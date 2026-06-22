@@ -1,5 +1,5 @@
 # Phase 4 — Epic 1.4: Simulation Loop
-**Status:** NOT STARTED  
+**Status:** COMPLETE — 2026-06-22  
 **Requires:** Phase 3 complete (WorldState must exist)  
 **Reads required:** `docs/interface_contracts.md` (WorldSnapshot, TileDisplayData, TileInspectorData, StateCache, IWorldStateReadOnly), `docs/snippets/patterns.md` (StateCache Commit Pattern, #7)
 
