@@ -27,11 +27,12 @@ public sealed class TileGrid
         return _chunks[cx, cy]?.GetTile(lx, ly) ?? default;
     }
 
-    /// <summary>Set tile. Applies East-West cylinder wrapping; creates chunk lazily.</summary>
+    /// <summary>Set tile. Applies East-West cylinder wrapping; creates chunk lazily (thread-safe).</summary>
     public void SetTile(TileCoord coord, TileData tile)
     {
         var (cx, cy, lx, ly) = Decompose(coord);
-        _chunks[cx, cy] ??= new TileChunk();
+        if (_chunks[cx, cy] is null)
+            Interlocked.CompareExchange(ref _chunks[cx, cy], new TileChunk(), null);
         _chunks[cx, cy]!.SetTile(lx, ly, tile);
     }
 
@@ -47,6 +48,14 @@ public sealed class TileGrid
     {
         foreach (var chunk in _chunks)
             if (chunk is not null) yield return chunk;
+    }
+
+    public IEnumerable<(int ChunkX, int ChunkY, TileChunk Chunk)> AllChunksWithCoords()
+    {
+        for (int cy = 0; cy < ChunkCountY; cy++)
+            for (int cx = 0; cx < ChunkCountX; cx++)
+                if (_chunks[cx, cy] is { } chunk)
+                    yield return (cx, cy, chunk);
     }
 
     public IEnumerable<TileChunk> AllDirtyChunks()

@@ -3,6 +3,7 @@ using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Tiles;
 using WorldEngine.Sim.World;
 using WorldEngine.Sim.WorldGen;
+using System.Linq;
 
 namespace WorldEngine.Sim.Simulation.Phases;
 
@@ -23,6 +24,7 @@ public sealed class EnvironmentalPhase
     public List<PendingEvent> RunTick(WorldState world, List<PendingEvent> pending, bool isAnnualTick = false)
     {
         RunSeasonalClimate(world);
+        RunDisasterTick(world, pending);
 
         if (isAnnualTick)
         {
@@ -30,6 +32,7 @@ public sealed class EnvironmentalPhase
             RunAnnualSeaLevel(world, pending);
             RunAnnualResourceDynamics(world);
             VolcanicMultiplierDecay(world);
+            RunDroughtsAnnual(world, pending);
         }
 
         return pending;
@@ -291,6 +294,247 @@ public sealed class EnvironmentalPhase
         world.VolcanicActivityMultiplier = MathF.Max(1.0f,
             world.VolcanicActivityMultiplier + (1.0f - world.VolcanicActivityMultiplier) * rate);
     }
+
+    // =========================================================================
+    // 1.5.4 — Resource Dynamics (annual)
+    // =========================================================================
+
+    // =========================================================================
+    // 1.5.3 — Natural Disaster System
+    // =========================================================================
+
+    private void RunDisasterTick(WorldState world, List<PendingEvent> pending)
+    {
+        RunVolcanicEruptions(world, pending);
+        RunEarthquakes(world, pending);
+        RunWildfires(world, pending);
+        RunFloods(world, pending);
+        TickDownActiveDisasters(world);
+    }
+
+    private void RunVolcanicEruptions(WorldState world, List<PendingEvent> pending)
+    {
+        var dcfg = _cfg.Disasters;
+        foreach (var (cx, cy, chunk) in world.TileGrid.AllChunksWithCoords())
+        {
+            if (!chunk.SummaryFlags.HasFlag(ChunkSummaryFlags.HasVolcanicTile)) continue;
+            foreach (var (coord, tile) in chunk.AllTiles(cx, cy))
+            {
+                if (!tile.StaticFlags.HasFlag(TileStaticFlags.IsVolcanic)) continue;
+                float roll = WorldRng.FloatAt(world.WorldSeed, world.CurrentTick, coord.X, coord.Y, DisasterSalts.VolcanicEruption);
+                float prob = dcfg.VolcanicEruptionProbabilityPerTick * world.VolcanicActivityMultiplier;
+                if (roll >= prob) continue;
+                AddDisaster(world, coord, new ActiveDisaster(DisasterType.VolcanicAsh, 1.0f, -1, new EventId(0)));
+                world.VolcanicActivityMultiplier += dcfg.VolcanicActivityBoost;
+                pending.Add(new PendingEvent(EventType.VolcanicEruption, coord, null, "{}"));
+            }
+        }
+    }
+
+    private void RunEarthquakes(WorldState world, List<PendingEvent> pending)
+    {
+        var dcfg = _cfg.Disasters;
+        foreach (var (cx, cy, chunk) in world.TileGrid.AllChunksWithCoords())
+        {
+            if (!chunk.SummaryFlags.HasFlag(ChunkSummaryFlags.HasFaultLineTile)) continue;
+            foreach (var (coord, tile) in chunk.AllTiles(cx, cy))
+            {
+                if (!tile.StaticFlags.HasFlag(TileStaticFlags.IsFaultLine)) continue;
+                float roll = WorldRng.FloatAt(world.WorldSeed, world.CurrentTick, coord.X, coord.Y, DisasterSalts.Earthquake);
+                if (roll >= dcfg.EarthquakeProbabilityPerTick) continue;
+                AddDisaster(world, coord, new ActiveDisaster(DisasterType.SeismicDamage, 0.8f, dcfg.EarthquakeDecayTicks, new EventId(0)));
+                pending.Add(new PendingEvent(EventType.Earthquake, coord, null, "{}"));
+            }
+        }
+    }
+
+    private void RunWildfires(WorldState world, List<PendingEvent> pending)
+    {
+        if (world.CurrentSeason is not (Season.Summer or Season.Autumn)) return;
+        var dcfg = _cfg.Disasters;
+
+        // Ignition pass
+        foreach (var (cx, cy, chunk) in world.TileGrid.AllChunksWithCoords())
+        {
+            if (!chunk.SummaryFlags.HasFlag(ChunkSummaryFlags.HasForestTile)) continue;
+            foreach (var (coord, tile) in chunk.AllTiles(cx, cy))
+            {
+                if (!IsForestBiome((BiomeType)tile.BiomeType)) continue;
+                if (HasActiveDisasterType(world, coord, DisasterType.Wildfire)) continue;
+
+                float prob = dcfg.WildfireIgnitionProbabilityPerTick;
+                if (tile.CurrentMoisture < dcfg.WildfireDryMoistureThreshold)
+                    prob *= dcfg.WildfireIgnitionDryMultiplier;
+
+                float roll = WorldRng.FloatAt(world.WorldSeed, world.CurrentTick, coord.X, coord.Y, DisasterSalts.Wildfire);
+                if (roll >= prob) continue;
+                AddDisaster(world, coord, new ActiveDisaster(DisasterType.Wildfire, 1.0f, dcfg.WildfireMaxTicks, new EventId(0)));
+                pending.Add(new PendingEvent(EventType.WildfireOccurred, coord, null, "{}"));
+            }
+        }
+
+        // Spread pass — iterate all tiles that already have an active wildfire
+        int w = world.TileGrid.TileWidth, h = world.TileGrid.TileHeight;
+        var activeFires = world.ActiveTileDisasters
+            .Where(kv => kv.Value.Any(d => d.Type == DisasterType.Wildfire))
+            .Select(kv => kv.Key)
+            .ToList();
+
+        var spreadNeighbors = new TileCoord[4];
+        foreach (var coord in activeFires)
+        {
+            spreadNeighbors[0] = new TileCoord(((coord.X + 1) % w + w) % w, coord.Y);
+            spreadNeighbors[1] = new TileCoord(((coord.X - 1) % w + w) % w, coord.Y);
+            spreadNeighbors[2] = new TileCoord(coord.X, Math.Clamp(coord.Y - 1, 0, h - 1));
+            spreadNeighbors[3] = new TileCoord(coord.X, Math.Clamp(coord.Y + 1, 0, h - 1));
+            foreach (var nb in spreadNeighbors)
+            {
+                var nbTile = world.TileGrid.GetTile(nb);
+                if (!IsForestBiome((BiomeType)nbTile.BiomeType)) continue;
+                if (HasActiveDisasterType(world, nb, DisasterType.Wildfire)) continue;
+
+                float roll = WorldRng.FloatAt(world.WorldSeed, world.CurrentTick, nb.X, nb.Y, DisasterSalts.WildfireSpread);
+                if (roll >= dcfg.WildfireSpreadProbabilityPerTick) continue;
+                AddDisaster(world, nb, new ActiveDisaster(DisasterType.Wildfire, 1.0f, dcfg.WildfireMaxTicks, new EventId(0)));
+                // No new PendingEvent for spread — shares root fire's causal chain
+            }
+        }
+    }
+
+    private void RunFloods(WorldState world, List<PendingEvent> pending)
+    {
+        if (world.CurrentSeason is not (Season.Spring or Season.Summer)) return;
+        var dcfg = _cfg.Disasters;
+        int w = world.TileGrid.TileWidth, h = world.TileGrid.TileHeight;
+
+        foreach (var (cx, cy, chunk) in world.TileGrid.AllChunksWithCoords())
+        {
+            if (!chunk.SummaryFlags.HasFlag(ChunkSummaryFlags.HasRiverTile)) continue;
+            foreach (var (coord, tile) in chunk.AllTiles(cx, cy))
+            {
+                if (!tile.StaticFlags.HasFlag(TileStaticFlags.HasRiver)) continue;
+                if ((BiomeType)tile.BiomeType is BiomeType.Ocean or BiomeType.CoastalWater) continue;
+
+                float prob = dcfg.FloodIgnitionProbabilityPerTick;
+                if (tile.CurrentMoisture >= dcfg.FloodWetMoistureThreshold)
+                    prob *= 2.0f;
+
+                float roll = WorldRng.FloatAt(world.WorldSeed, world.CurrentTick, coord.X, coord.Y, DisasterSalts.Flood);
+                if (roll >= prob) continue;
+
+                AddDisaster(world, coord, new ActiveDisaster(DisasterType.Flood, 0.7f, 6, new EventId(0)));
+                pending.Add(new PendingEvent(EventType.FloodOccurred, coord, null, "{}"));
+
+                // Spread to immediate neighbors
+                TileCoord[] floodNeighbors = {
+                    new TileCoord(((coord.X + 1) % w + w) % w, coord.Y),
+                    new TileCoord(((coord.X - 1) % w + w) % w, coord.Y),
+                    new TileCoord(coord.X, Math.Clamp(coord.Y - 1, 0, h - 1)),
+                    new TileCoord(coord.X, Math.Clamp(coord.Y + 1, 0, h - 1)),
+                };
+                foreach (var nb in floodNeighbors)
+                {
+                    var nbTile = world.TileGrid.GetTile(nb);
+                    if ((BiomeType)nbTile.BiomeType is BiomeType.Ocean or BiomeType.CoastalWater) continue;
+                    AddDisaster(world, nb, new ActiveDisaster(DisasterType.Flood, 0.5f, 4, new EventId(0)));
+                }
+            }
+        }
+    }
+
+    private static void TickDownActiveDisasters(WorldState world)
+    {
+        foreach (var coord in world.ActiveTileDisasters.Keys.ToList())
+        {
+            var list = world.ActiveTileDisasters[coord];
+            for (int i = list.Count - 1; i >= 0; i--)
+            {
+                var d = list[i];
+                if (d.TicksRemaining < 0) continue; // indefinite (e.g. volcanic ash deposit)
+                if (d.TicksRemaining <= 1)
+                    list.RemoveAt(i);
+                else
+                    list[i] = d with { TicksRemaining = d.TicksRemaining - 1 };
+            }
+
+            if (list.Count == 0)
+            {
+                world.ActiveTileDisasters.Remove(coord);
+                var tile = world.TileGrid.GetTile(coord);
+                tile.DynFlags &= ~TileDynFlags.HasActiveDisaster;
+                world.TileGrid.SetTile(coord, tile);
+            }
+        }
+    }
+
+    private void RunDroughtsAnnual(WorldState world, List<PendingEvent> pending)
+    {
+        var dcfg = _cfg.Disasters;
+
+        // Tick down existing droughts
+        for (int i = world.ActiveDroughts.Count - 1; i >= 0; i--)
+        {
+            var d = world.ActiveDroughts[i];
+            if (d.SeasonsRemaining <= 1)
+            {
+                world.ActiveDroughts.RemoveAt(i);
+                pending.Add(new PendingEvent(EventType.DroughtEnded, null, d.OriginEventId, "{}"));
+            }
+            else
+            {
+                world.ActiveDroughts[i] = d with { SeasonsRemaining = d.SeasonsRemaining - 1 };
+            }
+        }
+
+        // Attempt new drought per (latBand, biome) pair — one roll per unique combination
+        int h = world.TileGrid.TileHeight, w = world.TileGrid.TileWidth;
+        var seen = new HashSet<(int, BiomeType)>();
+
+        for (int y = 0; y < h; y++)
+        {
+            int latBand = y / Math.Max(1, h / 4);
+            for (int x = 0; x < w; x++)
+            {
+                var coord = new TileCoord(x, y);
+                var tile = world.TileGrid.GetTile(coord);
+                var biome = (BiomeType)tile.BiomeType;
+                if (biome is BiomeType.Ocean or BiomeType.CoastalWater) continue;
+
+                if (!seen.Add((latBand, biome))) continue;
+                if (world.ActiveDroughts.Any(d => d.LatitudeBandIndex == latBand && d.AffectedBiome == biome)) continue;
+
+                float prob = dcfg.DroughtProbabilityPerYear;
+                if (world.GlobalPrecipitationMultiplier < dcfg.DroughtPrecipitationThreshold)
+                    prob *= dcfg.DroughtDroughtMultiplier;
+
+                float roll = WorldRng.FloatAt(world.WorldSeed, world.CurrentYear, latBand, (int)biome, DisasterSalts.DroughtCheck);
+                if (roll >= prob) continue;
+
+                int seasons = Math.Clamp(
+                    dcfg.DroughtMinSeasons + (int)(roll / Math.Max(prob, 0.001f) * (dcfg.DroughtMaxSeasons - dcfg.DroughtMinSeasons)),
+                    dcfg.DroughtMinSeasons, dcfg.DroughtMaxSeasons);
+                world.ActiveDroughts.Add(new ActiveDrought(latBand, biome, 0.7f, seasons, new EventId(0)));
+                pending.Add(new PendingEvent(EventType.DroughtBegan, null, null, "{}"));
+            }
+        }
+    }
+
+    private static void AddDisaster(WorldState world, TileCoord coord, ActiveDisaster disaster)
+    {
+        if (!world.ActiveTileDisasters.TryGetValue(coord, out var list))
+            world.ActiveTileDisasters[coord] = list = new List<ActiveDisaster>();
+        list.Add(disaster);
+
+        var tile = world.TileGrid.GetTile(coord);
+        tile.DynFlags |= TileDynFlags.HasActiveDisaster;
+        world.TileGrid.SetTile(coord, tile);
+    }
+
+    private static bool HasActiveDisasterType(WorldState world, TileCoord coord, DisasterType type) =>
+        world.ActiveTileDisasters.TryGetValue(coord, out var list) && list.Any(d => d.Type == type);
+
+    private static bool IsForestBiome(BiomeType b) =>
+        b is BiomeType.TemperateForest or BiomeType.TropicalRainforest or BiomeType.BorealForest;
 
     // =========================================================================
     // 1.5.4 — Resource Dynamics (annual)
