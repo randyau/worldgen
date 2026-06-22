@@ -1,5 +1,5 @@
 # Phase 5 — Epic 1.5: Environmental Simulation
-**Status:** NOT STARTED  
+**Status:** COMPLETE — 2026-06-22  
 **Requires:** Phase 4 complete (PhaseRunner Phase 1 stub must exist)  
 **Reads required:** `docs/design_session_decisions.md` (DS-C), `docs/snippets/patterns.md` (#3 WorldRng, #5 tile iteration, #6 PendingEvent emission)
 
