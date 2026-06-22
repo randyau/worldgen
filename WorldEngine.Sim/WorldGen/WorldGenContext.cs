@@ -21,15 +21,15 @@ public sealed class WorldGenContext
     public int IndexOf(TileCoord c)  => c.X + c.Y * Config.TileWidth;
 
     // Results accumulated as layers complete — null until that layer has run
-    public TectonicResult? Tectonic { get; internal set; }
-    public ElevationResult? Elevation { get; internal set; }
-    public OceanResult? Ocean { get; internal set; }
-    public RiverResult? River { get; internal set; }
-    public ClimateResult? Climate { get; internal set; }
-    public BiomeResult? Biome { get; internal set; }
-    public MagicResult? Magic { get; internal set; }
-    public ResourceResult? Resource { get; internal set; }
-    public PoiResult? Poi { get; internal set; }
+    public TectonicResult? Tectonic { get; set; }
+    public ElevationResult? Elevation { get; set; }
+    public OceanResult? Ocean { get; set; }
+    public RiverResult? River { get; set; }
+    public ClimateResult? Climate { get; set; }
+    public BiomeResult? Biome { get; set; }
+    public MagicResult? Magic { get; set; }
+    public ResourceResult? Resource { get; set; }
+    public PoiResult? Poi { get; set; }
 
     public WorldGenContext(WorldConfig config, SimConfig simConfig)
     {
