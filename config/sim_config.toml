@@ -66,6 +66,12 @@ ultrafast_snapshot_years = 10     # Push UI snapshot every N sim-years in Ultraf
 # =============================================================================
 
 [events]
+# Active gate keys (consumed by EventsConfig / EventGate)
+minimum_recorded_tier        = 0        # 0=Background, 1=Character, 2=Regional, 3=Headline
+recent_event_cache_size      = 500
+suppressed_types = []
+
+# --- Legacy keys below are ignored (IgnoreMissingProperties=true) ---
 # Pre-write gate minimums
 # Increase these to reduce database size (record less)
 # Decrease to record more (use "Background" for development/research mode)

@@ -169,7 +169,7 @@ public sealed class EnvironmentalPhase
                     world.TileGrid.SetTile(coord, tile);
 
                     pending.Add(new PendingEvent(
-                        EventType.BiomeShifted,
+                        EventType.BiomeChanged,
                         coord,
                         CauseEventId: null,
                         System.Text.Json.JsonSerializer.Serialize(new
@@ -328,7 +328,8 @@ public sealed class EnvironmentalPhase
                 world.VolcanicActivityMultiplier = MathF.Min(
                     world.VolcanicActivityMultiplier + dcfg.VolcanicActivityBoost,
                     dcfg.VolcanicActivityMultiplierCap);
-                pending.Add(new PendingEvent(EventType.VolcanicEruption, coord, null, "{}"));
+                pending.Add(new PendingEvent(EventType.VolcanicEruption, coord, null,
+                    System.Text.Json.JsonSerializer.Serialize(new { Intensity = dcfg.VolcanicAshIntensity })));
             }
         }
     }
@@ -345,7 +346,8 @@ public sealed class EnvironmentalPhase
                 float roll = WorldRng.FloatAt(world.WorldSeed, world.CurrentTick, coord.X, coord.Y, DisasterSalts.Earthquake);
                 if (roll >= dcfg.EarthquakeProbabilityPerTick) continue;
                 AddDisaster(world, coord, new ActiveDisaster(DisasterType.SeismicDamage, dcfg.EarthquakeIntensity, dcfg.EarthquakeDecayTicks, new EventId(0)));
-                pending.Add(new PendingEvent(EventType.Earthquake, coord, null, "{}"));
+                pending.Add(new PendingEvent(EventType.EarthquakeOccurred, coord, null,
+                    System.Text.Json.JsonSerializer.Serialize(new { Intensity = dcfg.EarthquakeIntensity })));
             }
         }
     }
@@ -371,7 +373,8 @@ public sealed class EnvironmentalPhase
                 float roll = WorldRng.FloatAt(world.WorldSeed, world.CurrentTick, coord.X, coord.Y, DisasterSalts.Wildfire);
                 if (roll >= prob) continue;
                 AddDisaster(world, coord, new ActiveDisaster(DisasterType.Wildfire, dcfg.WildfireIntensity, dcfg.WildfireMaxTicks, new EventId(0)));
-                pending.Add(new PendingEvent(EventType.WildfireOccurred, coord, null, "{}"));
+                pending.Add(new PendingEvent(EventType.WildfireOccurred, coord, null,
+                    System.Text.Json.JsonSerializer.Serialize(new { Intensity = dcfg.WildfireIntensity })));
             }
         }
 
@@ -424,7 +427,8 @@ public sealed class EnvironmentalPhase
                 if (roll >= prob) continue;
 
                 AddDisaster(world, coord, new ActiveDisaster(DisasterType.Flood, dcfg.FloodOriginIntensity, dcfg.FloodOriginTicks, new EventId(0)));
-                pending.Add(new PendingEvent(EventType.FloodOccurred, coord, null, "{}"));
+                pending.Add(new PendingEvent(EventType.FloodOccurred, coord, null,
+                    System.Text.Json.JsonSerializer.Serialize(new { Intensity = dcfg.FloodOriginIntensity })));
 
                 foreach (var nb in world.GetTilesInRadius(coord, dcfg.FloodSpreadRadius))
                 {

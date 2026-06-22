@@ -16,6 +16,7 @@ public sealed class SimLoop
     private readonly StateCache _stateCache;
     private readonly PhaseRunner _phaseRunner;
     private readonly SnapshotBuilder _snapshotBuilder;
+    private readonly EventCache _eventCache;
     private readonly SimLoopConfig _cfg;
 
     private Thread? _thread;
@@ -34,13 +35,15 @@ public sealed class SimLoop
         StateCache stateCache,
         PhaseRunner phaseRunner,
         SnapshotBuilder snapshotBuilder,
-        SimConfig config)
+        SimConfig config,
+        EventCache eventCache)
     {
         _world           = world;
         _cmdQueue        = cmdQueue;
         _stateCache      = stateCache;
         _phaseRunner     = phaseRunner;
         _snapshotBuilder = snapshotBuilder;
+        _eventCache      = eventCache;
         _cfg             = config.SimLoop;
     }
 
@@ -84,11 +87,12 @@ public sealed class SimLoop
 
             if (buildSnapshot)
             {
+                var recentEvents = _eventCache.GetRecent(_world.SimConfig.Events.RecentEventCacheSize);
                 var snapshot = _snapshotBuilder.Build(
                     _world, _viewport, _overlay,
                     _currentSpeed, _paused,
                     ticksPerSecond: (long)TicksPerSecond(),
-                    recentEvents: Array.Empty<SimEvent>());
+                    recentEvents: recentEvents);
                 _stateCache.Commit(snapshot);
             }
 

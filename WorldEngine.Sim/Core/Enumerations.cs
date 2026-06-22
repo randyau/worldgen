@@ -61,15 +61,65 @@ public enum DisasterType
 
 public enum EventType
 {
-    // Environmental
-    WildfireOccurred, FloodOccurred, VolcanicEruption, Earthquake, DroughtBegan, DroughtEnded,
-    SeaLevelChanged, BiomeShifted, ResourceRecovered,
-    // World-level (stubs for future phases)
-    CharacterBorn, CharacterDied,
-    CivilizationFounded, CivilizationCollapsed,
-    ArtifactCreated, ArtifactDestroyed,
-    ReligionFounded, ReligionExtinct,
-    WarDeclared, WarEnded,
-    GodModeDisasterTriggered, GodModeEntitySpawned,
-    GodModeCharacterCreated, GodModeArtifactPlaced, GodModeCivilizationForced,
+    // Environmental (1000–1099) — locked, never renumber
+    VolcanicEruption    = 1001,
+    EarthquakeOccurred  = 1002,
+    WildfireOccurred    = 1003,
+    FloodOccurred       = 1004,
+    DroughtBegan        = 1005,
+    DroughtEnded        = 1006,
+    SeaLevelChanged     = 1007,
+    BiomeChanged        = 1008,
+    ClimateShifted      = 1009,
+    ResourceRecovered   = 1010,
+    // M2+ stubs (ranges reserved, values must not change once assigned)
+    CharacterBorn           = 3001,
+    CharacterDied           = 3002,
+    CivilizationFounded     = 4001,
+    CivilizationCollapsed   = 4002,
+    ArtifactCreated         = 6001,
+    ArtifactDestroyed       = 6002,
+    ReligionFounded         = 4003,
+    ReligionExtinct         = 4004,
+    WarDeclared             = 5001,
+    WarEnded                = 5002,
+    GodModeDisasterTriggered    = 9001,
+    GodModeEntitySpawned        = 9002,
+    GodModeCharacterCreated     = 9003,
+    GodModeArtifactPlaced       = 9004,
+    GodModeCivilizationForced   = 9005,
+}
+
+public static class VerbClassification
+{
+    public static VerbClass Classify(EventType type) => type switch
+    {
+        EventType.VolcanicEruption   => VerbClass.Destruction,
+        EventType.EarthquakeOccurred => VerbClass.Destruction,
+        EventType.WildfireOccurred   => VerbClass.Destruction,
+        EventType.FloodOccurred      => VerbClass.Destruction,
+        EventType.DroughtBegan       => VerbClass.Destruction,
+        EventType.DroughtEnded       => VerbClass.Creation,
+        EventType.SeaLevelChanged    => VerbClass.Transformation,
+        EventType.BiomeChanged       => VerbClass.Transformation,
+        EventType.ClimateShifted     => VerbClass.Transformation,
+        EventType.ResourceRecovered  => VerbClass.Maintenance,
+        // M2+ stubs — reasonable defaults
+        EventType.CharacterBorn           => VerbClass.Creation,
+        EventType.CharacterDied           => VerbClass.Destruction,
+        EventType.CivilizationFounded     => VerbClass.Creation,
+        EventType.CivilizationCollapsed   => VerbClass.Destruction,
+        EventType.ArtifactCreated         => VerbClass.Creation,
+        EventType.ArtifactDestroyed       => VerbClass.Destruction,
+        EventType.ReligionFounded         => VerbClass.Creation,
+        EventType.ReligionExtinct         => VerbClass.Destruction,
+        EventType.WarDeclared             => VerbClass.Conflict,
+        EventType.WarEnded                => VerbClass.Maintenance,
+        EventType.GodModeDisasterTriggered    => VerbClass.Destruction,
+        EventType.GodModeEntitySpawned        => VerbClass.Creation,
+        EventType.GodModeCharacterCreated     => VerbClass.Creation,
+        EventType.GodModeArtifactPlaced       => VerbClass.Creation,
+        EventType.GodModeCivilizationForced   => VerbClass.Transformation,
+        _ => throw new ArgumentOutOfRangeException(nameof(type), type, "No VerbClass mapping")
+    };
 }

@@ -1,0 +1,79 @@
+using System.Text.Json;
+using WorldEngine.Sim.Core;
+
+namespace WorldEngine.Sim.Events;
+
+/// <summary>
+/// Maps a (type, payload, isFirstOfKind) tuple to an <see cref="EventTier"/> and
+/// <see cref="PopulationImpact"/>. The final tier is the max of the verb-class floor
+/// and the impact-derived tier, bumped one level when the event is first of its kind.
+/// </summary>
+public static class SignificanceClassifier
+{
+    // threshold for SeaLevelChanged delta to be Catastrophic (in normalized sea level units)
+    // The spec says "delta > 5m" but we use normalized units; 5m ≈ 0.02 in fraction-of-255
+    private const float SeaLevelCatastrophicDelta = 0.02f;
+
+    public static (EventTier tier, PopulationImpact impact) Classify(
+        EventType type,
+        string payloadJson,
+        bool isFirstOfKind)
+    {
+        var impact = ComputeImpact(type, payloadJson);
+        var verbTier = VerbTierFloor(VerbClassification.Classify(type));
+        var impactTier = ImpactTier(impact);
+        var baseTier = (EventTier)Math.Max((int)verbTier, (int)impactTier);
+        var finalTier = isFirstOfKind ? BumpTier(baseTier) : baseTier;
+        return (finalTier, impact);
+    }
+
+    private static PopulationImpact ComputeImpact(EventType type, string payloadJson)
+    {
+        float intensity = TryGetFloat(payloadJson, "Intensity");
+        return type switch
+        {
+            EventType.VolcanicEruption  => intensity > 0.8f ? PopulationImpact.Catastrophic
+                                         : intensity > 0.5f ? PopulationImpact.Major
+                                         : PopulationImpact.Moderate,
+            EventType.EarthquakeOccurred => intensity > 0.9f ? PopulationImpact.Catastrophic
+                                          : intensity > 0.6f ? PopulationImpact.Major
+                                          : PopulationImpact.Moderate,
+            EventType.FloodOccurred     => intensity > 0.7f ? PopulationImpact.Major : PopulationImpact.Minor,
+            EventType.WildfireOccurred  => intensity > 0.6f ? PopulationImpact.Moderate : PopulationImpact.Minor,
+            EventType.DroughtBegan      => PopulationImpact.Moderate,
+            EventType.SeaLevelChanged   => TryGetFloat(payloadJson, "Delta") > SeaLevelCatastrophicDelta
+                                           ? PopulationImpact.Catastrophic : PopulationImpact.Major,
+            _                           => PopulationImpact.None,
+        };
+    }
+
+    private static EventTier VerbTierFloor(VerbClass verb) => verb switch
+    {
+        VerbClass.Destruction => EventTier.Regional,
+        VerbClass.Transformation => EventTier.Character,
+        _ => EventTier.Background
+    };
+
+    private static EventTier ImpactTier(PopulationImpact impact) => impact switch
+    {
+        PopulationImpact.Catastrophic => EventTier.Headline,
+        PopulationImpact.Major        => EventTier.Regional,
+        PopulationImpact.Moderate     => EventTier.Character,
+        _                             => EventTier.Background
+    };
+
+    private static EventTier BumpTier(EventTier tier) =>
+        tier < EventTier.Headline ? (EventTier)((int)tier + 1) : EventTier.Headline;
+
+    private static float TryGetFloat(string json, string key)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.TryGetProperty(key, out var el))
+                return el.GetSingle();
+        }
+        catch { /* malformed JSON — treat as 0 */ }
+        return 0f;
+    }
+}

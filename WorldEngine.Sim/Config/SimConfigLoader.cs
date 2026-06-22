@@ -17,7 +17,13 @@ public static class SimConfigLoader
         var options = new TomlModelOptions
         {
             ConvertPropertyName = PascalToSnakeCase,
-            IgnoreMissingProperties = true
+            IgnoreMissingProperties = true,
+            // Allow integer TOML values to map onto enum-typed config properties
+            // (Tomlyn does not cast Int64 → enum by default).
+            ConvertToModel = (value, targetType) =>
+                value is long l && targetType.IsEnum
+                    ? Enum.ToObject(targetType, l)
+                    : null
         };
 
         return Toml.ToModel<SimConfig>(toml, null, options);

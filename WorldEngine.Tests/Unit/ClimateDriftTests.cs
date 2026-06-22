@@ -107,8 +107,8 @@ public class ClimateDriftTests
         world.CurrentSeason = Season.Spring;
         phase.RunTick(world, pending, isAnnualTick: true);
 
-        pending.Should().Contain(p => p.Type == EventType.BiomeShifted,
-            "extreme temperature anomaly should cause biome reclassification, emitting BiomeShifted events");
+        pending.Should().Contain(p => p.Type == EventType.BiomeChanged,
+            "extreme temperature anomaly should cause biome reclassification, emitting BiomeChanged events");
     }
 
     [Fact]

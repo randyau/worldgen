@@ -1,5 +1,6 @@
 using WorldEngine.Sim.Commands;
 using WorldEngine.Sim.Core;
+using WorldEngine.Sim.Persistence;
 using WorldEngine.Sim.Simulation;
 using WorldEngine.Sim.World;
 using WorldEngine.Sim.WorldGen;
@@ -40,7 +41,7 @@ public class SimLoopTests
         var eventCache = new EventCache();
         var phaseRunner = new PhaseRunner(sim, eventStore, eventCache);
         var snapshotBuilder = new SnapshotBuilder();
-        var loop = new SimLoop(world, cmdQueue, cache, phaseRunner, snapshotBuilder, sim);
+        var loop = new SimLoop(world, cmdQueue, cache, phaseRunner, snapshotBuilder, sim, eventCache);
 
         // Start running at Ultrafast so ticks accumulate quickly
         cmdQueue.Enqueue(new SetSimSpeed(SimSpeed.Ultrafast));

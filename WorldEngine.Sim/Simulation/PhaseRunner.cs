@@ -1,5 +1,8 @@
 using WorldEngine.Sim.Config;
 using WorldEngine.Sim.Core;
+using WorldEngine.Sim.Events;
+using WorldEngine.Sim.Persistence;
+using WorldEngine.Sim.Simulation.Phases;
 using WorldEngine.Sim.World;
 
 namespace WorldEngine.Sim.Simulation;
@@ -14,18 +17,24 @@ public sealed class PhaseRunner
     private readonly SimConfig _config;
     private readonly EventStore _eventStore;
     private readonly EventCache _eventCache;
+    private readonly EventGate _gate;
+    private readonly EnvironmentalPhase _envPhase;
     private readonly Action<SimPhase>? _phaseObserver;
     private readonly List<PendingEvent> _injectedEvents = new();
+    private int _lastAnnualTickYear;
 
     public PhaseRunner(
         SimConfig config,
         EventStore eventStore,
         EventCache eventCache,
+        EventGate? gate = null,
         Action<SimPhase>? phaseObserver = null)
     {
-        _config       = config;
-        _eventStore   = eventStore;
-        _eventCache   = eventCache;
+        _config        = config;
+        _eventStore    = eventStore;
+        _eventCache    = eventCache;
+        _gate          = gate ?? new EventGate(config);
+        _envPhase      = new EnvironmentalPhase(config);
         _phaseObserver = phaseObserver;
     }
 
@@ -54,40 +63,120 @@ public sealed class PhaseRunner
     private List<PendingEvent> RunEnvironmentalPhase(WorldState world)
     {
         _phaseObserver?.Invoke(SimPhase.Environmental);
-        // Stub — full implementation in Epic 1.5 (Phase 5)
-        return new List<PendingEvent>();
+        bool isAnnualTick = world.CurrentSeason == Season.Spring
+            && world.CurrentYear != _lastAnnualTickYear;
+        if (isAnnualTick)
+            _lastAnnualTickYear = world.CurrentYear;
+        var pending = new List<PendingEvent>();
+        _envPhase.RunTick(world, pending, isAnnualTick);
+        return pending;
     }
 
     private void RunPhaseStub(WorldState world, SimPhase phase)
     {
         _phaseObserver?.Invoke(phase);
-        // Stub — full implementation in respective future phases
     }
 
     private void RunEventGeneration(WorldState world, List<PendingEvent> pending)
     {
         _phaseObserver?.Invoke(SimPhase.EventGeneration);
+        if (pending.Count == 0) return;
 
+        // Step 1: classify + gate
+        var batch = new List<(PendingEvent pe, SimEvent ev)>();
         foreach (var pe in pending)
         {
+            bool isFirst = !_eventCache.ContainsType(pe.Type);
+            var (tier, impact) = SignificanceClassifier.Classify(pe.Type, pe.PayloadJson, isFirst);
+            if (!_gate.ShouldRecord(pe.Type, tier)) continue;
+
             var ev = new SimEvent
             {
-                Id               = new EventId(world.CurrentTick * 1000 + pending.IndexOf(pe)),
+                Id               = new EventId(0), // assigned by DB on insert
                 Type             = pe.Type,
                 Year             = world.CurrentYear,
                 Season           = world.CurrentSeason,
                 Tick             = world.CurrentTick,
                 Location         = pe.Location,
-                TierInvolvement  = EventTier.Background,
-                VerbClass        = VerbClass.Transformation,
-                PopulationImpact = PopulationImpact.None,
-                IsFirstOfKind    = false,
+                TierInvolvement  = tier,
+                VerbClass        = VerbClassification.Classify(pe.Type),
+                PopulationImpact = impact,
+                IsFirstOfKind    = isFirst,
                 IsGodMode        = false,
                 PayloadJson      = pe.PayloadJson,
             };
+            batch.Add((pe, ev));
+        }
 
-            _eventStore.Write(ev);
+        if (batch.Count == 0) return;
+
+        // Step 2: DB insert (disk = system of record, MUST come before cache)
+        var inserted = _eventStore.BatchInsert(batch.Select(b => b.ev));
+
+        // Step 3: Update OriginEventId on matching ActiveDisasters
+        UpdateActiveDisasterOrigins(world, batch, inserted);
+
+        // Step 4: Causal edges
+        var edges = new List<(long, long)>();
+        for (int i = 0; i < batch.Count && i < inserted.Count; i++)
+        {
+            var pe = batch[i].pe;
+            if (pe.CauseEventId.HasValue && pe.CauseEventId.Value.Value != 0)
+                edges.Add((pe.CauseEventId.Value.Value, inserted[i].Id.Value));
+        }
+        if (edges.Count > 0)
+            _eventStore.InsertCausalEdges(edges);
+
+        // Step 5: Cache (ALWAYS after DB)
+        foreach (var ev in inserted)
             _eventCache.Add(ev);
+    }
+
+    private static void UpdateActiveDisasterOrigins(
+        WorldState world,
+        List<(PendingEvent pe, SimEvent ev)> batch,
+        IReadOnlyList<SimEvent> inserted)
+    {
+        for (int i = 0; i < batch.Count && i < inserted.Count; i++)
+        {
+            var (pe, _) = batch[i];
+            var realEv = inserted[i];
+
+            // Drought events have no Location but track ActiveDroughts.
+            if (pe.Type == EventType.DroughtBegan)
+            {
+                for (int d = 0; d < world.ActiveDroughts.Count; d++)
+                {
+                    if (world.ActiveDroughts[d].OriginEventId.Value == 0)
+                    {
+                        world.ActiveDroughts[d] = world.ActiveDroughts[d] with { OriginEventId = realEv.Id };
+                        break;
+                    }
+                }
+                continue;
+            }
+
+            if (pe.Location is not { } coord) continue;
+
+            DisasterType? dType = pe.Type switch
+            {
+                EventType.VolcanicEruption   => DisasterType.VolcanicAsh,
+                EventType.EarthquakeOccurred => DisasterType.SeismicDamage,
+                EventType.WildfireOccurred   => DisasterType.Wildfire,
+                EventType.FloodOccurred      => DisasterType.Flood,
+                _                            => null
+            };
+            if (dType is null) continue;
+
+            if (!world.ActiveTileDisasters.TryGetValue(coord, out var disasters)) continue;
+            for (int d = 0; d < disasters.Count; d++)
+            {
+                if (disasters[d].Type == dType.Value && disasters[d].OriginEventId.Value == 0)
+                {
+                    disasters[d] = disasters[d] with { OriginEventId = realEv.Id };
+                    break;
+                }
+            }
         }
     }
 }
