@@ -22,6 +22,8 @@ public sealed class SimLoop
     private Thread? _thread;
     private volatile bool _running;
 
+    public Exception? LastException { get; private set; }
+
     private SimSpeed _currentSpeed = SimSpeed.Normal;
     private bool _paused;
     private bool _stepOneTick;
@@ -62,47 +64,62 @@ public sealed class SimLoop
 
     private void Run()
     {
-        while (_running)
+        try
         {
-            // 1. Drain and apply commands
-            foreach (var cmd in _cmdQueue.DrainAll())
-                ApplyCommand(cmd);
-
-            // 2. Paused idle
-            if (_paused && !_stepOneTick)
+            while (_running)
             {
-                Thread.Sleep(16);
-                continue;
+                // 1. Drain and apply commands; track whether any were processed
+                int cmdCount = 0;
+                foreach (var cmd in _cmdQueue.DrainAll())
+                {
+                    ApplyCommand(cmd);
+                    cmdCount++;
+                }
+
+                // 2. Paused idle — still rebuild snapshot when commands changed state
+                if (_paused && !_stepOneTick)
+                {
+                    if (cmdCount > 0) CommitSnapshot();
+                    Thread.Sleep(16);
+                    continue;
+                }
+
+                // 3. Run tick
+                _phaseRunner.RunTick(_world);
+
+                // 4. Advance time
+                AdvanceTime();
+
+                // 5. Build snapshot (skip in Ultrafast except every N ticks)
+                bool buildSnapshot = _currentSpeed != SimSpeed.Ultrafast
+                    || (_world.CurrentTick % _cfg.UltrafastSnapshotIntervalTicks == 0);
+
+                if (buildSnapshot) CommitSnapshot();
+
+                // 6. Clear StepOneTick after one step
+                if (_stepOneTick) _stepOneTick = false;
+
+                // 7. Throttle
+                int sleepMs = ThrottleSleepMs();
+                if (sleepMs > 0) Thread.Sleep(sleepMs);
             }
-
-            // 3. Run tick
-            _phaseRunner.RunTick(_world);
-
-            // 4. Advance time
-            AdvanceTime();
-
-            // 5. Build snapshot (skip in Ultrafast except every N ticks)
-            bool buildSnapshot = _currentSpeed != SimSpeed.Ultrafast
-                || (_world.CurrentTick % _cfg.UltrafastSnapshotIntervalTicks == 0);
-
-            if (buildSnapshot)
-            {
-                var recentEvents = _eventCache.GetRecent(_world.SimConfig.Events.RecentEventCacheSize);
-                var snapshot = _snapshotBuilder.Build(
-                    _world, _viewport, _overlay,
-                    _currentSpeed, _paused,
-                    ticksPerSecond: (long)TicksPerSecond(),
-                    recentEvents: recentEvents);
-                _stateCache.Commit(snapshot);
-            }
-
-            // 6. Clear StepOneTick after one step
-            if (_stepOneTick) _stepOneTick = false;
-
-            // 7. Throttle
-            int sleepMs = ThrottleSleepMs();
-            if (sleepMs > 0) Thread.Sleep(sleepMs);
         }
+        catch (Exception ex)
+        {
+            LastException = ex;
+            _running = false;
+        }
+    }
+
+    private void CommitSnapshot()
+    {
+        var recentEvents = _eventCache.GetRecent(_world.SimConfig.Events.RecentEventCacheSize);
+        var snapshot = _snapshotBuilder.Build(
+            _world, _viewport, _overlay,
+            _currentSpeed, _paused,
+            ticksPerSecond: (long)TicksPerSecond(),
+            recentEvents: recentEvents);
+        _stateCache.Commit(snapshot);
     }
 
     private void ApplyCommand(ICommand cmd)

@@ -32,6 +32,20 @@ public sealed class TileMapRenderer(GraphicsDevice gd, Camera2D camera)
                 sb.Draw(_pixel, new Rectangle(rect.X, rect.Y, 1, rect.Height), borderColor);
             }
         }
+
+        // Draw selection highlight over the inspected tile
+        if (snapshot.InspectedTile?.Coord is TileCoord sel)
+        {
+            var pos  = camera.TileToScreen(sel);
+            int size = (int)camera.Zoom;
+            int x = (int)pos.X, y = (int)pos.Y;
+            var hi = Color.Yellow;
+            const int B = 2;
+            sb.Draw(_pixel, new Rectangle(x,          y,          size, B),    hi); // top
+            sb.Draw(_pixel, new Rectangle(x,          y + size-B, size, B),    hi); // bottom
+            sb.Draw(_pixel, new Rectangle(x,          y,          B,    size), hi); // left
+            sb.Draw(_pixel, new Rectangle(x + size-B, y,          B,    size), hi); // right
+        }
     }
 
     public void Dispose() => _pixel.Dispose();

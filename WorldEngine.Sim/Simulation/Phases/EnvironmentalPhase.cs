@@ -24,6 +24,7 @@ public sealed class EnvironmentalPhase
     public List<PendingEvent> RunTick(WorldState world, List<PendingEvent> pending, bool isAnnualTick = false)
     {
         RunSeasonalClimate(world);
+        VolcanicMultiplierDecay(world);
         RunDisasterTick(world, pending);
 
         if (isAnnualTick)
@@ -31,7 +32,6 @@ public sealed class EnvironmentalPhase
             RunAnnualDrift(world, pending);
             RunAnnualSeaLevel(world, pending);
             RunAnnualResourceDynamics(world);
-            VolcanicMultiplierDecay(world);
             RunDroughtsAnnual(world, pending);
         }
 
@@ -321,6 +321,7 @@ public sealed class EnvironmentalPhase
             foreach (var (coord, tile) in chunk.AllTiles(cx, cy))
             {
                 if (!tile.StaticFlags.HasFlag(TileStaticFlags.IsVolcanic)) continue;
+                if ((BiomeType)tile.BiomeType is BiomeType.Ocean or BiomeType.CoastalWater) continue;
                 float roll = WorldRng.FloatAt(world.WorldSeed, world.CurrentTick, coord.X, coord.Y, DisasterSalts.VolcanicEruption);
                 float prob = dcfg.VolcanicEruptionProbabilityPerTick * world.VolcanicActivityMultiplier;
                 if (roll >= prob) continue;
@@ -343,6 +344,7 @@ public sealed class EnvironmentalPhase
             foreach (var (coord, tile) in chunk.AllTiles(cx, cy))
             {
                 if (!tile.StaticFlags.HasFlag(TileStaticFlags.IsFaultLine)) continue;
+                if ((BiomeType)tile.BiomeType is BiomeType.Ocean or BiomeType.CoastalWater) continue;
                 float roll = WorldRng.FloatAt(world.WorldSeed, world.CurrentTick, coord.X, coord.Y, DisasterSalts.Earthquake);
                 if (roll >= dcfg.EarthquakeProbabilityPerTick) continue;
                 AddDisaster(world, coord, new ActiveDisaster(DisasterType.SeismicDamage, dcfg.EarthquakeIntensity, dcfg.EarthquakeDecayTicks, new EventId(0)));

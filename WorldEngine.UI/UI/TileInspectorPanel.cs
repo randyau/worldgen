@@ -12,8 +12,8 @@ public sealed class TileInspectorPanel
     public TileInspectorPanel()
     {
         _content = new VerticalStackPanel { Spacing = 2 };
-        Root = new Panel { Width = 260, Visible = false };
-        var scroll = new ScrollViewer { Content = _content, Height = 400 };
+        Root = new Panel { Width = 340, Visible = false };
+        var scroll = new ScrollViewer { Content = _content, Height = 380 };
         Root.Widgets.Add(scroll);
     }
 

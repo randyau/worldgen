@@ -29,8 +29,9 @@ mountain_threshold      = 0.7     # Elevation above which terrain is classified 
 tectonic_intensity      = 0.8     # How dramatic plate collision effects are (0=gentle, 1=extreme)
 
 [world_gen.ocean]
-default_sea_level       = 0.35    # Fraction of elevation range below which is ocean
+default_sea_level       = 0.40    # Fraction of elevation range below which is ocean
                                    # Higher = more ocean, lower = more land
+                                   # Raised from 0.35 to submerge mid-ocean volcanic ridges
 
 [world_gen.climate]
 equator_temperature     = 0.9     # Temperature at equator (0-1 scaled)
@@ -143,7 +144,6 @@ suppressed_verb_classes = []
 [environment]
 # Natural disaster base probabilities per seasonal tick per eligible tile
 # These are per-tick probabilities — multiply by 4 for annual rate
-volcanic_eruption_prob  = 0.0001   # Per volcanic tile per season
 earthquake_prob         = 0.0002   # Per fault line tile per season
 wildfire_prob           = 0.0005   # Per forest tile in dry season
 flood_prob              = 0.001    # Per river-adjacent tile in wet season
@@ -504,7 +504,7 @@ monsoon_multiplier_max            = 3.0    # maximum MonsoonIntensityMultiplier
 lat_temperature_anomaly_scale     = 1.4    # amplification of temperature anomaly at high latitudes
 annual_sea_level_drift_rate       = 0.0    # sea level change per year; 0 = stable
 sea_level_event_threshold         = 0.1    # minimum delta to emit SeaLevelChanged event
-volcanic_decay_rate               = 0.05   # VolcanicActivityMultiplier lerp toward 1.0 per year
+volcanic_decay_rate               = 0.005  # VolcanicActivityMultiplier lerp toward 1.0 per tick (~0.07/year at 14 ticks/year)
 
 # =============================================================================
 # DISASTERS (runtime, Phase 5)
@@ -527,7 +527,7 @@ flood_origin_ticks                     = 6        # duration (seasons) at origin
 flood_spread_ticks                     = 4        # duration (seasons) at spread tiles
 volcanic_eruption_probability_per_tick = 0.0002
 volcanic_ash_intensity                 = 1.0      # intensity assigned to VolcanicAsh ActiveDisaster
-volcanic_activity_boost                = 0.5      # added to VolcanicActivityMultiplier per eruption
+volcanic_activity_boost                = 0.05     # added to VolcanicActivityMultiplier per eruption
 volcanic_activity_multiplier_cap       = 10.0     # VolcanicActivityMultiplier is clamped to this ceiling
 earthquake_probability_per_tick        = 0.0005
 earthquake_intensity                   = 0.8      # intensity assigned to SeismicDamage ActiveDisaster

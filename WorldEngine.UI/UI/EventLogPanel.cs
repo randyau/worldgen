@@ -18,7 +18,7 @@ public sealed class EventLogPanel
     public EventLogPanel()
     {
         _rows  = new VerticalStackPanel { Spacing = 2 };
-        _scroll = new ScrollViewer { Content = _rows, Width = 380, Height = 250 };
+        _scroll = new ScrollViewer { Content = _rows, Width = 340, Height = 250 };
 
         var headlineBox  = new CheckBox { Text = "Headline",   IsChecked = _showHeadline };
         var regionalBox  = new CheckBox { Text = "Regional",   IsChecked = _showRegional };

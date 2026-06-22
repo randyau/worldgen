@@ -45,6 +45,8 @@ public sealed class Game1 : Game
     // Input
     private MouseState _prevMouse;
     private bool _simStarted;
+    private bool _simCrashReported;
+    private Label? _crashLabel;
 
     public Game1()
     {
@@ -99,13 +101,24 @@ public sealed class Game1 : Game
         var mapPlaceholder = new Panel { Id = "MapArea", HorizontalAlignment = HorizontalAlignment.Stretch };
         mapAndSidebar.Widgets.Add(mapPlaceholder);
 
-        var sidebar = new VerticalStackPanel { Width = 280, Spacing = 8 };
+        var sidebar = new VerticalStackPanel { Width = 360, Spacing = 8 };
         if (_tileInspector is not null) sidebar.Widgets.Add(_tileInspector.Root);
         if (_eventLog is not null) sidebar.Widgets.Add(_eventLog.Root);
         mapAndSidebar.Widgets.Add(sidebar);
 
         mainStack.Widgets.Add(mapAndSidebar);
         root.Widgets.Add(mainStack);
+
+        // Crash overlay — hidden until sim thread dies
+        _crashLabel = new Label
+        {
+            Text = "",
+            TextColor = Microsoft.Xna.Framework.Color.Red,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment   = VerticalAlignment.Bottom,
+            Visible = false
+        };
+        root.Widgets.Add(_crashLabel);
 
         return root;
     }
@@ -145,6 +158,19 @@ public sealed class Game1 : Game
 
         if (!_simStarted && _genTask?.IsCompletedSuccessfully == true)
             StartSim(_genTask.Result);
+
+        // Surface sim thread crashes to a visible label and log file
+        if (!_simCrashReported && _simLoop?.LastException is Exception simEx)
+        {
+            _simCrashReported = true;
+            var logPath = Path.Combine(AppContext.BaseDirectory, "crash.log");
+            File.AppendAllText(logPath, $"\n{DateTime.Now:u} [SimThread]\n{simEx}\n");
+            if (_crashLabel is not null)
+            {
+                _crashLabel.Text    = $"Sim crashed: {simEx.Message} — see crash.log";
+                _crashLabel.Visible = true;
+            }
+        }
 
         var snapshot = _stateCache.Read();
         if (snapshot is not null && _simStarted)
@@ -230,6 +256,41 @@ public sealed class Game1 : Game
         if (kb.IsKeyDown(Keys.M)) _commandQueue.Enqueue(new SetActiveOverlay(OverlayType.Moisture));
         if (kb.IsKeyDown(Keys.R)) _commandQueue.Enqueue(new SetActiveOverlay(OverlayType.Resources));
         if (kb.IsKeyDown(Keys.G)) _commandQueue.Enqueue(new SetActiveOverlay(OverlayType.MagicIntensity));
+
+        // N = new world
+        if (kb.IsKeyDown(Keys.N) && _simStarted) ResetToNewWorld();
+    }
+
+    private void ResetToNewWorld()
+    {
+        // Stop sim
+        _simLoop?.Stop();
+        _simLoop = null;
+        _eventStore?.Dispose();
+        _eventStore = null;
+
+        // Delete DB so the new run starts clean
+        if (File.Exists("world.db")) File.Delete("world.db");
+
+        // Reset state flags
+        _simStarted         = false;
+        _simCrashReported   = false;
+        if (_crashLabel is not null) _crashLabel.Visible = false;
+
+        // Reset UI: hide main panels, show gen screen, clear inspector & log
+        if (_desktop?.Root is Panel root)
+        {
+            foreach (var w in root.Widgets)
+                if (w.Id == "MainUI") w.Visible = false;
+        }
+        _genScreen!.Root.Visible = true;
+        _commandQueue.Enqueue(new SetInspectedTile(null));
+
+        // Re-kick world gen
+        var worldCfg = new WorldConfig { Seed = Environment.TickCount, WidthKm = 2000, HeightKm = 1600, TileWidthKm = 10 };
+        var simCfg   = SimConfigLoader.LoadOrCreateDefault();
+        var progress = new Progress<(string, float)>(p => _genProgress.Enqueue(p));
+        _genTask = Task.Run(() => GenerateWorld(worldCfg, simCfg, progress));
     }
 
     protected override void Draw(GameTime gameTime)
