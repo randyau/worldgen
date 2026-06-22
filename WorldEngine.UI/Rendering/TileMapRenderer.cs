@@ -16,9 +16,14 @@ public sealed class TileMapRenderer(GraphicsDevice gd, Camera2D camera)
         foreach (var (coord, tile) in snapshot.VisibleTiles)
         {
             var screenPos = camera.TileToScreen(coord);
-            var rect = new Rectangle(
-                (int)screenPos.X, (int)screenPos.Y,
-                (int)camera.Zoom, (int)camera.Zoom);
+            // Round both edges independently so tiles pack without gaps.
+            // At non-integer zoom, each tile is either floor(zoom) or ceil(zoom) px wide,
+            // distributed evenly — prevents the irregular moiré from double-flooring.
+            int x0 = (int)MathF.Round(screenPos.X);
+            int y0 = (int)MathF.Round(screenPos.Y);
+            int x1 = (int)MathF.Round(screenPos.X + camera.Zoom);
+            int y1 = (int)MathF.Round(screenPos.Y + camera.Zoom);
+            var rect = new Rectangle(x0, y0, x1 - x0, y1 - y0);
 
             var color = OverlayRenderer.GetColor(tile, snapshot.ActiveOverlay);
             sb.Draw(_pixel, rect, color);
@@ -36,15 +41,18 @@ public sealed class TileMapRenderer(GraphicsDevice gd, Camera2D camera)
         // Draw selection highlight over the inspected tile
         if (snapshot.InspectedTile?.Coord is TileCoord sel)
         {
-            var pos  = camera.TileToScreen(sel);
-            int size = (int)camera.Zoom;
-            int x = (int)pos.X, y = (int)pos.Y;
+            var pos = camera.TileToScreen(sel);
+            int x0s = (int)MathF.Round(pos.X);
+            int y0s = (int)MathF.Round(pos.Y);
+            int x1s = (int)MathF.Round(pos.X + camera.Zoom);
+            int y1s = (int)MathF.Round(pos.Y + camera.Zoom);
+            int w = x1s - x0s, h = y1s - y0s;
             var hi = Color.Yellow;
             const int B = 2;
-            sb.Draw(_pixel, new Rectangle(x,          y,          size, B),    hi); // top
-            sb.Draw(_pixel, new Rectangle(x,          y + size-B, size, B),    hi); // bottom
-            sb.Draw(_pixel, new Rectangle(x,          y,          B,    size), hi); // left
-            sb.Draw(_pixel, new Rectangle(x + size-B, y,          B,    size), hi); // right
+            sb.Draw(_pixel, new Rectangle(x0s,      y0s,      w, B),    hi); // top
+            sb.Draw(_pixel, new Rectangle(x0s,      y1s - B,  w, B),    hi); // bottom
+            sb.Draw(_pixel, new Rectangle(x0s,      y0s,      B, h),    hi); // left
+            sb.Draw(_pixel, new Rectangle(x1s - B,  y0s,      B, h),    hi); // right
         }
     }
 
