@@ -20,6 +20,10 @@ public class ClimateConfig
     public float MaxWarmingAnomaly { get; set; } = 5.0f;
     public float MaxCoolingAnomaly { get; set; } = 3.0f;
     public float StormCorridorShiftPerDegree { get; set; } = 0.005f;
+    public float MonsoonAnomalySensitivity { get; set; } = 0.01f;
+    public float MonsoonMultiplierMin { get; set; } = 0.5f;
+    public float MonsoonMultiplierMax { get; set; } = 3.0f;
+    public float LatTemperatureAnomalyScale { get; set; } = 1.4f;
 
     // Phase 5 — sea level (annual)
     public float AnnualSeaLevelDriftRate { get; set; } = 0.0f;

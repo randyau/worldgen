@@ -8,16 +8,25 @@ public class DisasterConfig
     public float FloodIgnitionProbabilityPerTick { get; set; } = 0.0002f;
 
     public float VolcanicEruptionProbabilityPerTick { get; set; } = 0.0002f;
+    public float VolcanicAshIntensity { get; set; } = 1.0f;
+    public float VolcanicActivityBoost { get; set; } = 0.5f;
+    public float VolcanicActivityMultiplierCap { get; set; } = 10.0f;
     public float EarthquakeProbabilityPerTick { get; set; } = 0.0005f;
+    public float EarthquakeIntensity { get; set; } = 0.8f;
+    public int EarthquakeDecayTicks { get; set; } = 8;
     public float WildfireIgnitionDryMultiplier { get; set; } = 3.0f;
     public byte WildfireDryMoistureThreshold { get; set; } = 60;
+    public float WildfireIntensity { get; set; } = 1.0f;
     public byte FloodWetMoistureThreshold { get; set; } = 200;
+    public float FloodWetMultiplier { get; set; } = 2.0f;
     public int FloodSpreadRadius { get; set; } = 1;
-    public int EarthquakeDecayTicks { get; set; } = 8;
+    public float FloodOriginIntensity { get; set; } = 0.7f;
+    public float FloodSpreadIntensity { get; set; } = 0.5f;
+    public int FloodOriginTicks { get; set; } = 6;
+    public int FloodSpreadTicks { get; set; } = 4;
     public float DroughtProbabilityPerYear { get; set; } = 0.05f;
     public float DroughtDroughtMultiplier { get; set; } = 2.0f;
     public float DroughtPrecipitationThreshold { get; set; } = 0.7f;
     public int DroughtMinSeasons { get; set; } = 2;
     public int DroughtMaxSeasons { get; set; } = 8;
-    public float VolcanicActivityBoost { get; set; } = 0.5f;
 }

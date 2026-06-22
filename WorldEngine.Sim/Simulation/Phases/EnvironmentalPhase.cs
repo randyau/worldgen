@@ -121,8 +121,8 @@ public sealed class EnvironmentalPhase
 
             // Monsoon multiplier varies with anomaly
             world.MonsoonIntensityMultiplier = Math.Clamp(
-                cfg.MonsoonIntensityMultiplier + world.GlobalTemperatureAnomaly * 0.01f,
-                0.5f, 3.0f);
+                cfg.MonsoonIntensityMultiplier + world.GlobalTemperatureAnomaly * cfg.MonsoonAnomalySensitivity,
+                cfg.MonsoonMultiplierMin, cfg.MonsoonMultiplierMax);
         }
 
         // Biome reclassification always runs when anomaly is non-zero
@@ -149,7 +149,7 @@ public sealed class EnvironmentalPhase
 
                 // Compute effective temperature including anomaly
                 float normalizedLat = y / (float)h;
-                float latScale = 1.0f + MathF.Abs(normalizedLat - 0.5f) * 1.4f;
+                float latScale = 1.0f + MathF.Abs(normalizedLat - 0.5f) * cfg.Climate.LatTemperatureAnomalyScale;
                 int effectiveTemp = (int)Math.Clamp(
                     tile.BaseTemperature + GetSeasonalTempDelta(profile, world.CurrentSeason)
                     + world.GlobalTemperatureAnomaly * latScale,
@@ -324,8 +324,10 @@ public sealed class EnvironmentalPhase
                 float roll = WorldRng.FloatAt(world.WorldSeed, world.CurrentTick, coord.X, coord.Y, DisasterSalts.VolcanicEruption);
                 float prob = dcfg.VolcanicEruptionProbabilityPerTick * world.VolcanicActivityMultiplier;
                 if (roll >= prob) continue;
-                AddDisaster(world, coord, new ActiveDisaster(DisasterType.VolcanicAsh, 1.0f, -1, new EventId(0)));
-                world.VolcanicActivityMultiplier += dcfg.VolcanicActivityBoost;
+                AddDisaster(world, coord, new ActiveDisaster(DisasterType.VolcanicAsh, dcfg.VolcanicAshIntensity, -1, new EventId(0)));
+                world.VolcanicActivityMultiplier = MathF.Min(
+                    world.VolcanicActivityMultiplier + dcfg.VolcanicActivityBoost,
+                    dcfg.VolcanicActivityMultiplierCap);
                 pending.Add(new PendingEvent(EventType.VolcanicEruption, coord, null, "{}"));
             }
         }
@@ -342,7 +344,7 @@ public sealed class EnvironmentalPhase
                 if (!tile.StaticFlags.HasFlag(TileStaticFlags.IsFaultLine)) continue;
                 float roll = WorldRng.FloatAt(world.WorldSeed, world.CurrentTick, coord.X, coord.Y, DisasterSalts.Earthquake);
                 if (roll >= dcfg.EarthquakeProbabilityPerTick) continue;
-                AddDisaster(world, coord, new ActiveDisaster(DisasterType.SeismicDamage, 0.8f, dcfg.EarthquakeDecayTicks, new EventId(0)));
+                AddDisaster(world, coord, new ActiveDisaster(DisasterType.SeismicDamage, dcfg.EarthquakeIntensity, dcfg.EarthquakeDecayTicks, new EventId(0)));
                 pending.Add(new PendingEvent(EventType.Earthquake, coord, null, "{}"));
             }
         }
@@ -368,7 +370,7 @@ public sealed class EnvironmentalPhase
 
                 float roll = WorldRng.FloatAt(world.WorldSeed, world.CurrentTick, coord.X, coord.Y, DisasterSalts.Wildfire);
                 if (roll >= prob) continue;
-                AddDisaster(world, coord, new ActiveDisaster(DisasterType.Wildfire, 1.0f, dcfg.WildfireMaxTicks, new EventId(0)));
+                AddDisaster(world, coord, new ActiveDisaster(DisasterType.Wildfire, dcfg.WildfireIntensity, dcfg.WildfireMaxTicks, new EventId(0)));
                 pending.Add(new PendingEvent(EventType.WildfireOccurred, coord, null, "{}"));
             }
         }
@@ -395,7 +397,7 @@ public sealed class EnvironmentalPhase
 
                 float roll = WorldRng.FloatAt(world.WorldSeed, world.CurrentTick, nb.X, nb.Y, DisasterSalts.WildfireSpread);
                 if (roll >= dcfg.WildfireSpreadProbabilityPerTick) continue;
-                AddDisaster(world, nb, new ActiveDisaster(DisasterType.Wildfire, 1.0f, dcfg.WildfireMaxTicks, new EventId(0)));
+                AddDisaster(world, nb, new ActiveDisaster(DisasterType.Wildfire, dcfg.WildfireIntensity, dcfg.WildfireMaxTicks, new EventId(0)));
                 // No new PendingEvent for spread — shares root fire's causal chain
             }
         }
@@ -405,7 +407,6 @@ public sealed class EnvironmentalPhase
     {
         if (world.CurrentSeason is not (Season.Spring or Season.Summer)) return;
         var dcfg = _cfg.Disasters;
-        int w = world.TileGrid.TileWidth, h = world.TileGrid.TileHeight;
 
         foreach (var (cx, cy, chunk) in world.TileGrid.AllChunksWithCoords())
         {
@@ -417,26 +418,20 @@ public sealed class EnvironmentalPhase
 
                 float prob = dcfg.FloodIgnitionProbabilityPerTick;
                 if (tile.CurrentMoisture >= dcfg.FloodWetMoistureThreshold)
-                    prob *= 2.0f;
+                    prob *= dcfg.FloodWetMultiplier;
 
                 float roll = WorldRng.FloatAt(world.WorldSeed, world.CurrentTick, coord.X, coord.Y, DisasterSalts.Flood);
                 if (roll >= prob) continue;
 
-                AddDisaster(world, coord, new ActiveDisaster(DisasterType.Flood, 0.7f, 6, new EventId(0)));
+                AddDisaster(world, coord, new ActiveDisaster(DisasterType.Flood, dcfg.FloodOriginIntensity, dcfg.FloodOriginTicks, new EventId(0)));
                 pending.Add(new PendingEvent(EventType.FloodOccurred, coord, null, "{}"));
 
-                // Spread to immediate neighbors
-                TileCoord[] floodNeighbors = {
-                    new TileCoord(((coord.X + 1) % w + w) % w, coord.Y),
-                    new TileCoord(((coord.X - 1) % w + w) % w, coord.Y),
-                    new TileCoord(coord.X, Math.Clamp(coord.Y - 1, 0, h - 1)),
-                    new TileCoord(coord.X, Math.Clamp(coord.Y + 1, 0, h - 1)),
-                };
-                foreach (var nb in floodNeighbors)
+                foreach (var nb in world.GetTilesInRadius(coord, dcfg.FloodSpreadRadius))
                 {
+                    if (nb == coord) continue;
                     var nbTile = world.TileGrid.GetTile(nb);
                     if ((BiomeType)nbTile.BiomeType is BiomeType.Ocean or BiomeType.CoastalWater) continue;
-                    AddDisaster(world, nb, new ActiveDisaster(DisasterType.Flood, 0.5f, 4, new EventId(0)));
+                    AddDisaster(world, nb, new ActiveDisaster(DisasterType.Flood, dcfg.FloodSpreadIntensity, dcfg.FloodSpreadTicks, new EventId(0)));
                 }
             }
         }
@@ -444,27 +439,39 @@ public sealed class EnvironmentalPhase
 
     private static void TickDownActiveDisasters(WorldState world)
     {
-        foreach (var coord in world.ActiveTileDisasters.Keys.ToList())
+        var toRemove = new List<TileCoord>();
+
+        foreach (var (coord, list) in world.ActiveTileDisasters)
         {
-            var list = world.ActiveTileDisasters[coord];
+            bool wildfireExpired = false;
             for (int i = list.Count - 1; i >= 0; i--)
             {
                 var d = list[i];
                 if (d.TicksRemaining < 0) continue; // indefinite (e.g. volcanic ash deposit)
                 if (d.TicksRemaining <= 1)
+                {
+                    if (d.Type == DisasterType.Wildfire) wildfireExpired = true;
                     list.RemoveAt(i);
+                }
                 else
+                {
                     list[i] = d with { TicksRemaining = d.TicksRemaining - 1 };
+                }
             }
 
             if (list.Count == 0)
             {
-                world.ActiveTileDisasters.Remove(coord);
+                toRemove.Add(coord);
                 var tile = world.TileGrid.GetTile(coord);
                 tile.DynFlags &= ~TileDynFlags.HasActiveDisaster;
+                if (wildfireExpired && IsForestBiome((BiomeType)tile.BiomeType))
+                    tile.DynFlags |= TileDynFlags.RecentlyBurned;
                 world.TileGrid.SetTile(coord, tile);
             }
         }
+
+        foreach (var coord in toRemove)
+            world.ActiveTileDisasters.Remove(coord);
     }
 
     private void RunDroughtsAnnual(WorldState world, List<PendingEvent> pending)
@@ -573,12 +580,12 @@ public sealed class EnvironmentalPhase
                         fertility = Math.Min(255, fertility + cfg.FertilityRecoveryPerYear);
                 }
 
-                // Post-fire boost: tile that just cleared a wildfire (no active disaster, was forest)
-                bool justClearedFire = !tile.DynFlags.HasFlag(TileDynFlags.HasActiveDisaster)
-                    && biome is BiomeType.TemperateForest or BiomeType.TropicalRainforest or BiomeType.BorealForest
-                    && fertility < 100; // low fertility suggests recent damage
-                if (justClearedFire)
+                // Post-fire boost: tile where wildfire just expired this tick
+                if (tile.DynFlags.HasFlag(TileDynFlags.RecentlyBurned))
+                {
                     fertility = Math.Min(255, fertility + cfg.PostFireFertilityBoost);
+                    tile.DynFlags &= ~TileDynFlags.RecentlyBurned;
+                }
 
                 if ((byte)fertility != tile.Fertility)
                 {
