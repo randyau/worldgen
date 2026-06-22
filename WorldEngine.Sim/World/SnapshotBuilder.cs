@@ -11,14 +11,13 @@ public sealed class SnapshotBuilder
 {
     public WorldSnapshot Build(
         WorldState world,
-        ViewportRect viewport,
         OverlayType activeOverlay,
         SimSpeed currentSpeed,
         bool paused,
         long ticksPerSecond,
         IReadOnlyList<SimEvent> recentEvents)
     {
-        var tiles = BuildVisibleTiles(world, viewport);
+        var tiles = BuildAllTiles(world);
         var inspected = world.InspectedTile.HasValue
             ? BuildInspectorData(world, world.InspectedTile.Value)
             : null;
@@ -29,7 +28,7 @@ public sealed class SnapshotBuilder
             CurrentSpeed:                currentSpeed,
             IsPaused:                    paused,
             TicksPerSecond:              ticksPerSecond,
-            VisibleTiles:                tiles,
+            AllTiles:                    tiles,
             ActiveOverlay:               activeOverlay,
             WorldTileWidth:              world.TileGrid.TileWidth,
             WorldTileHeight:             world.TileGrid.TileHeight,
@@ -41,23 +40,16 @@ public sealed class SnapshotBuilder
         );
     }
 
-    private static IReadOnlyDictionary<TileCoord, TileDisplayData> BuildVisibleTiles(
-        WorldState world, ViewportRect viewport)
+    private static TileDisplayData[] BuildAllTiles(WorldState world)
     {
-        var result = new Dictionary<TileCoord, TileDisplayData>(viewport.Width * viewport.Height);
         int w = world.TileGrid.TileWidth, h = world.TileGrid.TileHeight;
-
-        for (int y = viewport.Y; y < viewport.Y + viewport.Height; y++)
-        {
-            int clampedY = Math.Clamp(y, 0, h - 1);
-            for (int x = viewport.X; x < viewport.X + viewport.Width; x++)
+        var result = new TileDisplayData[w * h];
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
             {
-                int wrappedX = ((x % w) + w) % w;
-                var coord = new TileCoord(wrappedX, clampedY);
-                result[coord] = BuildTileDisplayData(world, coord);
+                var coord = new TileCoord(x, y);
+                result[y * w + x] = BuildTileDisplayData(world, coord);
             }
-        }
-
         return result;
     }
 

@@ -1,6 +1,5 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using WorldEngine.Sim.Commands;
 using WorldEngine.Sim.Core;
 
 namespace WorldEngine.UI.Rendering;
@@ -42,9 +41,4 @@ public sealed class Camera2D
         return (tl.X - 1, tl.Y - 1, br.X + 1, br.Y + 1);
     }
 
-    public void FlushViewportCommand(CommandQueue queue, GraphicsDevice gd)
-    {
-        var (minX, minY, maxX, maxY) = GetVisibleTileBounds(gd);
-        queue.Enqueue(new SetViewport(minX, minY, maxX - minX + 1, maxY - minY + 1));
-    }
 }

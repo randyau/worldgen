@@ -12,29 +12,45 @@ public sealed class TileMapRenderer(GraphicsDevice gd, Camera2D camera)
     public void Draw(SpriteBatch sb, WorldSnapshot snapshot)
     {
         bool drawBorder = camera.Zoom > 4f;
+        int tw = snapshot.WorldTileWidth, th = snapshot.WorldTileHeight;
 
-        foreach (var (coord, tile) in snapshot.VisibleTiles)
+        // Compute visible tile range from current camera — no round-trip through sim thread
+        int screenW = sb.GraphicsDevice.Viewport.Width;
+        int screenH = sb.GraphicsDevice.Viewport.Height;
+        var tl = camera.ScreenToTile(Vector2.Zero);
+        var br = camera.ScreenToTile(new Vector2(screenW, screenH));
+        int minX = tl.X - 1;
+        int minY = Math.Max(0, tl.Y - 1);
+        int maxX = br.X + 1;
+        int maxY = Math.Min(th - 1, br.Y + 1);
+
+        for (int ty = minY; ty <= maxY; ty++)
         {
-            var screenPos = camera.TileToScreen(coord);
-            // Round both edges independently so tiles pack without gaps.
-            // At non-integer zoom, each tile is either floor(zoom) or ceil(zoom) px wide,
-            // distributed evenly — prevents the irregular moiré from double-flooring.
-            int x0 = (int)MathF.Round(screenPos.X);
-            int y0 = (int)MathF.Round(screenPos.Y);
-            int x1 = (int)MathF.Round(screenPos.X + camera.Zoom);
-            int y1 = (int)MathF.Round(screenPos.Y + camera.Zoom);
-            var rect = new Rectangle(x0, y0, x1 - x0, y1 - y0);
-
-            var color = OverlayRenderer.GetColor(tile, snapshot.ActiveOverlay);
-            sb.Draw(_pixel, rect, color);
-
-            if (drawBorder)
+            for (int tx = minX; tx <= maxX; tx++)
             {
-                var borderColor = Color.Black * 0.3f;
-                // Top edge
-                sb.Draw(_pixel, new Rectangle(rect.X, rect.Y, rect.Width, 1), borderColor);
-                // Left edge
-                sb.Draw(_pixel, new Rectangle(rect.X, rect.Y, 1, rect.Height), borderColor);
+                int wx  = ((tx % tw) + tw) % tw;
+                int idx = ty * tw + wx;
+                if ((uint)idx >= (uint)snapshot.AllTiles.Length) continue;
+
+                var coord     = new TileCoord(wx, ty);
+                var tile      = snapshot.AllTiles[idx];
+                var screenPos = camera.TileToScreen(coord);
+
+                // Round both edges independently so tiles pack without gaps.
+                int x0 = (int)MathF.Round(screenPos.X);
+                int y0 = (int)MathF.Round(screenPos.Y);
+                int x1 = (int)MathF.Round(screenPos.X + camera.Zoom);
+                int y1 = (int)MathF.Round(screenPos.Y + camera.Zoom);
+                var rect = new Rectangle(x0, y0, x1 - x0, y1 - y0);
+
+                sb.Draw(_pixel, rect, OverlayRenderer.GetColor(tile, snapshot.ActiveOverlay));
+
+                if (drawBorder)
+                {
+                    var borderColor = Color.Black * 0.3f;
+                    sb.Draw(_pixel, new Rectangle(rect.X, rect.Y, rect.Width, 1), borderColor);
+                    sb.Draw(_pixel, new Rectangle(rect.X, rect.Y, 1, rect.Height), borderColor);
+                }
             }
         }
 

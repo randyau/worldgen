@@ -28,8 +28,8 @@ public class SnapshotBuilderTests
 
     private static readonly SnapshotBuilder _builder = new();
 
-    private static WorldSnapshot Snap(WorldState world, ViewportRect? vp = null) =>
-        _builder.Build(world, vp ?? ViewportRect.Default, OverlayType.Biome,
+    private static WorldSnapshot Snap(WorldState world) =>
+        _builder.Build(world, OverlayType.Biome,
             SimSpeed.Normal, paused: false, ticksPerSecond: 4, recentEvents: Array.Empty<SimEvent>());
 
     [Fact]
@@ -37,20 +37,18 @@ public class SnapshotBuilderTests
     {
         var world = BuildWorld();
         int w = world.TileGrid.TileWidth, h = world.TileGrid.TileHeight;
-        var vp = new ViewportRect(0, 0, w, h);
-        var snap = Snap(world, vp);
+        var snap = Snap(world);
 
-        // Equatorial row ≈ center Y; polar rows are at Y=0 and Y=h-1
         int equatorY = h / 2;
         int polarY   = 0;
 
         float equatorTemp = 0f; int equatorCount = 0;
         float polarTemp   = 0f; int polarCount   = 0;
 
-        foreach (var (coord, tile) in snap.VisibleTiles)
+        for (int x = 0; x < w; x++)
         {
-            if (coord.Y == equatorY) { equatorTemp += tile.EffectiveTemperature; equatorCount++; }
-            if (coord.Y == polarY)   { polarTemp   += tile.EffectiveTemperature; polarCount++;   }
+            equatorTemp += snap.AllTiles[equatorY * w + x].EffectiveTemperature; equatorCount++;
+            polarTemp   += snap.AllTiles[polarY   * w + x].EffectiveTemperature; polarCount++;
         }
 
         float meanEquator = equatorCount > 0 ? equatorTemp / equatorCount : 0;
@@ -64,18 +62,17 @@ public class SnapshotBuilderTests
     public void SnapshotBuilder_HasActiveDisasterTrueWhenInRegistry()
     {
         var world = BuildWorld();
-        int w = world.TileGrid.TileWidth;
-        var testCoord = new TileCoord(w / 2, world.TileGrid.TileHeight / 2);
+        int w = world.TileGrid.TileWidth, h = world.TileGrid.TileHeight;
+        var testCoord = new TileCoord(w / 2, h / 2);
 
         world.ActiveTileDisasters[testCoord] = new List<ActiveDisaster>
         {
             new ActiveDisaster(DisasterType.Wildfire, 0.5f, 5, new EventId(1))
         };
 
-        var vp = new ViewportRect(0, 0, w, world.TileGrid.TileHeight);
-        var snap = Snap(world, vp);
+        var snap = Snap(world);
 
-        snap.VisibleTiles[testCoord].HasActiveDisaster.Should().BeTrue(
+        snap.AllTiles[testCoord.Y * w + testCoord.X].HasActiveDisaster.Should().BeTrue(
             "tile with an entry in ActiveTileDisasters must have HasActiveDisaster=true");
     }
 
@@ -84,15 +81,16 @@ public class SnapshotBuilderTests
     {
         var world = BuildWorld();
         int w = world.TileGrid.TileWidth, h = world.TileGrid.TileHeight;
-        var vp = new ViewportRect(0, 0, w, h);
-        var snap = Snap(world, vp);
+        var snap = Snap(world);
 
-        foreach (var (coord, tile) in snap.VisibleTiles)
-        {
-            if (!world.ActiveTileDisasters.ContainsKey(coord))
-                tile.HasActiveDisaster.Should().BeFalse(
-                    $"tile {coord} not in ActiveTileDisasters must have HasActiveDisaster=false");
-        }
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+            {
+                var coord = new TileCoord(x, y);
+                if (!world.ActiveTileDisasters.ContainsKey(coord))
+                    snap.AllTiles[y * w + x].HasActiveDisaster.Should().BeFalse(
+                        $"tile {coord} not in ActiveTileDisasters must have HasActiveDisaster=false");
+            }
     }
 
     [Fact]
@@ -101,7 +99,7 @@ public class SnapshotBuilderTests
         var world = BuildWorld();
         int w = world.TileGrid.TileWidth, h = world.TileGrid.TileHeight;
         world.InspectedTile = new TileCoord(w / 2, h / 2);
-        var snap = Snap(world, new ViewportRect(0, 0, w, h));
+        var snap = Snap(world);
 
         snap.InspectedTile.Should().NotBeNull(
             "InspectedTile should be set in the snapshot when world.InspectedTile is set");
@@ -149,7 +147,7 @@ public class SnapshotBuilderTests
         if (depositCoord == default) return; // no deposits in this seed — skip
 
         world.InspectedTile = depositCoord;
-        var snap = Snap(world, new ViewportRect(0, 0, w, h));
+        var snap = Snap(world);
 
         snap.InspectedTile!.Deposits.Should()
             .BeEquivalentTo(world.ResourceRegistry[depositCoord],
@@ -171,7 +169,7 @@ public class SnapshotBuilderTests
         world.ActiveTileDisasters[coord] = disasters;
         world.InspectedTile = coord;
 
-        var snap = Snap(world, new ViewportRect(0, 0, w, h));
+        var snap = Snap(world);
 
         snap.InspectedTile!.Disasters.Should()
             .BeEquivalentTo(disasters, "inspector data must include all disasters from registry");
@@ -200,7 +198,7 @@ public class SnapshotBuilderTests
         world.ActiveDroughts.Add(new ActiveDrought(latBand, biome, 0.6f, 2, new EventId(99)));
         world.InspectedTile = landCoord;
 
-        var snap = Snap(world, new ViewportRect(0, 0, w, h));
+        var snap = Snap(world);
 
         snap.InspectedTile!.IsInActiveDrought.Should().BeTrue(
             "tile whose biome+latitude band matches an ActiveDrought should report IsInActiveDrought=true");

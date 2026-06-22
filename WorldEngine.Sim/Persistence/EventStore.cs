@@ -185,6 +185,17 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
         Query($"{SelectColumns} WHERE IsFirstOfKind = 1 AND Year >= @fromYear AND Year <= @toYear ORDER BY Id;",
             new { fromYear, toYear });
 
+    /// <summary>
+    /// Removes all events and causal edges while keeping the schema intact.
+    /// Use before reusing the same DB file for a new world.
+    /// </summary>
+    public void Truncate()
+    {
+        _conn.Execute("DELETE FROM CausalEdges;");
+        _conn.Execute("DELETE FROM Events;");
+        _conn.Execute("PRAGMA wal_checkpoint(TRUNCATE);");
+    }
+
     public void Dispose() => _conn.Dispose();
 
     // ---- helpers ----

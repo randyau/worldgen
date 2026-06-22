@@ -8,7 +8,7 @@ public class StateCacheTests
     private static WorldSnapshot MakeSnap(int year) => new WorldSnapshot(
         CurrentYear: year, CurrentSeason: Season.Spring, CurrentSpeed: SimSpeed.Normal,
         IsPaused: false, TicksPerSecond: 4,
-        VisibleTiles: new Dictionary<TileCoord, TileDisplayData>(),
+        AllTiles: Array.Empty<TileDisplayData>(),
         ActiveOverlay: OverlayType.Biome,
         WorldTileWidth: 50, WorldTileHeight: 40,
         RecentEvents: Array.Empty<SimEvent>(),

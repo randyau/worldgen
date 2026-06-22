@@ -14,8 +14,8 @@ public sealed record WorldSnapshot(
     bool IsPaused,
     long TicksPerSecond,
 
-    // Map
-    IReadOnlyDictionary<TileCoord, TileDisplayData> VisibleTiles,
+    // Map — flat array indexed by (y * WorldTileWidth + x); X wraps, Y clamps
+    TileDisplayData[] AllTiles,
     OverlayType ActiveOverlay,
     int WorldTileWidth,
     int WorldTileHeight,

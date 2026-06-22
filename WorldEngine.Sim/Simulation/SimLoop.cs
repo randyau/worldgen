@@ -28,7 +28,6 @@ public sealed class SimLoop
     private bool _paused;
     private bool _stepOneTick;
 
-    private ViewportRect _viewport = ViewportRect.Default;
     private OverlayType _overlay = OverlayType.Biome;
 
     public SimLoop(
@@ -115,7 +114,7 @@ public sealed class SimLoop
     {
         var recentEvents = _eventCache.GetRecent(_world.SimConfig.Events.RecentEventCacheSize);
         var snapshot = _snapshotBuilder.Build(
-            _world, _viewport, _overlay,
+            _world, _overlay,
             _currentSpeed, _paused,
             ticksPerSecond: (long)TicksPerSecond(),
             recentEvents: recentEvents);
@@ -135,9 +134,6 @@ public sealed class SimLoop
                 break;
             case StepOneTick:
                 _stepOneTick = true;
-                break;
-            case SetViewport v:
-                _viewport = new ViewportRect(v.X, v.Y, v.Width, v.Height);
                 break;
             case SetInspectedTile t:
                 _world.InspectedTile = t.Coord;

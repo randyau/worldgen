@@ -44,9 +44,11 @@ public sealed class Game1 : Game
 
     // Input
     private MouseState _prevMouse;
+    private KeyboardState _prevKb;
     private bool _simStarted;
     private bool _simCrashReported;
     private Label? _crashLabel;
+    private WorldSnapshot? _lastSnapshot;
 
     public Game1()
     {
@@ -176,13 +178,19 @@ public sealed class Game1 : Game
         if (snapshot is not null && _simStarted)
         {
             HandleInput(snapshot);
-            _timeControls?.Update(snapshot);
-            _eventLog?.Update(snapshot);
-            _tileInspector?.Update(snapshot.InspectedTile);
+            // Only rebuild Myra widgets when the sim has committed a new snapshot
+            if (!ReferenceEquals(snapshot, _lastSnapshot))
+            {
+                _lastSnapshot = snapshot;
+                _timeControls?.Update(snapshot);
+                _eventLog?.Update(snapshot);
+                _tileInspector?.Update(snapshot.InspectedTile);
+            }
         }
 
         _desktop?.UpdateLayout();
         _prevMouse = Mouse.GetState();
+        _prevKb    = Keyboard.GetState();
         base.Update(gameTime);
     }
 
@@ -215,8 +223,6 @@ public sealed class Game1 : Game
 
         _simLoop = new SimLoop(world, _commandQueue, _stateCache, phaseRunner, snapshotBuilder, simCfg, eventCache);
         _simLoop.Start();
-
-        _camera?.FlushViewportCommand(_commandQueue, GraphicsDevice);
     }
 
     private void HandleInput(WorldSnapshot snapshot)
@@ -229,7 +235,6 @@ public sealed class Game1 : Game
         {
             var delta = new Vector2(mouse.X - _prevMouse.X, mouse.Y - _prevMouse.Y);
             _camera.Pan(-delta);
-            _camera.FlushViewportCommand(_commandQueue, GraphicsDevice);
         }
 
         // Scroll wheel zoom
@@ -238,7 +243,6 @@ public sealed class Game1 : Game
         {
             float factor = scrollDelta > 0 ? 1.15f : 1f / 1.15f;
             _camera.ZoomAt(new Vector2(mouse.X, mouse.Y), factor);
-            _camera.FlushViewportCommand(_commandQueue, GraphicsDevice);
         }
 
         // Left-click → inspect tile
@@ -257,20 +261,19 @@ public sealed class Game1 : Game
         if (kb.IsKeyDown(Keys.R)) _commandQueue.Enqueue(new SetActiveOverlay(OverlayType.Resources));
         if (kb.IsKeyDown(Keys.G)) _commandQueue.Enqueue(new SetActiveOverlay(OverlayType.MagicIntensity));
 
-        // N = new world
-        if (kb.IsKeyDown(Keys.N) && _simStarted) ResetToNewWorld();
+        // N = new world (press-edge only, not hold)
+        if (kb.IsKeyDown(Keys.N) && !_prevKb.IsKeyDown(Keys.N) && _simStarted) ResetToNewWorld();
     }
 
     private void ResetToNewWorld()
     {
-        // Stop sim
+        // Stop sim thread first, then truncate DB while connection is still open
+        // (avoids SQLite WAL file-lock on Windows that File.Delete would hit)
         _simLoop?.Stop();
         _simLoop = null;
+        _eventStore?.Truncate();
         _eventStore?.Dispose();
         _eventStore = null;
-
-        // Delete DB so the new run starts clean
-        if (File.Exists("world.db")) File.Delete("world.db");
 
         // Reset state flags
         _simStarted         = false;
