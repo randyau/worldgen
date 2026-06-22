@@ -1,0 +1,465 @@
+# World Engine — Simulation Configuration
+# Version: 0.1
+#
+# This file contains all simulation balance constants.
+# Edit values here to tune behavior without recompiling.
+# All values have comments explaining what they control.
+#
+# PROFILES: Create files in config/profiles/ that override specific sections.
+# Profile files only need to include the values they override.
+#
+# RULE: If a number affects simulation behavior or balance, it lives here.
+# Structural constants (save format version, enum values) stay in code.
+
+# =============================================================================
+# WORLD GENERATION
+# =============================================================================
+
+[world_gen]
+default_tile_size_km    = 10      # Real-world km per world-scale tile
+default_width_km        = 4000    # Default world width (Europe-scale)
+default_height_km       = 3000    # Default world height (Europe-scale)
+chunk_size              = 16      # Tile grid chunk dimensions (16×16 tiles per chunk)
+border_manifest_samples = 64      # Samples per tile edge in border manifests
+magic_intensity_scale   = 1.0     # Multiplier on magic intensity peaks (V2 stub)
+
+[world_gen.elevation]
+noise_scale             = 0.3     # How much noise varies elevation around tectonic baseline
+mountain_threshold      = 0.7     # Elevation above which terrain is classified as mountain
+tectonic_intensity      = 0.8     # How dramatic plate collision effects are (0=gentle, 1=extreme)
+
+[world_gen.ocean]
+default_sea_level       = 0.35    # Fraction of elevation range below which is ocean
+                                   # Higher = more ocean, lower = more land
+
+[world_gen.climate]
+equator_temperature     = 0.9     # Temperature at equator (0-1 scaled)
+pole_temperature        = 0.05    # Temperature at poles (0-1 scaled)
+elevation_temp_penalty  = 0.4     # How much elevation reduces temperature
+rain_shadow_strength    = 0.7     # How much mountains reduce precipitation on leeward side
+monsoon_threshold       = 0.6     # Moisture level above which a region has monsoon season
+storm_corridor_latitude = 0.55    # Normalized latitude band where storm corridors form
+
+[world_gen.resources]
+iron_density            = 0.08    # Fraction of mountain/hill tiles with iron deposits
+copper_density          = 0.04    # Fraction of volcanic-adjacent tiles with copper
+tin_density             = 0.015   # Fraction of eligible tiles with tin (rare by design)
+precious_metal_density  = 0.005   # Fraction of volcanic tiles with precious metals
+rare_resource_density   = 0.003   # Fraction of tiles with rare/magical resources
+
+# =============================================================================
+# SIMULATION LOOP
+# =============================================================================
+
+[sim_loop]
+days_per_season         = 90      # Simulation days in one season (affects Daily/Standard sync)
+seasons_per_year        = 4       # Always 4: Spring, Summer, Autumn, Winter
+
+[sim_loop.speed]
+slow_ticks_per_second   = 0.5     # Seasonal ticks per real second at Slow speed
+normal_ticks_per_second = 1.0     # Seasonal ticks per real second at Normal speed
+fast_ticks_per_second   = 10.0    # Seasonal ticks per real second at Fast speed
+ultrafast_snapshot_years = 10     # Push UI snapshot every N sim-years in Ultrafast mode
+
+# =============================================================================
+# EVENTS AND HISTORY
+# =============================================================================
+
+[events]
+# Pre-write gate minimums
+# Increase these to reduce database size (record less)
+# Decrease to record more (use "Background" for development/research mode)
+# Values: "Background"=0, "Character"=1, "Regional"=2, "Headline"=3
+minimum_tier_to_record       = "Background"    # Start permissive, tighten empirically
+minimum_population_impact    = "None"          # Effectively no population gate initially
+
+# Event cache (in-memory ring buffer of recent events)
+cache_size                   = 400    # Number of recent events kept in memory
+                                       # Used for UI event log and IsFirstOfKind checks
+
+# Pruning: events below Regional tier older than this are eligible for pruning
+# Set to 0 to disable pruning (development mode)
+retention_years              = 500
+
+# IsFirstOfKind lookback window
+first_of_kind_lookback_years = 50    # How far back to check when classifying IsFirstOfKind
+
+[events.population_impact_thresholds]
+# Population affected → PopulationImpact tier
+# Both absolute count AND regional fraction are checked — either condition triggers the tier
+catastrophic_absolute        = 10000  # Absolute population affected
+catastrophic_fraction        = 0.25   # Fraction of regional population affected
+major_absolute               = 500
+major_fraction               = 0.05
+moderate_absolute            = 50
+moderate_fraction             = 0.01
+
+[events.gate]
+# Event types always recorded regardless of other gate settings
+# Add to this list for types that should never be filtered
+always_record_types = [
+    "CharacterBorn",
+    "CharacterDied",
+    "CivilizationFounded",
+    "CivilizationCollapsed",
+    "ArtifactCreated",
+    "ArtifactDestroyed",
+    "ReligionFounded",
+    "ReligionExtinct",
+    "WarDeclared",
+    "WarEnded",
+    "GodModeDisasterTriggered",
+    "GodModeEntitySpawned",
+    "GodModeCharacterCreated",
+    "GodModeArtifactPlaced",
+    "GodModeCivilizationForced",
+]
+
+# Event types always suppressed regardless of other gate settings
+# Pure simulation bookkeeping with no narrative value
+# Add to this list empirically as you discover noise categories
+suppressed_types = [
+    "Tier3ResourceTick",
+    "SettlementFoodAccounting",
+    "PopulationGrowthIncrement",
+    "ArmySupplyConsumption",
+    "RelationshipDecayTick",
+]
+
+# Verb classes to suppress entirely (empty = suppress nothing)
+# Add verb classes here if an entire category proves to be noise
+suppressed_verb_classes = []
+
+# =============================================================================
+# ENVIRONMENTAL SIMULATION
+# =============================================================================
+
+[environment]
+# Natural disaster base probabilities per seasonal tick per eligible tile
+# These are per-tick probabilities — multiply by 4 for annual rate
+volcanic_eruption_prob  = 0.0001   # Per volcanic tile per season
+earthquake_prob         = 0.0002   # Per fault line tile per season
+wildfire_prob           = 0.0005   # Per forest tile in dry season
+flood_prob              = 0.001    # Per river-adjacent tile in wet season
+drought_chance_per_year = 0.02     # Per region per year (not per tile)
+
+# Disaster spread
+wildfire_spread_prob    = 0.3      # Probability wildfire spreads to adjacent forest tile per tick
+flood_spread_radius     = 3        # Maximum tiles a flood event spreads from origin
+
+# Climate drift
+climate_drift_rate      = 0.001    # How fast regional temperature/moisture drifts per year
+biome_change_threshold  = 0.15     # How much climate must drift before biome reclassifies
+
+# Resource regeneration rates (fraction of max per year)
+forest_regrowth_rate    = 0.05     # Forests regrow at 5% per year after wildfire
+soil_recovery_rate      = 0.08     # Soil fertility recovers at 8% per year after drought
+fish_recovery_rate      = 0.12     # Fish populations recover at 12% per year
+
+# Sea level change
+sea_level_change_rate   = 0.0002   # Maximum sea level change per year (fraction of world height)
+sea_level_event_threshold = 0.01   # Sea level change required to trigger a SeaLevelChanged event
+
+# =============================================================================
+# CIVILIZATION
+# =============================================================================
+
+[civilization]
+# Population thresholds for settlement state changes
+min_viable_population       = 50      # Below this, settlement is in danger of collapse
+collapse_threshold          = 0.15    # Fraction of peak population — triggers Collapsed state
+recovery_threshold          = 0.40    # Fraction needed to exit Declining state
+
+# Role pressure — population required before Tier 2 specialists crystallize
+# (See also [specialists] section for specialist-specific thresholds)
+first_tier2_threshold       = 100     # Population before first Tier 2 role crystallizes
+tier2_per_population        = 200     # Roughly one new Tier 2 role per N additional population
+
+# Civilization label application
+min_tier1_for_civ_label     = 1       # Minimum Tier 1 leaders
+min_tier2_roles_for_civ     = 3       # Minimum distinct Tier 2 roles
+min_territory_tiles         = 5       # Minimum controlled tiles
+
+# Civilization lifecycle
+ruins_to_myth_years         = 500     # Years before abandoned ruins become Myth state
+ruins_proximity_to_active_bonus = 200 # Bonus years before Myth if near active civilization
+
+[civilization.settler_seeding]
+global_pop_threshold        = 500     # World population below this triggers spontaneous seeding check
+probability_per_century     = 0.15    # 15% chance per century when below threshold
+starting_population         = 20      # Initial settler group size
+
+# =============================================================================
+# ADMINISTRATIVE DISTANCE PENALTY
+# =============================================================================
+
+[admin_distance]
+max_distance_penalty        = 0.6     # Maximum loyalty reduction at zero authority
+max_cultural_bonus          = 0.2     # Loyalty bonus from cultural alignment
+max_religion_bonus          = 0.15    # Loyalty bonus from shared religion
+max_personal_bonus          = 0.25    # Loyalty bonus from personal relationship with Tier 1
+revolt_threshold            = 0.25    # Loyalty below this enables revolt probability
+base_revolt_probability     = 0.02    # Base revolt chance per season at threshold (2%)
+
+[admin_distance.movement_costs]
+# Base movement cost (seasons to traverse) by biome
+plains          = 1.0
+grassland       = 1.0
+forest          = 2.0
+dense_forest    = 3.0
+hills           = 2.0
+mountains       = 5.0
+high_mountains  = 10.0
+desert          = 2.5
+swamp           = 3.0
+tundra          = 2.0
+road_multiplier = 0.4     # Roads reduce movement cost by 60%
+river_following = 0.7     # Following a river reduces cost
+river_crossing  = 1.5     # Crossing a river increases cost
+winter_mult     = 1.8     # Winter slows all movement
+monsoon_mult    = 1.6     # Monsoon season slows movement
+
+[admin_distance.anchors.capital]
+core_radius     = 3.0     # Seasons of travel = full authority
+max_radius      = 15.0    # Seasons of travel = zero authority
+decay_rate      = 0.3
+strength        = 1.0
+
+[admin_distance.anchors.sub_capital]
+core_radius     = 2.0
+max_radius      = 10.0
+decay_rate      = 0.35
+strength        = 0.7
+
+[admin_distance.anchors.tier1_presence]
+core_radius     = 1.0
+max_radius      = 5.0
+decay_rate      = 0.5
+strength        = 0.5
+
+[admin_distance.anchors.garrison]
+core_radius     = 1.0
+max_radius      = 3.0
+decay_rate      = 0.6
+strength        = 0.3
+
+[admin_distance.anchors.religious_center]
+core_radius     = 2.0
+max_radius      = 8.0
+decay_rate      = 0.4
+strength        = 0.4
+
+# =============================================================================
+# CHARACTER SYSTEM
+# =============================================================================
+
+[characters]
+# Tier 1 / Tier 2 limits
+max_tier1_active            = 100     # Maximum simultaneously simulated Tier 1 characters
+max_tier2_active            = 500     # Maximum simultaneously simulated Tier 2 characters
+
+# Relationship dynamics
+relationship_decay_per_tick = 0.01    # Relationship drifts toward neutral without interaction
+max_relationship_value      = 1.0
+min_relationship_value      = -1.0
+
+# Character generation
+personality_noise_stddev    = 0.2     # Gaussian noise on trait generation
+parental_inheritance_weight = 0.6     # How much traits pull toward parent average
+cultural_shift_weight       = 0.3     # How much cultural modifiers shift trait distributions
+
+[characters.needs]
+# Needs decay rates per seasonal tick (how fast unmet needs worsen)
+food_decay                  = 0.10
+safety_decay                = 0.05
+shelter_decay               = 0.01
+belonging_decay             = 0.02
+status_decay                = 0.03
+purpose_decay               = 0.03
+spiritual_decay             = 0.02
+
+# Satisfaction thresholds (needs below this are "unmet" for behavior purposes)
+critical_need_threshold     = 0.2     # Below this, character is in crisis for this need
+unmet_need_threshold        = 0.4     # Below this, need is considered unmet in utility calc
+
+[characters.skills]
+base_growth_rate            = 0.002   # Base skill growth per use per tick
+max_skill_value             = 1.0
+min_skill_value             = 0.0
+diminishing_returns_factor  = 0.7     # How much growth slows near max skill
+                                       # growth_rate × (1 - skill × factor)
+
+[characters.aging]
+adult_age                   = 18      # Age at which character becomes fully active
+elder_age                   = 60      # Age at which decline mechanics begin
+max_age_base                = 80      # Base maximum age before death check each year
+max_age_variance            = 20      # Random variance added to max age
+
+# =============================================================================
+# UTILITY FUNCTION WEIGHTS
+# =============================================================================
+
+[utility]
+# Weights for the utility function — must sum to 1.0
+needs_weight                = 0.40
+goals_weight                = 0.35
+personality_weight          = 0.15
+relationship_weight         = 0.10
+
+# Softmax selection temperature range
+# Higher temperature = more random selection (less deterministic)
+# Curiosity trait interpolates between min and max
+min_temperature             = 0.2
+max_temperature             = 0.5
+
+# Actions with utility below this threshold are ignored
+min_utility_threshold       = 0.05
+
+# Risk aversion
+# Characters risk-averse when action risk exceeds their risk tolerance
+# Risk tolerance = Aggression × 0.5 + Safety_need × 0.3
+max_risk_penalty            = 0.6     # Maximum utility reduction from risk aversion
+
+# =============================================================================
+# GOALS
+# =============================================================================
+
+[goals]
+# How many ticks before a newly spawned goal reaches full urgency
+urgency_ramp_ticks          = 20      # 5 years at seasonal resolution
+
+# Maximum active goals per character
+max_active_goals            = 5       # Goals beyond this are queued
+
+# Goal spawn thresholds — personality traits required to spawn goal types
+vengeance_aggression_min    = 0.3     # Minimum Aggression to spawn VengeanceGoal
+religion_wonder_min         = 0.5     # Minimum Wonder to spawn FoundReligionGoal
+seize_power_aggression_min  = 0.6     # Minimum Aggression for SeizePowerGoal
+seize_power_greed_min       = 0.4     # Minimum Greed for SeizePowerGoal
+
+# =============================================================================
+# SPECIALISTS
+# =============================================================================
+
+[specialists]
+# Minimum settlement population to support each specialist type
+apothecary_threshold        = 200
+priest_threshold            = 300
+entertainer_threshold       = 500
+teacher_threshold           = 500
+weaponsmith_threshold       = 800
+physician_threshold         = 1000
+scholar_threshold           = 2000
+alchemist_threshold         = 3000
+jeweler_threshold           = 3000
+cartographer_threshold      = 5000
+advisor_threshold           = 5000
+spy_threshold               = 8000
+architect_threshold         = 10000
+
+# Livelihood thresholds
+subsistence_needs_threshold = 0.3     # Needs below this = Survival state
+independent_client_minimum  = 3       # Minimum regular clients for Independent state
+
+# Reputation
+reputation_boost_threshold  = 0.7    # Quality above which work boosts reputation
+reputation_decay_rate       = 0.005  # Reputation decay per tick without high-quality work
+reputation_spread_hops      = 2      # How many relationship hops reputation spreads
+
+# =============================================================================
+# ARTIFACTS
+# =============================================================================
+
+[artifacts]
+# Artifact generation (crafting specialists)
+base_generation_probability = 0.05   # At max skill, 5% chance per crafting task
+notable_performance_threshold = 0.75 # Quality above which a performance is notable
+covet_threshold             = 0.6    # Artifact property score above which NPCs covet it
+
+# =============================================================================
+# RELIGION
+# =============================================================================
+
+[religion]
+awe_threshold_base          = 0.6    # Base probability threshold for awe event to trigger religion
+wonder_trait_multiplier     = 0.5    # High Wonder reduces the threshold (more receptive)
+piety_trait_multiplier      = 0.3    # High Piety also reduces threshold
+spread_trust_threshold      = 0.5    # Minimum trust required for religion to spread via relationship
+inter_religion_trust_penalty = -0.15  # Baseline trust penalty between members of different religions
+conversion_experience_threshold = 0.3 # How much more positive experience with new religion before conversion
+
+# =============================================================================
+# CULTURAL MODIFIERS
+# =============================================================================
+
+[cultural_modifiers]
+expiry_threshold            = 0.03   # Modifier magnitude below this is considered expired
+max_active_per_region       = 20     # Performance cap on active modifiers per region
+reinforcement_window_years  = 50     # How recent must a similar event be to reinforce decay slowdown
+reinforcement_bonus         = 0.15   # Magnitude boost per reinforcing event
+
+[cultural_modifiers.half_life_years]
+# How many years for a modifier to halve in magnitude
+# Shorter = fades faster, Longer = persists longer
+animosity_major_war         = 150
+animosity_minor_war         = 60
+fear_disaster               = 100
+reverence_golden_age        = 120
+xenophobia_plague           = 80
+religious_fervor            = 200
+trade_goodwill              = 40
+military_trauma             = 100
+cultural_pride              = 90
+
+# =============================================================================
+# SPATIAL BUFFER (SPOTLIGHT MODE)
+# =============================================================================
+
+[spatial_buffer]
+detailed_radius_world_tiles = 1      # World tiles of daily resolution around spotlight (3×3 zone)
+buffer_width_world_tiles    = 2      # Width of interpolation buffer ring in world tiles
+interpolation_noise_max     = 1      # Maximum tile offset in daily path interpolation
+
+# =============================================================================
+# PERFORMANCE
+# =============================================================================
+
+[performance]
+autosave_interval_ticks     = 40     # state.bin autosave every N ticks (10 years at seasonal)
+snapshot_interval_years     = 100    # Historical snapshot every N sim-years
+event_cache_size            = 400    # Recent events kept in memory (ring buffer)
+voxel_cache_entries         = 5      # LRU voxel grid cache entries
+influence_map_recompute_batch = 10   # Max influence maps recomputed per tick during invalidation
+
+# Tile processing
+dirty_flag_chunk_skip       = true   # Skip chunks with no dirty tiles (significant performance gain)
+parallel_tile_assembly      = true   # Assemble TileGrid in parallel after world gen
+
+# Database
+sqlite_cache_size_kb        = 4096   # SQLite page cache size
+sqlite_mmap_size_mb         = 64     # Memory-mapped I/O size for SQLite
+
+# =============================================================================
+# WORLD GENERATION — TECTONICS
+# =============================================================================
+
+[world_gen.tectonics]
+plate_count = 15
+min_plate_separation_fraction = 0.12
+continental_plate_fraction = 0.45
+
+# =============================================================================
+# WORLD GENERATION — RIVERS
+# =============================================================================
+
+[world_gen.rivers]
+flow_accumulation_threshold = 50
+min_lake_basin_tiles = 20
+major_river_threshold = 500
+
+# =============================================================================
+# WORLD GENERATION — BIOME THRESHOLDS
+# =============================================================================
+
+[world_gen.biome_thresholds]
+# Populated during 1.3.7 — fields added when implementing BiomeClassifier
