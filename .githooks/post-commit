@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Regenerates index.scip after each commit.
+# Runs in background so it never blocks the commit.
+# The index is used by Claude Code sessions via scripts/scip-query.py.
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+LOG="$REPO_ROOT/.scip-index.log"
+
+(
+  cd "$REPO_ROOT"
+  if ! command -v scip-dotnet &>/dev/null; then
+    dotnet tool restore --no-cache 2>/dev/null || true
+  fi
+
+  if command -v scip-dotnet &>/dev/null; then
+    scip-dotnet index WorldEngine.sln \
+      --output index.scip \
+      --skip-dotnet-restore \
+      > "$LOG" 2>&1
+    echo "$(date -Is) indexed $(git rev-parse --short HEAD)" >> "$LOG"
+  else
+    echo "$(date -Is) scip-dotnet not found — run: dotnet tool restore" >> "$LOG"
+  fi
+) &

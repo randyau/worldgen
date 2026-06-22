@@ -34,6 +34,45 @@ The primary audience is worldbuilders and writers, not traditional gamers. The c
 
 ---
 
+## Code Intelligence (SCIP)
+
+This project uses [SCIP](https://github.com/sourcegraph/scip) for compact, queryable code symbol navigation. A `post-commit` hook regenerates `index.scip` (a 1–2 MB binary index) automatically after every commit. The index is git-ignored.
+
+**At session start, prefer SCIP queries over `grep` for symbol navigation:**
+
+```bash
+# Find where a type/method is defined
+python3 scripts/scip-query.py defs TileData
+
+# Find all files that reference a symbol
+python3 scripts/scip-query.py refs IWorldStateReadOnly
+
+# List all defined types
+python3 scripts/scip-query.py types
+
+# Find files that reference an interface (best-effort impl search)
+python3 scripts/scip-query.py impls IWorldGenLayer
+
+# Index statistics
+python3 scripts/scip-query.py stats
+```
+
+**If `index.scip` is missing** (fresh clone or hooks not yet run):
+```bash
+dotnet tool restore           # installs scip-dotnet from .config/dotnet-tools.json
+scip-dotnet index WorldEngine.sln --skip-dotnet-restore
+```
+
+**First-time setup on a new machine:**
+```bash
+git config core.hooksPath .githooks   # enables the post-commit hook
+dotnet tool restore                   # installs scip-dotnet
+```
+
+The `scripts/scip_pb2.py` file is the compiled protobuf binding for the SCIP format; regenerate it with `python3 scripts/scip-query.py --setup` if it ever becomes stale after a proto update.
+
+---
+
 ## Project Structure
 
 ```
@@ -189,10 +228,11 @@ When you encounter a hook point for a V2 feature (e.g., the magic intensity laye
 At the start of each session:
 
 1. Read this file
-2. Read the active phase doc from `docs/phases/` (whichever phase is in progress)
-3. Check `docs/interface_contracts.md` for any interfaces you'll be implementing against
-4. Check existing code in the relevant project directories to understand what's already built
-5. Load `docs/snippets/patterns.md` when you need code boilerplate
+2. Run `python3 scripts/scip-query.py stats` — confirms the SCIP index is fresh and tells you the document/symbol counts. If missing, run `scip-dotnet index WorldEngine.sln --skip-dotnet-restore` first.
+3. Read the active phase doc from `docs/phases/` (whichever phase is in progress)
+4. Check `docs/interface_contracts.md` for any interfaces you'll be implementing against
+5. Use `python3 scripts/scip-query.py defs <TypeName>` to locate types before reading files
+6. Load `docs/snippets/patterns.md` when you need code boilerplate
 
 Do not assume continuity from a previous session. Read the code to understand what exists.
 

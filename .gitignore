@@ -14,3 +14,8 @@ packages/
 # OS
 .DS_Store
 Thumbs.db
+
+# SCIP code intelligence
+index.scip
+.scip-index.log
+scripts/__pycache__/
