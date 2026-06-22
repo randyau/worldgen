@@ -486,3 +486,49 @@ monsoon_moisture_threshold        = 160    # Byte moisture above which tile is m
 storm_corridor_normalized_lat     = 0.35   # Fractional latitude of storm corridor center (0=S, 1=N)
 storm_corridor_half_width         = 0.08   # Fraction of world height defining storm corridor band
 storm_corridor_moisture_bonus_genesis = 0.3  # Moisture bonus multiplier during storm season
+
+# Phase 5 additions — climate drift and sea level
+annual_temp_drift_rate            = 0.0    # degrees per year; 0 = stable climate
+max_warming_anomaly               = 5.0    # max GlobalTemperatureAnomaly (positive)
+max_cooling_anomaly               = 3.0    # max GlobalTemperatureAnomaly magnitude (negative)
+storm_corridor_shift_per_degree   = 0.005  # fractional lat shift per degree of anomaly
+annual_sea_level_drift_rate       = 0.0    # sea level change per year; 0 = stable
+sea_level_event_threshold         = 0.1    # minimum delta to emit SeaLevelChanged event
+volcanic_decay_rate               = 0.05   # VolcanicActivityMultiplier lerp toward 1.0 per year
+
+# =============================================================================
+# DISASTERS (runtime, Phase 5)
+# =============================================================================
+
+[disasters]
+wildfire_ignition_probability_per_tick = 0.0003
+wildfire_ignition_dry_multiplier       = 3.0      # multiplier when moisture < dry threshold
+wildfire_spread_probability_per_tick   = 0.20
+wildfire_max_ticks                     = 16
+wildfire_dry_moisture_threshold        = 60
+flood_ignition_probability_per_tick    = 0.0002
+flood_wet_moisture_threshold           = 200
+flood_spread_radius                    = 1
+volcanic_eruption_probability_per_tick = 0.0002
+volcanic_activity_boost                = 0.5      # added to VolcanicActivityMultiplier per eruption
+earthquake_probability_per_tick        = 0.0005
+earthquake_decay_ticks                 = 8
+drought_probability_per_year           = 0.05
+drought_drought_multiplier             = 2.0      # chance multiplier when precipitation low
+drought_precipitation_threshold        = 0.7
+drought_min_seasons                    = 2
+drought_max_seasons                    = 8
+
+# =============================================================================
+# RESOURCES (runtime, Phase 5)
+# =============================================================================
+
+[resources]
+iron_density                  = 0.08
+copper_density                = 0.04
+tin_density                   = 0.015
+precious_metal_density        = 0.005
+rare_resource_density         = 0.003
+fertility_recovery_per_year   = 1     # byte units per year
+post_fire_fertility_boost     = 30    # temporary fertility bonus after fire clears
+drought_fertility_penalty_per_season = 5

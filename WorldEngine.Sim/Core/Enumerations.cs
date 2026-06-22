@@ -63,7 +63,7 @@ public enum EventType
 {
     // Environmental
     WildfireOccurred, FloodOccurred, VolcanicEruption, Earthquake, DroughtBegan, DroughtEnded,
-    SeaLevelChanged, BiomeShifted,
+    SeaLevelChanged, BiomeShifted, ResourceRecovered,
     // World-level (stubs for future phases)
     CharacterBorn, CharacterDied,
     CivilizationFounded, CivilizationCollapsed,
