@@ -462,7 +462,15 @@ major_river_threshold = 500
 # =============================================================================
 
 [world_gen.biome_thresholds]
-# Populated during 1.3.7 — fields added when implementing BiomeClassifier
+high_mountain_elevation = 220   # byte elevation above which terrain is HighMountain
+mountain_elevation      = 180   # byte elevation above which terrain is Mountain
+hills_elevation         = 140   # byte elevation above which terrain is Hills
+hot_temperature         = 180   # byte temp above which tile is "hot" (tropical/desert zone)
+cold_temperature        = 80    # byte temp below which tile is "cold" (boreal/tundra zone)
+polar_temperature       = 40    # byte temp below which tile is "polar" (tundra/ice)
+wet_moisture            = 160   # byte moisture above which tile is "wet" (forest/rainforest)
+dry_moisture            = 60    # byte moisture below which tile is "dry" (savanna/desert)
+arid_moisture           = 30    # byte moisture below which tile is "arid" (desert only)
 
 # =============================================================================
 # CLIMATE (world-gen parameters for ClimateLayer)

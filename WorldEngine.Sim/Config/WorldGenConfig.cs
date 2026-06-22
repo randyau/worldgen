@@ -14,5 +14,6 @@ public class WorldGenConfig
     public ElevationConfig Elevation { get; set; } = new();
     public OceanConfig Ocean { get; set; } = new();
     public RiversConfig Rivers { get; set; } = new();
+    public ResourcesConfig Resources { get; set; } = new();
     public BiomeThresholdConfig BiomeThresholds { get; set; } = new();
 }
