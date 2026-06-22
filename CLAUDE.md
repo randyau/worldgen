@@ -18,15 +18,12 @@ The primary audience is worldbuilders and writers, not traditional gamers. The c
 - `docs/interface_contracts.md` — critical C# interface signatures (TileData, WorldSnapshot, etc.)
 - `docs/implementation_plan_m1.md` — phase ordering and story-level implementation guide
 
+**Current milestone status:** Milestone 1 COMPLETE (2026-06-22). All 7 phases archived. Beginning Milestone 2 (Character System).
+
 **For coding sessions — read the active phase doc:**
-- `docs/phases/phase_1_foundation.md` — Epic 1.1 stories, tests, file paths
-- `docs/phases/phase_2_tile_structures.md` — Epic 1.2 stories, tests, file paths
-- `docs/phases/phase_3_world_gen.md` — Epic 1.3 stories, tests, file paths
-- `docs/phases/phase_4_sim_loop.md` — Epic 1.4 stories, tests, file paths
-- `docs/phases/phase_5_environmental.md` — Epic 1.5 stories, tests, file paths
-- `docs/phases/phase_6_events.md` — Epic 1.6 stories, tests, file paths
-- `docs/phases/phase_7_ui.md` — Epic 1.7 stories, manual tests
-- `docs/phases/archive/` — completed phases moved here
+- `docs/phases/` — active phase docs for the current milestone (add new M2 phase docs here)
+- `docs/phases/archive/` — all M1 phases archived here for reference
+- `docs/testing/runbook_m1.md` — M1 manual test runbook (use during testing, reference for M2 regression testing)
 
 **Reusable code patterns and test templates:**
 - `docs/snippets/patterns.md` — command pattern, WorldRng, tile iteration, StateCache, etc.
@@ -229,7 +226,7 @@ At the start of each session:
 
 1. Read this file
 2. Run `python3 scripts/scip-query.py stats` — confirms the SCIP index is fresh and tells you the document/symbol counts. If missing, run `scip-dotnet index WorldEngine.sln --skip-dotnet-restore` first.
-3. Read the active phase doc from `docs/phases/` (whichever phase is in progress)
+3. Read the active phase doc from `docs/phases/` (whichever phase is in progress). If `docs/phases/` is empty, Milestone 1 is complete and M2 phase docs have not yet been written — check `docs/mvp_spec.md` for the M2 scope summary before starting.
 4. Check `docs/interface_contracts.md` for any interfaces you'll be implementing against
 5. Use `python3 scripts/scip-query.py defs <TypeName>` to locate types before reading files
 6. Load `docs/snippets/patterns.md` when you need code boilerplate

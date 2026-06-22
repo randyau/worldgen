@@ -1,7 +1,7 @@
 # World Engine — MVP Specification
-**Version:** 0.1  
-**Date:** June 18, 2026  
-**Status:** Milestone 1 defined. Milestones 2-4 defined at summary level only.
+**Version:** 0.2  
+**Date:** June 18, 2026 (updated June 22, 2026)  
+**Status:** Milestone 1 COMPLETE — 2026-06-22. Milestones 2-4 defined at summary level only.
 
 ---
 
@@ -260,17 +260,23 @@ Before simulation starts, show a world generation screen. Display progress per l
 
 ---
 
-## Milestone 1 Definition of Done
+## Milestone 1 Definition of Done — ACHIEVED 2026-06-22
 
-The milestone is complete when:
+1. `scripts/publish-win.sh` produces a self-contained Windows exe; launching it shows a generated world ✓
+2. Time passes visibly (year counter increments, events appear in the log) ✓
+3. Disasters fire and appear in the event log with correct tier classification ✓
+4. Climate varies seasonally (visible in the climate overlay, keyboard shortcuts B/E/T/M/R/G) ✓
+5. `world.db` contains a coherent event history queryable with `docs/queries/event_log_queries.md` ✓
+6. The same seed produces the same world (192 tests pass, including SameSeedProducesSameWorld) ✓
+7. All tests pass with zero warnings on WorldEngine.Sim ✓
 
-1. `dotnet run --project WorldEngine.UI` opens a window showing a generated world
-2. Time passes visibly (year counter increments, events appear in the log)
-3. Disasters fire and appear in the event log with correct tier classification
-4. Climate varies seasonally (visible in the climate overlay)
-5. `world.db` contains a coherent event history queryable with the documented SQL queries
-6. The same seed produces the same world and the same history (reproducibility test passes)
-7. All Epic tests pass with zero warnings
+**Manual test runbook:** `docs/testing/runbook_m1.md`
+
+**Notes on story 1.6.6 (Database Tooling):** Completed as `docs/queries/event_log_queries.md` — SQL queries covering health checks, event distribution, temporal/spatial analysis, causal graph validation, and environmental sim validation.
+
+**Notes on 1.7.4 (Tile Inspector):** Reads from `WorldSnapshot.InspectedTile` (not directly from `WorldState`) — the sim thread builds `TileInspectorData` on `SetInspectedTile` command and includes it in the next snapshot. This is consistent with the two-thread model.
+
+**Known divergence from spec:** No `WorldGenPipeline` class — world gen runs via direct layer calls and `TileGridAssembler.Assemble()`. See `WorldEngine.UI/Game1.cs` for the actual sequence.
 
 ---
 

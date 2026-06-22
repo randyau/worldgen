@@ -5,6 +5,34 @@
 
 ---
 
+## EventType Integer Reference
+
+The `Type` column stores integer values. Use these constants in WHERE clauses:
+
+```
+-- M1 Environmental events (1001–1010)
+1001 = VolcanicEruption      1002 = EarthquakeOccurred
+1003 = WildfireOccurred      1004 = FloodOccurred
+1005 = DroughtBegan          1006 = DroughtEnded
+1007 = SeaLevelChanged       1008 = BiomeChanged
+1009 = ClimateShifted        1010 = ResourceRecovered
+
+-- VerbClass integers
+0 = Creation    1 = Destruction    2 = Transformation
+3 = Transfer    4 = Conflict       5 = Maintenance
+
+-- TierInvolvement integers
+0 = Background    1 = Character    2 = Regional    3 = Headline
+
+-- PopulationImpact integers
+0 = None    1 = Minor    2 = Moderate    3 = Major    4 = Catastrophic
+
+-- Season integers
+0 = Spring    1 = Summer    2 = Autumn    3 = Winter
+```
+
+---
+
 ## Quick Health Checks
 
 Run these first to verify the event system is working at all.
@@ -250,14 +278,20 @@ GROUP BY Type;
 Use these specifically during Milestone 1 to verify the environmental sim is working.
 
 ```sql
--- Which disaster types have fired?
-SELECT Type, COUNT(*) as occurrences, 
+-- Which disaster types have fired? (Type stored as integer — see reference table above)
+SELECT Type,
+       CASE Type
+           WHEN 1001 THEN 'VolcanicEruption'   WHEN 1002 THEN 'EarthquakeOccurred'
+           WHEN 1003 THEN 'WildfireOccurred'    WHEN 1004 THEN 'FloodOccurred'
+           WHEN 1005 THEN 'DroughtBegan'        WHEN 1006 THEN 'DroughtEnded'
+           WHEN 1007 THEN 'SeaLevelChanged'     WHEN 1008 THEN 'BiomeChanged'
+           WHEN 1009 THEN 'ClimateShifted'      WHEN 1010 THEN 'ResourceRecovered'
+       END as type_name,
+       COUNT(*) as occurrences, 
        MIN(Year) as first_occurrence,
        MAX(Year) as last_occurrence
 FROM Events 
-WHERE Type IN ('VolcanicEruption', 'EarthquakeOccurred', 'FloodOccurred', 
-               'DroughtBegan', 'DroughtEnded', 'WildfireOccurred', 'SeaLevelChanged',
-               'BiomeChanged', 'ClimateShifted')
+WHERE Type BETWEEN 1001 AND 1010
 GROUP BY Type
 ORDER BY occurrences DESC;
 
@@ -267,35 +301,33 @@ SELECT Type, COUNT(*) as total,
        (SELECT MAX(Year) FROM Events) as sim_years,
        ROUND(COUNT(*) * 1.0 / (SELECT MAX(Year) FROM Events), 3) as per_year
 FROM Events 
-WHERE Type IN ('VolcanicEruption', 'EarthquakeOccurred', 'FloodOccurred', 
-               'WildfireOccurred', 'SeaLevelChanged')
+WHERE Type IN (1001, 1002, 1003, 1004, 1007)  -- volcanic, earthquake, wildfire, flood, sea level
 GROUP BY Type;
 
 -- Sea level change events over time
 SELECT Year, Season, substr(PayloadJson, 1, 200) as payload
 FROM Events 
-WHERE Type = 'SeaLevelChanged'
+WHERE Type = 1007  -- SeaLevelChanged
 ORDER BY Year;
 
 -- Biome change events (are biomes drifting over time?)
 SELECT Year, LocationX, LocationY, substr(PayloadJson, 1, 200) as payload
 FROM Events 
-WHERE Type = 'BiomeChanged'
+WHERE Type = 1008  -- BiomeChanged
 ORDER BY Year
 LIMIT 50;
 
 -- Climate shift events
 SELECT Year, COUNT(*) as shifts_this_year
 FROM Events 
-WHERE Type = 'ClimateShifted'
+WHERE Type = 1009  -- ClimateShifted
 GROUP BY Year
 ORDER BY Year;
 
 -- Most disaster-prone locations
 SELECT LocationX, LocationY, COUNT(*) as disaster_count
 FROM Events 
-WHERE Type IN ('VolcanicEruption', 'EarthquakeOccurred', 'FloodOccurred', 
-               'WildfireOccurred')
+WHERE Type IN (1001, 1002, 1003, 1004)  -- volcanic, earthquake, wildfire, flood
   AND LocationX IS NOT NULL
 GROUP BY LocationX, LocationY
 ORDER BY disaster_count DESC

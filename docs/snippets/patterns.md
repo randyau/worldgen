@@ -1,6 +1,6 @@
 # Global Code Patterns
 **Load this file when you need boilerplate.** These are the recurring patterns across the codebase.
-Do not deviate from these patterns without updating GUARDRAILS.md.
+Do not deviate from these patterns without updating CLAUDE.md.
 
 ---
 

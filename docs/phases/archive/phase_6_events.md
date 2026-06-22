@@ -1,5 +1,5 @@
 # Phase 6 — Epic 1.6: Event System
-**Status:** NOT STARTED  
+**Status:** COMPLETE — 2026-06-22  
 **Requires:** Phase 5 complete (PendingEvents must flow from Phase 1 to Phase 7)  
 **Reads required:** `docs/interface_contracts.md` (SimEvent, EventTier, VerbClass, IHistoryGraphReadOnly), `docs/queries/event_log_queries.md` (for validation)
 

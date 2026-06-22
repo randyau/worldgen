@@ -19,3 +19,7 @@ Thumbs.db
 index.scip
 .scip-index.log
 scripts/__pycache__/
+
+# Publish output and runtime artifacts
+publish/
+world.db

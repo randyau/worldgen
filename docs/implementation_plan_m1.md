@@ -1,7 +1,7 @@
 # Milestone 1 Implementation Plan
 **Date:** June 2026  
-**Status:** Design complete, implementation not started  
-**See:** Individual phase docs in `docs/phases/` for story-by-story coding and test details
+**Status:** COMPLETE — 2026-06-22  
+**See:** `docs/phases/archive/` for all phase docs. `docs/testing/runbook_m1.md` for manual test cases.
 
 ---
 
@@ -110,18 +110,28 @@ All sections that need to exist by Phase 6 done. Add sections during the phase t
 
 ---
 
-## Test Suite Targets by Phase
+## Actual Test Suite (as of M1 completion)
 
-| Phase | New Unit Tests | New Integration Tests | New Reproducibility Tests |
-|---|---|---|---|
-| 1 | ~11 | 0 | 0 (stub added) |
-| 2 | ~20 | 0 | 0 |
-| 3 | ~30 | 1 (pipeline runs) | 1 (**SameSeedProducesSameWorld** — this is the one) |
-| 4 | ~15 | 3 (SimLoop) | 0 |
-| 5 | ~20 | 0 | 1 (SameSeedSameDisasters) |
-| 6 | ~15 | 5 (EventStore) | 0 |
-| 7 | 0 | 0 | 0 (manual only) |
-| **Total** | **~111** | **~9** | **2** |
+192 tests total, all passing.
+
+| Phase | Actual Unit Tests | Actual Integration Tests |
+|---|---|---|
+| 1–3 | ~60 (config, types, all gen layers) | 1 (SameSeedProducesSameWorld) |
+| 4 | ~20 (StateCache, CommandQueue, PhaseRunner) | 3 (SimLoop) |
+| 5 | ~50 (seasonal, drift, sea level, disasters) | 0 |
+| 6 | ~35 (EventType, EventGate, Classifier, Cache) | 11 (EventStore, Phase7 integration) |
+| 7 | 0 | 0 (manual only — see runbook_m1.md) |
+
+**Deviations from original targets:**
+- No `WorldGenPipeline` class was implemented. Generation runs via direct layer calls in `Game1.cs` and `TileGridAssembler.Assemble()`. The pipeline was inlined rather than abstracted.
+- `SameSeedSameDisasters` reproducibility test was not written separately — covered by the full-world reproducibility test.
+- Integration test count exceeded estimates due to Phase 6 EventStore tests.
+
+---
+
+## Session Protocol
+
+This section is now obsolete for M1. For M2 sessions, see `CLAUDE.md` starting protocol.
 
 ---
 

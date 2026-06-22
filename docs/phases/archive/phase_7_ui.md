@@ -1,5 +1,5 @@
 # Phase 7 — Epic 1.7: Basic UI
-**Status:** NOT STARTED  
+**Status:** COMPLETE — 2026-06-22  
 **Requires:** Phase 6 complete (WorldSnapshot must be populated with real events)  
 **Reads required:** `docs/interface_contracts.md` (WorldSnapshot, TileDisplayData, TileInspectorData), `docs/design_session_decisions.md` (DS-D)
 

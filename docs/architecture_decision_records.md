@@ -3,7 +3,7 @@
 **Date:** June 18, 2026  
 **Purpose:** Quick-reference summary of every major architectural decision and its rationale. Read this to understand WHY the codebase is structured the way it is, without reading the full implementation decisions document.
 
-For full rationale and detail, see `docs/world_engine_implementation_decisions_v0.3.md`.
+For full rationale and detail, see `docs/implementation_decisions_v0.3.md`.
 
 ---
 

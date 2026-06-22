@@ -1,8 +1,8 @@
 # World Engine — Interface Contracts
-**Version:** 0.2  
+**Version:** 0.3  
 **Date:** June 2026  
-**Status:** Updated after design sessions A–D. All changes from sessions are incorporated.  
-**Changes from v0.1:** TileData exact layout locked (14 bytes, Pack=1). TileStaticFlags promoted to ushort. TileDynFlags revised (HasActiveDisaster only). TileDisplayData updated (Fertility added, effective values clarified, HasActiveDisaster computed from registry). WorldSnapshot extended (InspectedTile, drift parameters). TileInspectorData added. ResourceDeposit, ActiveDisaster, ActiveDrought, DisasterType, SeasonalProfile, PendingEvent, ChunkSummaryFlags all added.
+**Status:** Updated through Milestone 1 completion.  
+**Changes from v0.2:** TileDynFlags — added `RecentlyBurned = 1 << 1` (set when wildfire expires on a forest tile; cleared after post-fire fertility boost applied in annual resource dynamics). EventStore moved to `WorldEngine.Sim/Persistence/` (not `Simulation/`). All EventType values now have explicit stable int IDs (1001–1010 for M1 environmental). IHistoryGraphReadOnly is implemented by EventStore.
 
 **Rule:** Do not add methods to these interfaces without updating this document first. Interface changes are breaking changes.
 
@@ -69,9 +69,10 @@ Updated each tick. Disasters are tracked in `ActiveTileDisasters` registry, not 
 [Flags]
 public enum TileDynFlags : byte   // 8 bits
 {
-    None             = 0,
+    None              = 0,
     HasActiveDisaster = 1 << 0,  // presence indicator → ActiveTileDisasters[coord]
-    // bits 1–7: reserved for M2+
+    RecentlyBurned    = 1 << 1,  // set when a wildfire expires on a forest tile; cleared after post-fire fertility boost applied in RunAnnualResourceDynamics
+    // bits 2–7: reserved for M2+
     // Candidates: HasStructure, IsContested, IsUnderSiege, IsOnTradeRoute
 }
 ```
@@ -567,5 +568,5 @@ public readonly record struct ArtifactId(long Value)
 
 ---
 
-*Document Version: 0.2*  
-*Last Updated: June 2026*
+*Document Version: 0.3*  
+*Last Updated: June 2026 (Milestone 1 complete)*
