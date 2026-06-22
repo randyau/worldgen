@@ -236,8 +236,12 @@ Candidate lists deferred to M4 profiling. At 120k tiles, simple per-tile checks 
 
 `TileDisplayData.HasActiveDisaster` is computed from `ActiveTileDisasters.ContainsKey(coord)` by the sim thread when building the snapshot.
 
-### D3: All UI→Sim state updates through CommandQueue
-**Decision:** `SetViewport`, `SetInspectedTile`, `SetActiveOverlay` all go through the existing `CommandQueue`. Latest value wins (last command in a drain batch overwrites earlier ones). No separate "latest value" channel for M1.
+### D3: UI→Sim state updates through CommandQueue — viewport removed
+**Original decision:** `SetViewport`, `SetInspectedTile`, `SetActiveOverlay` all go through `CommandQueue`.
+
+**Revised (M1 bugfix):** `SetViewport` is removed from this list. The sim no longer tracks the camera viewport. `WorldSnapshot.AllTiles` contains the full world grid; `TileMapRenderer` computes the visible range from `Camera2D` on the UI thread each frame. This eliminates the one-tick lag that made pan/zoom feel unresponsive and removes a round-trip command on every camera move.
+
+`SetInspectedTile` and `SetActiveOverlay` remain in `CommandQueue` — they change sim-side state (`WorldState.InspectedTile`, `SimLoop._overlay`) so must cross the thread boundary.
 
 ### D4: WorldSnapshot includes drift parameters
 **Decision:** `WorldSnapshot` includes the current drift parameters (`GlobalTemperatureAnomaly`, `GlobalPrecipitationMultiplier`, `StormCorridorNormalizedLat`) so the UI can display world-level climate status without additional queries.

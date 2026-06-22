@@ -241,7 +241,7 @@ Not a code feature — a set of documented SQL queries in `docs/event_log_querie
 Get a MonoGame window open with a basic game loop. Initialize Myra desktop. Hook up the sim thread (start SimLoop on a background thread). Verify the two-thread model works — sim runs on its thread, UI renders on main thread, StateCache bridges them.
 
 **1.7.2 — Tile Map Renderer**
-Render the world as a colored tile grid. Color-code by biome (green = forest, tan = desert, blue = water, etc.). Support mouse pan and zoom. The visible tile region feeds `WorldSnapshot.VisibleTiles`. When the visible region changes (pan/zoom), update the snapshot query region.
+Render the world as a colored tile grid. Color-code by biome (green = forest, tan = desert, blue = water, etc.). Support mouse pan and zoom. `WorldSnapshot.AllTiles` contains the full world grid; `TileMapRenderer` computes the visible range from `Camera2D` each frame so pan and zoom are immediately responsive independent of sim tick rate.
 
 **1.7.3 — Map Overlay Toggles**
 Layer toggles for the map: Terrain (biome colors), Elevation (grayscale heightmap), Climate (temperature or moisture), Resources (deposit locations), Magic Intensity (heatmap). Implemented as keyboard shortcuts and a simple Myra toolbar. The snapshot includes the currently active overlay data.

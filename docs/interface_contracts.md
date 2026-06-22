@@ -352,11 +352,13 @@ public sealed class StateCache
 
 **Updated from v0.1:** Added `Fertility`. `Temperature` renamed to `EffectiveTemperature` (computed, not base). `Moisture` renamed to `CurrentMoisture` (dynamic field). `HasActiveDisaster` retained but is now computed from `ActiveTileDisasters.ContainsKey(coord)` by the sim thread — not read from TileDynFlags directly.
 
+**Updated from v0.2:** No longer created per-viewport. `SnapshotBuilder` builds all tiles unconditionally; the renderer filters by visible range using camera coordinates.
+
 ```csharp
 /// <summary>
-/// Per-tile rendering data in WorldSnapshot.VisibleTiles.
+/// Per-tile rendering data in WorldSnapshot.AllTiles.
 /// Contains effective (current) values, not genesis base values.
-/// Created by the sim thread for all tiles in the current viewport.
+/// Created by the sim thread for the full world grid each tick.
 /// HasActiveDisaster is computed from ActiveTileDisasters registry.
 /// </summary>
 public sealed record TileDisplayData(
@@ -400,7 +402,9 @@ public sealed record TileInspectorData(
 
 ## WorldSnapshot
 
-**Updated from v0.1:** Added `InspectedTile`, `GlobalTemperatureAnomaly`, `GlobalPrecipitationMultiplier`, `StormCorridorNormalizedLat`. `VisibleTiles` now typed to updated `TileDisplayData`.
+**Updated from v0.1:** Added `InspectedTile`, `GlobalTemperatureAnomaly`, `GlobalPrecipitationMultiplier`, `StormCorridorNormalizedLat`.
+
+**Updated from v0.2:** `VisibleTiles` (viewport-filtered dict) replaced by `AllTiles` (flat array, full world). The sim no longer tracks the camera viewport — `TileMapRenderer` computes the visible range from `Camera2D` each frame. Index as `AllTiles[y * WorldTileWidth + x]`.
 
 ```csharp
 /// <summary>
@@ -415,8 +419,8 @@ public sealed record WorldSnapshot(
     bool IsPaused,
     long TicksPerSecond,
 
-    // Map
-    IReadOnlyDictionary<TileCoord, TileDisplayData> VisibleTiles,
+    // Map — flat array indexed by (y * WorldTileWidth + x); X wraps, Y clamps
+    TileDisplayData[] AllTiles,
     OverlayType ActiveOverlay,
     int WorldTileWidth,
     int WorldTileHeight,

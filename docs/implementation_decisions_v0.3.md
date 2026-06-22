@@ -137,9 +137,11 @@ Player inputs (Spotlight, God Mode, time controls) are the same `ICommand` type 
 
 `WorldState` is the full simulation state — lives exclusively in the sim thread.
 
-`WorldSnapshot` is a lightweight immutable projection — only what the UI needs to render the current frame.
+`WorldSnapshot` is an immutable projection — everything the UI needs to render. `AllTiles` is a flat `TileDisplayData[]` covering the full world grid (indexed `y * WorldTileWidth + x`). The sim builds it unconditionally each tick; the renderer filters to the visible region using the camera on the UI thread.
 
 StateCache holds the latest snapshot behind a `ReaderWriterLockSlim`. Lock held for microseconds (single pointer assignment). UI rendering is never meaningfully blocked.
+
+**Camera viewport is UI-thread-only.** `TileMapRenderer` calls `Camera2D.ScreenToTile()` each frame to compute the visible tile range — no `SetViewport` command, no sim-thread round-trip. Pan and zoom are immediately responsive regardless of sim tick rate. `Game1` skips Myra widget rebuilds when the snapshot reference is unchanged (reference equality on `StateCache.Read()`), so label reflows only happen when the sim commits new data.
 
 ### History Graph Access
 The causal event graph is append-only. Exposed to the UI as `IHistoryGraphReadOnly` — no locks needed. UI traverses it freely for profile cards, timeline scrubbing, story thread queries.

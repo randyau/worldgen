@@ -4,9 +4,9 @@ using WorldEngine.Sim.Tiles;
 namespace WorldEngine.Sim.World;
 
 /// <summary>
-/// Per-tile rendering data in WorldSnapshot.VisibleTiles.
+/// Per-tile rendering data in WorldSnapshot.AllTiles (index: y * WorldTileWidth + x).
 /// Contains effective (current) values, not genesis base values.
-/// Created by the sim thread for all tiles in the current viewport.
+/// Created by the sim thread for the full world grid each tick.
 /// HasActiveDisaster is computed from ActiveTileDisasters registry.
 /// </summary>
 public sealed record TileDisplayData(
