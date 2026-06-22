@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorldEngine.Sim", "WorldEngine.Sim\WorldEngine.Sim.csproj", "{C7048472-3BE1-41CF-90E8-4252AE2BA983}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorldEngine.UI", "WorldEngine.UI\WorldEngine.UI.csproj", "{4F0D9366-F969-40E4-B71A-124FAD1D544D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorldEngine.Tests", "WorldEngine.Tests\WorldEngine.Tests.csproj", "{EB0C1E3E-C5C5-4C63-BE57-EC544163E822}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C7048472-3BE1-41CF-90E8-4252AE2BA983}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C7048472-3BE1-41CF-90E8-4252AE2BA983}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C7048472-3BE1-41CF-90E8-4252AE2BA983}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C7048472-3BE1-41CF-90E8-4252AE2BA983}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4F0D9366-F969-40E4-B71A-124FAD1D544D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4F0D9366-F969-40E4-B71A-124FAD1D544D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4F0D9366-F969-40E4-B71A-124FAD1D544D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4F0D9366-F969-40E4-B71A-124FAD1D544D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EB0C1E3E-C5C5-4C63-BE57-EC544163E822}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EB0C1E3E-C5C5-4C63-BE57-EC544163E822}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EB0C1E3E-C5C5-4C63-BE57-EC544163E822}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EB0C1E3E-C5C5-4C63-BE57-EC544163E822}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
