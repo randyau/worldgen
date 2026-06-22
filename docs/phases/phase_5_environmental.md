@@ -8,6 +8,22 @@
 ## Goal
 Implement Phase 1 of the 7-phase tick: seasonal climate variation, climate drift, natural disasters, resource dynamics, and sea level changes. The stub Phase 1 from story 1.4.5 gets replaced with real logic here.
 
+## Model Recommendations
+
+> **Use Opus for story 1.5.3 only. Sonnet for everything else.**
+
+| Story | Model | Reason |
+|---|---|---|
+| 1.5.1 Seasonal Climate | Sonnet | Formula application to all tiles — straightforward |
+| 1.5.2 Climate Drift | Sonnet | Drift + BiomeClassifier re-run — no novel algorithm |
+| **1.5.3 Disaster System** | **Opus** | Spread logic, multi-disaster stacking, `OriginEventId` threading through `ActiveDisaster` records, chunk-skip correctness — multiple interacting pieces with non-obvious failure modes |
+| 1.5.4 Resource Dynamics | Sonnet | Simple per-tile adjustments, short methods |
+| 1.5.5 Sea Level | Sonnet | Drift formula + coastal reclassification — mechanical |
+
+Token budget tip: for 1.5.3, load only CLAUDE.md + this phase doc + snippets/patterns.md. The disaster system story is self-contained. Don't carry the full Phase 3/4 implementation context into the Opus session.
+
+---
+
 ## Key Architecture Points
 - Phase 1 is a **direct mutator** — no command pattern. Reads and writes WorldState in-place.
 - All randomness via `WorldRng.FloatAt()` with `DisasterSalts` constants — never `System.Random`

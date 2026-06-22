@@ -8,6 +8,25 @@
 ## Goal
 Build the generation pipeline that produces a fully populated WorldState from a seed. This is the longest phase. Story 1.3.8 (TileGrid assembly) contains the reproducibility test — that test must pass before Phase 3 is considered done.
 
+## Model Recommendations
+
+> **Use Opus for stories 1.3.2, 1.3.4, and 1.3.6. Use Sonnet for everything else.**
+
+| Story | Model | Reason |
+|---|---|---|
+| 1.3.1 Pipeline | Sonnet | Mechanical scaffolding, no algorithm |
+| **1.3.2 Tectonics** | **Opus** | Poisson disc + cylinder-aware Voronoi + subduction detection — silent failure modes |
+| 1.3.3 Elevation+Ocean | Sonnet | FastNoiseLite patterns are well-understood |
+| **1.3.4 Rivers** | **Opus** | Priority Flood (Barnes algorithm) + D8 flow accumulation — wrong implementation looks plausible but produces subtle drainage errors |
+| 1.3.5 Magic (stub) | Sonnet | Noise + weighting only |
+| **1.3.6 Climate** | **Opus** | Two-band wind sweep + rain shadow + per-tile seasonal profiles — sweep direction errors are silent and hard to detect from tests alone |
+| 1.3.7 Biome+Resource | Sonnet | BiomeClassifier is a pure function with config thresholds |
+| 1.3.8 Assembly | Sonnet | Parallel.For over layer results — mechanical, not algorithmic |
+
+Token budget tip: start a fresh Opus session for each of 1.3.2, 1.3.4, and 1.3.6. Each is self-contained enough to implement without the full prior context — just load CLAUDE.md + this phase doc + snippets/patterns.md.
+
+---
+
 ## Key Design Constraints
 - All layer results are immutable once produced
 - Layers read only from committed predecessors in `WorldGenContext`
