@@ -64,7 +64,7 @@ public sealed class SnapshotBuilder
     private static TileDisplayData BuildTileDisplayData(WorldState world, TileCoord coord)
     {
         var tile = world.TileGrid.GetTile(coord);
-        int idx = world.TileGrid.TileWidth * coord.Y + coord.X;
+        int idx = world.TileGrid.FlatIndex(coord);
 
         byte effectiveTemp = ComputeEffectiveTemperature(world, coord, tile, idx);
         bool hasDisaster = world.ActiveTileDisasters.ContainsKey(coord);
@@ -112,7 +112,7 @@ public sealed class SnapshotBuilder
     private static TileInspectorData BuildInspectorData(WorldState world, TileCoord coord)
     {
         var tile = world.TileGrid.GetTile(coord);
-        int idx = world.TileGrid.TileWidth * coord.Y + coord.X;
+        int idx = world.TileGrid.FlatIndex(coord);
         int h = world.TileGrid.TileHeight;
 
         var profile = world.SeasonalProfiles.Length > idx
