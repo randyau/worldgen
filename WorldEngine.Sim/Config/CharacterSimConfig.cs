@@ -36,6 +36,10 @@ public sealed class CharacterSimConfig
     public float DepositScoreMultiplier  { get; set; } = 0.5f;
     // How much route-position bonus boosts the EstablishSettlement success probability multiplier
     public float RouteScoreMultiplier    { get; set; } = 0.3f;
+    // Effective fertility multiplier for tiles already inside a same-civ settlement's hinterland
+    public float HinterlandDrainFactor   { get; set; } = 0.15f;
+    // Years a civ must wait between founding consecutive settlements (prevents paired founding)
+    public int   CivFoundingCooldownYears { get; set; } = 15;
 
     // Civilization-born character generation
     public int   CivBirthMinPop         { get; set; } = 30;   // settlement needs this many people

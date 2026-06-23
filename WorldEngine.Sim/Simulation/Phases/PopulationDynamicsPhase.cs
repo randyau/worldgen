@@ -53,16 +53,26 @@ public sealed class PopulationDynamicsPhase
         SettlementStub stub, TileCoord tile, WorldState world, List<PendingEvent> pending)
     {
         var tileData = world.GetTile(tile);
-        float fertility = tileData.Fertility / 255f;
+        // Per-settlement founding-time variance permanently differentiates otherwise similar tiles
+        float fertility = tileData.Fertility / 255f * stub.FertilityMultiplier;
 
         // Safety score: number of Tier1+Tier2 entities in 3-tile radius, clamped
         int nearby = world.GetEntitiesInRadius(tile, 3)
             .Count(e => e is Tier1Character or Tier2Character);
         float safetyScore = Math.Clamp(0.3f + nearby * 0.1f, 0f, 1f);
 
+        // Decay responds to food pressure from the resource ledger
+        float foodRatio = stub.FoodPressureRatio;
+        float starvationDecay = foodRatio < _cfg.PopMinViable / 100f ? 0f
+            : foodRatio < _simCfg.ResourcePressure.CrisisThreshold
+                ? (1f - foodRatio) * _cfg.FamineDecayRate
+            : foodRatio < _simCfg.ResourcePressure.ShortageThreshold
+                ? (1f - foodRatio) * _cfg.StarvationDecayRate
+            : 0f;
+
         // Population change this season
         float growthF  = fertility * safetyScore * _cfg.PopGrowthRate;
-        float decayF   = _cfg.PopDecayRate;
+        float decayF   = _cfg.PopDecayRate + starvationDecay;
         float deltaF   = growthF - decayF;
 
         float newPopF  = stub.PopulationF + deltaF;

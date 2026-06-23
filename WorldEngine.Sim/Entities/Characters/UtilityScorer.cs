@@ -69,14 +69,19 @@ public static class UtilityScorer
                 Score(c, ActionType.Travel, 0.5f, world, cfg) + wanderlust));
         }
 
-        // EstablishSettlement — fertility OR valuable deposits required; route position is a bonus
+        // EstablishSettlement — fertility OR valuable deposits required; route position is a bonus.
+        // Same-civ hinterland overlap reduces effective fertility so the tile looks unattractive.
+        // Per-civ founding cooldown prevents two settlements crystallising in the same year.
         bool alreadyHasSettlement = isFounder;
-        if (!alreadyHasSettlement && !world.Settlements.ContainsKey(c.Location))
+        if (!alreadyHasSettlement && !world.Settlements.ContainsKey(c.Location)
+            && !InCivFoundingCooldown(c, world, cfg))
         {
             var tileFert = world.GetTile(c.Location);
+            float hinterlandFactor = HinterlandFactor(c.Location, c.Identity.CivId, world, cfg);
+            float effectiveFertility = tileFert.Fertility * hinterlandFactor;
             float depositVal  = ComputeDepositValue(c.Location, world);
-            bool  worthSettle = tileFert.Fertility >= cfg.MinFertilityToSettle
-                              || depositVal > cfg.DepositSettleThreshold;
+            bool  worthSettle = effectiveFertility >= cfg.MinFertilityToSettle
+                              || (hinterlandFactor >= 1f && depositVal > cfg.DepositSettleThreshold);
             if (worthSettle)
             {
                 float routeBonus = ComputeRouteBonus(c.Location, world);
@@ -327,6 +332,43 @@ public static class UtilityScorer
             if (score > bestScore) { bestScore = score; best = coord; }
         }
         return best;
+    }
+
+    // ─── Hinterland and founding cooldown ─────────────────────────────────────
+
+    /// <summary>
+    /// Returns a factor ∈ [HinterlandDrainFactor, 1.0].
+    /// When the candidate tile falls inside an existing same-civ settlement's reach,
+    /// the factor is HinterlandDrainFactor — the owning settlement is already extracting
+    /// those resources, so the tile looks nearly worthless to a new founder.
+    /// Foreign-civ overlaps are intentionally ignored: competing for the same resources
+    /// is a conflict driver, not something to suppress.
+    /// </summary>
+    private static float HinterlandFactor(
+        TileCoord candidate, CivId civId, IWorldStateReadOnly world, CharacterSimConfig cfg)
+    {
+        if (!civId.IsValid) return 1f;
+        foreach (var (settleTile, stub) in world.Settlements)
+        {
+            if (stub.CivId != civId) continue;
+            if (TileDistance(candidate, settleTile) <= stub.ReachRadius())
+                return cfg.HinterlandDrainFactor;
+        }
+        return 1f;
+    }
+
+    /// <summary>
+    /// Returns true when the character's civ founded a settlement too recently.
+    /// Prevents multiple characters tipping over the utility threshold in the same
+    /// tick cluster and producing paired same-year settlements.
+    /// </summary>
+    private static bool InCivFoundingCooldown(
+        Tier1Character c, IWorldStateReadOnly world, CharacterSimConfig cfg)
+    {
+        if (!c.Identity.CivId.IsValid) return false;
+        var civ = world.GetCivilization(c.Identity.CivId);
+        if (civ is null) return false;
+        return world.CurrentYear - civ.LastSettlementFoundedYear < cfg.CivFoundingCooldownYears;
     }
 
     // ─── Founding score helpers ────────────────────────────────────────────────

@@ -70,16 +70,19 @@ public static class CivTracker
             world.Civilizations[civId].Members.Add(founder.Id);
         }
 
-        string settlementName = GenerateSettlementName(cmd.Tile, world, namesConfig);
+        string settlementName    = GenerateSettlementName(cmd.Tile, world, namesConfig);
+        float  fertilityVariance = GenerateFertilityMultiplier(cmd.Tile, world);
         var stub = new SettlementStub(
-            FounderId:   founder.Id,
-            CivId:       civId,
-            Tile:        cmd.Tile,
-            FoundedYear: world.CurrentYear,
-            Population:  SettlementStartPop,
-            Health:      SettlementStartHealth,
-            Name:        settlementName);
+            FounderId:           founder.Id,
+            CivId:               civId,
+            Tile:                cmd.Tile,
+            FoundedYear:         world.CurrentYear,
+            Population:          SettlementStartPop,
+            Health:              SettlementStartHealth,
+            Name:                settlementName,
+            FertilityMultiplier: fertilityVariance);
         world.Settlements[cmd.Tile] = stub;
+        world.Civilizations[civId].LastSettlementFoundedYear = world.CurrentYear;
 
         // Mark goal as progressed
         foreach (var g in founder.Goals)
@@ -299,8 +302,9 @@ public static class CivTracker
 
     // ─── Name generation ─────────────────────────────────────────────────────
 
-    private const int SaltSettlementPrefix = 5001;
-    private const int SaltSettlementSuffix = 5002;
+    private const int SaltSettlementPrefix   = 5001;
+    private const int SaltSettlementSuffix   = 5002;
+    private const int SaltFertilityVariance  = 5003;
 
     private static string GenerateSettlementName(
         TileCoord tile, WorldState world, SettlementNamesConfig cfg)
@@ -317,6 +321,18 @@ public static class CivTracker
         int pi = BiasedIndex(pf, biome, cfg.Prefixes.Length);
         int si = (int)(sf * cfg.Suffixes.Length);
         return cfg.Prefixes[pi] + cfg.Suffixes[si];
+    }
+
+    // Deterministic founding-time fertility variance: maps [0,1] → [1-variance, 1+variance]
+    // so each settlement has a permanent slight edge or disadvantage baked in at birth.
+    private static float GenerateFertilityMultiplier(TileCoord tile, WorldState world)
+    {
+        float r = WorldRng.FloatAt(world.WorldSeed, 0, tile.X, tile.Y, SaltFertilityVariance);
+        // r ∈ [0,1] → multiplier ∈ [0.85, 1.15] (variance of ±0.15 baked into SettlementConfig)
+        // DECISION: variance range is hardcoded here; SettlementConfig.FertilityVariance is the
+        // intended range, but injecting SimConfig into CivTracker adds coupling we avoid for now.
+        const float variance = 0.15f;
+        return 1f - variance + r * (variance * 2f);
     }
 
     // Slightly bias prefix selection so rocky biomes lean toward hard-sounding names,

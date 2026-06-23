@@ -15,6 +15,9 @@ public sealed class Civilization
     // Living member characters
     public HashSet<EntityId> Members { get; } = [];
 
+    /// <summary>Year the most recent settlement was founded. Guards against paired-founding.</summary>
+    public int LastSettlementFoundedYear { get; set; } = -999;
+
     public Civilization(CivId id, string name, EntityId founderId, TileCoord capitalTile, int foundedYear)
     {
         Id          = id;

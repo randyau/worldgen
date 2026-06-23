@@ -613,8 +613,13 @@ softmax_temp_max          = 2.0
 perception_radius         = 3
 health_per_season_heal    = 5
 combat_damage_base        = 20
-min_fertility_to_settle   = 100
-civ_birth_min_pop         = 30
+min_fertility_to_settle      = 100
+deposit_settle_threshold     = 0.5    # min deposit value to settle despite low fertility
+deposit_score_multiplier     = 0.5    # how much deposit value boosts establish score
+route_score_multiplier       = 0.3    # how much route-position bonus boosts establish score
+hinterland_drain_factor      = 0.15   # effective fertility multiplier inside same-civ hinterland
+civ_founding_cooldown_years  = 15     # years between same-civ settlements (prevents paired founding)
+civ_birth_min_pop            = 30
 civ_birth_chance_per_season = 0.02
 # Territorial aggression: aggressive founders drain trust from foreign visitors on their settlement tile
 territorial_aggression_min    = 0.55  # chars below this aggression don't apply pressure
@@ -662,14 +667,18 @@ tier2_needs_decay_status    = 0.04
 # =============================================================================
 
 [settlement]
-pop_growth_rate          = 2.0   # population added per season per fertility unit (fertility/255 × this)
-pop_decay_rate           = 0.05  # population lost per season unconditionally (hunger/disease stub)
-pop_min_viable           = 5     # below this → settlement abandoned
-pop_max                  = 50000 # hard cap
-crystal_pop_artisan      = 200
-crystal_pop_scholar      = 300
-crystal_pop_physician    = 500
-crystal_pop_merchant     = 1000
+pop_growth_rate             = 2.0   # population added per season per fertility unit (fertility/255 × this)
+pop_decay_rate              = 0.05  # population lost per season unconditionally (hunger/disease baseline)
+starvation_decay_rate       = 0.3   # extra decay per unit food deficit when food < shortage_threshold
+famine_decay_rate           = 0.8   # extra decay per unit food deficit when food < crisis_threshold
+pop_min_viable              = 5     # below this → settlement abandoned
+pop_max                     = 50000 # hard cap
+fertility_variance          = 0.15  # per-settlement founding-time multiplier range (±this around 1.0)
+civ_founding_cooldown_years = 15    # years a civ must wait between founding consecutive settlements
+crystal_pop_artisan         = 200
+crystal_pop_scholar         = 300
+crystal_pop_physician       = 500
+crystal_pop_merchant        = 1000
 
 [resource_pressure]
 shortage_threshold      = 0.6    # food ratio below this = shortage; seeds Acquire goals

@@ -19,4 +19,12 @@ public sealed record SettlementStub(
     float     FoodPressureRatio    = 1f,   // convenience accessor; mirrors ResourceLedger["food"]
     float     WaterPressureRatio   = 1f,
     int       LastStrainEventTick  = 0,    // tick of last SettlementStraining event (rate-limit)
-    IReadOnlyDictionary<string, float>? ResourceLedger = null); // extensible supply values per resource type
+    IReadOnlyDictionary<string, float>? ResourceLedger = null, // extensible supply values per resource type
+    float     FertilityMultiplier  = 1f)   // per-settlement founding-time variance; permanent
+{
+    /// <summary>
+    /// Radius (in tiles) of this settlement's hinterland.
+    /// Scales with population; capped at 5. Shared by ResourcePressurePhase and UtilityScorer.
+    /// </summary>
+    public int ReachRadius() => Math.Clamp(2 + Population / 2000, 2, 5);
+}

@@ -33,7 +33,7 @@ public sealed class ResourcePressurePhase
 
         foreach (var (coord, stub) in world.Settlements.ToList())
         {
-            int reachRadius = ReachRadius(stub.Population);
+            int reachRadius = stub.ReachRadius();
             var ledger = BuildLedger(coord, stub, reachRadius, world);
 
             float foodRatio  = ledger.TryGetValue("food",  out var f) ? f : 1f;
@@ -66,15 +66,6 @@ public sealed class ResourcePressurePhase
         }
 
         return pending;
-    }
-
-    // ─── Reach radius ─────────────────────────────────────────────────────────
-
-    private int ReachRadius(int population)
-    {
-        // Small settlements work 2-3 tiles out; large ones up to 5.
-        // Each 2000 people roughly adds one tile of effective reach.
-        return Math.Clamp(2 + population / 2000, 2, 5);
     }
 
     // ─── Ledger construction ──────────────────────────────────────────────────
