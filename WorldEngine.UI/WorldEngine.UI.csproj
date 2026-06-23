@@ -16,8 +16,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Bundle sim config so the published exe is self-contained -->
+    <!-- Bundle sim and beast configs so the published exe is self-contained -->
     <Content Include="..\config\sim_config.toml" Link="config\sim_config.toml" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\config\beasts.toml" Link="config\beasts.toml" CopyToOutputDirectory="PreserveNewest" />
     <!-- MonoGame requires this dir to exist even if no assets are loaded -->
     <Content Include="Content\**\*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>

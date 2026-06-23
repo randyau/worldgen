@@ -18,5 +18,6 @@ public sealed record TileDisplayData(
     byte Fertility,
     TileStaticFlags StaticFlags,
     TileDynFlags DynFlags,
-    bool HasActiveDisaster       // computed: ActiveTileDisasters.ContainsKey(coord)
+    bool HasActiveDisaster,      // computed: ActiveTileDisasters.ContainsKey(coord)
+    EntityId[] EntitiesPresent   // empty array if none — never null
 );

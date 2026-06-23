@@ -1,4 +1,5 @@
 using WorldEngine.Sim.Core;
+using WorldEngine.Sim.Entities;
 using WorldEngine.Sim.World;
 
 namespace WorldEngine.Tests.Unit;
@@ -13,6 +14,7 @@ public class StateCacheTests
         WorldTileWidth: 50, WorldTileHeight: 40,
         RecentEvents: Array.Empty<SimEvent>(),
         InspectedTile: null,
+        EntitySnapshots: new Dictionary<EntityId, EntitySnapshot>(),
         GlobalTemperatureAnomaly: 0f,
         GlobalPrecipitationMultiplier: 1f,
         StormCorridorNormalizedLat: 0.35f

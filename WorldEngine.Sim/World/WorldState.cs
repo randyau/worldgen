@@ -1,5 +1,6 @@
 using WorldEngine.Sim.Config;
 using WorldEngine.Sim.Core;
+using WorldEngine.Sim.Entities;
 using WorldEngine.Sim.Tiles;
 
 namespace WorldEngine.Sim.World;
@@ -28,6 +29,10 @@ public sealed class WorldState : IWorldStateReadOnly
     public Dictionary<TileCoord, List<ResourceDeposit>> ResourceRegistry { get; }
     public Dictionary<TileCoord, List<ActiveDisaster>> ActiveTileDisasters { get; } = new();
     public List<ActiveDrought> ActiveDroughts { get; } = new();
+    public EntityRegistry Entities { get; } = new();
+
+    /// <summary>Deferred mythological beast emergence schedule. Processed annually.</summary>
+    public List<(int EmergenceYear, string SpeciesId)> BeastEmergenceSchedule { get; } = new();
 
     // === TIME ===
     public int CurrentYear { get; internal set; } = 1;
@@ -107,4 +112,13 @@ public sealed class WorldState : IWorldStateReadOnly
 
     public int GetRandomInt(EntityId entityId, int min, int max, int salt = 0) =>
         min + (int)(GetRandomFloat(entityId, salt) * (max - min));
+
+    // === IWorldStateReadOnly — entity access ===
+
+    public IEntity? GetEntity(EntityId id) => Entities.Get(id);
+
+    public IEnumerable<IEntity> GetEntitiesAt(TileCoord coord) => Entities.GetAt(coord);
+
+    public IEnumerable<IEntity> GetEntitiesInRadius(TileCoord center, int radius) =>
+        Entities.GetInRadius(center, radius);
 }

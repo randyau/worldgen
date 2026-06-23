@@ -35,7 +35,7 @@ public enum EventTier
 public enum VerbClass
 {
     Creation = 0, Destruction = 1, Transformation = 2,
-    Transfer = 3, Conflict = 4, Maintenance = 5
+    Transfer = 3, Conflict = 4, Maintenance = 5, Interaction = 6
 }
 
 public enum PopulationImpact
@@ -72,6 +72,14 @@ public enum EventType
     BiomeChanged        = 1008,
     ClimateShifted      = 1009,
     ResourceRecovered   = 1010,
+    // Beast events (2001–2099) — M2.1
+    BeastSpawned        = 2001,
+    BeastAwakened       = 2002,
+    BeastDied           = 2003,
+    BeastSlain          = 2004,
+    BeastReproduced     = 2005,
+    BeastEncountered    = 2006,
+
     // M2+ stubs (ranges reserved, values must not change once assigned)
     CharacterBorn           = 3001,
     CharacterDied           = 3002,
@@ -120,6 +128,13 @@ public static class VerbClassification
         EventType.GodModeCharacterCreated     => VerbClass.Creation,
         EventType.GodModeArtifactPlaced       => VerbClass.Creation,
         EventType.GodModeCivilizationForced   => VerbClass.Transformation,
+        // Beast events
+        EventType.BeastSpawned     => VerbClass.Creation,
+        EventType.BeastAwakened    => VerbClass.Creation,
+        EventType.BeastDied        => VerbClass.Destruction,
+        EventType.BeastSlain       => VerbClass.Destruction,
+        EventType.BeastReproduced  => VerbClass.Creation,
+        EventType.BeastEncountered => VerbClass.Interaction,
         _ => throw new ArgumentOutOfRangeException(nameof(type), type, "No VerbClass mapping")
     };
 }

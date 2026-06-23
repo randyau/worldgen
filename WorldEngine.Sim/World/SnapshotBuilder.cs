@@ -1,4 +1,5 @@
 using WorldEngine.Sim.Core;
+using WorldEngine.Sim.Entities;
 using WorldEngine.Sim.Tiles;
 
 namespace WorldEngine.Sim.World;
@@ -17,7 +18,8 @@ public sealed class SnapshotBuilder
         long ticksPerSecond,
         IReadOnlyList<SimEvent> recentEvents)
     {
-        var tiles = BuildAllTiles(world);
+        var entitySnapshots = BuildEntitySnapshots(world);
+        var tiles = BuildAllTiles(world, entitySnapshots);
         var inspected = world.InspectedTile.HasValue
             ? BuildInspectorData(world, world.InspectedTile.Value)
             : null;
@@ -34,26 +36,50 @@ public sealed class SnapshotBuilder
             WorldTileHeight:             world.TileGrid.TileHeight,
             RecentEvents:                recentEvents,
             InspectedTile:               inspected,
+            EntitySnapshots:             entitySnapshots,
             GlobalTemperatureAnomaly:    world.GlobalTemperatureAnomaly,
             GlobalPrecipitationMultiplier: world.GlobalPrecipitationMultiplier,
             StormCorridorNormalizedLat:  world.StormCorridorNormalizedLat
         );
     }
 
-    private static TileDisplayData[] BuildAllTiles(WorldState world)
+    private static IReadOnlyDictionary<EntityId, EntitySnapshot> BuildEntitySnapshots(WorldState world)
     {
+        var dict = new Dictionary<EntityId, EntitySnapshot>(world.Entities.Count);
+        foreach (var (id, entity) in world.Entities.All)
+            dict[id] = entity.ToSnapshot();
+        return dict;
+    }
+
+    private static TileDisplayData[] BuildAllTiles(
+        WorldState world,
+        IReadOnlyDictionary<EntityId, EntitySnapshot> entitySnapshots)
+    {
+        // Build a reverse lookup: coord → entity IDs, from the live snapshot we just built
+        var byCoord = new Dictionary<TileCoord, List<EntityId>>();
+        foreach (var snap in entitySnapshots.Values)
+        {
+            if (!byCoord.TryGetValue(snap.Location, out var list))
+                byCoord[snap.Location] = list = new List<EntityId>();
+            list.Add(snap.Id);
+        }
+
         int w = world.TileGrid.TileWidth, h = world.TileGrid.TileHeight;
         var result = new TileDisplayData[w * h];
         for (int y = 0; y < h; y++)
             for (int x = 0; x < w; x++)
             {
                 var coord = new TileCoord(x, y);
-                result[y * w + x] = BuildTileDisplayData(world, coord);
+                var ids = byCoord.TryGetValue(coord, out var list)
+                    ? list.ToArray()
+                    : Array.Empty<EntityId>();
+                result[y * w + x] = BuildTileDisplayData(world, coord, ids);
             }
         return result;
     }
 
-    private static TileDisplayData BuildTileDisplayData(WorldState world, TileCoord coord)
+    private static TileDisplayData BuildTileDisplayData(
+        WorldState world, TileCoord coord, EntityId[] entitiesPresent)
     {
         var tile = world.TileGrid.GetTile(coord);
         int idx = world.TileGrid.FlatIndex(coord);
@@ -70,7 +96,8 @@ public sealed class SnapshotBuilder
             Fertility:           tile.Fertility,
             StaticFlags:         tile.StaticFlags,
             DynFlags:            tile.DynFlags,
-            HasActiveDisaster:   hasDisaster
+            HasActiveDisaster:   hasDisaster,
+            EntitiesPresent:     entitiesPresent
         );
     }
 

@@ -1,4 +1,5 @@
 using WorldEngine.Sim.Core;
+using WorldEngine.Sim.Entities;
 
 namespace WorldEngine.Sim.World;
 
@@ -25,6 +26,9 @@ public sealed record WorldSnapshot(
 
     // Tile inspector (null if no tile selected)
     TileInspectorData? InspectedTile,
+
+    // Entities — flat lookup by EntityId; used by inspector and map renderer
+    IReadOnlyDictionary<EntityId, EntitySnapshot> EntitySnapshots,
 
     // World-level drift parameters for UI status display
     float GlobalTemperatureAnomaly,

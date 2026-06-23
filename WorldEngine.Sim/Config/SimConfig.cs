@@ -7,6 +7,7 @@ public class SimConfig
     public EventsConfig Events { get; set; } = new();
     public ClimateConfig Climate { get; set; } = new();
     public SimLoopConfig SimLoop { get; set; } = new();
+    public BeastsSimConfig Beasts { get; set; } = new();
 
     public static SimConfig Default() => new();
 }

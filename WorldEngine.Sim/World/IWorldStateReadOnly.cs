@@ -1,4 +1,5 @@
 using WorldEngine.Sim.Core;
+using WorldEngine.Sim.Entities;
 using WorldEngine.Sim.Tiles;
 
 namespace WorldEngine.Sim.World;
@@ -36,10 +37,12 @@ public interface IWorldStateReadOnly
     float GlobalTemperatureAnomaly { get; }
     float CurrentSeaLevel { get; }
 
-    // Milestone 2+ additions (uncomment when implementing):
-    // IEntity? GetEntity(EntityId id);
-    // IEnumerable<IEntity> GetEntitiesAt(TileCoord coord);
-    // IEnumerable<IEntity> GetEntitiesInRadius(TileCoord center, int radius);
+    // === ENTITY ACCESS (M2+) ===
+    IEntity? GetEntity(EntityId id);
+    IEnumerable<IEntity> GetEntitiesAt(TileCoord coord);
+    IEnumerable<IEntity> GetEntitiesInRadius(TileCoord center, int radius);
+
+    // === RELATIONSHIPS / HISTORY (M3+) ===
     // float GetRelationshipTrust(EntityId from, EntityId to);
     // IEnumerable<SimEvent> GetRecentEvents(int withinYears);
     // float GetAuthorityAt(TileCoord coord, CivId civId);

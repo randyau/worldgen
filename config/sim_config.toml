@@ -580,3 +580,10 @@ rare_resource_density         = 0.003
 fertility_recovery_per_year   = 1     # byte units per year
 post_fire_fertility_boost     = 30    # temporary fertility bonus after fire clears
 drought_fertility_penalty_per_season = 5
+
+# =============================================================================
+# BEASTS (lifecycle constants — species stats are in config/beasts.toml)
+# =============================================================================
+
+[beasts]
+starvation_health_loss = 5    # health points lost per season when FoodNeed < 0.2

@@ -32,6 +32,10 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>config\sim_config.toml</Link>
     </Content>
+    <Content Include="..\config\beasts.toml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>config\beasts.toml</Link>
+    </Content>
   </ItemGroup>
 
 </Project>

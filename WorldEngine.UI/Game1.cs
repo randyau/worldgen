@@ -7,6 +7,7 @@ using Myra.Graphics2D.UI;
 using WorldEngine.Sim.Commands;
 using WorldEngine.Sim.Config;
 using WorldEngine.Sim.Core;
+using WorldEngine.Sim.Entities.Beasts;
 using WorldEngine.Sim.Events;
 using WorldEngine.Sim.Persistence;
 using WorldEngine.Sim.Simulation;
@@ -213,12 +214,21 @@ public sealed class Game1 : Game
         }
 
         var simCfg = SimConfigLoader.LoadOrCreateDefault();
+        var beastCatalog = BeastCatalogLoader.LoadOrCreateDefault();
+
         _eventStore = new EventStore("world.db");
         _eventStore.InitializeSchema();
 
+        var spawnEvents = BeastSpawner.SpawnAll(world, beastCatalog);
+
         var eventCache = new EventCache(simCfg.Events.RecentEventCacheSize);
         var gate = new EventGate(simCfg);
-        var phaseRunner = new PhaseRunner(simCfg, _eventStore, eventCache, gate);
+        var phaseRunner = new PhaseRunner(simCfg, _eventStore, eventCache, gate,
+            beastCatalog: beastCatalog);
+
+        foreach (var pe in spawnEvents)
+            phaseRunner.InjectPendingEvent(pe);
+
         var snapshotBuilder = new SnapshotBuilder();
 
         _simLoop = new SimLoop(world, _commandQueue, _stateCache, phaseRunner, snapshotBuilder, simCfg, eventCache);

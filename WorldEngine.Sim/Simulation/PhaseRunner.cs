@@ -1,5 +1,6 @@
 using WorldEngine.Sim.Config;
 using WorldEngine.Sim.Core;
+using WorldEngine.Sim.Entities.Beasts;
 using WorldEngine.Sim.Events;
 using WorldEngine.Sim.Persistence;
 using WorldEngine.Sim.Simulation.Phases;
@@ -19,6 +20,7 @@ public sealed class PhaseRunner
     private readonly EventCache _eventCache;
     private readonly EventGate _gate;
     private readonly EnvironmentalPhase _envPhase;
+    private readonly EntityBehaviorPhase _entityPhase;
     private readonly Action<SimPhase>? _phaseObserver;
     private readonly List<PendingEvent> _injectedEvents = new();
     private int _lastAnnualTickYear;
@@ -28,13 +30,17 @@ public sealed class PhaseRunner
         EventStore eventStore,
         EventCache eventCache,
         EventGate? gate = null,
-        Action<SimPhase>? phaseObserver = null)
+        Action<SimPhase>? phaseObserver = null,
+        BeastCatalog? beastCatalog = null)
     {
         _config        = config;
         _eventStore    = eventStore;
         _eventCache    = eventCache;
         _gate          = gate ?? new EventGate(config);
         _envPhase      = new EnvironmentalPhase(config);
+        _entityPhase   = new EntityBehaviorPhase(
+            beastCatalog ?? BeastCatalogLoader.LoadOrCreateDefault(),
+            config.Beasts.StarvationHealthLoss);
         _phaseObserver = phaseObserver;
     }
 
@@ -46,13 +52,18 @@ public sealed class PhaseRunner
 
     public void RunTick(WorldState world)
     {
-        var pending = RunEnvironmentalPhase(world);
+        bool isAnnualTick = world.CurrentSeason == Season.Spring
+            && world.CurrentYear != _lastAnnualTickYear;
+        if (isAnnualTick)
+            _lastAnnualTickYear = world.CurrentYear;
+
+        var pending = RunEnvironmentalPhase(world, isAnnualTick);
         pending.AddRange(_injectedEvents);
         _injectedEvents.Clear();
 
         RunPhaseStub(world, SimPhase.ResourceProduction);
         RunPhaseStub(world, SimPhase.PopulationDynamics);
-        RunPhaseStub(world, SimPhase.EntityBehavior);
+        RunEntityBehaviorPhase(world, pending, isAnnualTick);
         RunPhaseStub(world, SimPhase.CharacterDecisions);
         RunPhaseStub(world, SimPhase.ConflictResolution);
         RunEventGeneration(world, pending);
@@ -60,16 +71,18 @@ public sealed class PhaseRunner
         world.CurrentTick++;
     }
 
-    private List<PendingEvent> RunEnvironmentalPhase(WorldState world)
+    private List<PendingEvent> RunEnvironmentalPhase(WorldState world, bool isAnnualTick)
     {
         _phaseObserver?.Invoke(SimPhase.Environmental);
-        bool isAnnualTick = world.CurrentSeason == Season.Spring
-            && world.CurrentYear != _lastAnnualTickYear;
-        if (isAnnualTick)
-            _lastAnnualTickYear = world.CurrentYear;
         var pending = new List<PendingEvent>();
         _envPhase.RunTick(world, pending, isAnnualTick);
         return pending;
+    }
+
+    private void RunEntityBehaviorPhase(WorldState world, List<PendingEvent> pending, bool isAnnualTick)
+    {
+        _phaseObserver?.Invoke(SimPhase.EntityBehavior);
+        _entityPhase.RunTick(world, pending, isAnnualTick);
     }
 
     private void RunPhaseStub(WorldState world, SimPhase phase)
