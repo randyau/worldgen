@@ -43,6 +43,8 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
         _conn.Execute(DatabaseSchema.CreateIndexTier);
         _conn.Execute(DatabaseSchema.CreateIndexLocation);
         _conn.Execute(DatabaseSchema.CreateCausalEdges);
+        _conn.Execute(DatabaseSchema.CreateEventEntities);
+        _conn.Execute(DatabaseSchema.CreateIndexEventEntities);
     }
 
     /// <summary>
@@ -97,6 +99,18 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
             """;
         foreach (var (pred, succ) in edges)
             _conn.Execute(sql, new { PredecessorId = pred, SuccessorId = succ }, tx);
+        tx.Commit();
+    }
+
+    public void InsertEventEntities(IEnumerable<(long EventId, long EntityId)> pairs)
+    {
+        using var tx = _conn.BeginTransaction();
+        const string sql = """
+            INSERT OR IGNORE INTO EventEntities (EventId, EntityId)
+            VALUES (@EventId, @EntityId);
+            """;
+        foreach (var (evId, entId) in pairs)
+            _conn.Execute(sql, new { EventId = evId, EntityId = entId }, tx);
         tx.Commit();
     }
 

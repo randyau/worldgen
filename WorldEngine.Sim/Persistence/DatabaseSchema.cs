@@ -32,4 +32,15 @@ public static class DatabaseSchema
             PRIMARY KEY (PredecessorId, SuccessorId)
         );
         """;
+
+    public const string CreateEventEntities = """
+        CREATE TABLE IF NOT EXISTS EventEntities (
+            EventId    INTEGER NOT NULL REFERENCES Events(Id),
+            EntityId   INTEGER NOT NULL,
+            PRIMARY KEY (EventId, EntityId)
+        );
+        """;
+
+    public const string CreateIndexEventEntities =
+        "CREATE INDEX IF NOT EXISTS idx_event_entities_entity ON EventEntities(EntityId);";
 }

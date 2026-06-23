@@ -1,0 +1,229 @@
+using WorldEngine.Sim.Config;
+using WorldEngine.Sim.Core;
+using WorldEngine.Sim.World;
+
+namespace WorldEngine.Sim.Entities.Characters;
+
+/// <summary>
+/// Scores candidate actions for a Tier 1 character and selects one via softmax.
+/// </summary>
+public static class UtilityScorer
+{
+    // Salt for softmax random selection
+    private const int SaltSoftmax = 600;
+
+    public sealed record ScoredAction(ICommand Command, float Score);
+
+    /// <summary>Score all available actions and return a softmax-weighted selection.</summary>
+    public static ICommand? SelectAction(
+        Tier1Character c,
+        IWorldStateReadOnly world,
+        CharacterSimConfig cfg)
+    {
+        var candidates = BuildCandidates(c, world, cfg);
+        if (candidates.Count == 0) return null;
+
+        float temp = cfg.SoftmaxTempMin
+            + c.Personality.Curiosity * (cfg.SoftmaxTempMax - cfg.SoftmaxTempMin);
+
+        // Softmax weights
+        float[] weights = new float[candidates.Count];
+        float max = candidates.Max(a => a.Score); // numerical stability
+        for (int i = 0; i < candidates.Count; i++)
+            weights[i] = MathF.Exp((candidates[i].Score - max) / temp);
+
+        float total = weights.Sum();
+        float roll = world.GetRandomFloat(c.Id, SaltSoftmax) * total;
+        float cumulative = 0f;
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            cumulative += weights[i];
+            if (roll <= cumulative)
+                return candidates[i].Command;
+        }
+        return candidates[^1].Command;
+    }
+
+    private static List<ScoredAction> BuildCandidates(
+        Tier1Character c,
+        IWorldStateReadOnly world,
+        CharacterSimConfig cfg)
+    {
+        var actions = new List<ScoredAction>();
+
+        // Rest — always available
+        actions.Add(new(new Rest(c.Id), Score(c, ActionType.Rest, 0f, world, cfg)));
+
+        // Travel — pick best adjacent tile (highest fertility + settlement presence)
+        var travelDest = BestAdjacentTile(c, world);
+        if (travelDest.HasValue)
+            actions.Add(new(new MoveToTile(c.Id, travelDest.Value),
+                Score(c, ActionType.Travel, 0.5f, world, cfg)));
+
+        // EstablishSettlement — if tile is fertile and empty
+        if (!world.Settlements.ContainsKey(c.Location)
+            && world.GetTile(c.Location).Fertility >= cfg.MinFertilityToSettle)
+        {
+            float successProb = (c.Skills.Leadership + c.Aptitude.Diligence) * 0.5f;
+            actions.Add(new(new EstablishSettlement(c.Id, c.Location),
+                Score(c, ActionType.Establish, successProb, world, cfg)));
+        }
+
+        // AllyWith / Negotiate — nearby character without alliance
+        foreach (var e in world.GetEntitiesAt(c.Location))
+        {
+            if (e is not Tier1Character other || other.Id == c.Id || !other.IsAlive) continue;
+            var rel = world.GetRelationship(c.Id, other.Id);
+            if (rel?.IsAtWar ?? false) continue;
+
+            if (rel?.Trust >= 0.4f && !(rel?.IsAlly ?? false))
+            {
+                float successProb = (c.Skills.Diplomacy + c.Personality.Sociability) * 0.5f;
+                actions.Add(new(new AllyWith(c.Id, other.Id),
+                    Score(c, ActionType.Ally, successProb, world, cfg)));
+            }
+            else
+            {
+                actions.Add(new(new Negotiate(c.Id, other.Id),
+                    Score(c, ActionType.Negotiate, 0.8f, world, cfg)));
+            }
+        }
+
+        // DeclareRivalry — nearby character with low trust
+        foreach (var e in world.GetEntitiesInRadius(c.Location, cfg.PerceptionRadius))
+        {
+            if (e is not Tier1Character other || other.Id == c.Id || !other.IsAlive) continue;
+            var rel = world.GetRelationship(c.Id, other.Id);
+            if ((rel?.Trust ?? 0f) < -0.1f && !(rel?.IsRival ?? false) && !(rel?.IsAtWar ?? false))
+            {
+                actions.Add(new(new DeclareRivalry(c.Id, other.Id),
+                    Score(c, ActionType.Rivalry, 1.0f, world, cfg)));
+                break; // one rival declaration per tick is enough
+            }
+        }
+
+        // DeclareWar — rival with Aggression
+        if (c.Personality.Aggression > 0.5f)
+        {
+            foreach (var e in world.GetEntitiesInRadius(c.Location, cfg.PerceptionRadius))
+            {
+                if (e is not Tier1Character other || other.Id == c.Id || !other.IsAlive) continue;
+                var rel = world.GetRelationship(c.Id, other.Id);
+                if ((rel?.IsRival ?? false) && !(rel?.IsAtWar ?? false))
+                {
+                    actions.Add(new(new DeclareWar(c.Id, other.Id),
+                        Score(c, ActionType.War, c.Personality.Aggression, world, cfg)));
+                    break;
+                }
+            }
+        }
+
+        // RaidSettlement — nearby enemy settlement
+        if (c.Personality.Aggression > 0.4f)
+        {
+            foreach (var coord in world.GetTilesInRadius(c.Location, cfg.PerceptionRadius))
+            {
+                if (!world.Settlements.TryGetValue(coord, out var settlement)) continue;
+                var rel = world.GetRelationship(c.Id, settlement.FounderId);
+                if (rel?.IsAtWar ?? false)
+                {
+                    float successProb = c.Skills.Combat * c.Aptitude.Diligence;
+                    actions.Add(new(new RaidSettlement(c.Id, coord),
+                        Score(c, ActionType.Raid, successProb, world, cfg)));
+                    break;
+                }
+            }
+        }
+
+        return actions;
+    }
+
+    private enum ActionType { Rest, Travel, Establish, Ally, Negotiate, Rivalry, War, Raid }
+
+    private static float Score(
+        Tier1Character c,
+        ActionType action,
+        float successProb,
+        IWorldStateReadOnly world,
+        CharacterSimConfig cfg)
+    {
+        float needsSatisfaction   = NeedsSatisfaction(c, action);
+        float goalAdvancement     = GoalAdvancement(c, action);
+        float personalityFit      = PersonalityFit(c, action);
+
+        return (needsSatisfaction * cfg.NeedsWeight
+              + goalAdvancement   * cfg.GoalsWeight
+              + personalityFit    * cfg.PersonalityWeight)
+              * Math.Max(0.1f, successProb);
+    }
+
+    private static float NeedsSatisfaction(Tier1Character c, ActionType a) => a switch
+    {
+        ActionType.Rest      => (2f - c.Needs.Safety - c.Needs.Food) * 0.2f,
+        ActionType.Establish => (1f - c.Needs.Shelter) * 0.7f + (1f - c.Needs.Status) * 0.3f,
+        ActionType.Ally      => (1f - c.Needs.Belonging) * 0.6f + (1f - c.Needs.Safety) * 0.4f,
+        ActionType.Negotiate => (1f - c.Needs.Belonging) * 0.5f,
+        ActionType.War       => (1f - c.Needs.Status) * 0.7f,
+        ActionType.Raid      => (1f - c.Needs.Status) * 0.5f,
+        ActionType.Travel    => (1f - c.Needs.Safety) * 0.3f,
+        ActionType.Rivalry   => (1f - c.Needs.Status) * 0.4f,
+        _                    => 0.1f
+    };
+
+    private static float GoalAdvancement(Tier1Character c, ActionType a)
+    {
+        if (c.Goals.Count == 0) return 0f;
+        float best = 0f;
+        foreach (var g in c.Goals)
+        {
+            float match = (g.Type, a) switch
+            {
+                (GoalType.Survive,   ActionType.Rest)      => 0.8f,
+                (GoalType.Survive,   ActionType.Travel)    => 0.4f,
+                (GoalType.Expansion, ActionType.Establish) => 1.0f,
+                (GoalType.Expansion, ActionType.Travel)    => 0.3f,
+                (GoalType.Dominance, ActionType.War)       => 1.0f,
+                (GoalType.Dominance, ActionType.Raid)      => 0.8f,
+                (GoalType.Alliance,  ActionType.Ally)      => 1.0f,
+                (GoalType.Alliance,  ActionType.Negotiate) => 0.5f,
+                _                                          => 0f
+            };
+            best = Math.Max(best, match * g.Priority);
+        }
+        return best;
+    }
+
+    private static float PersonalityFit(Tier1Character c, ActionType a) => a switch
+    {
+        ActionType.Establish => c.Personality.Ambition,
+        ActionType.War       => c.Personality.Aggression,
+        ActionType.Raid      => c.Personality.Aggression * 0.8f,
+        ActionType.Rivalry   => c.Personality.Aggression * 0.7f,
+        ActionType.Ally      => c.Personality.Sociability,
+        ActionType.Negotiate => c.Personality.Sociability * 0.7f + c.Personality.Honesty * 0.3f,
+        ActionType.Rest      => c.Personality.Stability,
+        ActionType.Travel    => c.Personality.Curiosity,
+        _                    => 0.2f
+    };
+
+    private static TileCoord? BestAdjacentTile(Tier1Character c, IWorldStateReadOnly world)
+    {
+        TileCoord? best = null;
+        int bestScore = -1;
+        int w = world.Config.TileWidth, h = world.Config.TileHeight;
+        int[] dx = { -1, 1, 0, 0 };
+        int[] dy = { 0, 0, -1, 1 };
+        for (int i = 0; i < 4; i++)
+        {
+            int nx = ((c.Location.X + dx[i]) % w + w) % w;
+            int ny = Math.Clamp(c.Location.Y + dy[i], 0, h - 1);
+            var coord = new TileCoord(nx, ny);
+            if (!world.IsLand(coord)) continue;
+            if ((BiomeType)world.GetTile(coord).BiomeType == BiomeType.HighMountain) continue;
+            int score = world.GetTile(coord).Fertility;
+            if (world.Settlements.ContainsKey(coord)) score += 50;
+            if (score > bestScore) { bestScore = score; best = coord; }
+        }
+        return best;
+    }
+}

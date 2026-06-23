@@ -10,6 +10,7 @@ namespace WorldEngine.Sim.World;
 public sealed record PendingEvent(
     EventType Type,
     TileCoord? Location,
-    EventId? CauseEventId,   // null = root event; set = CausalEdge will be created
-    string PayloadJson
+    EventId? CauseEventId,       // null = root event; set = CausalEdge will be created
+    string PayloadJson,
+    IReadOnlyList<long>? EntityIds = null // entity IDs to cross-reference in EventEntities
 );

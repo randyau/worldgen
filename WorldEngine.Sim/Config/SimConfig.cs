@@ -8,6 +8,8 @@ public class SimConfig
     public ClimateConfig Climate { get; set; } = new();
     public SimLoopConfig SimLoop { get; set; } = new();
     public BeastsSimConfig Beasts { get; set; } = new();
+    public CharacterSimConfig Character { get; set; } = new();
+    public CharacterNamesConfig CharacterNames { get; set; } = new();
 
     public static SimConfig Default() => new();
 }

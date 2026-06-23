@@ -43,10 +43,30 @@ public static class SignificanceClassifier
             EventType.DroughtBegan      => PopulationImpact.Moderate,
             EventType.SeaLevelChanged   => TryGetFloat(payloadJson, "Delta") > SeaLevelCatastrophicDelta
                                            ? PopulationImpact.Catastrophic : PopulationImpact.Major,
-            // Beast events — Awakened/Slain/Died are Regional; others Background
+            // Beast events
             EventType.BeastAwakened     => PopulationImpact.Major,   // → Regional tier
-            EventType.BeastSlain        => PopulationImpact.None,     // VerbClass.Destruction already → Regional
-            EventType.BeastDied         => PopulationImpact.None,     // VerbClass.Destruction already → Regional
+            EventType.BeastSlain        => PopulationImpact.None,     // VerbClass.Destruction → Regional
+            EventType.BeastDied         => PopulationImpact.None,
+            // Tier 1 character events — all Headline (Tier 1 involved, per §23)
+            EventType.CharacterBorn     => PopulationImpact.Minor,    // → Headline via Tier1 rule
+            EventType.CharacterDied     => PopulationImpact.Moderate, // → Headline
+            EventType.CharacterMarried  => PopulationImpact.None,
+            EventType.CharacterExiled   => PopulationImpact.None,
+            // Political events — Headline
+            EventType.WarDeclared       => PopulationImpact.Major,
+            EventType.WarEnded          => PopulationImpact.Major,
+            EventType.BattleOccurred    => PopulationImpact.Moderate,
+            EventType.CivilizationFounded   => PopulationImpact.Major,
+            EventType.CivilizationCollapsed => PopulationImpact.Catastrophic,
+            // Settlement events — Regional (Creation/Destruction verb floors apply)
+            EventType.SettlementFounded     => PopulationImpact.Minor,
+            EventType.SettlementDestroyed   => PopulationImpact.Moderate,
+            // Relationship events — Character tier
+            EventType.AllianceFormed    => PopulationImpact.None,
+            EventType.AllianceBroken    => PopulationImpact.None,
+            EventType.RivalryFormed     => PopulationImpact.None,
+            EventType.Negotiated        => PopulationImpact.None,
+            EventType.SuccessionOccurred => PopulationImpact.Minor,
             _                           => PopulationImpact.None,
         };
     }

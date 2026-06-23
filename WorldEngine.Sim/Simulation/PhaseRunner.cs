@@ -21,6 +21,7 @@ public sealed class PhaseRunner
     private readonly EventGate _gate;
     private readonly EnvironmentalPhase _envPhase;
     private readonly EntityBehaviorPhase _entityPhase;
+    private readonly CharacterBehaviorPhase _charPhase;
     private readonly Action<SimPhase>? _phaseObserver;
     private readonly List<PendingEvent> _injectedEvents = new();
     private int _lastAnnualTickYear;
@@ -41,6 +42,7 @@ public sealed class PhaseRunner
         _entityPhase   = new EntityBehaviorPhase(
             beastCatalog ?? BeastCatalogLoader.LoadOrCreateDefault(),
             config.Beasts.StarvationHealthLoss);
+        _charPhase     = new CharacterBehaviorPhase(config);
         _phaseObserver = phaseObserver;
     }
 
@@ -64,7 +66,7 @@ public sealed class PhaseRunner
         RunPhaseStub(world, SimPhase.ResourceProduction);
         RunPhaseStub(world, SimPhase.PopulationDynamics);
         RunEntityBehaviorPhase(world, pending, isAnnualTick);
-        RunPhaseStub(world, SimPhase.CharacterDecisions);
+        RunCharacterBehaviorPhase(world, pending);
         RunPhaseStub(world, SimPhase.ConflictResolution);
         RunEventGeneration(world, pending);
 
@@ -83,6 +85,12 @@ public sealed class PhaseRunner
     {
         _phaseObserver?.Invoke(SimPhase.EntityBehavior);
         _entityPhase.RunTick(world, pending, isAnnualTick);
+    }
+
+    private void RunCharacterBehaviorPhase(WorldState world, List<PendingEvent> pending)
+    {
+        _phaseObserver?.Invoke(SimPhase.CharacterDecisions);
+        pending.AddRange(_charPhase.Execute(world, world.CurrentTick));
     }
 
     private void RunPhaseStub(WorldState world, SimPhase phase)
@@ -129,16 +137,21 @@ public sealed class PhaseRunner
         // Step 3: Update OriginEventId on matching ActiveDisasters
         UpdateActiveDisasterOrigins(world, batch, inserted);
 
-        // Step 4: Causal edges
-        var edges = new List<(long, long)>();
+        // Step 4: Causal edges + EventEntities cross-references
+        var edges       = new List<(long, long)>();
+        var entPairs    = new List<(long, long)>();
         for (int i = 0; i < batch.Count && i < inserted.Count; i++)
         {
-            var pe = batch[i].pe;
+            var pe    = batch[i].pe;
+            long evId = inserted[i].Id.Value;
             if (pe.CauseEventId.HasValue && pe.CauseEventId.Value.Value != 0)
-                edges.Add((pe.CauseEventId.Value.Value, inserted[i].Id.Value));
+                edges.Add((pe.CauseEventId.Value.Value, evId));
+            if (pe.EntityIds is { Count: > 0 })
+                foreach (int eid in pe.EntityIds)
+                    entPairs.Add((evId, eid));
         }
-        if (edges.Count > 0)
-            _eventStore.InsertCausalEdges(edges);
+        if (edges.Count    > 0) _eventStore.InsertCausalEdges(edges);
+        if (entPairs.Count > 0) _eventStore.InsertEventEntities(entPairs);
 
         // Step 5: Cache (ALWAYS after DB)
         foreach (var ev in inserted)

@@ -16,5 +16,6 @@ public sealed record EntitySnapshot(
     float HealthFraction,    // 0.0–1.0
     float FoodFraction,      // 0.0–1.0; -1 if entity has no Food need
     int AgeSeason,           // age in seasons
-    bool IsAlive
+    bool IsAlive,
+    string? CivName = null   // non-null for characters that belong to a civilization
 );

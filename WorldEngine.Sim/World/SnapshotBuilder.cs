@@ -1,3 +1,4 @@
+using WorldEngine.Sim.Civilizations;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities;
 using WorldEngine.Sim.Tiles;
@@ -47,7 +48,13 @@ public sealed class SnapshotBuilder
     {
         var dict = new Dictionary<EntityId, EntitySnapshot>(world.Entities.Count);
         foreach (var (id, entity) in world.Entities.All)
-            dict[id] = entity.ToSnapshot();
+        {
+            var snap = entity.ToSnapshot();
+            if (entity is Entities.Characters.Tier1Character c && c.Identity.CivId.IsValid
+                && world.Civilizations.TryGetValue(c.Identity.CivId, out var civ))
+                snap = snap with { CivName = civ.Name };
+            dict[id] = snap;
+        }
         return dict;
     }
 

@@ -587,3 +587,29 @@ drought_fertility_penalty_per_season = 5
 
 [beasts]
 starvation_health_loss = 5    # health points lost per season when FoodNeed < 0.2
+
+# =============================================================================
+# CHARACTER (Tier 1 — heroes, rulers — Phase 2.2+)
+# =============================================================================
+
+[character]
+initial_count             = 20
+max_age_seasons_min       = 80
+max_age_seasons_max       = 200
+max_health                = 100
+needs_decay_safety        = 0.05
+needs_decay_food          = 0.08
+needs_decay_shelter       = 0.04
+needs_decay_belonging     = 0.03
+needs_decay_status        = 0.03
+needs_decay_purpose       = 0.04
+needs_decay_spiritual     = 0.02
+needs_weight              = 0.5
+goals_weight              = 0.3
+personality_weight        = 0.2
+softmax_temp_min          = 0.5
+softmax_temp_max          = 2.0
+perception_radius         = 3
+health_per_season_heal    = 5
+combat_damage_base        = 20
+min_fertility_to_settle   = 100

@@ -8,6 +8,7 @@ using WorldEngine.Sim.Commands;
 using WorldEngine.Sim.Config;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities.Beasts;
+using WorldEngine.Sim.Entities.Characters;
 using WorldEngine.Sim.Events;
 using WorldEngine.Sim.Persistence;
 using WorldEngine.Sim.Simulation;
@@ -220,6 +221,7 @@ public sealed class Game1 : Game
         _eventStore.InitializeSchema();
 
         var spawnEvents = BeastSpawner.SpawnAll(world, beastCatalog);
+        var charSpawnEvents = CharacterSpawner.SpawnAll(world, simCfg);
 
         var eventCache = new EventCache(simCfg.Events.RecentEventCacheSize);
         var gate = new EventGate(simCfg);
@@ -227,6 +229,8 @@ public sealed class Game1 : Game
             beastCatalog: beastCatalog);
 
         foreach (var pe in spawnEvents)
+            phaseRunner.InjectPendingEvent(pe);
+        foreach (var pe in charSpawnEvents)
             phaseRunner.InjectPendingEvent(pe);
 
         var snapshotBuilder = new SnapshotBuilder();

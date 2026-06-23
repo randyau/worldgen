@@ -54,7 +54,10 @@ public sealed class TileInspectorPanel
 
         // Beast section — built from EntitySnapshots filtered by tile coord
         if (snapshot is not null)
+        {
             AddBeastSection(data.Coord, snapshot.EntitySnapshots);
+            AddCharacterSection(data.Coord, snapshot.EntitySnapshots);
+        }
     }
 
     private void AddBeastSection(
@@ -73,6 +76,25 @@ public sealed class TileInspectorPanel
             string tag = b.IsLegendary ? " [Legendary]" : "";
             AddLine($"{b.Name}{tag}");
             AddLine($"  HP {b.HealthFraction:P0}  Food {b.FoodFraction:P0}  Age {b.AgeSeason}");
+        }
+    }
+
+    private void AddCharacterSection(
+        TileCoord coord,
+        IReadOnlyDictionary<EntityId, EntitySnapshot> entitySnapshots)
+    {
+        var chars = entitySnapshots.Values
+            .Where(e => e.Kind == EntityKind.Tier1Character && e.IsAlive && e.Location == coord)
+            .ToList();
+
+        if (chars.Count == 0) return;
+
+        AddLine("--- Characters ---");
+        foreach (var c in chars)
+        {
+            string civTag = c.CivName is not null ? $" [{c.CivName}]" : "";
+            AddLine($"{c.Name}{civTag}");
+            AddLine($"  HP {c.HealthFraction:P0}  Age {c.AgeSeason}s");
         }
     }
 

@@ -59,6 +59,10 @@ public sealed class TileMapRenderer(GraphicsDevice gd, Camera2D camera)
         if (camera.Zoom >= 4f)
             DrawBeastMarkers(sb, snapshot, tw, th, minX, maxX, minY, maxY);
 
+        // Draw character markers — small blue square at zoom ≥ 2
+        if (camera.Zoom >= 2f)
+            DrawCharacterMarkers(sb, snapshot, tw, th, minX, maxX, minY, maxY);
+
         // Draw selection highlight over the inspected tile
         if (snapshot.InspectedTile?.Coord is TileCoord sel)
         {
@@ -116,6 +120,36 @@ public sealed class TileMapRenderer(GraphicsDevice gd, Camera2D camera)
             var coord = new TileCoord(wx, ty);
             if (legendary.Contains(coord)) DrawDot(coord, goldColor);
             else if (normal.Contains(coord)) DrawDot(coord, darkRedColor);
+        }
+    }
+
+    private void DrawCharacterMarkers(
+        SpriteBatch sb, WorldSnapshot snapshot,
+        int tw, int th, int minX, int maxX, int minY, int maxY)
+    {
+        var charTiles = new HashSet<TileCoord>();
+        foreach (var kvp in snapshot.EntitySnapshots)
+        {
+            var snap = kvp.Value;
+            if (!snap.IsAlive) continue;
+            if (snap.Kind == EntityKind.Tier1Character)
+                charTiles.Add(snap.Location);
+        }
+
+        int dotSize = Math.Max(2, (int)(camera.Zoom * 0.25f));
+        int half    = dotSize / 2;
+        var blue    = new Color(60, 100, 220);
+
+        for (int ty = minY; ty <= maxY; ty++)
+        for (int tx = minX; tx <= maxX; tx++)
+        {
+            int wx    = ((tx % tw) + tw) % tw;
+            var coord = new TileCoord(wx, ty);
+            if (!charTiles.Contains(coord)) continue;
+            var pos = camera.TileToScreen(coord);
+            int cx  = (int)MathF.Round(pos.X + camera.Zoom * 0.5f);
+            int cy  = (int)MathF.Round(pos.Y + camera.Zoom * 0.2f); // top of tile
+            sb.Draw(_pixel, new Rectangle(cx - half, cy - half, dotSize, dotSize), blue);
         }
     }
 
