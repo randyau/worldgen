@@ -31,6 +31,10 @@ public sealed class CharacterSimConfig
     public int   CombatDamageBase       { get; set; } = 20;
     public int   MinFertilityToSettle   { get; set; } = 100;
 
+    // Civilization-born character generation
+    public int   CivBirthMinPop         { get; set; } = 30;   // settlement needs this many people
+    public float CivBirthChancePerSeason { get; set; } = 0.02f; // ~1 birth per 50 seasons at min pop
+
     // Tier 2 tuning
     public int   Tier2PerPopulation     { get; set; } = 10;  // one Tier2 per this many pop
     public int   Tier2MaxAgeSeasonsMin  { get; set; } = 60;

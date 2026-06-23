@@ -46,7 +46,52 @@ public sealed class CharacterBehaviorPhase
         foreach (var c in characters.Where(ch => !ch.IsAlive))
             world.Entities.Remove(c.Id);
 
+        // Spawn next-generation heroes from stable settlements
+        TrySpawnCivBorn(world, pending, tick);
+
         return pending;
+    }
+
+    // ─── Civ-born character generation ───────────────────────────────────────
+
+    private const int SaltCivBirth = 1000;
+
+    private void TrySpawnCivBorn(WorldState world, List<PendingEvent> pending, long tick)
+    {
+        foreach (var kvp in world.Settlements)
+        {
+            var stub = kvp.Value;
+            if (stub.Population < _cfg.CivBirthMinPop) continue;
+            if (!world.Civilizations.TryGetValue(stub.CivId, out var civ)) continue;
+            if (civ.IsCollapsed) continue;
+
+            // Probability scales with population above minimum
+            float popFactor = Math.Min(3f, (float)stub.Population / _cfg.CivBirthMinPop);
+            float chance    = _cfg.CivBirthChancePerSeason * popFactor;
+
+            float r = WorldRng.FloatAt(world.WorldSeed, (int)tick, (int)(stub.FounderId.Value & 0x7FFFFFFF), 0, SaltCivBirth);
+            if (r > chance) continue;
+
+            // Unique entitySeq derived from tick + tile to stay deterministic
+            long seq  = 50_000L + (tick * 997L + kvp.Key.X * 31 + kvp.Key.Y) & 0x7FFFFFFF;
+            var born  = CharacterFactory.Spawn(kvp.Key, world.WorldSeed, seq, _simCfg, world.CurrentYear);
+            born.Identity = born.Identity with { CivId = stub.CivId };
+            civ.Members.Add(born.Id);
+            world.Entities.Add(born);
+
+            var payload = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                characterId = born.Id.Value,
+                name        = born.Identity.Name,
+                epithet     = born.Identity.Epithet,
+                civId       = stub.CivId.Value,
+                location    = new[] { born.Location.X, born.Location.Y },
+                ambition    = born.Personality.Ambition,
+                aggression  = born.Personality.Aggression
+            });
+            pending.Add(new PendingEvent(EventType.CharacterBorn, born.Location, null, payload,
+                new[] { born.Id.Value }));
+        }
     }
 
     // ─── Lifecycle ────────────────────────────────────────────────────────────

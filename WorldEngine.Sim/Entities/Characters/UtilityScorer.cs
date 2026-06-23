@@ -60,8 +60,11 @@ public static class UtilityScorer
             actions.Add(new(new MoveToTile(c.Id, travelDest.Value),
                 Score(c, ActionType.Travel, 0.5f, world, cfg)));
 
-        // EstablishSettlement — if tile is fertile and empty
-        if (!world.Settlements.ContainsKey(c.Location)
+        // EstablishSettlement — only if tile is fertile, empty, and char has no existing settlement
+        bool alreadyHasSettlement = c.Identity.CivId.IsValid
+            && world.Settlements.Values.Any(s => s.FounderId == c.Id);
+        if (!alreadyHasSettlement
+            && !world.Settlements.ContainsKey(c.Location)
             && world.GetTile(c.Location).Fertility >= cfg.MinFertilityToSettle)
         {
             float successProb = (c.Skills.Leadership + c.Aptitude.Diligence) * 0.5f;

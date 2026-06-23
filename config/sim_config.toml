@@ -613,6 +613,8 @@ perception_radius         = 3
 health_per_season_heal    = 5
 combat_damage_base        = 20
 min_fertility_to_settle   = 100
+civ_birth_min_pop         = 30
+civ_birth_chance_per_season = 0.02
 # Tier 2 sub-tuning (appended to [character] section — Tomlyn merges same-section keys)
 tier2_per_population        = 10
 tier2_max_age_seasons_min   = 60
@@ -628,8 +630,8 @@ tier2_needs_decay_status    = 0.04
 # =============================================================================
 
 [settlement]
-pop_growth_rate          = 0.5   # population added per season per fertility unit (fertility/255 × this)
-pop_decay_rate           = 0.2   # population lost per season unconditionally (hunger/disease stub)
+pop_growth_rate          = 2.0   # population added per season per fertility unit (fertility/255 × this)
+pop_decay_rate           = 0.05  # population lost per season unconditionally (hunger/disease stub)
 pop_min_viable           = 5     # below this → settlement abandoned
 pop_max                  = 50000 # hard cap
 crystal_pop_artisan      = 200
