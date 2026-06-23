@@ -40,6 +40,7 @@ public sealed class SnapshotBuilder
             InspectedTile:               inspected,
             EntitySnapshots:             entitySnapshots,
             Settlements:                 settlements,
+            Ruins:                       world.Ruins,
             GlobalTemperatureAnomaly:    world.GlobalTemperatureAnomaly,
             GlobalPrecipitationMultiplier: world.GlobalPrecipitationMultiplier,
             StormCorridorNormalizedLat:  world.StormCorridorNormalizedLat
@@ -115,6 +116,7 @@ public sealed class SnapshotBuilder
 
         byte effectiveTemp = ComputeEffectiveTemperature(world, coord, tile, idx);
         bool hasDisaster = world.ActiveTileDisasters.ContainsKey(coord);
+        bool hasRuin     = world.Ruins.ContainsKey(coord);
 
         return new TileDisplayData(
             Biome:               (BiomeType)tile.BiomeType,
@@ -126,6 +128,7 @@ public sealed class SnapshotBuilder
             StaticFlags:         tile.StaticFlags,
             DynFlags:            tile.DynFlags,
             HasActiveDisaster:   hasDisaster,
+            HasRuin:             hasRuin,
             EntitiesPresent:     entitiesPresent
         );
     }

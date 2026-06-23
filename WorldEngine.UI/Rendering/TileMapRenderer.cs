@@ -67,6 +67,9 @@ public sealed class TileMapRenderer(GraphicsDevice gd, Camera2D camera)
         if (camera.Zoom >= 2f)
             DrawCharacterMarkers(sb, snapshot, tw, th, minX, maxX, minY, maxY);
 
+        // Draw ruin markers — always visible regardless of zoom
+        DrawRuinMarkers(sb, snapshot, tw, th, minX, maxX, minY, maxY);
+
         // Draw settlement markers — always visible regardless of zoom
         DrawSettlementMarkers(sb, snapshot, tw, th, minX, maxX, minY, maxY);
 
@@ -193,6 +196,31 @@ public sealed class TileMapRenderer(GraphicsDevice gd, Camera2D camera)
             // Border then fill (border drawn as slightly larger rect)
             sb.Draw(_pixel, new Rectangle(cx - half - 1, cy - half - 1, markerSize + 2, markerSize + 2), border);
             sb.Draw(_pixel, new Rectangle(cx - half, cy - half, markerSize, markerSize), fill);
+        }
+    }
+
+    private void DrawRuinMarkers(
+        SpriteBatch sb, WorldSnapshot snapshot, int tw, int th,
+        int minX, int maxX, int minY, int maxY)
+    {
+        if (snapshot.Ruins.Count == 0) return;
+
+        int markerSize = Math.Max(2, (int)(camera.Zoom * 0.25f));
+        int half       = markerSize / 2;
+        var ruinColor  = new Color(110, 80, 50); // muted brown
+
+        for (int ty = minY; ty <= maxY; ty++)
+        for (int tx = minX; tx <= maxX; tx++)
+        {
+            int wx    = ((tx % tw) + tw) % tw;
+            var coord = new TileCoord(wx, ty);
+            // Don't show ruin marker when an active settlement is present
+            if (!snapshot.Ruins.ContainsKey(coord) || snapshot.Settlements.ContainsKey(coord)) continue;
+
+            var pos = camera.TileToScreen(coord);
+            int cx  = (int)MathF.Round(pos.X + camera.Zoom * 0.5f);
+            int cy  = (int)MathF.Round(pos.Y + camera.Zoom * 0.5f);
+            sb.Draw(_pixel, new Rectangle(cx - half, cy - half, markerSize, markerSize), ruinColor);
         }
     }
 

@@ -286,12 +286,18 @@ public static class CivTracker
         if (newHealth <= 0)
         {
             world.Settlements.Remove(cmd.SettlementTile);
+
+            int timesSettled = RegisterRuin(cmd.SettlementTile, settlement, "destroyed", world);
+
             pending.Add(new PendingEvent(EventType.SettlementDestroyed, cmd.SettlementTile, null,
                 JsonSerializer.Serialize(new
                 {
-                    tile        = new[] { cmd.SettlementTile.X, cmd.SettlementTile.Y },
-                    founderId   = settlement.FounderId.Value,
-                    destroyerId = raider.Id.Value
+                    tile           = new[] { cmd.SettlementTile.X, cmd.SettlementTile.Y },
+                    settlementName = settlement.Name,
+                    founderId      = settlement.FounderId.Value,
+                    destroyerId    = raider.Id.Value,
+                    civId          = settlement.CivId.Value,
+                    timesSettled
                 })));
         }
         else
@@ -322,6 +328,30 @@ public static class CivTracker
         });
         pending.Add(new PendingEvent(EventType.Negotiated, c.Location, null, payload,
             new[] { c.Id.Value, target.Id.Value }));
+    }
+
+    // ─── Ruin registration ────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Records a settlement tile as a ruin. Increments TimesSettled if the tile has been ruined before.
+    /// Returns the new TimesSettled count.
+    /// </summary>
+    public static int RegisterRuin(
+        TileCoord tile, SettlementStub stub, string cause, WorldState world)
+    {
+        int timesSettled = world.Ruins.TryGetValue(tile, out var existing)
+            ? existing.TimesSettled + 1
+            : 1;
+
+        world.Ruins[tile] = new RuinRecord(
+            Tile:           tile,
+            SettlementName: stub.Name,
+            OriginalCivId:  stub.CivId,
+            DestroyedYear:  world.CurrentYear,
+            Cause:          cause,
+            TimesSettled:   timesSettled);
+
+        return timesSettled;
     }
 
     // ─── Annual diplomacy maintenance ─────────────────────────────────────────

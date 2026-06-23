@@ -87,9 +87,11 @@ public static class UtilityScorer
             if (worthSettle)
             {
                 float routeBonus = ComputeRouteBonus(c.Location, world);
+                float ruinPenalty = RuinFoundingPenalty(c.Location, world, cfg);
                 float successProb = (c.Skills.Leadership + c.Aptitude.Diligence) * 0.5f
                                   * (1f + depositVal * cfg.DepositScoreMultiplier
-                                       + routeBonus  * cfg.RouteScoreMultiplier);
+                                       + routeBonus  * cfg.RouteScoreMultiplier
+                                       - ruinPenalty);
                 actions.Add(new(new EstablishSettlement(c.Id, c.Location),
                     Score(c, ActionType.Establish, successProb, world, cfg)));
             }
@@ -388,6 +390,21 @@ public static class UtilityScorer
                         / (1f + civPop / (float)cfg.FoundingCooldownPopScale);
         int cooldown = Math.Max(cfg.MinFoundingCooldownYears, (int)effective);
         return world.CurrentYear - civ.LastSettlementFoundedYear < cooldown;
+    }
+
+    // ─── Ruin penalty ─────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Score penalty for settling on a ruined tile. Decays exponentially from RuinFoundingPenalty
+    /// toward zero as years pass. High deposits or fertility can still overcome this in scoring.
+    /// </summary>
+    private static float RuinFoundingPenalty(
+        TileCoord coord, IWorldStateReadOnly world, CharacterSimConfig cfg)
+    {
+        if (!world.Ruins.TryGetValue(coord, out var ruin)) return 0f;
+        int yearsAgo = world.CurrentYear - ruin.DestroyedYear;
+        if (cfg.RuinDecayHalfLifeYears <= 0) return cfg.RuinFoundingPenalty;
+        return cfg.RuinFoundingPenalty * MathF.Exp(-yearsAgo * MathF.Log(2f) / cfg.RuinDecayHalfLifeYears);
     }
 
     // ─── Founding score helpers ────────────────────────────────────────────────

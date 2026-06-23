@@ -51,6 +51,12 @@ public sealed class CharacterSimConfig
     // Intensity of the Acquire(Food) goal seeded on allied chars when a settlement strains
     public float AllyDisasterAidIntensity    { get; set; } = 0.3f;
 
+    // ─── Ruins ────────────────────────────────────────────────────────────────
+    // Score penalty (0–1) applied to EstablishSettlement when the tile has a ruin
+    public float RuinFoundingPenalty      { get; set; } = 0.4f;
+    // Years for the penalty to halve (exponential decay); 0 = penalty never decays
+    public float RuinDecayHalfLifeYears   { get; set; } = 50f;
+
     // ─── Effective fertility multiplier for tiles already inside a same-civ settlement's hinterland.
     // 0.5 = "half the resources are claimed" — discourages but doesn't block high-fertility tiles.
     public float HinterlandDrainFactor       { get; set; } = 0.5f;

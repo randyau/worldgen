@@ -26,10 +26,24 @@ public sealed class TileInspectorPanel
         _content.Widgets.Clear();
         var tile = data.RawTile;
 
+        // Ruin — shown before or instead of settlement info
+        if (snapshot?.Ruins.TryGetValue(data.Coord, out var ruin) == true
+            && snapshot?.Settlements.ContainsKey(data.Coord) == false)
+        {
+            string ruinLabel = ruin.TimesSettled > 1
+                ? $"RUINS OF {ruin.SettlementName.ToUpper()} (destroyed {ruin.TimesSettled}x)"
+                : $"RUINS OF {ruin.SettlementName.ToUpper()}";
+            AddLine($"--- {ruinLabel} ---");
+            AddLine($"Last destroyed: Year {ruin.DestroyedYear} ({ruin.Cause})");
+            AddLine("");
+        }
+
         // Settlement info first — most interesting to the user
         if (snapshot?.Settlements.TryGetValue(data.Coord, out var settlement) == true)
         {
-            AddLine($"=== {settlement.Name} ===");
+            string ruinSuffix = snapshot?.Ruins.TryGetValue(data.Coord, out var existingRuin) == true
+                ? $" (on ruins; destroyed {existingRuin.TimesSettled}x)" : "";
+            AddLine($"=== {settlement.Name}{ruinSuffix} ===");
             AddLine($"Civ: {settlement.CivName}");
             AddLine($"Pop: {settlement.Population:N0}");
             string healthLabel = settlement.Health >= 70 ? "Good"

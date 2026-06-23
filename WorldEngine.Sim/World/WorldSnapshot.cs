@@ -44,6 +44,9 @@ public sealed record WorldSnapshot(
     // Settlements — keyed by tile coord; used by inspector and map renderer
     IReadOnlyDictionary<TileCoord, SettlementSnapshot> Settlements,
 
+    // Ruins — keyed by tile coord; displayed in inspector and map renderer
+    IReadOnlyDictionary<TileCoord, RuinRecord> Ruins,
+
     // World-level drift parameters for UI status display
     float GlobalTemperatureAnomaly,
     float GlobalPrecipitationMultiplier,

@@ -617,6 +617,10 @@ min_fertility_to_settle      = 100
 deposit_settle_threshold     = 0.5    # min deposit value to settle despite low fertility
 deposit_score_multiplier     = 0.5    # how much deposit value boosts establish score
 route_score_multiplier       = 0.3    # how much route-position bonus boosts establish score
+# Ruins — founding score penalty for building on a destroyed or abandoned settlement site
+ruin_founding_penalty         = 0.4   # max score penalty (0–1); high deposits or fertility can overcome it
+ruin_decay_half_life_years    = 50    # years for the penalty to halve (exponential decay)
+
 # Alliance system
 alliance_max_base             = 2     # minimum alliance slots per character
 alliance_max_per_sociability  = 3     # +floor(Sociability × this) extra slots; Soc=1.0 → 5 slots total

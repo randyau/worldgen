@@ -44,6 +44,7 @@ public sealed class WorldState : IWorldStateReadOnly
     // === CIVILIZATION / CHARACTER STATE ===
     public Dictionary<CivId, Civilization>        Civilizations   { get; } = new();
     public Dictionary<TileCoord, SettlementStub>  Settlements     { get; } = new();
+    public Dictionary<TileCoord, RuinRecord>      Ruins           { get; } = new();
     public RelationshipGraph                       Relationships   { get; } = new();
     public int NextCivId { get; set; } = 1;
 
@@ -138,6 +139,7 @@ public sealed class WorldState : IWorldStateReadOnly
     // === IWorldStateReadOnly — civilization / character ===
 
     IReadOnlyDictionary<TileCoord, SettlementStub> IWorldStateReadOnly.Settlements => Settlements;
+    IReadOnlyDictionary<TileCoord, RuinRecord>    IWorldStateReadOnly.Ruins       => Ruins;
 
     public RelationshipEdge? GetRelationship(EntityId a, EntityId b) =>
         Relationships.Get(a, b);

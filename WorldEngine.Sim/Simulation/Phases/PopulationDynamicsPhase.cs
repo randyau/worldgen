@@ -3,6 +3,7 @@ using WorldEngine.Sim.Civilizations;
 using WorldEngine.Sim.Config;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities.Characters;
+using WorldEngine.Sim.Tiles;
 using WorldEngine.Sim.World;
 
 namespace WorldEngine.Sim.Simulation.Phases;
@@ -152,18 +153,22 @@ public sealed class PopulationDynamicsPhase
 
     // ─── Abandonment ──────────────────────────────────────────────────────────
 
-    private void AbandonSettlement(TileCoord tile, WorldState world, List<PendingEvent> pending)
+    private static void AbandonSettlement(TileCoord tile, WorldState world, List<PendingEvent> pending)
     {
         if (!world.Settlements.TryGetValue(tile, out var stub)) return;
         world.Settlements.Remove(tile);
 
+        int timesSettled = CivTracker.RegisterRuin(tile, stub, "abandoned", world);
+
         var payload = JsonSerializer.Serialize(new
         {
-            tile          = new[] { tile.X, tile.Y },
-            founderId     = stub.FounderId.Value,
-            civId         = stub.CivId.Value,
-            foundedYear   = stub.FoundedYear,
-            year          = world.CurrentYear
+            tile           = new[] { tile.X, tile.Y },
+            settlementName = stub.Name,
+            founderId      = stub.FounderId.Value,
+            civId          = stub.CivId.Value,
+            foundedYear    = stub.FoundedYear,
+            year           = world.CurrentYear,
+            timesSettled
         });
         pending.Add(new PendingEvent(EventType.SettlementAbandoned, tile, null, payload));
     }

@@ -47,6 +47,7 @@ public interface IWorldStateReadOnly
 
     // === CIVILIZATION / CHARACTER (Phase 2.2+) ===
     IReadOnlyDictionary<TileCoord, SettlementStub> Settlements { get; }
+    IReadOnlyDictionary<TileCoord, RuinRecord>    Ruins       { get; }
     IReadOnlyDictionary<TileCoord, IReadOnlyList<ResourceDeposit>> ResourceDeposits { get; }
     Civilization? GetCivilization(CivId civId);
     RelationshipEdge? GetRelationship(EntityId a, EntityId b);
