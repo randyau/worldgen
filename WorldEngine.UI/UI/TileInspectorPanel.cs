@@ -60,8 +60,9 @@ public sealed class TileInspectorPanel
         else foreach (var d in data.Deposits) AddLine($"{d.DepositType} (Q:{d.Quality} D:{d.Depth})");
 
         AddLine("--- Disasters ---");
-        if (data.Disasters.Count == 0) AddLine("(none)");
-        else foreach (var d in data.Disasters)
+        var disasters = data.Disasters.ToList(); // snapshot; sim thread may mutate the source
+        if (disasters.Count == 0) AddLine("(none)");
+        else foreach (var d in disasters)
             AddLine($"{d.Type} {d.Intensity:F2} [{(d.TicksRemaining < 0 ? "∞" : d.TicksRemaining.ToString())} ticks]");
         AddLine($"In drought: {data.IsInActiveDrought}");
 
