@@ -92,8 +92,31 @@ public sealed class ElevationLayer : IWorldGenLayer<ElevationResult>
         float range = max - min;
         var result = new ElevationResult(ctx.TileCount);
         for (int i = 0; i < raw.Length; i++)
-        {
             result.Elevation[i] = (byte)Math.Clamp((int)((raw[i] - min) / range * 255f), 0, 255);
+
+        // Optional smoothing: softens tectonic step-discontinuities so rivers curve
+        // naturally instead of snapping to straight fault lines.
+        int passes = cfg.SmoothingPasses;
+        if (passes > 0)
+        {
+            var buf = new byte[ctx.TileCount];
+            for (int pass = 0; pass < passes; pass++)
+            {
+                for (int sy = 0; sy < h; sy++)
+                {
+                    for (int sx = 0; sx < w; sx++)
+                    {
+                        int idx = ctx.IndexOf(sx, sy);
+                        int sum = result.Elevation[idx] * 4; // center weight = 4
+                        sum += result.Elevation[ctx.IndexOf((sx + 1) % w, sy)];
+                        sum += result.Elevation[ctx.IndexOf((sx - 1 + w) % w, sy)];
+                        sum += sy > 0     ? result.Elevation[ctx.IndexOf(sx, sy - 1)] : result.Elevation[idx];
+                        sum += sy < h - 1 ? result.Elevation[ctx.IndexOf(sx, sy + 1)] : result.Elevation[idx];
+                        buf[idx] = (byte)(sum / 8);
+                    }
+                }
+                Array.Copy(buf, result.Elevation, ctx.TileCount);
+            }
         }
 
         progress?.Report(1.0f);

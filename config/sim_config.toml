@@ -27,6 +27,8 @@ magic_intensity_scale   = 1.0     # Multiplier on magic intensity peaks (V2 stub
 noise_scale             = 0.3     # How much noise varies elevation around tectonic baseline
 mountain_threshold      = 0.7     # Elevation above which terrain is classified as mountain
 tectonic_intensity      = 0.8     # How dramatic plate collision effects are (0=gentle, 1=extreme)
+smoothing_passes        = 3       # Box-blur passes on elevation after normalization.
+                                   # Softens fault-line steps so rivers curve naturally. 0=off.
 
 [world_gen.ocean]
 default_sea_level       = 0.40    # Fraction of tiles (by elevation rank) that are ocean
@@ -454,6 +456,9 @@ sqlite_mmap_size_mb         = 64     # Memory-mapped I/O size for SQLite
 plate_count = 15
 min_plate_separation_fraction = 0.12
 continental_plate_fraction = 0.45
+boundary_perturb_strength   = 10.0  # Tiles of max noise displacement at Voronoi assignment;
+                                     # makes plate boundaries wavy. 0=straight, 8-12=organic.
+boundary_perturb_frequency  = 0.07  # Noise frequency for perturbation. Lower=broader waves.
 
 # =============================================================================
 # WORLD GENERATION — RIVERS

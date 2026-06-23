@@ -12,6 +12,8 @@ public sealed class TectonicLayer : IWorldGenLayer<TectonicResult>
     private const int SaltPlateType   = 0;
     private const int SaltPoisson     = 1;
     private const int SaltDeposit     = 2;
+    private const int SaltPerturbX    = 3;
+    private const int SaltPerturbY    = 4;
 
     public TectonicResult Generate(
         WorldGenContext ctx,
@@ -23,11 +25,28 @@ public sealed class TectonicLayer : IWorldGenLayer<TectonicResult>
         int plateCount = ctx.SimConfig.WorldGen.Tectonics.PlateCount;
         float minSepFraction = ctx.SimConfig.WorldGen.Tectonics.MinPlateSeparationFraction;
         float contFraction = ctx.SimConfig.WorldGen.Tectonics.ContinentalPlateFraction;
+        float perturbStr  = ctx.SimConfig.WorldGen.Tectonics.BoundaryPerturbStrength;
+        float perturbFreq = ctx.SimConfig.WorldGen.Tectonics.BoundaryPerturbFrequency;
 
         float minSep = minSepFraction * Math.Min(w, h);
 
         // --- Step 1: Poisson disc sampling for plate centers ---
         var centers = SamplePlateCenters(seed, w, h, plateCount, minSep);
+
+        // --- Step 1b: Set up boundary perturbation noise (if configured) ---
+        // Two independent noise fields displace each tile's (x,y) before Voronoi
+        // nearest-center lookup, making plate boundaries wavy instead of straight.
+        FastNoiseLite? perturbX = null, perturbY = null;
+        if (perturbStr > 0f)
+        {
+            perturbX = new FastNoiseLite(seed ^ (SaltPerturbX * 0x7654321));
+            perturbX.SetNoiseType(FastNoiseLite.NoiseType.OpenSimplex2);
+            perturbX.SetFrequency(perturbFreq);
+
+            perturbY = new FastNoiseLite(seed ^ (SaltPerturbY * 0x7654321));
+            perturbY.SetNoiseType(FastNoiseLite.NoiseType.OpenSimplex2);
+            perturbY.SetFrequency(perturbFreq);
+        }
 
         ct.ThrowIfCancellationRequested();
         progress?.Report(0.2f);
@@ -52,7 +71,16 @@ public sealed class TectonicLayer : IWorldGenLayer<TectonicResult>
         {
             for (int x = 0; x < w; x++)
             {
-                int nearest = NearestCenter(x, y, centers, w);
+                // Apply boundary perturbation: offset the lookup position by noise
+                // so plate boundaries follow organic curves instead of straight lines.
+                float lx = x, ly = y;
+                if (perturbStr > 0f)
+                {
+                    lx += perturbX!.GetNoise(x, y) * perturbStr;
+                    ly += perturbY!.GetNoise(x, y) * perturbStr;
+                }
+
+                int nearest = NearestCenter((int)lx, (int)ly, centers, w);
                 int idx = ctx.IndexOf(x, y);
                 result.PlateId[idx]           = (byte)nearest;
                 result.IsContinentalTile[idx] = isContinental[nearest];
