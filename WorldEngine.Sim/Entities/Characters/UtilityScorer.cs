@@ -78,14 +78,15 @@ public static class UtilityScorer
             if (e is not Tier1Character other || other.Id == c.Id || !other.IsAlive) continue;
             var rel = world.GetRelationship(c.Id, other.Id);
             if (rel?.IsAtWar ?? false) continue;
+            if (rel?.IsAlly ?? false) continue;  // already allied — no further social action needed
 
-            if (rel?.Trust >= 0.4f && !(rel?.IsAlly ?? false))
+            if (rel?.Trust >= 0.4f)
             {
                 float successProb = (c.Skills.Diplomacy + c.Personality.Sociability) * 0.5f;
                 actions.Add(new(new AllyWith(c.Id, other.Id),
                     Score(c, ActionType.Ally, successProb, world, cfg)));
             }
-            else
+            else if ((rel?.Trust ?? 0f) < 0.7f)  // don't negotiate already-maxed relationships
             {
                 actions.Add(new(new Negotiate(c.Id, other.Id),
                     Score(c, ActionType.Negotiate, 0.8f, world, cfg)));

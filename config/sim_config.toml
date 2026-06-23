@@ -71,7 +71,8 @@ ultrafast_snapshot_years = 10     # Push UI snapshot every N sim-years in Ultraf
 
 [events]
 # Active gate keys (consumed by EventsConfig / EventGate)
-minimum_recorded_tier        = 0        # 0=Background, 1=Character, 2=Regional, 3=Headline
+minimum_recorded_tier        = 1        # 0=Background (dev only), 1=Character, 2=Regional, 3=Headline
+                                        # Background floods DB with every negotiation, movement, etc.
 recent_event_cache_size      = 500
 suppressed_types = []
 
