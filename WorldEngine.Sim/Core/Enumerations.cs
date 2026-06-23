@@ -144,7 +144,7 @@ public static class VerbClassification
         EventType.ResourceRecovered  => VerbClass.Maintenance,
         // M2+ stubs — reasonable defaults
         EventType.CharacterBorn           => VerbClass.Creation,
-        EventType.CharacterDied           => VerbClass.Destruction,
+        EventType.CharacterDied           => VerbClass.Transformation, // Destruction floor=Regional floods DB; impact drives tier for notable deaths
         EventType.CharacterMarried        => VerbClass.Transfer,
         EventType.CharacterExiled         => VerbClass.Transformation,
         EventType.AllianceFormed          => VerbClass.Transfer,
@@ -180,7 +180,7 @@ public static class VerbClassification
         // Beast events
         EventType.BeastSpawned     => VerbClass.Creation,
         EventType.BeastAwakened    => VerbClass.Creation,
-        EventType.BeastDied        => VerbClass.Destruction,
+        EventType.BeastDied        => VerbClass.Transformation, // Destruction floor=Regional; most beast deaths are old-age, not narrative
         EventType.BeastSlain       => VerbClass.Destruction,
         EventType.BeastReproduced  => VerbClass.Creation,
         EventType.BeastEncountered  => VerbClass.Interaction,

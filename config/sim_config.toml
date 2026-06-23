@@ -134,6 +134,7 @@ suppressed_types = [
     "PopulationGrowthIncrement",
     "ArmySupplyConsumption",
     "RelationshipDecayTick",
+    "CharacterMoved",          # pure locomotion: 77% of all events, zero narrative value
 ]
 
 # Verb classes to suppress entirely (empty = suppress nothing)
@@ -558,7 +559,7 @@ volcanic_eruption_probability_per_tick = 0.00005   # reduced 4× — eruptions a
 volcanic_ash_intensity                 = 1.0      # intensity assigned to VolcanicAsh ActiveDisaster
 volcanic_activity_boost                = 0.05     # added to VolcanicActivityMultiplier per eruption
 volcanic_activity_multiplier_cap       = 10.0     # VolcanicActivityMultiplier is clamped to this ceiling
-earthquake_probability_per_tick        = 0.0005
+earthquake_probability_per_tick        = 0.00005  # was 0.0005; 10x reduction → ~2-3/year globally
 earthquake_intensity                   = 0.8      # intensity assigned to SeismicDamage ActiveDisaster
 earthquake_decay_ticks                 = 8
 drought_probability_per_year           = 0.05

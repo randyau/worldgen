@@ -42,18 +42,18 @@ public sealed class TileInspectorPanel
         AddLine($"Tile ({data.Coord.X}, {data.Coord.Y})");
         AddLine($"Biome: {(BiomeType)tile.BiomeType}");
         AddLine($"Elevation: {tile.Elevation}");
-        AddLine($"Base Temp: {tile.BaseTemperature}");
+        AddLine($"Base Temp: {TempC(tile.BaseTemperature):F1}°C  ({TempF(tile.BaseTemperature):F0}°F)");
         AddLine($"Current Moisture: {tile.CurrentMoisture}");
-        AddLine($"Effective Temp: {data.EffectiveTemperature:F1}");
+        AddLine($"Effective Temp: {TempC(data.EffectiveTemperature):F1}°C  ({TempF(data.EffectiveTemperature):F0}°F)");
         AddLine($"Magic: {tile.MagicIntensity}");
         AddLine($"Fertility: {tile.Fertility}");
 
         AddLine("--- Seasonal Profile ---");
         var p = data.SeasonalProfile;
-        AddLine($"Spring:  Temp {p.TempDeltaSpring:+#;-#;0}  Moist {p.MoistureDeltaSpring:+#;-#;0}");
-        AddLine($"Summer:  Temp {p.TempDeltaSummer:+#;-#;0}  Moist {p.MoistureDeltaSummer:+#;-#;0}");
-        AddLine($"Autumn:  Temp {p.TempDeltaAutumn:+#;-#;0}  Moist {p.MoistureDeltaAutumn:+#;-#;0}");
-        AddLine($"Winter:  Temp {p.TempDeltaWinter:+#;-#;0}  Moist {p.MoistureDeltaWinter:+#;-#;0}");
+        AddLine($"Spring:  Temp {TempDeltaC(p.TempDeltaSpring):+#.#;-#.#;0}°C  Moist {p.MoistureDeltaSpring:+#;-#;0}");
+        AddLine($"Summer:  Temp {TempDeltaC(p.TempDeltaSummer):+#.#;-#.#;0}°C  Moist {p.MoistureDeltaSummer:+#;-#;0}");
+        AddLine($"Autumn:  Temp {TempDeltaC(p.TempDeltaAutumn):+#.#;-#.#;0}°C  Moist {p.MoistureDeltaAutumn:+#;-#;0}");
+        AddLine($"Winter:  Temp {TempDeltaC(p.TempDeltaWinter):+#.#;-#.#;0}°C  Moist {p.MoistureDeltaWinter:+#;-#;0}");
 
         AddLine("--- Resources ---");
         if (data.Deposits.Count == 0) AddLine("(none)");
@@ -119,6 +119,11 @@ public sealed class TileInspectorPanel
             AddLine($"  HP {c.HealthFraction:P0}  Age {c.AgeSeason}s");
         }
     }
+
+    // Raw 0-255 maps to -50°C … +50°C (100°C span)
+    private static float TempC(float raw) => raw * (100f / 255f) - 50f;
+    private static float TempF(float raw) => TempC(raw) * 9f / 5f + 32f;
+    private static float TempDeltaC(float rawDelta) => rawDelta * (100f / 255f);
 
     private void AddLine(string text) =>
         _content.Widgets.Add(new Label { Text = text });
