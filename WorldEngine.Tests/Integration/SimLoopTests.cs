@@ -134,15 +134,26 @@ public class SimLoopTests
         var (loop, cmdQueue, _) = MakeLoop(world);
         loop.Start();
 
-        // Wait for enough ticks to advance a season (at least tps ticks)
+        // Wait until season first changes away from Spring — capture it immediately.
+        // Do NOT check world.CurrentSeason after Stop(): MakeLoop runs at Ultrafast
+        // (no sleep), so Stop()'s 2s join allows hundreds of season cycles, making
+        // the final season non-deterministic (could cycle back to Spring).
         long deadline = Environment.TickCount64 + 5000;
-        while (world.CurrentTick < tps && Environment.TickCount64 < deadline)
+        Season? firstAdvanced = null;
+        while (Environment.TickCount64 < deadline)
+        {
+            if (world.CurrentSeason != Season.Spring)
+            {
+                firstAdvanced = world.CurrentSeason;
+                break;
+            }
             await Task.Delay(10);
+        }
 
         loop.Stop();
 
-        world.CurrentSeason.Should().NotBe(Season.Spring,
-            $"after {world.CurrentTick} ticks (>{tps} per seasonal change), season should have advanced from Spring");
+        firstAdvanced.Should().NotBeNull(
+            $"season should have advanced from Spring within 5 seconds (tps = {tps})");
     }
 
     [Fact]

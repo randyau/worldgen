@@ -29,9 +29,10 @@ mountain_threshold      = 0.7     # Elevation above which terrain is classified 
 tectonic_intensity      = 0.8     # How dramatic plate collision effects are (0=gentle, 1=extreme)
 
 [world_gen.ocean]
-default_sea_level       = 0.40    # Fraction of elevation range below which is ocean
-                                   # Higher = more ocean, lower = more land
-                                   # Raised from 0.35 to submerge mid-ocean volcanic ridges
+default_sea_level       = 0.40    # Fraction of tiles (by elevation rank) that are ocean
+erosion_passes          = 2       # Passes to strip thin ridges (≥min_ocean_8neighbors ocean 8-neighbors → ocean)
+min_ocean_8neighbors    = 5       # Threshold for erosion: tiles with this many ocean 8-neighbors become ocean
+                                   # 5 removes 1-tile-wide and 2-tile-wide protrusions; solid coasts are ≤4
 
 [world_gen.climate]
 equator_temperature     = 0.9     # Temperature at equator (0-1 scaled)
@@ -505,6 +506,8 @@ lat_temperature_anomaly_scale     = 1.4    # amplification of temperature anomal
 annual_sea_level_drift_rate       = 0.0    # sea level change per year; 0 = stable
 sea_level_event_threshold         = 0.1    # minimum delta to emit SeaLevelChanged event
 volcanic_decay_rate               = 0.005  # VolcanicActivityMultiplier lerp toward 1.0 per tick (~0.07/year at 14 ticks/year)
+moisture_carry_decay              = 0.993  # Fraction of moisture retained per inland tile during wind sweep
+                                           # 0.97 (old) made interiors desert at ~50 tiles; 0.993 reaches ~70% at 50 tiles
 
 # =============================================================================
 # DISASTERS (runtime, Phase 5)

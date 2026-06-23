@@ -70,13 +70,17 @@ public class EnvironmentalPhaseTests
         var phase = MakePhase(world.SimConfig);
         int w = world.TileGrid.TileWidth, h = world.TileGrid.TileHeight;
 
-        // Find storm corridor tiles
+        // Find inland storm corridor tiles with enough moisture headroom.
+        // The storm bonus is a ×1.3 multiplier in Autumn only; the test needs
+        // (BaseMoisture + summerDelta) < 255 so that Summer ≠ Autumn at the ceiling.
+        // Threshold: Base < 200 ensures (Base + max_seasonal_delta=35) * 1.0 < 255.
         var stormTiles = Enumerable.Range(0, w * h)
             .Where(i => {
                 int x = i % w, y = i / w;
                 var t = world.TileGrid.GetTile(new TileCoord(x, y));
                 return t.StaticFlags.HasFlag(TileStaticFlags.IsStormCorridor)
-                    && (BiomeType)t.BiomeType is not BiomeType.Ocean;
+                    && (BiomeType)t.BiomeType is not BiomeType.Ocean
+                    && t.BaseMoisture < 200;
             })
             .Take(20)
             .ToList();

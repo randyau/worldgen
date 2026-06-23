@@ -90,6 +90,7 @@ public sealed class ClimateLayer : IWorldGenLayer<ClimateResult>
         float tropHalf   = cfg.TropicalBandHalfWidth;
         float rainShadow = cfg.RainShadowLossFraction;
         byte  mtThresh   = cfg.MountainElevationThreshold;
+        float decay      = cfg.MoistureCarryDecay;
 
         for (int y = 0; y < h; y++)
         {
@@ -102,24 +103,20 @@ public sealed class ClimateLayer : IWorldGenLayer<ClimateResult>
             float carry = 0f;
             for (int pass = 0; pass < w; pass++)
             {
-                int x = (w - 1 - pass % w + w) % w; // sweep from east to west with wrap
-                // Simpler: just iterate x = w-1 down to 0, then x=w-1..0 again for wrap
-                // DECISION: single pass from east edge going west; cylinder handled by wrap
+                int x = (w - 1 - pass % w + w) % w;
                 int idx = ctx.IndexOf(x, y);
 
                 if (ocean.IsOcean[idx])
                 {
-                    // Ocean sources moisture
                     carry = 0.7f + 0.3f * (1f - elev.Elevation[idx] / 255f);
                 }
                 else
                 {
-                    // Mountain rain shadow: leeward (west) side loses moisture
                     if (elev.Elevation[idx] >= mtThresh)
                         carry *= (1f - rainShadow);
 
                     raw[idx] = Math.Max(raw[idx], carry);
-                    carry *= 0.97f; // small decay per tile
+                    carry *= decay;
                 }
             }
         }
@@ -131,7 +128,6 @@ public sealed class ClimateLayer : IWorldGenLayer<ClimateResult>
             bool inTropical = MathF.Abs(normLat - 0.5f) < tropHalf;
             if (inTropical) continue;
 
-            // Sweep West→East: moisture carried from west to east
             float carry = 0f;
             for (int pass = 0; pass < w; pass++)
             {
@@ -144,12 +140,11 @@ public sealed class ClimateLayer : IWorldGenLayer<ClimateResult>
                 }
                 else
                 {
-                    // Mountain rain shadow: leeward (east) side loses moisture
                     if (elev.Elevation[idx] >= mtThresh)
                         carry *= (1f - rainShadow);
 
                     raw[idx] = Math.Max(raw[idx], carry);
-                    carry *= 0.97f;
+                    carry *= decay;
                 }
             }
         }

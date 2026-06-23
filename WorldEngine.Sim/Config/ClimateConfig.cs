@@ -29,4 +29,12 @@ public class ClimateConfig
     public float AnnualSeaLevelDriftRate { get; set; } = 0.0f;
     public float SeaLevelEventThreshold { get; set; } = 0.1f;
     public float VolcanicDecayRate { get; set; } = 0.05f;
+
+    // World-gen: moisture transport
+    /// <summary>
+    /// Fraction of moisture retained per tile as wind sweeps inland (0–1).
+    /// 0.97 = aggressive drying (deep interiors become desert by ~50 tiles).
+    /// 0.993 = gentler drying (moisture reaches ~70% at 50 tiles, ~45% at 100 tiles).
+    /// </summary>
+    public float MoistureCarryDecay { get; set; } = 0.97f;
 }
