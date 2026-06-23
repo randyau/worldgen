@@ -158,7 +158,7 @@ public sealed class PhaseRunner
             if (pe.CauseEventId.HasValue && pe.CauseEventId.Value.Value != 0)
                 edges.Add((pe.CauseEventId.Value.Value, evId));
             if (pe.EntityIds is { Count: > 0 })
-                foreach (int eid in pe.EntityIds)
+                foreach (long eid in pe.EntityIds)
                     entPairs.Add((evId, eid));
         }
         if (edges.Count    > 0) _eventStore.InsertCausalEdges(edges);

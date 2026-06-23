@@ -1,7 +1,7 @@
 # Phase 2.3 — Tier 2 Characters
 
 **Milestone:** 2 — The Character System  
-**Status:** IN PROGRESS  
+**Status:** COMPLETE — 2026-06-23  
 **Goal:** Introduce Tier 2 named characters — individuals below hero/ruler status who fill specialist and authority roles. They have livelihoods, simpler personality models, and produce economic and social events that feed the history log.
 
 **Companion docs:**

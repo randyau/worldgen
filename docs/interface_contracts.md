@@ -1,8 +1,8 @@
 # World Engine — Interface Contracts
-**Version:** 0.4  
+**Version:** 0.5  
 **Date:** June 2026  
-**Status:** Updated for Milestone 2 start (Beast System).  
-**Changes from v0.3:** `IEntity` — added `IsAlive`. `IWorldStateReadOnly` — entity lookup methods uncommented (now live for M2). `TileDisplayData` — added `EntitiesPresent`. `WorldSnapshot` — added `EntitySnapshots`. New type: `EntitySnapshot`. `VerbClass` — added `Interaction = 6`.
+**Status:** Updated for Milestone 2 complete (Character System + Population Dynamics).  
+**Changes from v0.4:** `PendingEvent` — added optional `EntityIds`. `EntitySnapshot` — added optional `CivName`. `CivId` — promoted to value type with `IsValid`. New: `EventEntities` DB table schema, `EventType` ranges for M2, `IHistoryGraphReadOnly.GetEventsByEntity` stub promoted to M3. `IWorldStateReadOnly` — `GetRelationship` uncommented (live for M2).
 
 **Rule:** Do not add methods to these interfaces without updating this document first. Interface changes are breaking changes.
 
@@ -205,15 +205,18 @@ Produced by Phase 1 (Environmental). Consumed by Phase 7 (EventGeneration) which
 
 ```csharp
 /// <summary>
-/// Lightweight event record produced by Phase 1.
+/// Lightweight event record produced by any sim phase.
 /// Phase 7 assigns Id, Year, Season, Tick, runs significance classification,
 /// applies EventGate, and writes to SQLite + EventCache.
+/// EntityIds (optional) — populated by character/civ phases; Phase 7 writes
+/// rows into the EventEntities cross-reference table for each ID.
 /// </summary>
 public sealed record PendingEvent(
     EventType Type,
     TileCoord? Location,
-    EventId? CauseEventId,   // null = root event; set = CausalEdge will be created
-    string PayloadJson
+    EventId? CauseEventId,       // null = root event; set = CausalEdge will be created
+    string PayloadJson,
+    IReadOnlyList<long>? EntityIds = null   // M2+: entity IDs involved in this event
 );
 ```
 
@@ -305,9 +308,15 @@ public interface IWorldStateReadOnly
     IEnumerable<IEntity> GetEntitiesAt(TileCoord coord);
     IEnumerable<IEntity> GetEntitiesInRadius(TileCoord center, int radius);
 
-    // === HISTORY / RELATIONSHIPS (M3+) ===
-    // float GetRelationshipTrust(EntityId from, EntityId to);
-    // IEnumerable<SimEvent> GetRecentEvents(int withinYears);
+    // === HISTORY / RELATIONSHIPS (M2+) ===
+    RelationshipData? GetRelationship(EntityId a, EntityId b);
+
+    // === CIVILIZATION ACCESS (M2+) ===
+    IReadOnlyDictionary<TileCoord, SettlementStub> Settlements { get; }
+    IReadOnlyDictionary<CivId, Civilization> Civilizations { get; }
+
+    // === FUTURE (M3+) ===
+    // IEnumerable<SimEvent> GetEventsByEntity(EntityId id);
     // float GetAuthorityAt(TileCoord coord, CivId civId);
 }
 ```
@@ -388,6 +397,7 @@ Flat, immutable summary of one entity for use in `WorldSnapshot`. Produced by `I
 /// <summary>
 /// Immutable UI-facing summary of one entity. Read by the UI thread from WorldSnapshot.
 /// Heavy entity data stays on the sim thread inside EntityRegistry.
+/// CivName is populated for Tier1Character entities that have founded or joined a civ.
 /// </summary>
 public sealed record EntitySnapshot(
     EntityId Id,
@@ -399,7 +409,8 @@ public sealed record EntitySnapshot(
     float HealthFraction,    // 0.0–1.0
     float FoodFraction,      // 0.0–1.0; -1 if entity has no Food need
     int AgeSeason,           // age in seasons
-    bool IsAlive
+    bool IsAlive,
+    string? CivName = null   // M2+: set for Tier1Character with a valid CivId
 );
 ```
 
@@ -425,6 +436,69 @@ public sealed record TileInspectorData(
     bool IsInActiveDrought,                        // computed from ActiveDroughts list
     EventId? DroughtOriginEventId                  // set if IsInActiveDrought
 );
+```
+
+---
+
+## Strongly-Typed ID Wrappers
+
+All entity/civ/event IDs use readonly record structs, never raw ints or longs.
+
+```csharp
+public readonly record struct EntityId(long Value)
+{
+    public static EntityId New() => new(Interlocked.Increment(ref _counter));
+    private static long _counter;
+    public bool IsValid => Value > 0;
+}
+
+public readonly record struct CivId(int Value)
+{
+    public bool IsValid => Value > 0;   // unset CivId is CivId(0), not null
+}
+
+public readonly record struct EventId(long Value)
+{
+    public bool IsValid => Value > 0;
+}
+```
+
+`CivId.IsValid` was added in M2 to distinguish "no civ assigned" (Value=0) from a real civ. Always check `.IsValid` before using a CivId from character identity data.
+
+---
+
+## EventEntities Table (M2+)
+
+Cross-reference table in `world.db` linking events to the entity IDs involved. Written by Phase 7 (`PhaseRunner`) when `PendingEvent.EntityIds` is non-null.
+
+```sql
+CREATE TABLE IF NOT EXISTS EventEntities (
+    EventId  INTEGER NOT NULL REFERENCES Events(Id),
+    EntityId INTEGER NOT NULL,
+    PRIMARY KEY (EventId, EntityId)
+);
+CREATE INDEX IF NOT EXISTS idx_evententities_entity ON EventEntities(EntityId);
+```
+
+Query all events for a character: `SELECT * FROM Events WHERE Id IN (SELECT EventId FROM EventEntities WHERE EntityId = @id)`.
+
+**Important:** `EventEntities` must be deleted before `Events` in any `Truncate()` call (FK constraint).
+
+---
+
+## EventType Ranges
+
+```
+Environmental / M1:  1xx–9xx    (volcanic, flood, drought, etc.)
+Beast:              2001–2006   (BeastSpawned, BeastDied, BeastHunted, BeastMigrated, BeastEvolved, BeastExtinct)
+Character lifecycle:3001–3004   (CharacterBorn, CharacterDied, CharacterCrystallized, CharacterLeveledUp)
+Character actions:  3101–3107   (CharacterMoved, CharacterRested, CharacterExplored, CharacterTrained,
+                                  CharacterForaged, CharacterHealed, CharacterCrafted)
+Civ/settlement:     3201–3205   (CivilizationFounded, CivilizationCollapsed, SettlementFounded,
+                                  RaidOccurred, NegotiationCompleted)
+Tier2 events:       3301–3306   (AppointedToRole, MerchantTradeCompleted, ScholarDiscovery,
+                                  PhysicianHealed, DiplomacyCompleted, ArtisanCrafted)
+Population:         3401–3403   (SettlementGrew, SettlementShrank, SettlementAbandoned)
 ```
 
 ---

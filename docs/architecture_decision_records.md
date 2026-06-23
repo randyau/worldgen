@@ -233,5 +233,57 @@ For full rationale and detail, see `docs/implementation_decisions_v0.3.md`.
 
 ---
 
-*Document Version: 0.1*  
-*Last Updated: June 18, 2026*
+---
+
+## ADR-025: CivId as Value Type with IsValid (Not Nullable)
+
+**Decision:** `CivId` is `readonly record struct CivId(int Value)` with `IsValid => Value > 0`. Unset is `CivId(0)`, not `null`.
+
+**Rejected:** `CivId?` nullable struct (forces null checks at every callsite, awkward in records/snapshots that can't have null struct fields without boxing).
+
+**Rationale:** Characters start without a civ and may gain one later. Using `CivId(0)` as sentinel avoids nullable complexity while staying explicit — `if (c.Identity.CivId.IsValid)` reads cleanly. Same pattern used by `EntityId` and `EventId` in the codebase.
+
+---
+
+## ADR-026: SettlementStub PopulationF Float Accumulator
+
+**Decision:** `SettlementStub` carries a `float PopulationF` fractional accumulator separate from `int Population`. Growth deltas smaller than 1.0 accumulate in `PopulationF`; integer parts are moved to `Population` each tick.
+
+**Rejected:** Storing population as a float directly (confuses display, complicates comparison with threshold ints); integer-only with minimum delta of 1 (oscillation at marginal fertility — settlement alternates grow/shrink every tick).
+
+**Rationale:** Per-season growth rates are fractions of a person. At low population (5–30), each tick's delta is < 1. Without a fractional accumulator, growth can never manifest and settlements are stuck at birth population forever. The two-field design keeps display/comparison integer while allowing sub-unit accumulation.
+
+---
+
+## ADR-027: CharacterNamesConfig as Config-Driven Name Pool
+
+**Decision:** Character names are drawn from `CharacterNamesConfig.FirstNames` (40 entries) and `Epithets` (25 entries), loaded from `sim_config.toml`.
+
+**Rejected:** Hardcoded name list (not tunable), procedural phoneme assembly (complex, inconsistent quality), external file separate from sim_config (extra dependency).
+
+**Rationale:** Keeps names in the same config system as all other sim constants. Short lists are sufficient for M2 scale (20 initial + civ-born over centuries). Easy to expand or replace for different cultural settings. Epithet system ("the Bold", "the Wise") adds character texture without prose generation (a V2 feature).
+
+---
+
+## ADR-028: EventEntities Junction Table for Entity–Event Cross-Reference
+
+**Decision:** Separate `EventEntities(EventId, EntityId)` table with an index on `EntityId`. Populated by Phase 7 when `PendingEvent.EntityIds` is non-null.
+
+**Rejected:** Storing entity IDs as a JSON array in the `Events.PayloadJson` column (unindexed, requires full table scan to find all events for a character; no FK enforcement).
+
+**Rationale:** The core query for character history ("all events involving character X") is a JOIN, not a JSON scan. The junction table makes this O(log n) via the `EntityId` index. FK to `Events` enforces referential integrity — deletion order matters (`EventEntities` before `Events` in `Truncate()`).
+
+---
+
+## ADR-029: Civ-Born Character Generation (No Discrete Reproduction)
+
+**Decision:** New Tier 1 characters ("heroes") emerge from stable settlements at a configurable probability per season, proportional to population size above a minimum threshold. No explicit parentage, lineage, or reproductive modeling.
+
+**Rejected:** Explicit reproduction (two parents → offspring, genealogy tree) for Tier 1 heroes — this is a worldbuilder tool, not a dynasty simulator; explicit genealogy is M3+ scope. Periodically spawning from a fixed global pool — doesn't tie hero emergence to civilization health.
+
+**Rationale:** The sim needs character turnover over centuries without the complexity of genealogy. The "heroes emerge from thriving civilizations" model is thematically correct for the product (worldbuilders want notable figures, not population demographics). Probability scaling with population ensures depopulated civs don't keep generating heroes.
+
+---
+
+*Document Version: 0.2*  
+*Last Updated: June 23, 2026 (Milestone 2 complete)*

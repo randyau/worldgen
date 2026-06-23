@@ -1,5 +1,5 @@
 # World Engine — MVP Specification
-**Version:** 0.2  
+**Version:** 0.3  
 **Date:** June 18, 2026 (updated June 22, 2026)  
 **Status:** Milestone 1 COMPLETE — 2026-06-22. Milestones 2-4 defined at summary level only.
 
@@ -280,23 +280,23 @@ Before simulation starts, show a world generation screen. Display progress per l
 
 ---
 
-## Milestone 2: The Character System (Summary)
+## Milestone 2: The Character System — COMPLETE (2026-06-23)
 
 Characters enter the world in layers, with playtesting between each layer.
 
-**Phase 2.1 — Legendary Beasts**
+**Phase 2.1 — Legendary Beasts** ✓  
 Tier 1 entities with simple needs (food, safety, territory) and behaviors (roam, eat, fight, reproduce, die). No politics, no goals beyond survival. Validates the entity model, relationship graph, and character event types in isolation.
 
-**Phase 2.2 — Tier 1 Characters**
-Heroes, rulers, legendary figures. Full personality/aptitude/skills system. Goals, utility scoring, action library. The administrative distance penalty. Civilization emergence.
+**Phase 2.2 — Tier 1 Characters** ✓  
+Heroes, rulers, legendary figures. Full personality/aptitude/skills system (12-trait PersonalityVector, 6-trait AptitudeVector, 8-skill SkillVector, 7-need NeedsVector). Goals, utility scoring with softmax temperature, 8-action library. Civilization emergence via CivTracker. EventEntities DB table for character history queries.
 
-**Phase 2.3 — Tier 2 Characters**
-Authority Tier 2 (generals, administrators). Specialist Tier 2 (physicians, merchants, scholars). The livelihood system.
+**Phase 2.3 — Tier 2 Characters** ✓  
+6 specialist roles (General, Governor, Merchant, Scholar, Physician, Artisan). Livelihood system (LivelihoodData: role, employer, settlement). Simplified 6-trait PersonalityVector6, 4-need NeedsVector4. Crystallization to Tier 1 on high Ambition + Status.
 
-**Phase 2.4 — Tier 3 Population**
-Aggregate population dynamics. Settlement growth and decline. Specialist crystallization from population pressure. Population-driven economic events.
+**Phase 2.4 — Tier 3 Population** ✓  
+Aggregate population dynamics via PopulationDynamicsPhase. Settlement growth (fertility × safetyScore × PopGrowthRate) and decline (PopDecayRate). Specialist crystallization from population pressure (configurable thresholds per role). Civ-born character generation: new Tier 1 heroes emerge from stable settlements proportional to population. Population-driven events (SettlementGrew/Shrank/Abandoned). Post-playtest fixes: balanced growth vs. decay rates; gated EstablishSettlement to prevent multi-settlement founding.
 
-Each phase includes a playtesting period before proceeding. The character system from the design and implementation docs is the target — but the system will be refined based on what playtesting reveals.
+Bug fixes applied post-M2 close: `PhaseRunner` EntityId long truncation (int→long in foreach); `CharacterBehaviorPhase` operator precedence in civ-born seq derivation.
 
 ---
 
@@ -328,5 +328,5 @@ Polish and features for the full experience.
 
 ---
 
-*Document Version: 0.1*  
-*Last Updated: June 18, 2026*
+*Document Version: 0.3*  
+*Last Updated: June 23, 2026 (Milestone 2 complete)*

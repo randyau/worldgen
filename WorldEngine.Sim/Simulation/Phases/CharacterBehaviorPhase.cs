@@ -73,7 +73,7 @@ public sealed class CharacterBehaviorPhase
             if (r > chance) continue;
 
             // Unique entitySeq derived from tick + tile to stay deterministic
-            long seq  = 50_000L + (tick * 997L + kvp.Key.X * 31 + kvp.Key.Y) & 0x7FFFFFFF;
+            long seq  = (50_000L + tick * 997L + kvp.Key.X * 31 + kvp.Key.Y) & 0x7FFFFFFF;
             var born  = CharacterFactory.Spawn(kvp.Key, world.WorldSeed, seq, _simCfg, world.CurrentYear);
             born.Identity = born.Identity with { CivId = stub.CivId };
             civ.Members.Add(born.Id);

@@ -1,7 +1,7 @@
 # Phase 2.4 — Tier 3 Population
 
 **Milestone:** 2 — The Character System  
-**Status:** IN PROGRESS  
+**Status:** COMPLETE — 2026-06-23  
 **Goal:** Activate `SimPhase.PopulationDynamics` (currently a stub). Settlements grow and shrink based on food supply (fertility) and safety. Population pressure crystallizes new Tier 2 specialists. Population-driven events (SettlementGrew, SettlementShrank, SettlementAbandoned) feed the history log. This replaces the static `Population = 50` stub in SettlementStub with living dynamics.
 
 **Companion docs:**
