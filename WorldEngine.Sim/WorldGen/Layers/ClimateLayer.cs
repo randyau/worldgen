@@ -23,12 +23,20 @@ public sealed class ClimateLayer : IWorldGenLayer<ClimateResult>
         var elev  = ctx.Elevation!;
         var ocean = ctx.Ocean!;
         var cfg   = ctx.SimConfig.Climate;
+        int seed  = ctx.Config.Seed ^ LayerSeeds.Climate;
         int w = ctx.TileWidth, h = ctx.TileHeight, n = ctx.TileCount;
 
         var result = new ClimateResult(n);
 
         // --- Step 1: Base temperature from latitude + lapse rate ---
-        ComputeBaseTemperature(elev, ocean, cfg, w, h, ctx, result.BaseTemperature);
+        FastNoiseLite? tempNoise = null;
+        if (cfg.TemperatureNoiseScale > 0f)
+        {
+            tempNoise = new FastNoiseLite(seed ^ 0x7A4B3C);
+            tempNoise.SetNoiseType(FastNoiseLite.NoiseType.OpenSimplex2);
+            tempNoise.SetFrequency(cfg.TemperatureNoiseFrequency);
+        }
+        ComputeBaseTemperature(elev, ocean, cfg, w, h, ctx, result.BaseTemperature, tempNoise);
         progress?.Report(0.2f);
         ct.ThrowIfCancellationRequested();
 
@@ -51,11 +59,12 @@ public sealed class ClimateLayer : IWorldGenLayer<ClimateResult>
 
     private static void ComputeBaseTemperature(
         ElevationResult elev, OceanResult ocean, ClimateConfig cfg,
-        int w, int h, WorldGenContext ctx, byte[] temp)
+        int w, int h, WorldGenContext ctx, byte[] temp, FastNoiseLite? noise)
     {
         // Lapse rate: −6°C per 1000m, scaled to byte. World height ≈ 255 → ~128 max elevation m.
         // DECISION: byte 255 ≈ 2550m altitude → max lapse reduction ≈ 15°C → ~0.25 fraction.
         const float lapseScale = 0.25f;
+        float noiseScale = cfg.TemperatureNoiseScale;
 
         for (int y = 0; y < h; y++)
         {
@@ -72,7 +81,12 @@ public sealed class ClimateLayer : IWorldGenLayer<ClimateResult>
                 float elevation01 = elev.Elevation[idx] / 255f;
                 float lapseFrac   = elevation01 * lapseScale;
 
-                float t = Math.Clamp(latFrac - lapseFrac, 0f, 1f);
+                // Regional temperature anomaly: breaks horizontal banding without
+                // destroying the latitude gradient. Noise is in [-1,1]; scale keeps
+                // it below the lapse-rate contribution so elevation still dominates locally.
+                float noiseT = noise != null ? noise.GetNoise(x, y) * noiseScale : 0f;
+
+                float t = Math.Clamp(latFrac - lapseFrac + noiseT, 0f, 1f);
                 temp[idx] = (byte)(t * 255f);
             }
         }

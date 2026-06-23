@@ -37,4 +37,19 @@ public class ClimateConfig
     /// 0.993 = gentler drying (moisture reaches ~70% at 50 tiles, ~45% at 100 tiles).
     /// </summary>
     public float MoistureCarryDecay { get; set; } = 0.97f;
+
+    // World-gen: temperature variation
+    /// <summary>
+    /// Amplitude of coherent noise added to the latitude temperature fraction [0–1].
+    /// Breaks horizontal biome banding by introducing regional temperature anomalies
+    /// (analogous to ocean currents, land mass effects). 0 = pure latitude bands.
+    /// 0.12–0.18 produces realistic regional variation without destroying the gradient.
+    /// </summary>
+    public float TemperatureNoiseScale { get; set; } = 0f;
+
+    /// <summary>
+    /// Noise frequency for temperature anomalies. Low values (0.01–0.02) produce
+    /// broad regional anomalies; higher values produce finer-grained variation.
+    /// </summary>
+    public float TemperatureNoiseFrequency { get; set; } = 0.015f;
 }
