@@ -54,19 +54,22 @@ public static class UtilityScorer
         // Rest — always available
         actions.Add(new(new Rest(c.Id), Score(c, ActionType.Rest, 0f, world, cfg)));
 
-        // Travel — pick best adjacent tile; wanderlust bonus grows with time stationary
+        // Travel — pick best adjacent tile; wanderlust bonus grows with time stationary,
+        // dampened by settled role (founder > civ member > free agent) and Curiosity
         var travelDest = BestAdjacentTile(c, world);
+        bool isFounder = c.Identity.CivId.IsValid
+            && world.Settlements.Values.Any(s => s.FounderId == c.Id);
         if (travelDest.HasValue)
         {
             float wanderlust = Math.Min(1f, (float)c.TicksInCurrentTile / cfg.WanderlustMaxTicks)
-                             * cfg.WanderlustBonus;
+                             * cfg.WanderlustBonus
+                             * WanderlustMultiplier(c, isFounder, cfg);
             actions.Add(new(new MoveToTile(c.Id, travelDest.Value),
                 Score(c, ActionType.Travel, 0.5f, world, cfg) + wanderlust));
         }
 
         // EstablishSettlement — only if tile is fertile, empty, and char has no existing settlement
-        bool alreadyHasSettlement = c.Identity.CivId.IsValid
-            && world.Settlements.Values.Any(s => s.FounderId == c.Id);
+        bool alreadyHasSettlement = isFounder;
         if (!alreadyHasSettlement
             && !world.Settlements.ContainsKey(c.Location)
             && world.GetTile(c.Location).Fertility >= cfg.MinFertilityToSettle)
@@ -213,6 +216,25 @@ public static class UtilityScorer
         ActionType.Travel    => c.Personality.Curiosity,
         _                    => 0.2f
     };
+
+    /// <summary>
+    /// Scales the wanderlust bonus by role and Curiosity.
+    /// Founders (rulers/kings) barely wander. Civ members wander occasionally.
+    /// Free agents wander freely. Curiosity amplifies all three.
+    /// </summary>
+    private static float WanderlustMultiplier(
+        Tier1Character c, bool isFounder, CharacterSimConfig cfg)
+    {
+        float roleBase = isFounder               ? cfg.WanderlustFounderMultiplier
+                       : c.Identity.CivId.IsValid ? cfg.WanderlustMemberMultiplier
+                       : 1.0f;
+
+        // Curiosity scales from CuriosityFloor (low Curiosity) to 1.0 (max Curiosity)
+        float curiosityScale = cfg.WanderlustCuriosityFloor
+                             + (1f - cfg.WanderlustCuriosityFloor) * c.Personality.Curiosity;
+
+        return roleBase * curiosityScale;
+    }
 
     private static TileCoord? BestAdjacentTile(Tier1Character c, IWorldStateReadOnly world)
     {

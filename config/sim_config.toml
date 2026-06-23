@@ -616,8 +616,13 @@ min_fertility_to_settle   = 100
 civ_birth_min_pop         = 30
 civ_birth_chance_per_season = 0.02
 # Wanderlust: travel urgency that builds the longer a character stays in one place
-wanderlust_max_ticks      = 8     # full bonus after 2 seasons (half a year) stationary
-wanderlust_bonus          = 0.4   # travel score bonus at max wanderlust; ~0.15 base → ~0.55 after 2 seasons
+wanderlust_max_ticks            = 8    # full bonus after 2 seasons (half a year) stationary
+wanderlust_bonus                = 0.4  # travel score bonus at max wanderlust; ~0.15 base → ~0.55 for free agents
+# Role dampeners — multiply wanderlust_bonus; rulers barely wander, members occasionally, free agents fully
+wanderlust_founder_multiplier   = 0.15 # settlement founders (kings, rulers) — 15% of base wanderlust
+wanderlust_member_multiplier    = 0.5  # civ members with settled jobs — 50% of base wanderlust
+# Curiosity scales from this floor (Curiosity=0) up to 1.0 (Curiosity=1)
+wanderlust_curiosity_floor      = 0.3  # even the least curious chars have 30% of their role's wanderlust
 # Tier 2 sub-tuning (appended to [character] section — Tomlyn merges same-section keys)
 tier2_per_population        = 10
 tier2_max_age_seasons_min   = 60

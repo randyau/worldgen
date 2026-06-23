@@ -36,8 +36,13 @@ public sealed class CharacterSimConfig
     public float CivBirthChancePerSeason { get; set; } = 0.02f; // ~1 birth per 50 seasons at min pop
 
     // Wanderlust — travel urge that builds the longer a character stays in one place
-    public int   WanderlustMaxTicks       { get; set; } = 8;   // full bonus after 2 seasons stationary
-    public float WanderlustBonus          { get; set; } = 0.4f; // added to travel score at max wanderlust
+    public int   WanderlustMaxTicks          { get; set; } = 8;   // full bonus after 2 seasons stationary
+    public float WanderlustBonus             { get; set; } = 0.4f; // added to travel score at max wanderlust
+    // Role dampeners: multiply the wanderlust bonus before applying
+    public float WanderlustFounderMultiplier { get; set; } = 0.15f; // settlement founders (rulers/kings) rarely leave
+    public float WanderlustMemberMultiplier  { get; set; } = 0.5f;  // civ members wander occasionally
+    // Curiosity floor: even Curiosity=0 chars get this fraction of their role's wanderlust
+    public float WanderlustCuriosityFloor    { get; set; } = 0.3f;
 
     // Tier 2 tuning
     public int   Tier2PerPopulation     { get; set; } = 10;  // one Tier2 per this many pop
