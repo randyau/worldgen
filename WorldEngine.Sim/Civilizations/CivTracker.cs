@@ -110,19 +110,41 @@ public static class CivTracker
         if (world.GetEntity(cmd.TargetId) is not Tier1Character target) return;
 
         var rel = world.Relationships.GetOrCreate(c.Id, target.Id);
-        if (rel.IsAlly) return; // already allied
+        if (rel.IsAlly) return;
 
-        var updated = rel with
+        var cfg = world.SimConfig.Character;
+
+        // Cross-civ only — same-civ relationships are just trust edges
+        if (c.Identity.CivId.IsValid && target.Identity.CivId.IsValid
+            && c.Identity.CivId == target.Identity.CivId) return;
+
+        // Alliance cap
+        int allianceMax = cfg.AllianceMaxBase + (int)(c.Personality.Sociability * cfg.AllianceMaxPerSociability);
+        if (world.Relationships.CountAlliances(c.Id) >= allianceMax) return;
+
+        // Enemy-of-ally: if target is allied with any of c's rivals, drain that relationship
+        foreach (var bEdge in world.Relationships.GetAll(target.Id).Where(e => e.IsAlly).ToList())
+        {
+            var thirdId = bEdge.From == target.Id ? bEdge.To : bEdge.From;
+            var cThird  = world.Relationships.Get(c.Id, thirdId);
+            if (cThird?.IsRival ?? false)
+            {
+                world.Relationships.Upsert(cThird with
+                {
+                    Trust = Math.Clamp(cThird.Trust - cfg.EnemyOfAllyTrustDrain, -1f, 1f)
+                });
+            }
+        }
+
+        world.Relationships.Upsert(rel with
         {
             Trust = Math.Min(1f, rel.Trust + 0.3f),
             Flags = rel.Flags | RelationshipFlags.IsAlly
-        };
-        world.Relationships.Upsert(updated);
+        });
 
-        // Belonging need satisfaction
         c.Needs      = c.Needs with { Belonging = Math.Min(1f, c.Needs.Belonging + 0.15f) };
         target.Needs = target.Needs with { Belonging = Math.Min(1f, target.Needs.Belonging + 0.1f) };
-        c.Skills = c.Skills with { Diplomacy = Math.Min(1f, c.Skills.Diplomacy + 0.02f) };
+        c.Skills     = c.Skills with { Diplomacy = Math.Min(1f, c.Skills.Diplomacy + 0.02f) };
 
         foreach (var g in c.Goals)
             if (g.Type == GoalType.Alliance && g.TargetEntityId == target.Id)
@@ -130,11 +152,13 @@ public static class CivTracker
 
         var payload = JsonSerializer.Serialize(new
         {
-            characterId = c.Id.Value,
-            targetId    = target.Id.Value,
-            charName    = c.Identity.Name,
-            targetName  = target.Identity.Name,
-            location    = new[] { c.Location.X, c.Location.Y }
+            declarerId   = c.Id.Value,
+            declarerName = c.Identity.Name,
+            targetId     = target.Id.Value,
+            targetName   = target.Identity.Name,
+            declarerCiv  = c.Identity.CivId.Value,
+            targetCiv    = target.Identity.CivId.Value,
+            location     = new[] { c.Location.X, c.Location.Y }
         });
         pending.Add(new PendingEvent(EventType.AllianceFormed, c.Location, null, payload,
             new[] { c.Id.Value, target.Id.Value }));
@@ -179,11 +203,15 @@ public static class CivTracker
         var rel = world.Relationships.GetOrCreate(c.Id, target.Id);
         if (rel.IsAtWar) return;
 
+        bool wasAllied = rel.IsAlly;
         world.Relationships.Upsert(rel with
         {
             Trust = Math.Min(rel.Trust - 0.3f, -0.3f),
-            Flags = rel.Flags | RelationshipFlags.IsAtWar | RelationshipFlags.IsRival
+            Flags = (rel.Flags & ~RelationshipFlags.IsAlly) | RelationshipFlags.IsAtWar | RelationshipFlags.IsRival
         });
+
+        if (wasAllied)
+            FireAllianceBroken(c, target, "war_declared", world, pending);
 
         var payload = JsonSerializer.Serialize(new
         {
@@ -196,6 +224,34 @@ public static class CivTracker
         });
         pending.Add(new PendingEvent(EventType.WarDeclared, c.Location, null, payload,
             new[] { c.Id.Value, target.Id.Value }));
+
+        // Notify target's allies: drain trust toward the aggressor, seed a Protect goal
+        var cfg = world.SimConfig.Character;
+        foreach (var allyEdge in world.Relationships.GetAll(target.Id).Where(e => e.IsAlly).ToList())
+        {
+            var allyId = allyEdge.From == target.Id ? allyEdge.To : allyEdge.From;
+            if (world.GetEntity(allyId) is not Tier1Character ally || !ally.IsAlive) continue;
+            if (ally.Identity.CivId == c.Identity.CivId) continue;
+
+            var allyAggrRel = world.Relationships.GetOrCreate(ally.Id, c.Id);
+            world.Relationships.Upsert(allyAggrRel with
+            {
+                Trust = Math.Clamp(allyAggrRel.Trust - cfg.AllianceWarTrustDrain, -1f, 1f)
+            });
+
+            bool hasProtect = ally.Goals.Any(g => g.Type == GoalType.Protect && g.TargetEntityId == target.Id);
+            if (!hasProtect)
+                ally.Goals.Add(new GoalData
+                {
+                    Type           = GoalType.Protect,
+                    Object         = GoalObject.Person,
+                    TargetEntityId = target.Id,
+                    Priority       = cfg.AllyProtectGoalIntensity,
+                    Intensity      = cfg.AllyProtectGoalIntensity,
+                    FormedTick     = (int)world.CurrentTick,
+                    StaleSince     = (int)world.CurrentTick
+                });
+        }
     }
 
     // ─── Raid ─────────────────────────────────────────────────────────────────
@@ -266,6 +322,52 @@ public static class CivTracker
         });
         pending.Add(new PendingEvent(EventType.Negotiated, c.Location, null, payload,
             new[] { c.Id.Value, target.Id.Value }));
+    }
+
+    // ─── Annual diplomacy maintenance ─────────────────────────────────────────
+
+    /// <summary>
+    /// Called once per year. Dissolves alliances where trust has fallen below the floor.
+    /// </summary>
+    public static void RunAnnualDiplomacy(WorldState world, List<PendingEvent> pending)
+    {
+        var cfg      = world.SimConfig.Character;
+        var toBreak  = world.Relationships.AllEdges
+            .Where(e => e.IsAlly && e.Trust < cfg.AllianceTrustFloor)
+            .ToList();
+
+        foreach (var edge in toBreak)
+        {
+            var current = world.Relationships.Get(edge.From, edge.To);
+            if (current is null || !current.IsAlly) continue;
+
+            world.Relationships.Upsert(current with
+            {
+                Flags = current.Flags & ~RelationshipFlags.IsAlly
+            });
+
+            // Only fire the event if both characters are still alive (dead chars leave stale edges)
+            if (world.GetEntity(edge.From) is not Tier1Character a) continue;
+            if (world.GetEntity(edge.To)   is not Tier1Character b) continue;
+            FireAllianceBroken(a, b, "trust_decay", world, pending);
+        }
+    }
+
+    private static void FireAllianceBroken(
+        Tier1Character a, Tier1Character b, string reason,
+        WorldState world, List<PendingEvent> pending)
+    {
+        var payload = JsonSerializer.Serialize(new
+        {
+            characterAId   = a.Id.Value,
+            characterAName = a.Identity.Name,
+            characterBId   = b.Id.Value,
+            characterBName = b.Identity.Name,
+            reason,
+            year = world.CurrentYear
+        });
+        pending.Add(new PendingEvent(EventType.AllianceBroken, a.Location, null, payload,
+            new[] { a.Id.Value, b.Id.Value }));
     }
 
     // ─── Event helpers ────────────────────────────────────────────────────────

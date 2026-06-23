@@ -36,7 +36,22 @@ public sealed class CharacterSimConfig
     public float DepositScoreMultiplier  { get; set; } = 0.5f;
     // How much route-position bonus boosts the EstablishSettlement success probability multiplier
     public float RouteScoreMultiplier    { get; set; } = 0.3f;
-    // Effective fertility multiplier for tiles already inside a same-civ settlement's hinterland.
+    // ─── Alliance system ───────────────────────────────────────────────────────
+    // Base + Sociability-scaled max alliances a character can hold (cross-civ only)
+    public int   AllianceMaxBase             { get; set; } = 2;
+    public int   AllianceMaxPerSociability   { get; set; } = 3;  // +floor(Sociability × this)
+    // Trust floor below which an alliance dissolves on the annual check
+    public float AllianceTrustFloor          { get; set; } = 0.1f;
+    // Trust drain applied to the attacker's allies when war is declared
+    public float AllianceWarTrustDrain       { get; set; } = 0.4f;
+    // Trust drain on A's relationship with C when B (A's new ally) is allied with C (A's rival)
+    public float EnemyOfAllyTrustDrain       { get; set; } = 0.15f;
+    // Intensity of the Protect goal seeded on allies of a civ under attack
+    public float AllyProtectGoalIntensity    { get; set; } = 0.6f;
+    // Intensity of the Acquire(Food) goal seeded on allied chars when a settlement strains
+    public float AllyDisasterAidIntensity    { get; set; } = 0.3f;
+
+    // ─── Effective fertility multiplier for tiles already inside a same-civ settlement's hinterland.
     // 0.5 = "half the resources are claimed" — discourages but doesn't block high-fertility tiles.
     public float HinterlandDrainFactor       { get; set; } = 0.5f;
     // Base cooldown years between same-civ settlements; scales down with civ population

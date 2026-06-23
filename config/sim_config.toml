@@ -617,6 +617,15 @@ min_fertility_to_settle      = 100
 deposit_settle_threshold     = 0.5    # min deposit value to settle despite low fertility
 deposit_score_multiplier     = 0.5    # how much deposit value boosts establish score
 route_score_multiplier       = 0.3    # how much route-position bonus boosts establish score
+# Alliance system
+alliance_max_base             = 2     # minimum alliance slots per character
+alliance_max_per_sociability  = 3     # +floor(Sociability × this) extra slots; Soc=1.0 → 5 slots total
+alliance_trust_floor          = 0.1   # trust below this dissolves the alliance on annual check
+alliance_war_trust_drain      = 0.4   # trust drained from aggressor to target's allies on war declaration
+enemy_of_ally_trust_drain     = 0.15  # trust drain on C when A allies B who is already allied with C's rival
+ally_protect_goal_intensity   = 0.6   # priority of the Protect goal seeded on allies when their ally is attacked
+ally_disaster_aid_intensity   = 0.3   # (reserved for future goal seeding; merchant routing handles aid currently)
+
 hinterland_drain_factor          = 0.5   # effective fertility multiplier inside same-civ hinterland (0.5 = half claimed)
 base_founding_cooldown_years     = 20    # base cooldown between same-civ settlements (scales down with pop)
 min_founding_cooldown_years      = 4     # floor — even the largest civ can't expand instantly

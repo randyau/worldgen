@@ -142,6 +142,8 @@ public sealed class WorldState : IWorldStateReadOnly
     public RelationshipEdge? GetRelationship(EntityId a, EntityId b) =>
         Relationships.Get(a, b);
 
+    public int CountAlliances(EntityId id) => Relationships.CountAlliances(id);
+
     public Civilization? GetCivilization(CivId civId) =>
         Civilizations.TryGetValue(civId, out var civ) ? civ : null;
 }

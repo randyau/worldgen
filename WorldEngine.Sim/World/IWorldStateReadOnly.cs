@@ -50,6 +50,7 @@ public interface IWorldStateReadOnly
     IReadOnlyDictionary<TileCoord, IReadOnlyList<ResourceDeposit>> ResourceDeposits { get; }
     Civilization? GetCivilization(CivId civId);
     RelationshipEdge? GetRelationship(EntityId a, EntityId b);
+    int CountAlliances(EntityId id);
 
     // === RELATIONSHIPS / HISTORY (M3+) ===
     // float GetRelationshipTrust(EntityId from, EntityId to);

@@ -133,11 +133,14 @@ public sealed class Tier2BehaviorPhase
             if (destTile == homeTile) continue;
             if (dest.ResourceLedger is null || home.ResourceLedger is null) continue;
 
+            bool isAllyDest = IsAlliedWithDestination(home, dest, world);
+
             foreach (var (res, homeSupply) in home.ResourceLedger)
             {
                 if (homeSupply <= 1.1f) continue; // home needs at least a 10% surplus
                 dest.ResourceLedger.TryGetValue(res, out float destSupply);
-                float complementarity = homeSupply - destSupply; // higher = home has more, dest wants it
+                float complementarity = homeSupply - destSupply;
+                if (isAllyDest) complementarity += 0.3f; // prefer allied settlements
                 if (complementarity > bestScore)
                 {
                     bestScore    = complementarity;
@@ -184,6 +187,20 @@ public sealed class Tier2BehaviorPhase
         });
         pending.Add(new PendingEvent(EventType.MerchantTradeCompleted, c.Location, null, payload,
             new[] { c.Id.Value }));
+    }
+
+    // Checks if home founder has an ally whose CivId matches the destination settlement's civ.
+    // No civ-level alliance concept yet; this proxies it via the founder's personal relationships.
+    private static bool IsAlliedWithDestination(SettlementStub home, SettlementStub dest, WorldState world)
+    {
+        if (!home.CivId.IsValid || !dest.CivId.IsValid || home.CivId == dest.CivId) return false;
+        foreach (var edge in world.Relationships.GetAll(home.FounderId).Where(e => e.IsAlly))
+        {
+            var allyId = edge.From == home.FounderId ? edge.To : edge.From;
+            if (world.GetEntity(allyId) is Tier1Character ally && ally.Identity.CivId == dest.CivId)
+                return true;
+        }
+        return false;
     }
 
     private void RunScholar(Tier2Character c, WorldState world, List<PendingEvent> pending)

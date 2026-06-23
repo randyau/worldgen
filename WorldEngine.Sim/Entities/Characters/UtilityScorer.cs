@@ -99,16 +99,23 @@ public static class UtilityScorer
         // Adding one candidate per non-allied char floods the softmax and drowns out travel/action.
         ICommand? bestSocialCmd = null;
         float bestSocialScore   = float.MinValue;
+        // Alliance cap — max alliances scales with Sociability
+        int allianceMax = cfg.AllianceMaxBase + (int)(c.Personality.Sociability * cfg.AllianceMaxPerSociability);
+        bool atAllianceCap = world.CountAlliances(c.Id) >= allianceMax;
+
         foreach (var e in world.GetEntitiesAt(c.Location))
         {
             if (e is not Tier1Character other || other.Id == c.Id || !other.IsAlive) continue;
+            // Alliances are cross-civ only
+            if (c.Identity.CivId.IsValid && other.Identity.CivId.IsValid
+                && c.Identity.CivId == other.Identity.CivId) continue;
             var rel = world.GetRelationship(c.Id, other.Id);
             if (rel?.IsAtWar ?? false) continue;
             if (rel?.IsAlly ?? false) continue;
 
             ICommand? cmd;
             float score;
-            if (rel?.Trust >= 0.4f)
+            if (!atAllianceCap && rel?.Trust >= 0.4f)
             {
                 float sp = (c.Skills.Diplomacy + c.Personality.Sociability) * 0.5f;
                 score = Score(c, ActionType.Ally, sp, world, cfg);

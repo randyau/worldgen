@@ -31,6 +31,9 @@ public sealed class RelationshipGraph
     public IEnumerable<RelationshipEdge> GetAll(EntityId id) =>
         _edges.Values.Where(e => e.From == id || e.To == id);
 
+    public int CountAlliances(EntityId id) =>
+        _edges.Values.Count(e => (e.From == id || e.To == id) && e.IsAlly);
+
     public IEnumerable<RelationshipEdge> AllEdges => _edges.Values;
 
     /// <summary>Convenience: ensure a neutral edge exists between two characters.</summary>

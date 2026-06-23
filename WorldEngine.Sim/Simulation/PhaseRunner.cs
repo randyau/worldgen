@@ -1,3 +1,4 @@
+using WorldEngine.Sim.Civilizations;
 using WorldEngine.Sim.Config;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities.Beasts;
@@ -74,6 +75,8 @@ public sealed class PhaseRunner
         pending.AddRange(_pressurePhase.Execute(world, world.CurrentTick));
         RunEntityBehaviorPhase(world, pending, isAnnualTick);
         RunCharacterBehaviorPhase(world, pending);
+        if (isAnnualTick)
+            CivTracker.RunAnnualDiplomacy(world, pending);
         RunPhaseStub(world, SimPhase.ConflictResolution);
         RunEventGeneration(world, pending);
 
