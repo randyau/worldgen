@@ -22,4 +22,5 @@ public sealed record CharacterSnapshot(
     // Key skills for display
     float Combat, float Leadership, float Diplomacy,
     int AgeSeason,
-    float HealthFraction);
+    float HealthFraction,
+    float Wellbeing);

@@ -57,6 +57,17 @@ public sealed class CharacterSimConfig
     public float PersonalityMismatchDrainRate { get; set; } = 0.003f; // drain × |stability diff|
     public float CulturalDistanceDrainRate    { get; set; } = 0.002f; // drain × cultural_distance (0–1)
 
+    // Wellbeing — emotional state dynamics
+    public float WellbeingGoalGainRate      { get; set; } = 0.01f;   // per tick when goal is progressing
+    public float WellbeingCompanionBoost    { get; set; } = 0.005f;  // per tick co-located with Bond target
+    public float WellbeingHungerDrain       { get; set; } = 0.02f;   // max drain when food = 0
+    public float WellbeingMeanReversionRate { get; set; } = 0.005f;  // pull toward 0 each tick
+    public float FlourishingThreshold       { get; set; } = 0.7f;    // Wellbeing ≥ this → Flourishing
+    public float SpiralThreshold            { get; set; } = -0.7f;   // Wellbeing ≤ this → Spiraling
+    public float DistressedSocialSuppression { get; set; } = 0.4f;   // social action score multiplier when Wellbeing < -0.3
+    public float GriefDrainRate             { get; set; } = 0.015f;  // Wellbeing drain per tick per Grieve goal
+    public float GriefDecayRate             { get; set; } = 0.002f;  // grief Intensity decay per tick
+
     // Tier 2 tuning
     public int   Tier2PerPopulation     { get; set; } = 10;  // one Tier2 per this many pop
     public int   Tier2MaxAgeSeasonsMin  { get; set; } = 60;

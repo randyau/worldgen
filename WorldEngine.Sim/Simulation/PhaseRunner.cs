@@ -21,9 +21,10 @@ public sealed class PhaseRunner
     private readonly EventGate _gate;
     private readonly EnvironmentalPhase _envPhase;
     private readonly EntityBehaviorPhase _entityPhase;
-    private readonly CharacterBehaviorPhase _charPhase;
-    private readonly Tier2BehaviorPhase       _tier2Phase;
-    private readonly PopulationDynamicsPhase  _popPhase;
+    private readonly CharacterBehaviorPhase  _charPhase;
+    private readonly Tier2BehaviorPhase      _tier2Phase;
+    private readonly PopulationDynamicsPhase _popPhase;
+    private readonly ResourcePressurePhase   _pressurePhase;
     private readonly Action<SimPhase>? _phaseObserver;
     private readonly List<PendingEvent> _injectedEvents = new();
     private int _lastAnnualTickYear;
@@ -47,6 +48,7 @@ public sealed class PhaseRunner
         _charPhase     = new CharacterBehaviorPhase(config);
         _tier2Phase    = new Tier2BehaviorPhase(config);
         _popPhase      = new PopulationDynamicsPhase(config);
+        _pressurePhase = new ResourcePressurePhase(config);
         _phaseObserver = phaseObserver;
     }
 
@@ -69,6 +71,7 @@ public sealed class PhaseRunner
 
         RunPhaseStub(world, SimPhase.ResourceProduction);
         RunPopulationDynamicsPhase(world, pending);
+        pending.AddRange(_pressurePhase.Execute(world, world.CurrentTick));
         RunEntityBehaviorPhase(world, pending, isAnnualTick);
         RunCharacterBehaviorPhase(world, pending);
         RunPhaseStub(world, SimPhase.ConflictResolution);

@@ -19,3 +19,5 @@ public sealed record DeclareRivalry(EntityId CharacterId, EntityId TargetId) : I
 public sealed record DeclareWar(EntityId CharacterId, EntityId TargetId) : ICommand;
 public sealed record RaidSettlement(EntityId CharacterId, TileCoord SettlementTile) : ICommand;
 public sealed record Negotiate(EntityId CharacterId, EntityId TargetId) : ICommand;
+public sealed record CreateArtwork(EntityId CharacterId) : ICommand;
+public sealed record FleeRegion(EntityId CharacterId, TileCoord Destination) : ICommand;

@@ -12,5 +12,8 @@ public sealed record SettlementStub(
     int       FoundedYear,
     int       Population,              // integer head count
     int       Health,                  // 0–100; raids reduce it; 0 = destroyed
-    float     PopulationF       = 0f,  // fractional accumulator for growth
-    int       LastCrystalThresh = 0);  // population threshold already crystallized
+    float     PopulationF          = 0f,   // fractional accumulator for growth
+    int       LastCrystalThresh    = 0,    // population threshold already crystallized
+    float     FoodPressureRatio    = 1f,   // supply/demand; < 1 = shortage
+    float     WaterPressureRatio   = 1f,
+    int       LastStrainEventTick  = 0);   // tick of last SettlementStraining event (rate-limit)

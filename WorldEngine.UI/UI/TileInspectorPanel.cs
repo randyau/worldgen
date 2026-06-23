@@ -111,7 +111,15 @@ public sealed class TileInspectorPanel
             string civTag = c.CivName is not null ? $" [{c.CivName}]" : "";
             string ancTag = c.AncestryId.Length > 0 ? $" ({c.AncestryId})" : "";
             AddLine($"{c.Name}{civTag}{ancTag}");
-            AddLine($"  HP {c.HealthFraction:P0}  Age {c.AgeSeason}s");
+            string wbLabel = c.Wellbeing switch
+            {
+                >= 0.7f  => "Flourishing",
+                >= 0.3f  => "Content",
+                >= -0.3f => "Neutral",
+                >= -0.7f => "Distressed",
+                _        => "Spiraling"
+            };
+            AddLine($"  HP {c.HealthFraction:P0}  Age {c.AgeSeason}s  [{wbLabel}]");
         }
         foreach (var c in tier2)
         {

@@ -52,6 +52,12 @@ public static class SignificanceClassifier
             EventType.CharacterDied     => PopulationImpact.Moderate, // → Headline
             EventType.CharacterMarried  => PopulationImpact.None,
             EventType.CharacterExiled   => PopulationImpact.None,
+            EventType.CharacterGrieved     => PopulationImpact.Minor,
+            EventType.CharacterFlourishing => PopulationImpact.Minor,
+            EventType.CharacterSpiraling   => PopulationImpact.Minor,
+            EventType.ArtworkCreated       => PopulationImpact.None,
+            EventType.GoalFormed           => PopulationImpact.None,
+            EventType.GoalResolved         => PopulationImpact.None,
             // Political events — Headline
             EventType.WarDeclared       => PopulationImpact.Major,
             EventType.WarEnded          => PopulationImpact.Major,
@@ -70,7 +76,8 @@ public static class SignificanceClassifier
             // Population events (3400-range)
             EventType.SettlementGrew      => PopulationImpact.None,   // suppressed: too noisy
             EventType.SettlementShrank    => PopulationImpact.None,
-            EventType.SettlementAbandoned => PopulationImpact.Major,  // → Regional tier
+            EventType.SettlementAbandoned  => PopulationImpact.Major,  // → Regional tier
+            EventType.SettlementStraining  => PopulationImpact.Moderate, // → Character tier; Major when crisis
             // Tier 2 character events
             EventType.AppointedToRole         => PopulationImpact.None,
             EventType.DismissedFromRole       => PopulationImpact.None,

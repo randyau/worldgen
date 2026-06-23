@@ -636,6 +636,17 @@ wanderlust_curiosity_floor      = 0.3  # even the least curious chars have 30% o
 # Ancestry / cultural passive drains — applied per-tick when different-civ chars share a tile
 personality_mismatch_drain_rate = 0.003  # drain × |stability diff| per tick
 cultural_distance_drain_rate    = 0.002  # drain × cultural_distance (0–1) per tick
+# Wellbeing — emotional state dynamics (-1 spiraling … +1 flourishing)
+wellbeing_goal_gain_rate        = 0.01    # per tick when a goal is progressing
+wellbeing_companion_boost       = 0.005   # per tick co-located with Bond target
+wellbeing_hunger_drain          = 0.02    # max drain at zero food
+wellbeing_mean_reversion_rate   = 0.005   # pull toward 0 each tick
+flourishing_threshold           = 0.7     # Wellbeing ≥ this → Flourishing event fires once
+spiral_threshold                = -0.7    # Wellbeing ≤ this → Spiraling
+distressed_social_suppression   = 0.4     # social action score multiplier when Wellbeing < -0.3
+grief_drain_rate                = 0.015   # Wellbeing drain per tick per Grieve goal
+grief_decay_rate                = 0.002   # grief intensity decay per tick
+
 # Tier 2 sub-tuning (appended to [character] section — Tomlyn merges same-section keys)
 tier2_per_population        = 10
 tier2_max_age_seasons_min   = 60
@@ -659,3 +670,11 @@ crystal_pop_artisan      = 200
 crystal_pop_scholar      = 300
 crystal_pop_physician    = 500
 crystal_pop_merchant     = 1000
+
+[resource_pressure]
+shortage_threshold      = 0.6    # food ratio below this = shortage; seeds Acquire goals
+crisis_threshold        = 0.3    # food ratio below this = crisis; also seeds Flee goals
+acquire_goal_intensity  = 0.7
+flee_goal_intensity     = 0.5
+strain_event_cooldown   = 8      # ticks between SettlementStraining events per settlement
+population_cap_per_tile = 100.0  # pop count that equals "full demand" for one tile's food

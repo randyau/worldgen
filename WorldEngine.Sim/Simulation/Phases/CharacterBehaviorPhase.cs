@@ -30,20 +30,45 @@ public sealed class CharacterBehaviorPhase
 
         // Snapshot to avoid modify-during-iteration
         var characters = world.Entities.Characters.ToList();
+        var deathsThisTick = new List<(EntityId Id, string Name)>();
+
         foreach (var c in characters)
         {
             if (!c.IsAlive) continue;
             UpdateLifecycle(c, world, tick, pending);
-            if (!c.IsAlive) continue;
+            if (!c.IsAlive)
+            {
+                deathsThisTick.Add((c.Id, c.Identity.Name));
+                continue;
+            }
             c.TicksInCurrentTile++;
             NeedsUpdater.Update(c, world, _cfg);
             GoalManager.UpdateGoals(c, world, tick);
+            bool wasSpiraling = c.Wellbeing <= _cfg.SpiralThreshold;
+            bool wasFlourishingBefore = c.Wellbeing >= _cfg.FlourishingThreshold;
+            bool isSpiraling = GoalManager.UpdateWellbeing(c, world, _cfg, out bool crossedFlourishing);
+            if (crossedFlourishing)
+                EmitFlourishingEvent(c, pending);
+            if (isSpiraling && !wasSpiraling) // only emit on the crossing, not every tick
+                EmitSpiralEvent(c, pending);
             ApplyTerritorialPressure(c, world, tick);
             ApplyPassiveDrains(c, world);
             CheckBeastEncounters(c, world, pending, tick);
             var cmd = UtilityScorer.SelectAction(c, world, _cfg);
             if (cmd != null)
                 ResolveCommand(cmd, c, world, pending, tick);
+        }
+
+        // Grief: after all deaths are resolved, notify mourners
+        foreach (var (deadId, deadName) in deathsThisTick)
+        {
+            var mourners = new List<(EntityId, float)>();
+            GoalManager.ApplyGriefToMourners(deadId, deadName, world, mourners);
+            foreach (var (mournerId, intensity) in mourners)
+            {
+                if (world.GetEntity(mournerId) is Tier1Character mourner && mourner.IsAlive)
+                    EmitGriefEvent(mourner, deadId, deadName, intensity, pending);
+            }
         }
 
         // Remove dead characters from registry
@@ -178,6 +203,12 @@ public sealed class CharacterBehaviorPhase
             case Rest:
                 ResolveRest(c);
                 break;
+            case CreateArtwork:
+                ResolveCreateArtwork(c, world, pending, tick);
+                break;
+            case FleeRegion flee:
+                ResolveMove(c, flee.Destination, world);
+                break;
             case EstablishSettlement:
             case AllyWith:
             case DeclareRivalry:
@@ -280,6 +311,77 @@ public sealed class CharacterBehaviorPhase
 
             world.Relationships.Upsert(rel with { Trust = Math.Clamp(trust, -1f, 1f) });
         }
+    }
+
+    // ─── Artwork creation ────────────────────────────────────────────────────
+
+    private static void ResolveCreateArtwork(
+        Tier1Character c, WorldState world, List<PendingEvent> pending, long tick)
+    {
+        // Progress the Create goal and boost Wellbeing
+        var createGoal = c.Goals.FirstOrDefault(g => g.Type == GoalType.Create);
+        if (createGoal != null)
+        {
+            createGoal.Progress = Math.Min(1f, createGoal.Progress + 0.2f);
+            createGoal.StaleSince = (int)tick;
+        }
+        c.Wellbeing = Math.Min(1f, c.Wellbeing + 0.05f);
+
+        var payload = JsonSerializer.Serialize(new
+        {
+            characterId   = c.Id.Value,
+            characterName = c.Identity.Name,
+            location      = new[] { c.Location.X, c.Location.Y },
+            wellbeing     = c.Wellbeing
+        });
+        pending.Add(new PendingEvent(EventType.ArtworkCreated, c.Location, null, payload,
+            new[] { c.Id.Value }));
+    }
+
+    // ─── Emotional state events ──────────────────────────────────────────────
+
+    private static void EmitFlourishingEvent(Tier1Character c, List<PendingEvent> pending)
+    {
+        var payload = JsonSerializer.Serialize(new
+        {
+            characterId   = c.Id.Value,
+            characterName = c.Identity.Name,
+            wellbeing     = c.Wellbeing,
+            location      = new[] { c.Location.X, c.Location.Y }
+        });
+        pending.Add(new PendingEvent(EventType.CharacterFlourishing, c.Location, null, payload,
+            new[] { c.Id.Value }));
+    }
+
+    private static void EmitSpiralEvent(Tier1Character c, List<PendingEvent> pending)
+    {
+        var payload = JsonSerializer.Serialize(new
+        {
+            characterId   = c.Id.Value,
+            characterName = c.Identity.Name,
+            wellbeing     = c.Wellbeing,
+            location      = new[] { c.Location.X, c.Location.Y }
+        });
+        pending.Add(new PendingEvent(EventType.CharacterSpiraling, c.Location, null, payload,
+            new[] { c.Id.Value }));
+    }
+
+    private static void EmitGriefEvent(
+        Tier1Character mourner, EntityId deadId, string deadName, float intensity,
+        List<PendingEvent> pending)
+    {
+        var payload = JsonSerializer.Serialize(new
+        {
+            characterId   = mourner.Id.Value,
+            characterName = mourner.Identity.Name,
+            deceasedId    = deadId.Value,
+            deceasedName  = deadName,
+            intensity,
+            wellbeing     = mourner.Wellbeing,
+            hasAvenge     = mourner.Goals.Any(g => g.Type == GoalType.Avenge)
+        });
+        pending.Add(new PendingEvent(EventType.CharacterGrieved, mourner.Location, null, payload,
+            new[] { mourner.Id.Value }));
     }
 
     // ─── Beast encounters ────────────────────────────────────────────────────

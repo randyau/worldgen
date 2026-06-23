@@ -139,8 +139,10 @@ public static class UtilityScorer
             }
         }
 
-        // RaidSettlement — nearby enemy settlement
-        if (c.Personality.Aggression > 0.4f)
+        // RaidSettlement — nearby enemy settlement; Avenge goal raises chance threshold
+        bool hasAvengeGoal = c.Goals.Any(g => g.Type == GoalType.Avenge);
+        float raidAggressionMin = hasAvengeGoal ? 0.2f : 0.4f;
+        if (c.Personality.Aggression > raidAggressionMin)
         {
             foreach (var coord in world.GetTilesInRadius(c.Location, cfg.PerceptionRadius))
             {
@@ -156,10 +158,28 @@ public static class UtilityScorer
             }
         }
 
+        // CreateArtwork — available when Wellbeing ≥ 0.3 and has a Create goal
+        if (c.Wellbeing >= 0.3f && c.Goals.Any(g => g.Type == GoalType.Create))
+        {
+            float artisticProb = c.Aptitude.Ingenuity * (0.5f + c.Wellbeing * 0.5f);
+            actions.Add(new(new CreateArtwork(c.Id),
+                Score(c, ActionType.Create, artisticProb, world, cfg)));
+        }
+
+        // FleeRegion — available when character has a Flee goal and Wellbeing < 0
+        var fleeGoal = c.Goals.FirstOrDefault(g => g.Type == GoalType.Flee);
+        if (fleeGoal != null && c.Wellbeing < 0f)
+        {
+            var fleeDest = BestAdjacentTile(c, world); // move toward any better tile
+            if (fleeDest.HasValue)
+                actions.Add(new(new FleeRegion(c.Id, fleeDest.Value),
+                    Score(c, ActionType.Flee, 1f, world, cfg)));
+        }
+
         return actions;
     }
 
-    private enum ActionType { Rest, Travel, Establish, Ally, Negotiate, Rivalry, War, Raid }
+    private enum ActionType { Rest, Travel, Establish, Ally, Negotiate, Rivalry, War, Raid, Create, Flee }
 
     private static float Score(
         Tier1Character c,
@@ -172,10 +192,28 @@ public static class UtilityScorer
         float goalAdvancement     = GoalAdvancement(c, action);
         float personalityFit      = PersonalityFit(c, action);
 
-        return (needsSatisfaction * cfg.NeedsWeight
-              + goalAdvancement   * cfg.GoalsWeight
-              + personalityFit    * cfg.PersonalityWeight)
-              * Math.Max(0.1f, successProb);
+        float base_ = (needsSatisfaction * cfg.NeedsWeight
+                     + goalAdvancement   * cfg.GoalsWeight
+                     + personalityFit    * cfg.PersonalityWeight)
+                     * Math.Max(0.1f, successProb);
+
+        // Wellbeing modulates social and creative actions
+        bool isSocial   = action is ActionType.Ally or ActionType.Negotiate;
+        bool isCreative = action is ActionType.Create;
+        if (isSocial || isCreative)
+        {
+            float wb = c.Wellbeing;
+            float mod = wb switch
+            {
+                >= 0.7f => 1.4f,         // Flourishing: more generous and expressive
+                >= 0.3f => 1.1f,         // Content: slightly open
+                >= -0.3f => 1.0f,        // Neutral: baseline
+                >= -0.7f => cfg.DistressedSocialSuppression, // Distressed: withdraws
+                _ => cfg.DistressedSocialSuppression * 0.5f  // Spiraling: nearly shut down
+            };
+            base_ *= mod;
+        }
+        return base_;
     }
 
     private static float NeedsSatisfaction(Tier1Character c, ActionType a) => a switch
@@ -207,6 +245,19 @@ public static class UtilityScorer
                 (GoalType.Dominance, ActionType.Raid)      => 0.8f,
                 (GoalType.Alliance,  ActionType.Ally)      => 1.0f,
                 (GoalType.Alliance,  ActionType.Negotiate) => 0.5f,
+                // New goal types
+                (GoalType.Create,    ActionType.Create)    => 1.0f,
+                (GoalType.Bond,      ActionType.Ally)      => 1.0f,
+                (GoalType.Bond,      ActionType.Negotiate) => 0.4f,
+                (GoalType.Avenge,    ActionType.Raid)      => 0.9f,
+                (GoalType.Avenge,    ActionType.War)       => 0.8f,
+                (GoalType.Acquire,   ActionType.Raid)      => 0.7f,
+                (GoalType.Acquire,   ActionType.Travel)    => 0.5f,
+                (GoalType.Flee,      ActionType.Flee)      => 1.0f,
+                (GoalType.Flee,      ActionType.Travel)    => 0.6f,
+                (GoalType.Grieve,    ActionType.Rest)      => 0.7f,  // withdrawn, stays put
+                (GoalType.Endure,    ActionType.Rest)      => 0.9f,
+                (GoalType.Protect,   ActionType.Travel)    => 0.4f,  // move toward protected
                 _                                          => 0f
             };
             best = Math.Max(best, match * g.Priority);
@@ -224,6 +275,8 @@ public static class UtilityScorer
         ActionType.Negotiate => c.Personality.Sociability * 0.7f + c.Personality.Honesty * 0.3f,
         ActionType.Rest      => c.Personality.Stability,
         ActionType.Travel    => c.Personality.Curiosity,
+        ActionType.Create    => c.Aptitude.Ingenuity,
+        ActionType.Flee      => (1f - c.Personality.Stability) * 0.8f,
         _                    => 0.2f
     };
 

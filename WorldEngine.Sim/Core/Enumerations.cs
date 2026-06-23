@@ -86,6 +86,9 @@ public enum EventType
     CharacterDied           = 3002,
     CharacterMarried        = 3003,
     CharacterExiled         = 3004,
+    CharacterGrieved        = 3005,  // trusted companion died; character enters grief
+    CharacterFlourishing    = 3006,  // Wellbeing crossed +0.7; character is thriving
+    CharacterSpiraling      = 3007,  // Wellbeing crossed -0.7; crisis state
 
     // M2+ character actions (3100-range)
     AllianceFormed          = 3101,
@@ -95,6 +98,9 @@ public enum EventType
     BattleOccurred          = 3105,
     RivalryFormed           = 3106,
     Negotiated              = 3107,
+    ArtworkCreated          = 3108,  // character created something (art, craft, discovery)
+    GoalFormed              = 3109,  // notable goal formed (Bond, Avenge, Create)
+    GoalResolved            = 3110,  // notable goal achieved or abandoned
 
     // M2+ civilization/settlement (3200-range)
     CivilizationFounded     = 3201,
@@ -102,6 +108,7 @@ public enum EventType
     SettlementFounded       = 3203,
     SettlementDestroyed     = 3204,
     SuccessionOccurred      = 3205,
+    SettlementStraining     = 3206,  // settlement is under food or water shortage
 
     // M2+ population events (3400-range)
     SettlementGrew          = 3401,
@@ -145,6 +152,9 @@ public static class VerbClassification
         // M2+ stubs — reasonable defaults
         EventType.CharacterBorn           => VerbClass.Creation,
         EventType.CharacterDied           => VerbClass.Transformation, // Destruction floor=Regional floods DB; impact drives tier for notable deaths
+        EventType.CharacterGrieved        => VerbClass.Transformation,
+        EventType.CharacterFlourishing    => VerbClass.Creation,
+        EventType.CharacterSpiraling      => VerbClass.Transformation,
         EventType.CharacterMarried        => VerbClass.Transfer,
         EventType.CharacterExiled         => VerbClass.Transformation,
         EventType.AllianceFormed          => VerbClass.Transfer,
@@ -154,11 +164,15 @@ public static class VerbClassification
         EventType.BattleOccurred          => VerbClass.Conflict,
         EventType.RivalryFormed           => VerbClass.Conflict,
         EventType.Negotiated              => VerbClass.Maintenance,
+        EventType.ArtworkCreated          => VerbClass.Creation,
+        EventType.GoalFormed              => VerbClass.Transformation,
+        EventType.GoalResolved            => VerbClass.Transformation,
         EventType.CivilizationFounded     => VerbClass.Creation,
         EventType.CivilizationCollapsed   => VerbClass.Destruction,
         EventType.SettlementFounded       => VerbClass.Creation,
         EventType.SettlementDestroyed     => VerbClass.Destruction,
         EventType.SuccessionOccurred      => VerbClass.Transfer,
+        EventType.SettlementStraining     => VerbClass.Transformation,
         EventType.SettlementGrew          => VerbClass.Creation,
         EventType.SettlementShrank        => VerbClass.Destruction,
         EventType.SettlementAbandoned     => VerbClass.Destruction,

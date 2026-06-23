@@ -30,6 +30,9 @@ public sealed class Tier1Character : IEntity
     public int AgeSeason { get; internal set; }
     public int MaxAgeSeason { get; }
 
+    // Emotional state — continuous wellbeing score: -1 (spiraling) … +1 (flourishing)
+    public float Wellbeing { get; internal set; }
+
     // Wanderlust — ticks on the same tile; drives travel utility bonus
     public int TicksInCurrentTile { get; internal set; }
 
@@ -73,7 +76,8 @@ public sealed class Tier1Character : IEntity
         FoodFraction:  Needs.Food,
         AgeSeason:     AgeSeason,
         IsAlive:       IsAlive,
-        AncestryId:    Identity.AncestryId);
+        AncestryId:    Identity.AncestryId,
+        Wellbeing:     Wellbeing);
 
     public CharacterSnapshot ToCharacterSnapshot() => new(
         Id:            Id,
@@ -94,5 +98,6 @@ public sealed class Tier1Character : IEntity
         Leadership:    Skills.Leadership,
         Diplomacy:     Skills.Diplomacy,
         AgeSeason:     AgeSeason,
-        HealthFraction: MaxHealth > 0 ? (float)Health / MaxHealth : 0f);
+        HealthFraction: MaxHealth > 0 ? (float)Health / MaxHealth : 0f,
+        Wellbeing:     Wellbeing);
 }
