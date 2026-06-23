@@ -77,7 +77,9 @@ public sealed class EntityBehaviorPhase
 
     private void UpdateBeastLifecycles(WorldState world, List<PendingEvent> pending)
     {
-        foreach (var beast in world.Entities.Beasts)
+        // Snapshot the list — Reproduce() adds to Entities.Beasts during iteration
+        var beasts = world.Entities.Beasts.ToList();
+        foreach (var beast in beasts)
         {
             if (!beast.IsAlive) continue;
 
@@ -239,6 +241,9 @@ public sealed class EntityBehaviorPhase
 
         var combatCfg = _catalog.CombatConfig;
 
+        // Fire encounter event at start of combat
+        FireEncounterEvent(attacker, target, pending);
+
         // Collect gang members (same species as attacker on same tile, up to max_gang_size)
         var gang = new List<LegendaryBeast> { attacker };
         foreach (var e in world.GetEntitiesAt(attacker.Location))
@@ -248,6 +253,8 @@ public sealed class EntityBehaviorPhase
                 && b.SpeciesId == attacker.SpeciesId && b.IsAlive)
                 gang.Add(b);
         }
+
+        bool targetKilled = false;
 
         // Multi-round combat loop
         for (int round = 0; round < combatCfg.MaxRoundsPerTick; round++)
@@ -264,7 +271,12 @@ public sealed class EntityBehaviorPhase
                 if (atkRoll > defRoll)
                     target.Health -= member.Strength;
             }
-            if (target.Health <= 0) { KillBeast(target, "Combat", attacker, pending, world); break; }
+            if (target.Health <= 0)
+            {
+                KillBeast(target, "Combat", attacker, pending, world);
+                targetKilled = true;
+                break;
+            }
 
             // Target retaliates against a random gang member
             var retTarget = gang[round % gang.Count];
@@ -287,6 +299,30 @@ public sealed class EntityBehaviorPhase
                 break;
             }
         }
+
+        // Winning gang members gain food from the kill (each uses their own FoodFromHunt stat)
+        if (targetKilled)
+        {
+            foreach (var member in gang)
+            {
+                if (member.IsAlive)
+                    member.FoodNeed = Math.Min(1f, member.FoodNeed + member.FoodFromHunt);
+            }
+        }
+    }
+
+    private static void FireEncounterEvent(
+        LegendaryBeast attacker, LegendaryBeast target, List<PendingEvent> pending)
+    {
+        var payload = JsonSerializer.Serialize(new
+        {
+            attackerId   = attacker.Id.Value,
+            attackerName = attacker.Name,
+            targetId     = target.Id.Value,
+            targetName   = target.Name,
+            location     = new[] { attacker.Location.X, attacker.Location.Y }
+        });
+        pending.Add(new PendingEvent(EventType.BeastEncountered, attacker.Location, null, payload));
     }
 
     // ─── Death ───────────────────────────────────────────────────────────────

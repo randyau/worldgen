@@ -71,23 +71,35 @@ public static class BeastSpawner
         var validTiles = CollectValidTiles(world, species);
         if (validTiles.Count == 0) return;
 
-        // Spawn one pack (or solitary beast) — cap at world budget and max_per_world
-        int packSize = species.PackSizeMin
-            + (int)(WorldRng.FloatAt(world.WorldSeed, 0, (int)(entitySeq & 0x7FFFFFFF), 0, SaltSpawnTile)
-                    * (species.PackSizeMax - species.PackSizeMin + 1));
-        packSize = Math.Min(packSize, Math.Min(species.MaxPerWorld, totalBudget));
+        // Determine how many packs to spread across the world.
+        // Budget per species: up to MaxPerWorld, capped by total remaining budget.
+        int avgPack   = Math.Max(1, (species.PackSizeMin + species.PackSizeMax) / 2);
+        int speciesBudget = Math.Min(species.MaxPerWorld, totalBudget);
+        int packCount = Math.Max(1, speciesBudget / avgPack);
 
-        // Pick one home tile for the pack
-        int tileIdx = (int)(WorldRng.FloatAt(world.WorldSeed, 0, (int)(entitySeq & 0x7FFFFFFF), 1, SaltSpawnTile)
-                      * validTiles.Count);
-        var home = validTiles[Math.Clamp(tileIdx, 0, validTiles.Count - 1)];
+        // Pre-select evenly-spaced tile indices so packs don't cluster
+        int stride = Math.Max(1, validTiles.Count / packCount);
 
-        for (int i = 0; i < packSize; i++, entitySeq++)
+        for (int p = 0; p < packCount && totalBudget > 0; p++)
         {
-            var beast = BeastFactory.Spawn(species, home, world.WorldSeed, entitySeq);
-            world.Entities.Add(beast);
-            totalBudget--;
-            pending.Add(MakeSpawnedEvent(beast, world));
+            int packSeed = (int)((entitySeq ^ (p * 7919L)) & 0x7FFFFFFF);
+            int packSize = species.PackSizeMin
+                + (int)(WorldRng.FloatAt(world.WorldSeed, 0, packSeed, 0, SaltSpawnTile)
+                        * (species.PackSizeMax - species.PackSizeMin + 1));
+            packSize = Math.Min(packSize, totalBudget);
+
+            // Spread packs: start offset within stride so packs don't overlap
+            int offset = (int)(WorldRng.FloatAt(world.WorldSeed, 0, packSeed, 1, SaltSpawnTile) * stride);
+            int tileIdx = Math.Clamp(p * stride + offset, 0, validTiles.Count - 1);
+            var home = validTiles[tileIdx];
+
+            for (int i = 0; i < packSize; i++, entitySeq++)
+            {
+                var beast = BeastFactory.Spawn(species, home, world.WorldSeed, entitySeq);
+                world.Entities.Add(beast);
+                totalBudget--;
+                pending.Add(MakeSpawnedEvent(beast, world));
+            }
         }
     }
 
