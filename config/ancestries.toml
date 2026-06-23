@@ -1,0 +1,203 @@
+# World Engine — Ancestry Definitions
+# Each [[ancestry]] block defines one ancestry.
+# Personality bias fields are offsets on the Gaussian mean (base 0.5).
+# +0.2 shifts average from 0.5 → 0.7; individual noise (stddev ≈ 0.2) equals max bias,
+# keeping individuals more variable than their ancestry stereotype.
+# Lifespan is in seasons (4 seasons/year).
+
+# =============================================================================
+# HUMAN — baseline; no biases; appears in most biomes
+# =============================================================================
+[[ancestry]]
+id                    = "human"
+display_name          = "Human"
+min_lifespan_seasons  = 60
+max_lifespan_seasons  = 200
+spawn_weights         = { grassland = 2.0, plains = 2.0, savanna = 2.0, temperate_forest = 1.5, boreal_forest = 1.0, hills = 1.5, desert = 1.0, tundra = 0.5 }
+first_meeting_trust   = { elf = 0.0, dwarf = 0.05, dark_elf = -0.05, orc = -0.05, halfling = 0.10 }
+cultural_distance     = { elf = 0.10, dwarf = 0.15, dark_elf = 0.40, orc = 0.35, halfling = 0.10 }
+first_names = [
+  "Navar", "Lyra", "Gawen", "Hessa", "Ceryn", "Barath", "Elowen", "Farid",
+  "Isolde", "Jorath", "Kira", "Mira", "Oryn", "Petra", "Rolan", "Sabel",
+  "Torin", "Ulric", "Vara", "Wren", "Aldric", "Brynn", "Caela", "Draven",
+  "Eryn", "Fyora", "Gorin", "Idris", "Jolara", "Kavel", "Maren", "Nox",
+  "Pyra", "Rowan", "Selah", "Tavian", "Ursa", "Vael", "Wynne", "Zor",
+  "Arlen", "Bessa", "Corvin", "Darya", "Elian", "Freya", "Gareth", "Hana",
+  "Irwin", "Jana"
+]
+epithets = [
+  "the Bold", "the Wise", "the Swift", "the Iron", "the Just",
+  "the Wanderer", "the Unyielding", "the Fierce", "the Silent", "the Bright",
+  "the Grim", "the Pale", "the Stormbringer", "the Seeker", "the Undying",
+  "the Patient", "the Relentless", "the Scholar", "the Cruel", "the Gentle",
+  "the Far-Sighted", "the Wolf", "the Bear", "the Hawk", "the Serpent",
+  "Oakenshield", "the Steadfast", "of the River", "the Wayward", "the Fortunate"
+]
+
+# =============================================================================
+# ELF — long-lived, curious, diplomatic; favors forests
+# =============================================================================
+[[ancestry]]
+id                    = "elf"
+display_name          = "Elf"
+min_lifespan_seasons  = 800
+max_lifespan_seasons  = 2000
+bias_curiosity        = 0.20
+bias_wonder           = 0.15
+bias_aggression       = -0.10
+bias_stability        = 0.05
+bias_honesty          = 0.10
+bias_acuity           = 0.15
+bias_focus            = 0.10
+spawn_weights         = { temperate_forest = 3.0, boreal_forest = 2.0, grassland = 1.0, hills = 0.5 }
+first_meeting_trust   = { human = 0.0, dwarf = -0.05, dark_elf = -0.25, orc = -0.10, halfling = 0.05 }
+cultural_distance     = { human = 0.10, dwarf = 0.20, dark_elf = 0.70, orc = 0.40, halfling = 0.20 }
+first_names = [
+  "Aelindra", "Sylarel", "Caelwyn", "Elowen", "Vaelith", "Sorel", "Mireille",
+  "Aeryn", "Lioren", "Thessaly", "Caladrel", "Erevyn", "Faelindra", "Galathen",
+  "Haelith", "Ilyarel", "Jaelith", "Kaewyn", "Lirael", "Maewyn", "Naelith",
+  "Orvael", "Phaelen", "Queleth", "Raelith", "Sorvael", "Taelith", "Uvalen",
+  "Waelith", "Aravel", "Brithael", "Caelen", "Daewyn", "Elithar", "Faenith",
+  "Gaelvael", "Haelwyn", "Ilaenith", "Jaelvael", "Kaelith", "Laelith", "Maelwyn",
+  "Naelwin", "Orveth", "Paelith", "Qaelwyn", "Raelvael", "Saelith", "Taelwyn"
+]
+epithets = [
+  "Dawnweaver", "the Ancient", "of the Silver Wood", "Starborn", "the Undying",
+  "Leafwhisper", "the Far-Sighted", "of the Long Watch", "Moonblade", "the Patient",
+  "the Dreamer", "Windwalker", "of the Fallen Court", "the Rememberer", "Twilightborn",
+  "Riversworn", "the Graceful", "of the First Age", "Spellwright", "the Wandering"
+]
+
+# =============================================================================
+# DWARF — medium-lived, steadfast, industrious; mountains and hills
+# =============================================================================
+[[ancestry]]
+id                    = "dwarf"
+display_name          = "Dwarf"
+min_lifespan_seasons  = 320
+max_lifespan_seasons  = 800
+bias_stability        = 0.20
+bias_loyalty          = 0.15
+bias_curiosity        = -0.10
+bias_greed            = 0.10
+bias_diligence        = 0.20
+bias_perfectionism    = 0.10
+spawn_weights         = { mountain = 3.0, hills = 3.0, boreal_forest = 0.5, tundra = 0.5 }
+first_meeting_trust   = { human = 0.05, elf = -0.05, dark_elf = -0.25, orc = -0.15, halfling = 0.05 }
+cultural_distance     = { human = 0.15, elf = 0.20, dark_elf = 0.65, orc = 0.50, halfling = 0.15 }
+first_names = [
+  "Brom", "Korda", "Tilda", "Garuk", "Merna", "Dolun", "Hessa", "Vrund",
+  "Agna", "Borun", "Kelda", "Griff", "Torva", "Skeld", "Wulfa", "Durgin",
+  "Ferra", "Helda", "Ingri", "Jarvik", "Keldra", "Lodvar", "Magna", "Norda",
+  "Orin", "Petra", "Qilda", "Ragnur", "Sigrid", "Thora", "Ulda", "Vagn",
+  "Walda", "Xorn", "Yrsa", "Zorna", "Aldra", "Brunda", "Corun", "Dorva",
+  "Eldra", "Flori", "Grunda", "Hadvar", "Ildra", "Jorund", "Korna", "Morna",
+  "Norna", "Oldra"
+]
+epithets = [
+  "Stonehanded", "Ironbrow", "the Deep", "Coppervein", "the Unyielding",
+  "Forgeson", "the Stubborn", "the Scarred", "Goldpick", "the Unbroken",
+  "Deepdelver", "Hammerfall", "of the Deep Halls", "the Unmoved", "Ironfoot",
+  "the Tenacious", "Axeborn", "the Grumbly", "Brightforge", "the Enduring"
+]
+
+# =============================================================================
+# DARK ELF — long-lived, aggressive, ambitious; volcanic and shadowed terrain
+# =============================================================================
+[[ancestry]]
+id                    = "dark_elf"
+display_name          = "Dark Elf"
+min_lifespan_seasons  = 400
+max_lifespan_seasons  = 1200
+bias_aggression       = 0.20
+bias_ambition         = 0.20
+bias_honesty          = -0.15
+bias_compassion       = -0.10
+bias_stability        = -0.05
+bias_focus            = 0.15
+bias_composure        = 0.10
+spawn_weights         = { volcanic = 3.0, swamp = 2.0, boreal_forest = 1.0, mountain = 1.0 }
+first_meeting_trust   = { human = -0.05, elf = -0.25, dwarf = -0.25, orc = 0.05, halfling = -0.10 }
+cultural_distance     = { human = 0.40, elf = 0.70, dwarf = 0.65, orc = 0.30, halfling = 0.55 }
+first_names = [
+  "Zarveth", "Xilana", "Korriv", "Malvex", "Vythis", "Draxil", "Nyssara",
+  "Ravaxa", "Thrix", "Ulveth", "Vexara", "Wrixal", "Xavri", "Yxara",
+  "Zevrin", "Azrix", "Belvex", "Crixal", "Darveth", "Exril", "Faxira",
+  "Grixal", "Hivex", "Ixara", "Krixal", "Laxira", "Mriveth", "Naxil",
+  "Olvex", "Praveth", "Qrixal", "Raxira", "Sriveth", "Taxil", "Uxara",
+  "Vriveth", "Wraxil", "Xirveth", "Yaxira", "Zrixal", "Arveth", "Brixal",
+  "Caxira", "Driveth", "Erixal", "Farveth", "Gaxira", "Hriveth", "Iraxil"
+]
+epithets = [
+  "the Veiled", "Shadowborn", "of the Deep Dark", "the Merciless", "Nightblade",
+  "the Ambitious", "of the Broken Web", "the Relentless", "Ashveil", "the Cold",
+  "of the Sunless Court", "the Calculating", "Darkharbor", "the Unscrupulous",
+  "the Ruthless", "of Bitter Flame", "the Scheming", "the Patient Knife"
+]
+
+# =============================================================================
+# ORC — short-lived, aggressive, enduring; plains and savanna
+# =============================================================================
+[[ancestry]]
+id                    = "orc"
+display_name          = "Orc"
+min_lifespan_seasons  = 120
+max_lifespan_seasons  = 320
+bias_aggression       = 0.20
+bias_stability        = -0.10
+bias_compassion       = -0.05
+bias_loyalty          = 0.10
+bias_diligence        = 0.10
+bias_composure        = 0.10
+spawn_weights         = { plains = 3.0, savanna = 3.0, grassland = 1.5, hills = 1.0, desert = 1.0 }
+first_meeting_trust   = { human = -0.05, elf = -0.10, dwarf = -0.15, dark_elf = 0.05, halfling = -0.10 }
+cultural_distance     = { human = 0.35, elf = 0.40, dwarf = 0.50, dark_elf = 0.30, halfling = 0.40 }
+first_names = [
+  "Grak", "Urva", "Kargal", "Drusk", "Thugga", "Brul", "Varg", "Morda",
+  "Grasha", "Krug", "Lorga", "Murgal", "Norg", "Proga", "Qurg", "Roga",
+  "Sorga", "Turg", "Uroga", "Vurga", "Wrog", "Xurga", "Yorg", "Zurg",
+  "Agrash", "Brorg", "Crug", "Drog", "Ergash", "Frug", "Grorg", "Hrug",
+  "Irgash", "Jrug", "Krorg", "Lrug", "Morg", "Nrug", "Org", "Prug",
+  "Qrorg", "Rrug", "Srorg", "Trug", "Urorg", "Vrug", "Wrorg", "Xrug",
+  "Yrug", "Zrog"
+]
+epithets = [
+  "the Crusher", "Warborn", "the Relentless", "Ironhide", "the Raider",
+  "Bloodfist", "the Tenacious", "Bonecruncher", "the Fierce", "Shieldbreaker",
+  "of the Red Plains", "the Undying", "Warpath", "the Unyielding", "Greathammer",
+  "of the Burning Steppe", "the Conqueror", "Bravescar", "the Fearless"
+]
+
+# =============================================================================
+# HALFLING — medium-lived, sociable, honest; fertile lowlands
+# =============================================================================
+[[ancestry]]
+id                    = "halfling"
+display_name          = "Halfling"
+min_lifespan_seasons  = 160
+max_lifespan_seasons  = 480
+bias_sociability      = 0.20
+bias_honesty          = 0.15
+bias_stability        = 0.15
+bias_aggression       = -0.15
+bias_curiosity        = 0.05
+bias_acuity           = 0.10
+bias_composure        = 0.10
+spawn_weights         = { grassland = 3.0, plains = 2.0, temperate_forest = 1.5, hills = 1.0 }
+first_meeting_trust   = { human = 0.10, elf = 0.05, dwarf = 0.05, dark_elf = -0.10, orc = -0.10 }
+cultural_distance     = { human = 0.10, elf = 0.20, dwarf = 0.15, dark_elf = 0.55, orc = 0.40 }
+first_names = [
+  "Tobin", "Merry", "Perla", "Willo", "Rucco", "Delma", "Hamlin", "Rosie",
+  "Pippa", "Cob", "Daisy", "Fergo", "Ginny", "Hobb", "Ivy", "Jory",
+  "Kella", "Lanny", "Mossie", "Nettle", "Olly", "Prilla", "Quince", "Ruby",
+  "Samlo", "Tilda", "Umber", "Vetch", "Wenda", "Xan", "Yonda", "Zebb",
+  "Arno", "Billa", "Cormo", "Dilly", "Elmo", "Fenna", "Gordo", "Hildy",
+  "Imbo", "Jilly", "Kibo", "Lolla", "Minna", "Nobby", "Oswin", "Pella",
+  "Quibby", "Rella"
+]
+epithets = [
+  "the Cheerful", "Lightfoot", "of the Green Hill", "the Lucky", "Nimblefingers",
+  "the Generous", "Goodbarrel", "the Warmhearted", "of the Merry Band", "the Honest",
+  "Halfpenny", "the Reliable", "of Burglar's Roost", "the Steadfast", "Hearthkeeper",
+  "the Affable", "of the Seven Harvests", "the Unassuming", "Cloverfoot"
+]

@@ -26,7 +26,9 @@ public static class SimConfigLoader
                     : null
         };
 
-        return Toml.ToModel<SimConfig>(toml, null, options);
+        var config = Toml.ToModel<SimConfig>(toml, null, options);
+        config.AncestryRegistry = AncestryLoader.LoadOrDefault(resolvedPath);
+        return config;
     }
 
     private static string? FindConfigFile()

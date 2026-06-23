@@ -7,6 +7,7 @@ namespace WorldEngine.Sim.Entities.Characters;
 public static class CharacterFactory
 {
     // Salt constants for WorldRng — never reuse across different trait rolls
+    private const int SaltAncestry   = 390;
     private const int SaltPersonality = 400;
     private const int SaltAptitude    = 410;
     private const int SaltSkills      = 420;
@@ -16,35 +17,40 @@ public static class CharacterFactory
 
     public static Tier1Character Spawn(
         TileCoord location,
+        BiomeType biome,
         int worldSeed,
         long entitySeq,
         SimConfig config,
         int birthYear)
     {
-        var id = EntityId.New();
+        var id  = EntityId.New();
         var seq = (int)(entitySeq & 0x7FFFFFFF);
 
+        var registry  = config.AncestryRegistry;
+        string ancId  = registry.SampleAncestry(biome, worldSeed, entitySeq, SaltAncestry);
+        var ancestry  = registry.GetOrHuman(ancId);
+
         var personality = new PersonalityVector(
-            Ambition:     Trait(worldSeed, seq, SaltPersonality + 0),
-            Greed:        Trait(worldSeed, seq, SaltPersonality + 1),
-            Aggression:   Trait(worldSeed, seq, SaltPersonality + 2),
-            Compassion:   Trait(worldSeed, seq, SaltPersonality + 3),
-            Curiosity:    Trait(worldSeed, seq, SaltPersonality + 4),
-            Creativity:   Trait(worldSeed, seq, SaltPersonality + 5),
-            Rationality:  Trait(worldSeed, seq, SaltPersonality + 6),
-            Wonder:       Trait(worldSeed, seq, SaltPersonality + 7),
-            Loyalty:      Trait(worldSeed, seq, SaltPersonality + 8),
-            Sociability:  Trait(worldSeed, seq, SaltPersonality + 9),
-            Honesty:      Trait(worldSeed, seq, SaltPersonality + 10),
-            Stability:    Trait(worldSeed, seq, SaltPersonality + 11));
+            Ambition:     BiasedTrait(worldSeed, seq, SaltPersonality + 0,  ancestry.BiasAmbition),
+            Greed:        BiasedTrait(worldSeed, seq, SaltPersonality + 1,  ancestry.BiasGreed),
+            Aggression:   BiasedTrait(worldSeed, seq, SaltPersonality + 2,  ancestry.BiasAggression),
+            Compassion:   BiasedTrait(worldSeed, seq, SaltPersonality + 3,  ancestry.BiasCompassion),
+            Curiosity:    BiasedTrait(worldSeed, seq, SaltPersonality + 4,  ancestry.BiasCuriosity),
+            Creativity:   BiasedTrait(worldSeed, seq, SaltPersonality + 5,  ancestry.BiasCreativity),
+            Rationality:  BiasedTrait(worldSeed, seq, SaltPersonality + 6,  ancestry.BiasRationality),
+            Wonder:       BiasedTrait(worldSeed, seq, SaltPersonality + 7,  ancestry.BiasWonder),
+            Loyalty:      BiasedTrait(worldSeed, seq, SaltPersonality + 8,  ancestry.BiasLoyalty),
+            Sociability:  BiasedTrait(worldSeed, seq, SaltPersonality + 9,  ancestry.BiasSociability),
+            Honesty:      BiasedTrait(worldSeed, seq, SaltPersonality + 10, ancestry.BiasHonesty),
+            Stability:    BiasedTrait(worldSeed, seq, SaltPersonality + 11, ancestry.BiasStability));
 
         var aptitude = new AptitudeVector(
-            Diligence:    Trait(worldSeed, seq, SaltAptitude + 0),
-            Focus:        Trait(worldSeed, seq, SaltAptitude + 1),
-            Perfectionism: Trait(worldSeed, seq, SaltAptitude + 2),
-            Composure:    Trait(worldSeed, seq, SaltAptitude + 3),
-            Acuity:       Trait(worldSeed, seq, SaltAptitude + 4),
-            Ingenuity:    Trait(worldSeed, seq, SaltAptitude + 5));
+            Diligence:    BiasedTrait(worldSeed, seq, SaltAptitude + 0, ancestry.BiasDiligence),
+            Focus:        BiasedTrait(worldSeed, seq, SaltAptitude + 1, ancestry.BiasFocus),
+            Perfectionism: BiasedTrait(worldSeed, seq, SaltAptitude + 2, ancestry.BiasPerfectionism),
+            Composure:    BiasedTrait(worldSeed, seq, SaltAptitude + 3, ancestry.BiasComposure),
+            Acuity:       BiasedTrait(worldSeed, seq, SaltAptitude + 4, ancestry.BiasAcuity),
+            Ingenuity:    BiasedTrait(worldSeed, seq, SaltAptitude + 5, ancestry.BiasIngenuity));
 
         var skills = new SkillVector(
             Combat:        LowSkill(worldSeed, seq, SaltSkills + 0),
@@ -56,16 +62,25 @@ public static class CharacterFactory
             Stealth:       LowSkill(worldSeed, seq, SaltSkills + 6),
             Piety:         LowSkill(worldSeed, seq, SaltSkills + 7));
 
-        int ageRange = config.Character.MaxAgeSeasonsMax - config.Character.MaxAgeSeasonsMin;
-        int maxAge = config.Character.MaxAgeSeasonsMin
-            + (int)(WorldRng.FloatAt(worldSeed, 0, seq, 0, SaltAge) * ageRange);
+        // Use ancestry lifespan if available; fall back to global config range
+        int ageMin = ancestry.MinLifespanSeasons > 0
+            ? ancestry.MinLifespanSeasons
+            : config.Character.MaxAgeSeasonsMin;
+        int ageMax = ancestry.MaxLifespanSeasons > ancestry.MinLifespanSeasons
+            ? ancestry.MaxLifespanSeasons
+            : config.Character.MaxAgeSeasonsMax;
+        int maxAge = ageMin + (int)(WorldRng.FloatAt(worldSeed, 0, seq, 0, SaltAge) * (ageMax - ageMin));
 
-        string name    = PickName(config.CharacterNames.FirstNames, worldSeed, seq, SaltName);
-        string epithet = PickName(config.CharacterNames.Epithets, worldSeed, seq, SaltEpithet);
+        // Pick from ancestry-specific name pool; fall back to global list
+        var namePool    = ancestry.FirstNames.Length > 0 ? ancestry.FirstNames : config.CharacterNames.FirstNames;
+        var epithetPool = ancestry.Epithets.Length   > 0 ? ancestry.Epithets   : config.CharacterNames.Epithets;
+        string name    = PickName(namePool,    worldSeed, seq, SaltName);
+        string epithet = PickName(epithetPool, worldSeed, seq, SaltEpithet);
 
         var identity = new IdentityData(
             Name:        name,
             Epithet:     epithet,
+            AncestryId:  ancId,
             MotherId:    null,
             FatherId:    null,
             CivId:       CivId.None,
@@ -83,15 +98,23 @@ public static class CharacterFactory
             maxAgeSeason: maxAge);
     }
 
-    // Gaussian approximation via sum of 3 uniform samples (central limit theorem)
-    private static float Trait(int worldSeed, int seq, int salt)
+    // Backward-compat overload for call sites that don't know the biome (Tier2 promotions, tests)
+    public static Tier1Character Spawn(
+        TileCoord location,
+        int worldSeed,
+        long entitySeq,
+        SimConfig config,
+        int birthYear) =>
+        Spawn(location, BiomeType.Grassland, worldSeed, entitySeq, config, birthYear);
+
+    // Gaussian approximation (3-sample CLT); bias shifts the mean, individual noise ≈ stddev 0.2
+    private static float BiasedTrait(int worldSeed, int seq, int salt, float bias)
     {
         float u1 = WorldRng.FloatAt(worldSeed, 0, seq, 0, salt);
         float u2 = WorldRng.FloatAt(worldSeed, 1, seq, 0, salt);
         float u3 = WorldRng.FloatAt(worldSeed, 2, seq, 0, salt);
-        float gaussian = (u1 + u2 + u3) / 3f;  // mean=0.5, stdDev≈0.17
-        // Scale to center=0.5 with stdDev≈0.2, clamp to [0.1, 0.9]
-        float val = 0.5f + (gaussian - 0.5f) * 1.2f;
+        float gaussian = (u1 + u2 + u3) / 3f;
+        float val = (0.5f + bias) + (gaussian - 0.5f) * 1.2f;
         return Math.Clamp(val, 0.1f, 0.9f);
     }
 

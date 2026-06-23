@@ -53,6 +53,10 @@ public sealed class CharacterSimConfig
     // Curiosity floor: even Curiosity=0 chars get this fraction of their role's wanderlust
     public float WanderlustCuriosityFloor    { get; set; } = 0.3f;
 
+    // Ancestry / cultural trust drains (passive per-tick; applied when chars of different civs share a tile)
+    public float PersonalityMismatchDrainRate { get; set; } = 0.003f; // drain × |stability diff|
+    public float CulturalDistanceDrainRate    { get; set; } = 0.002f; // drain × cultural_distance (0–1)
+
     // Tier 2 tuning
     public int   Tier2PerPopulation     { get; set; } = 10;  // one Tier2 per this many pop
     public int   Tier2MaxAgeSeasonsMin  { get; set; } = 60;

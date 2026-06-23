@@ -39,6 +39,7 @@ public sealed class CharacterBehaviorPhase
             NeedsUpdater.Update(c, world, _cfg);
             GoalManager.UpdateGoals(c, world, tick);
             ApplyTerritorialPressure(c, world, tick);
+            ApplyPassiveDrains(c, world);
             CheckBeastEncounters(c, world, pending, tick);
             var cmd = UtilityScorer.SelectAction(c, world, _cfg);
             if (cmd != null)
@@ -77,7 +78,8 @@ public sealed class CharacterBehaviorPhase
 
             // Unique entitySeq derived from tick + tile to stay deterministic
             long seq  = (50_000L + tick * 997L + kvp.Key.X * 31 + kvp.Key.Y) & 0x7FFFFFFF;
-            var born  = CharacterFactory.Spawn(kvp.Key, world.WorldSeed, seq, _simCfg, world.CurrentYear);
+            var tileData = world.TileGrid.GetTile(kvp.Key);
+            var born  = CharacterFactory.Spawn(kvp.Key, (BiomeType)tileData.BiomeType, world.WorldSeed, seq, _simCfg, world.CurrentYear);
             born.Identity = born.Identity with { CivId = stub.CivId };
             civ.Members.Add(born.Id);
             world.Entities.Add(born);
@@ -234,6 +236,49 @@ public sealed class CharacterBehaviorPhase
             {
                 Trust = Math.Max(-0.5f, rel.Trust - _cfg.TerritorialTrustDrain)
             });
+        }
+    }
+
+    // ─── Passive trust drains (ancestry cultural distance + personality mismatch) ──
+
+    /// <summary>
+    /// Applied each tick for every pair of co-located characters from different civs.
+    /// First meeting applies a one-time ancestry modifier; subsequent ticks drain by
+    /// cultural distance and personality mismatch.
+    /// </summary>
+    private void ApplyPassiveDrains(Tier1Character c, WorldState world)
+    {
+        var registry = _simCfg.AncestryRegistry;
+
+        foreach (var e in world.GetEntitiesAt(c.Location))
+        {
+            if (e is not Tier1Character other || other.Id == c.Id || !other.IsAlive) continue;
+            // Only drain between chars of different civs; same-civ relations handled by territorial pressure
+            if (c.Identity.CivId == other.Identity.CivId) continue;
+
+            bool isFirstMeeting = world.Relationships.Get(c.Id, other.Id) == null;
+            var rel = world.Relationships.GetOrCreate(c.Id, other.Id);
+            if (rel.IsAlly || rel.IsAtWar) continue;
+
+            float trust = rel.Trust;
+
+            if (isFirstMeeting)
+            {
+                // First-meeting modifier: average of both ancestries' view of the other
+                float modifierAB = registry.GetFirstMeetingTrust(c.Identity.AncestryId, other.Identity.AncestryId);
+                float modifierBA = registry.GetFirstMeetingTrust(other.Identity.AncestryId, c.Identity.AncestryId);
+                trust += (modifierAB + modifierBA) * 0.5f;
+            }
+
+            // Cultural distance drain — proportional to how different the ancestries are
+            float culturalDist = registry.GetCulturalDistance(c.Identity.AncestryId, other.Identity.AncestryId);
+            trust -= culturalDist * _cfg.CulturalDistanceDrainRate;
+
+            // Personality mismatch drain — characters with very different Stability punish each other
+            float stabilityDiff = Math.Abs(c.Personality.Stability - other.Personality.Stability);
+            trust -= stabilityDiff * _cfg.PersonalityMismatchDrainRate;
+
+            world.Relationships.Upsert(rel with { Trust = Math.Clamp(trust, -1f, 1f) });
         }
     }
 

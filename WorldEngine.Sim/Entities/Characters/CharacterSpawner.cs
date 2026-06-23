@@ -32,11 +32,13 @@ public static class CharacterSpawner
         {
             if (placed >= count) break;
 
+            var biome = (BiomeType)world.TileGrid.GetTile(tile).BiomeType;
             var character = CharacterFactory.Spawn(
-                location: tile,
+                location:  tile,
+                biome:     biome,
                 worldSeed: world.WorldSeed,
                 entitySeq: entitySeq,
-                config: config,
+                config:    config,
                 birthYear: world.CurrentYear);
 
             world.Entities.Add(character);

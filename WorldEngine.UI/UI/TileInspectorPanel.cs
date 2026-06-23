@@ -109,7 +109,8 @@ public sealed class TileInspectorPanel
         foreach (var c in tier1)
         {
             string civTag = c.CivName is not null ? $" [{c.CivName}]" : "";
-            AddLine($"{c.Name}{civTag}");
+            string ancTag = c.AncestryId.Length > 0 ? $" ({c.AncestryId})" : "";
+            AddLine($"{c.Name}{civTag}{ancTag}");
             AddLine($"  HP {c.HealthFraction:P0}  Age {c.AgeSeason}s");
         }
         foreach (var c in tier2)

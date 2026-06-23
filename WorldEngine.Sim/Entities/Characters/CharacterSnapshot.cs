@@ -11,6 +11,7 @@ public sealed record CharacterSnapshot(
     EntityKind Kind,
     string Name,
     string Epithet,
+    string AncestryId,
     TileCoord Location,
     CivId CivId,
     bool IsAlive,

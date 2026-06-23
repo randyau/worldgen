@@ -12,5 +12,8 @@ public class SimConfig
     public CharacterNamesConfig CharacterNames { get; set; } = new();
     public SettlementConfig Settlement { get; set; } = new();
 
+    // Loaded separately by AncestryLoader — not from sim_config.toml
+    public AncestryRegistry AncestryRegistry { get; set; } = AncestryRegistry.Empty;
+
     public static SimConfig Default() => new();
 }

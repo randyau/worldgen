@@ -72,13 +72,15 @@ public sealed class Tier1Character : IEntity
         HealthFraction: MaxHealth > 0 ? (float)Health / MaxHealth : 0f,
         FoodFraction:  Needs.Food,
         AgeSeason:     AgeSeason,
-        IsAlive:       IsAlive);
+        IsAlive:       IsAlive,
+        AncestryId:    Identity.AncestryId);
 
     public CharacterSnapshot ToCharacterSnapshot() => new(
         Id:            Id,
         Kind:          Kind,
         Name:          Identity.Name,
         Epithet:       Identity.Epithet,
+        AncestryId:    Identity.AncestryId,
         Location:      Location,
         CivId:         Identity.CivId,
         IsAlive:       IsAlive,

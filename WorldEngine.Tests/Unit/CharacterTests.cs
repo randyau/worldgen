@@ -67,13 +67,17 @@ public sealed class CharacterTests
     }
 
     [Fact]
-    public void Factory_AgeIsWithinConfiguredBounds()
+    public void Factory_AgeIsWithinReasonableBounds()
     {
+        // Ancestry now controls lifespan — range depends on which ancestry is rolled.
+        // Human min is 60 seasons; elf max is 2000 seasons. Check for sanity not exact config bounds.
+        const int absoluteMin = 30;   // shorter than the shortest ancestry
+        const int absoluteMax = 2500; // longer than the longest ancestry
         var cfg = DefaultConfig();
         for (int i = 0; i < 50; i++)
         {
             var c = CharacterFactory.Spawn(new TileCoord(0, 0), worldSeed: i * 17, entitySeq: 10_000 + i, cfg, birthYear: 1);
-            c.MaxAgeSeason.Should().BeInRange(cfg.Character.MaxAgeSeasonsMin, cfg.Character.MaxAgeSeasonsMax);
+            c.MaxAgeSeason.Should().BeInRange(absoluteMin, absoluteMax);
         }
     }
 

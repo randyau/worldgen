@@ -632,6 +632,9 @@ wanderlust_founder_multiplier   = 0.15 # settlement founders (kings, rulers) —
 wanderlust_member_multiplier    = 0.5  # civ members with settled jobs — 50% of base wanderlust
 # Curiosity scales from this floor (Curiosity=0) up to 1.0 (Curiosity=1)
 wanderlust_curiosity_floor      = 0.3  # even the least curious chars have 30% of their role's wanderlust
+# Ancestry / cultural passive drains — applied per-tick when different-civ chars share a tile
+personality_mismatch_drain_rate = 0.003  # drain × |stability diff| per tick
+cultural_distance_drain_rate    = 0.002  # drain × cultural_distance (0–1) per tick
 # Tier 2 sub-tuning (appended to [character] section — Tomlyn merges same-section keys)
 tier2_per_population        = 10
 tier2_max_age_seasons_min   = 60

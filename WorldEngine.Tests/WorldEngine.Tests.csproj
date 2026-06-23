@@ -36,6 +36,10 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>config\beasts.toml</Link>
     </Content>
+    <Content Include="..\config\ancestries.toml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>config\ancestries.toml</Link>
+    </Content>
   </ItemGroup>
 
 </Project>

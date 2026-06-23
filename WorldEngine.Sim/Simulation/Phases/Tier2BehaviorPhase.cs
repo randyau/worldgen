@@ -207,6 +207,7 @@ public sealed class Tier2BehaviorPhase
         // Spawn a Tier1 with matching name and elevated personality
         var promoted = CharacterFactory.Spawn(
             location:   c.Location,
+            biome:      (BiomeType)world.TileGrid.GetTile(c.Location).BiomeType,
             worldSeed:  world.WorldSeed,
             entitySeq:  (int)(c.Id.Value & 0x7FFFFFFF),
             config:     _simCfg,
