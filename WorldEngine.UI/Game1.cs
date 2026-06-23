@@ -96,24 +96,32 @@ public sealed class Game1 : Game
         if (_genScreen is not null)
             root.Widgets.Add(_genScreen.Root);
 
-        // Main UI layout (hidden until sim starts)
-        var mainStack = new VerticalStackPanel { Visible = false, Id = "MainUI" };
+        // Main UI — root Panel so children can overlap the map freely
+        // The map renders underneath via SpriteBatch; Myra widgets sit on top
+        var mainUI = new Panel { Visible = false, Id = "MainUI" };
 
+        // Time controls: full-width bar docked to the top
         if (_timeControls is not null)
-            mainStack.Widgets.Add(_timeControls.Root);
+        {
+            _timeControls.Root.HorizontalAlignment = HorizontalAlignment.Stretch;
+            _timeControls.Root.VerticalAlignment   = VerticalAlignment.Top;
+            mainUI.Widgets.Add(_timeControls.Root);
+        }
 
-        var mapAndSidebar = new HorizontalStackPanel();
-        // Map area: fills remaining space
-        var mapPlaceholder = new Panel { Id = "MapArea", HorizontalAlignment = HorizontalAlignment.Stretch };
-        mapAndSidebar.Widgets.Add(mapPlaceholder);
-
-        var sidebar = new VerticalStackPanel { Width = 360, Spacing = 8 };
+        // Sidebar: fixed 360px wide, docked to top-right, below time controls
+        var sidebar = new VerticalStackPanel
+        {
+            Width                = SidebarWidth,
+            Spacing              = 4,
+            HorizontalAlignment  = HorizontalAlignment.Right,
+            VerticalAlignment    = VerticalAlignment.Top,
+            Top                  = 44,   // clear the time controls bar (~40px tall)
+        };
         if (_tileInspector is not null) sidebar.Widgets.Add(_tileInspector.Root);
-        if (_eventLog is not null) sidebar.Widgets.Add(_eventLog.Root);
-        mapAndSidebar.Widgets.Add(sidebar);
+        if (_eventLog      is not null) sidebar.Widgets.Add(_eventLog.Root);
+        mainUI.Widgets.Add(sidebar);
 
-        mainStack.Widgets.Add(mapAndSidebar);
-        root.Widgets.Add(mainStack);
+        root.Widgets.Add(mainUI);
 
         // Crash overlay — hidden until sim thread dies
         _crashLabel = new Label
