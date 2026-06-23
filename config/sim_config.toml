@@ -513,13 +513,13 @@ sea_level_event_threshold         = 0.1    # minimum delta to emit SeaLevelChang
 volcanic_decay_rate               = 0.005  # VolcanicActivityMultiplier lerp toward 1.0 per tick (~0.07/year at 14 ticks/year)
 moisture_carry_decay              = 0.993  # Fraction of moisture retained per inland tile during wind sweep
                                            # 0.97 (old) made interiors desert at ~50 tiles; 0.993 reaches ~70% at 50 tiles
-temperature_noise_scale           = 0.20   # ±amplitude of coherent noise added to temperature latitude fraction.
-                                           # Breaks horizontal biome banding. 0 = pure latitude bands. 0.15-0.22 = organic.
-temperature_noise_frequency       = 0.015  # Noise frequency for temperature anomalies. Low = broad regional variation.
-moisture_noise_scale              = 40.0   # ±amplitude (byte units 0-255) added to moisture after wind sweeps.
+temperature_noise_scale           = 0.28   # ±amplitude of coherent noise added to temperature latitude fraction.
+                                           # Breaks horizontal biome banding. 0 = pure latitude bands. 0.22-0.30 = organic.
+temperature_noise_frequency       = 0.009  # Noise frequency for temperature anomalies. ~111 tile period = broad regional blobs.
+moisture_noise_scale              = 60.0   # ±amplitude (byte units 0-255) added to moisture after wind sweeps.
                                            # Breaks horizontal moisture banding (sweeps are row-by-row so all tiles at
-                                           # same latitude get the same base moisture). 30-50 = noticeable variation.
-moisture_noise_frequency          = 0.013  # Noise frequency for moisture anomalies. Slightly lower = bigger wet/dry blobs.
+                                           # same latitude get the same base moisture). 50-70 = strong regional variation.
+moisture_noise_frequency          = 0.009  # Noise frequency for moisture anomalies. Matched to temp frequency for same blob size.
 
 # =============================================================================
 # DISASTERS (runtime, Phase 5)

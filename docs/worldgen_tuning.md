@@ -72,7 +72,11 @@ Update this file whenever a new artifact is discovered and diagnosed.
 | `moisture_noise_scale` | 40.0 | 20–60 | Horizontal moisture bands dominate; same biome across an entire latitude row | Chaotic moisture; rain shadow signal is masked, deserts appear in coastal zones |
 | `moisture_noise_frequency` | 0.013 | 0.008–0.022 | Large wet/dry blobs (~77 tiles/period) | Fine moisture speckle; biome variety but no coherent wet or dry regions |
 
-**Artifact: horizontal biome banding** — if biomes stripe strongly by latitude (big orange desert band, big green forest band, big gray tundra band), increase `temperature_noise_scale` and/or `moisture_noise_scale`. These are the primary banding fixes.
+**Artifact: horizontal biome banding** — if biomes stripe strongly by latitude (big orange desert band, big green forest band, big gray tundra band), increase `temperature_noise_scale` and/or `moisture_noise_scale`, and lower both frequency params for broader regional blobs (current: 0.009 ≈ 111-tile period).
+
+**Two persistent band locations and their causes:**
+- **~45° latitude** — the `hot_temperature = 180` byte threshold is where the cosine latitude curve crosses 180/255 ≈ 70% latFrac. This is the hard tropical/temperate biome boundary. Noise blurs it but can't eliminate it entirely. Increasing `temperature_noise_scale` pushes more tiles across this threshold from both sides.
+- **~15–25° latitude** — the edge of `tropical_band_half_width = 0.25`. At this latitude the moisture sweep switches direction (trade winds E→W in tropics, westerlies W→E outside). This creates a sharp moisture transition at the band edge. Increasing `moisture_noise_scale` blurs it; lowering `tropical_band_half_width` moves it closer to the equator.
 
 ---
 
