@@ -79,6 +79,7 @@ public enum EventType
     BeastSlain          = 2004,
     BeastReproduced     = 2005,
     BeastEncountered    = 2006,
+    BeastAttackedChar   = 2007,  // beast attacked a Tier 1 character
 
     // M2+ character lifecycle (3000-range)
     CharacterBorn           = 3001,
@@ -182,7 +183,8 @@ public static class VerbClassification
         EventType.BeastDied        => VerbClass.Destruction,
         EventType.BeastSlain       => VerbClass.Destruction,
         EventType.BeastReproduced  => VerbClass.Creation,
-        EventType.BeastEncountered => VerbClass.Interaction,
+        EventType.BeastEncountered  => VerbClass.Interaction,
+        EventType.BeastAttackedChar => VerbClass.Interaction,
         _ => throw new ArgumentOutOfRangeException(nameof(type), type, "No VerbClass mapping")
     };
 }

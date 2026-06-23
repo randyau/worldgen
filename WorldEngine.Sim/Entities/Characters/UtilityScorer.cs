@@ -79,26 +79,36 @@ public static class UtilityScorer
                 Score(c, ActionType.Establish, successProb, world, cfg)));
         }
 
-        // AllyWith / Negotiate — nearby character without alliance
+        // AllyWith / Negotiate — pick the single best social target per tick.
+        // Adding one candidate per non-allied char floods the softmax and drowns out travel/action.
+        ICommand? bestSocialCmd = null;
+        float bestSocialScore   = float.MinValue;
         foreach (var e in world.GetEntitiesAt(c.Location))
         {
             if (e is not Tier1Character other || other.Id == c.Id || !other.IsAlive) continue;
             var rel = world.GetRelationship(c.Id, other.Id);
             if (rel?.IsAtWar ?? false) continue;
-            if (rel?.IsAlly ?? false) continue;  // already allied — no further social action needed
+            if (rel?.IsAlly ?? false) continue;
 
+            ICommand? cmd;
+            float score;
             if (rel?.Trust >= 0.4f)
             {
-                float successProb = (c.Skills.Diplomacy + c.Personality.Sociability) * 0.5f;
-                actions.Add(new(new AllyWith(c.Id, other.Id),
-                    Score(c, ActionType.Ally, successProb, world, cfg)));
+                float sp = (c.Skills.Diplomacy + c.Personality.Sociability) * 0.5f;
+                score = Score(c, ActionType.Ally, sp, world, cfg);
+                cmd   = new AllyWith(c.Id, other.Id);
             }
-            else if ((rel?.Trust ?? 0f) < 0.7f)  // don't negotiate already-maxed relationships
+            else if ((rel?.Trust ?? 0f) < 0.7f)
             {
-                actions.Add(new(new Negotiate(c.Id, other.Id),
-                    Score(c, ActionType.Negotiate, 0.8f, world, cfg)));
+                score = Score(c, ActionType.Negotiate, 0.8f, world, cfg);
+                cmd   = new Negotiate(c.Id, other.Id);
             }
+            else continue;
+
+            if (score > bestSocialScore) { bestSocialScore = score; bestSocialCmd = cmd; }
         }
+        if (bestSocialCmd != null)
+            actions.Add(new(bestSocialCmd, bestSocialScore));
 
         // DeclareRivalry — nearby character with low trust
         foreach (var e in world.GetEntitiesInRadius(c.Location, cfg.PerceptionRadius))

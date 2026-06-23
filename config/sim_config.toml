@@ -615,6 +615,15 @@ combat_damage_base        = 20
 min_fertility_to_settle   = 100
 civ_birth_min_pop         = 30
 civ_birth_chance_per_season = 0.02
+# Territorial aggression: aggressive founders drain trust from foreign visitors on their settlement tile
+territorial_aggression_min    = 0.55  # chars below this aggression don't apply pressure
+territorial_trust_drain       = 0.025 # trust lost per tick; ~-0.1 in 1 season → rivalry within a year
+
+# Beast encounters: predatory beasts on the same tile can attack wandering characters
+beast_encounter_aggression_min = 0.4  # beasts below this aggression are passive toward characters
+beast_encounter_chance         = 0.15 # probability of attack per shared tick (~every 7 ticks)
+beast_damage_multiplier        = 0.3  # beast.Strength × this = damage dealt to character
+
 # Wanderlust: travel urgency that builds the longer a character stays in one place
 wanderlust_max_ticks            = 8    # full bonus after 2 seasons (half a year) stationary
 wanderlust_bonus                = 0.4  # travel score bonus at max wanderlust; ~0.15 base → ~0.55 for free agents

@@ -35,6 +35,15 @@ public sealed class CharacterSimConfig
     public int   CivBirthMinPop         { get; set; } = 30;   // settlement needs this many people
     public float CivBirthChancePerSeason { get; set; } = 0.02f; // ~1 birth per 50 seasons at min pop
 
+    // Territorial aggression — aggressive founders develop negative trust with foreign visitors
+    public float TerritorialAggressionMin { get; set; } = 0.55f; // aggression threshold to apply pressure
+    public float TerritorialTrustDrain    { get; set; } = 0.025f; // trust lost per tick; ~-0.1 in 4 ticks (1 season)
+
+    // Beast encounters — predators on the same tile can attack characters
+    public float BeastEncounterAggressionMin { get; set; } = 0.4f;  // beasts below this are passive
+    public float BeastEncounterChance        { get; set; } = 0.15f; // probability of attack per shared tick
+    public float BeastDamageMultiplier       { get; set; } = 0.3f;  // beast.Strength × this = damage to char
+
     // Wanderlust — travel urge that builds the longer a character stays in one place
     public int   WanderlustMaxTicks          { get; set; } = 8;   // full bonus after 2 seasons stationary
     public float WanderlustBonus             { get; set; } = 0.4f; // added to travel score at max wanderlust

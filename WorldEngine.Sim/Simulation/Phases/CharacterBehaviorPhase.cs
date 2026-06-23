@@ -38,6 +38,8 @@ public sealed class CharacterBehaviorPhase
             c.TicksInCurrentTile++;
             NeedsUpdater.Update(c, world, _cfg);
             GoalManager.UpdateGoals(c, world, tick);
+            ApplyTerritorialPressure(c, world, tick);
+            CheckBeastEncounters(c, world, pending, tick);
             var cmd = UtilityScorer.SelectAction(c, world, _cfg);
             if (cmd != null)
                 ResolveCommand(cmd, c, world, pending, tick);
@@ -201,5 +203,81 @@ public sealed class CharacterBehaviorPhase
             Food    = Math.Min(1f, c.Needs.Food    + 0.05f),
             Shelter = Math.Min(1f, c.Needs.Shelter + 0.03f)
         };
+    }
+
+    // ─── Territorial pressure ────────────────────────────────────────────────
+
+    /// <summary>
+    /// Aggressive founders who see foreign chars on their settlement tile slowly
+    /// develop negative trust with them — the seed of rivalry and eventual war.
+    /// </summary>
+    private void ApplyTerritorialPressure(Tier1Character c, WorldState world, long tick)
+    {
+        if (c.Personality.Aggression < _cfg.TerritorialAggressionMin) return;
+        if (!world.Settlements.ContainsKey(c.Location)) return;
+
+        // Only applies to the founding char (or any char with high aggression at their own settlement)
+        bool atOwnSettlement = world.Settlements.TryGetValue(c.Location, out var stub)
+            && stub.CivId == c.Identity.CivId;
+        if (!atOwnSettlement) return;
+
+        foreach (var e in world.GetEntitiesAt(c.Location))
+        {
+            if (e is not Tier1Character other || other.Id == c.Id || !other.IsAlive) continue;
+            if (other.Identity.CivId == c.Identity.CivId) continue; // same civ — no pressure
+
+            var rel = world.Relationships.GetOrCreate(c.Id, other.Id);
+            if (rel.IsAlly || rel.IsRival || rel.IsAtWar) continue; // relationship already decided
+
+            // Drain trust by a small amount each tick — enough to reach -0.1 within ~5 years of contact
+            world.Relationships.Upsert(rel with
+            {
+                Trust = Math.Max(-0.5f, rel.Trust - _cfg.TerritorialTrustDrain)
+            });
+        }
+    }
+
+    // ─── Beast encounters ────────────────────────────────────────────────────
+
+    private const int SaltBeastEncounter = 800;
+
+    /// <summary>
+    /// When a predatory beast and a character share a tile, there is a chance
+    /// the beast attacks. Characters can be wounded or killed; this creates the
+    /// adventure/survival events the history log needs.
+    /// </summary>
+    private void CheckBeastEncounters(
+        Tier1Character c, WorldState world, List<PendingEvent> pending, long tick)
+    {
+        foreach (var e in world.GetEntitiesAt(c.Location))
+        {
+            if (e is not Entities.Beasts.LegendaryBeast beast || !beast.IsAlive) continue;
+            if (beast.Aggression < _cfg.BeastEncounterAggressionMin) continue;
+
+            float roll = WorldRng.FloatAt(world.WorldSeed, tick,
+                                          (int)(beast.Id.Value & 0x7FFFFFFF),
+                                          (int)(c.Id.Value & 0x7FFFFFFF),
+                                          SaltBeastEncounter);
+            if (roll > _cfg.BeastEncounterChance) continue;
+
+            int damage = Math.Max(1, (int)(beast.Strength * _cfg.BeastDamageMultiplier));
+            c.Health -= damage;
+
+            var payload = JsonSerializer.Serialize(new
+            {
+                characterId   = c.Id.Value,
+                characterName = c.Identity.Name,
+                beastId       = beast.Id.Value,
+                beastName     = beast.Name,
+                damage,
+                charHealthAfter = c.Health,
+                tile = new[] { c.Location.X, c.Location.Y }
+            });
+            pending.Add(new PendingEvent(EventType.BeastAttackedChar, c.Location, null, payload,
+                new[] { c.Id.Value, beast.Id.Value }));
+
+            if (c.Health <= 0)
+                KillCharacter(c, world, $"killed by {beast.Name}", pending);
+        }
     }
 }
