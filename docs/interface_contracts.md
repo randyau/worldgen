@@ -642,13 +642,35 @@ public sealed record WorldSnapshot(
     float StormCorridorNormalizedLat
 );
 
+// SettlementStub — live sim-thread settlement state
+// Lives in WorldState.Settlements; updated each tick by ResourcePressurePhase.
+public sealed record SettlementStub(
+    EntityId  FounderId,
+    CivId     CivId,
+    TileCoord Tile,
+    int       FoundedYear,
+    int       Population,
+    int       Health,              // 0–100; raids reduce it; 0 = destroyed
+    string    Name = "Unknown",    // deterministic from world seed + tile coord
+    float     PopulationF = 0f,
+    int       LastCrystalThresh = 0,
+    float     FoodPressureRatio = 1f,  // convenience; mirrors ResourceLedger["food"]
+    float     WaterPressureRatio = 1f,
+    int       LastStrainEventTick = 0,
+    IReadOnlyDictionary<string, float>? ResourceLedger = null);  // supply values per resource type
+// ResourceLedger keys: "food", "water", "timber", and any deposit type (lowercase, e.g. "iron")
+// Food/water: supply/demand ratio (1.0 = exactly met, >1 = surplus, <1 = shortage)
+// Minerals/timber: absolute supply units (not per-capita)
+
 // SettlementSnapshot — companion record for WorldSnapshot.Settlements
 public sealed record SettlementSnapshot(
     TileCoord Coord,
-    string CivName,
-    int Population,
-    int Health,         // 0–100
-    int FoundedYear);
+    string    Name,       // unique settlement name, e.g. "Ironford"
+    string    CivName,
+    int       Population,
+    int       Health,     // 0–100
+    int       FoundedYear,
+    IReadOnlyDictionary<string, float>? ResourceLedger = null);
 ```
 
 ---

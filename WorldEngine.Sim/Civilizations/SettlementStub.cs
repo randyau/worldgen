@@ -1,4 +1,5 @@
 using WorldEngine.Sim.Core;
+using System.Collections.Generic;
 
 namespace WorldEngine.Sim.Civilizations;
 
@@ -12,8 +13,10 @@ public sealed record SettlementStub(
     int       FoundedYear,
     int       Population,              // integer head count
     int       Health,                  // 0–100; raids reduce it; 0 = destroyed
+    string    Name                 = "Unknown",
     float     PopulationF          = 0f,   // fractional accumulator for growth
     int       LastCrystalThresh    = 0,    // population threshold already crystallized
-    float     FoodPressureRatio    = 1f,   // supply/demand; < 1 = shortage
+    float     FoodPressureRatio    = 1f,   // convenience accessor; mirrors ResourceLedger["food"]
     float     WaterPressureRatio   = 1f,
-    int       LastStrainEventTick  = 0);   // tick of last SettlementStraining event (rate-limit)
+    int       LastStrainEventTick  = 0,    // tick of last SettlementStraining event (rate-limit)
+    IReadOnlyDictionary<string, float>? ResourceLedger = null); // extensible supply values per resource type

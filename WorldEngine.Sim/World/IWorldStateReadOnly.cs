@@ -3,6 +3,7 @@ using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities;
 using WorldEngine.Sim.Entities.Characters;
 using WorldEngine.Sim.Tiles;
+using System.Collections.Generic;
 
 namespace WorldEngine.Sim.World;
 
@@ -46,6 +47,7 @@ public interface IWorldStateReadOnly
 
     // === CIVILIZATION / CHARACTER (Phase 2.2+) ===
     IReadOnlyDictionary<TileCoord, SettlementStub> Settlements { get; }
+    IReadOnlyDictionary<TileCoord, IReadOnlyList<ResourceDeposit>> ResourceDeposits { get; }
     RelationshipEdge? GetRelationship(EntityId a, EntityId b);
 
     // === RELATIONSHIPS / HISTORY (M3+) ===

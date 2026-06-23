@@ -29,13 +29,19 @@ public sealed class TileInspectorPanel
         // Settlement info first — most interesting to the user
         if (snapshot?.Settlements.TryGetValue(data.Coord, out var settlement) == true)
         {
-            AddLine("=== SETTLEMENT ===");
+            AddLine($"=== {settlement.Name} ===");
             AddLine($"Civ: {settlement.CivName}");
-            AddLine($"Pop: {settlement.Population}");
+            AddLine($"Pop: {settlement.Population:N0}");
             string healthLabel = settlement.Health >= 70 ? "Good"
                                : settlement.Health >= 40 ? "Struggling" : "Critical";
             AddLine($"Health: {settlement.Health}/100 ({healthLabel})");
             AddLine($"Founded: Year {settlement.FoundedYear}");
+            if (settlement.ResourceLedger is { Count: > 0 } ledger)
+            {
+                AddLine("--- Resources ---");
+                foreach (var (res, val) in ledger.OrderByDescending(kv => kv.Value))
+                    AddLine($"  {res}: {(val >= 0 ? "+" : "")}{val:F2}");
+            }
             AddLine("");
         }
 

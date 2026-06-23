@@ -1,7 +1,9 @@
 using System.Text.Json;
+using WorldEngine.Sim.Config;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities;
 using WorldEngine.Sim.Entities.Characters;
+using WorldEngine.Sim.Tiles;
 using WorldEngine.Sim.World;
 
 namespace WorldEngine.Sim.Civilizations;
@@ -20,12 +22,13 @@ public static class CivTracker
     public static void Resolve(
         ICommand cmd,
         WorldState world,
-        List<PendingEvent> pending)
+        List<PendingEvent> pending,
+        SettlementNamesConfig? namesConfig = null)
     {
         switch (cmd)
         {
             case EstablishSettlement es:
-                ResolveEstablish(es, world, pending); break;
+                ResolveEstablish(es, world, pending, namesConfig ?? new()); break;
             case AllyWith aw:
                 ResolveAlly(aw, world, pending); break;
             case DeclareRivalry dr:
@@ -42,7 +45,8 @@ public static class CivTracker
     // ─── Establish ────────────────────────────────────────────────────────────
 
     private static void ResolveEstablish(
-        EstablishSettlement cmd, WorldState world, List<PendingEvent> pending)
+        EstablishSettlement cmd, WorldState world, List<PendingEvent> pending,
+        SettlementNamesConfig namesConfig)
     {
         if (world.Settlements.ContainsKey(cmd.Tile)) return;
         if (world.GetEntity(cmd.CharacterId) is not Tier1Character founder) return;
@@ -66,13 +70,15 @@ public static class CivTracker
             world.Civilizations[civId].Members.Add(founder.Id);
         }
 
+        string settlementName = GenerateSettlementName(cmd.Tile, world, namesConfig);
         var stub = new SettlementStub(
             FounderId:   founder.Id,
             CivId:       civId,
             Tile:        cmd.Tile,
             FoundedYear: world.CurrentYear,
             Population:  SettlementStartPop,
-            Health:      SettlementStartHealth);
+            Health:      SettlementStartHealth,
+            Name:        settlementName);
         world.Settlements[cmd.Tile] = stub;
 
         // Mark goal as progressed
@@ -281,12 +287,53 @@ public static class CivTracker
     {
         var payload = JsonSerializer.Serialize(new
         {
-            founderId  = founder.Id.Value,
-            founderName = founder.Identity.Name,
-            civId      = stub.CivId.Value,
-            tile       = new[] { stub.Tile.X, stub.Tile.Y },
-            year       = world.CurrentYear
+            founderId      = founder.Id.Value,
+            founderName    = founder.Identity.Name,
+            settlementName = stub.Name,
+            civId          = stub.CivId.Value,
+            tile           = new[] { stub.Tile.X, stub.Tile.Y },
+            year           = world.CurrentYear
         });
         pending.Add(new PendingEvent(EventType.SettlementFounded, stub.Tile, null, payload));
+    }
+
+    // ─── Name generation ─────────────────────────────────────────────────────
+
+    private const int SaltSettlementPrefix = 5001;
+    private const int SaltSettlementSuffix = 5002;
+
+    private static string GenerateSettlementName(
+        TileCoord tile, WorldState world, SettlementNamesConfig cfg)
+    {
+        if (cfg.Prefixes.Length == 0 || cfg.Suffixes.Length == 0)
+            return $"Settlement ({tile.X},{tile.Y})";
+
+        // Deterministic from world seed + tile position — same tile always gets same name
+        float pf = WorldRng.FloatAt(world.WorldSeed, 0, tile.X, tile.Y, SaltSettlementPrefix);
+        float sf = WorldRng.FloatAt(world.WorldSeed, 0, tile.X, tile.Y, SaltSettlementSuffix);
+        var biome = (BiomeType)world.TileGrid.GetTile(tile).BiomeType;
+
+        // Bias prefix selection toward biome character
+        int pi = BiasedIndex(pf, biome, cfg.Prefixes.Length);
+        int si = (int)(sf * cfg.Suffixes.Length);
+        return cfg.Prefixes[pi] + cfg.Suffixes[si];
+    }
+
+    // Slightly bias prefix selection so rocky biomes lean toward hard-sounding names,
+    // warm biomes toward bright/green — purely cosmetic, not guaranteed.
+    private static int BiasedIndex(float raw, BiomeType biome, int count)
+    {
+        // Map raw [0,1] through a small biome-dependent shift, then wrap
+        float shift = biome switch
+        {
+            BiomeType.Mountain or BiomeType.Hills or BiomeType.Volcanic
+                => 0.3f,   // push toward Iron/Stone/Crag/Flint end
+            BiomeType.Grassland or BiomeType.Savanna or BiomeType.TemperateForest
+                => -0.15f, // push toward Green/Gold/Fair end
+            BiomeType.Tundra or BiomeType.BorealForest
+                => 0.15f,  // push toward Cold/Frost/Dark end
+            _ => 0f
+        };
+        return (int)(((raw + shift + 1f) % 1f) * count);
     }
 }

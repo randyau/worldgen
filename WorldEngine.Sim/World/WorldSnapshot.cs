@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities;
 
@@ -6,10 +7,12 @@ namespace WorldEngine.Sim.World;
 /// <summary>Immutable settlement info for UI display.</summary>
 public sealed record SettlementSnapshot(
     TileCoord Coord,
+    string    Name,
     string    CivName,
     int       Population,
     int       Health,
-    int       FoundedYear);
+    int       FoundedYear,
+    IReadOnlyDictionary<string, float>? ResourceLedger = null);
 
 /// <summary>
 /// Immutable projection of world state for the UI. Created after each tick.

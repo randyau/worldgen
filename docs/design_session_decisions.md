@@ -367,3 +367,43 @@ major_river_threshold = 500
 # Populated when implementing BiomeClassifier (story 1.3.7)
 # All values are 0-255 scaled to match byte fields in TileData
 ```
+
+---
+
+## Design Session F — Settlement Economics (2026-06-23)
+
+### F-1 Settlement Identity and Naming
+
+Each settlement is a distinct entity with a unique name generated deterministically at founding time from the world seed and tile coordinates. The name is a `Prefix + Suffix` combination drawn from `SettlementNamesConfig`, with a mild biome-based bias on prefix selection (rocky biomes lean toward Iron/Stone, warm fertile biomes toward Green/Gold, cold biomes toward Frost/Cold). Two settlements could share the same name in theory but are unlikely given 30 prefixes × 24 suffixes = 720 combinations. Settlement names are stored on `SettlementStub.Name` and passed through to `SettlementSnapshot.Name` for display.
+
+**Decision:** Biome bias is cosmetic and un-guaranteed — a Volcanic tile might still get "Greenvale". The name is tied to tile location, so it survives reload from the same seed.
+
+### F-2 Settlement Reach
+
+Each settlement controls a **reach** — a fixed-radius zone around its tile from which it draws resources. Radius scales with population: `clamp(2 + pop/2000, 2, 5)` tiles. All land tiles within the reach radius contribute food, water, timber, and any mineral deposits to the settlement's resource ledger.
+
+**Decision against Voronoi:** Settlements are typically far apart (many tiles between them). Equidistant competition between reaches is rare and not worth modeling in M2. If two reaches overlap in the future, the current model simply double-counts (both settlements benefit) — this is a known simplification.
+
+### F-3 Extensible Resource Ledger
+
+`SettlementStub.ResourceLedger` is a `Dictionary<string, float>` keyed by resource type string (all lowercase). This design means any new resource type added to `config/sim_config.toml` (e.g., "obsidian") flows through the entire simulation automatically — founding scores, goal seeding, merchant trade, and strain events all reference the ledger by string key, not hardcoded fields.
+
+**Ledger semantics:**
+- `"food"` and `"water"`: supply/demand ratio (1.0 = exactly met, >1 = surplus, <1 = shortage)
+- Minerals (`"iron"`, `"copper"`, `"gold"`, etc.) and `"timber"`: absolute supply units (demand not yet per-capita)
+
+The ledger is rebuilt from scratch each tick by `ResourcePressurePhase` — it is not persisted between ticks. `FoodPressureRatio` / `WaterPressureRatio` on `SettlementStub` remain as convenience accessors that mirror `ResourceLedger["food"]` / `["water"]`.
+
+### F-4 Founding Score Improvements
+
+Characters evaluating `EstablishSettlement` now consider:
+1. **Deposit value** — sum of quality-weighted deposit contributions on the target tile. A tile with a high-quality surface deposit can be settled even if `Fertility < MinFertilityToSettle`.
+2. **Route position bonus** — `1/(dist_a × dist_b)` summed across all pairs of existing settlements. A tile equidistant between two large settlements gets a meaningful bonus, simulating the economic pull of trade route positioning.
+
+Config properties (`DepositSettleThreshold`, `DepositScoreMultiplier`, `RouteScoreMultiplier`) allow tuning without code changes.
+
+### F-5 Ledger-Aware Merchant Trade
+
+`Tier2BehaviorPhase.RunMerchant()` now picks the destination settlement that has the most complementary resource balance relative to home (home has surplus, dest has deficit). On trade completion, a fraction (`MerchantTradeTransfer = 0.1`) of the surplus is transferred from home to dest in the ledger. The `MerchantTradeCompleted` event payload now includes `tradedResource`.
+
+This creates an emergent trade network: surplus regions naturally export to deficit regions via merchant movement, without any explicit "goods object" or physical routing simulation.

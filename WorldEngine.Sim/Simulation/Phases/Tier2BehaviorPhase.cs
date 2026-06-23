@@ -112,29 +112,75 @@ public sealed class Tier2BehaviorPhase
         }
     }
 
+    private const float MerchantTradeTransfer = 0.1f;  // fraction of surplus transferred per trade
+
     private void RunMerchant(Tier2Character c, WorldState world, List<PendingEvent> pending)
     {
-        // Trade fires when a second settlement exists
         if (world.Settlements.Count < 2) return;
         float r = world.GetRandomFloat(c.Id, SaltMerchant);
-        if (r > 0.15f) return; // ~15% chance per season
+        if (r > 0.15f) return;
 
-        // Pick a distinct destination settlement
-        TileCoord? dest = null;
-        foreach (var kv in world.Settlements)
+        var homeTile = c.Livelihood.SettlementTile;
+        if (!world.Settlements.TryGetValue(homeTile, out var home)) return;
+
+        // Find the best complementary destination: where home has surplus, dest has deficit
+        TileCoord? bestDest     = null;
+        string?    bestResource = null;
+        float      bestScore    = 0f;
+
+        foreach (var (destTile, dest) in world.Settlements)
         {
-            if (kv.Key != c.Livelihood.SettlementTile) { dest = kv.Key; break; }
+            if (destTile == homeTile) continue;
+            if (dest.ResourceLedger is null || home.ResourceLedger is null) continue;
+
+            foreach (var (res, homeSupply) in home.ResourceLedger)
+            {
+                if (homeSupply <= 1.1f) continue; // home needs at least a 10% surplus
+                dest.ResourceLedger.TryGetValue(res, out float destSupply);
+                float complementarity = homeSupply - destSupply; // higher = home has more, dest wants it
+                if (complementarity > bestScore)
+                {
+                    bestScore    = complementarity;
+                    bestDest     = destTile;
+                    bestResource = res;
+                }
+            }
         }
-        if (dest is null) return;
+
+        // Fallback: pick any settlement if no ledger data
+        if (bestDest is null)
+        {
+            foreach (var kv in world.Settlements)
+                if (kv.Key != homeTile) { bestDest = kv.Key; break; }
+        }
+        if (bestDest is null) return;
+
+        // Transfer value in the ledger (merchant moves the surplus toward the deficit)
+        if (bestResource is not null && world.Settlements.TryGetValue(bestDest.Value, out var destStub))
+        {
+            float transfer = home.ResourceLedger![bestResource] * MerchantTradeTransfer;
+            var newHomeLedger = new Dictionary<string, float>(home.ResourceLedger, StringComparer.OrdinalIgnoreCase);
+            newHomeLedger[bestResource] = home.ResourceLedger[bestResource] - transfer;
+
+            var newDestLedger = destStub.ResourceLedger is null
+                ? new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase)
+                : new Dictionary<string, float>(destStub.ResourceLedger, StringComparer.OrdinalIgnoreCase);
+            newDestLedger[bestResource] = newDestLedger.TryGetValue(bestResource, out float dv)
+                ? dv + transfer : transfer;
+
+            world.Settlements[homeTile]       = home     with { ResourceLedger = newHomeLedger };
+            world.Settlements[bestDest.Value] = destStub with { ResourceLedger = newDestLedger };
+        }
 
         c.Needs = c.Needs with { Status = Math.Min(1f, c.Needs.Status + 0.05f) };
 
         var payload = JsonSerializer.Serialize(new
         {
-            merchantId = c.Id.Value,
-            name       = c.Name,
-            fromTile   = new[] { c.Livelihood.SettlementTile.X, c.Livelihood.SettlementTile.Y },
-            toTile     = new[] { dest.Value.X, dest.Value.Y }
+            merchantId   = c.Id.Value,
+            name         = c.Name,
+            fromTile     = new[] { homeTile.X, homeTile.Y },
+            toTile       = new[] { bestDest.Value.X, bestDest.Value.Y },
+            tradedResource = bestResource ?? "general"
         });
         pending.Add(new PendingEvent(EventType.MerchantTradeCompleted, c.Location, null, payload,
             new[] { c.Id.Value }));

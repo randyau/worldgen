@@ -215,7 +215,7 @@ public sealed class CharacterBehaviorPhase
             case DeclareWar:
             case RaidSettlement:
             case Negotiate:
-                CivTracker.Resolve(cmd, world, pending);
+                CivTracker.Resolve(cmd, world, pending, _simCfg.SettlementNames);
                 break;
         }
     }

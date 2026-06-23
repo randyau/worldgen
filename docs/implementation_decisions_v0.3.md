@@ -1024,8 +1024,20 @@ Six playable ancestries defined in `config/ancestries.toml`, loaded by `Ancestry
 
 **Trust dynamics added:** Two passive per-tick drains for cross-civ chars sharing a tile: cultural distance drain (proportional to ancestry cultural distance 0–1) + personality stability mismatch drain. One-time first-meeting modifier applied when the relationship edge is first created. These combine with territorial pressure (aggressive founders drain foreign visitors) to make the rivalry pipeline reachable within a few years of contact.
 
+### Settlement Economics (M2 Extension, 2026-06-23)
+
+**Settlement naming:** Each settlement gets a unique human-readable name (`Prefix + Suffix`) generated deterministically from the world seed and tile coordinates at founding time. Biome mildly biases prefix selection (rocky → Iron/Stone, warm fertile → Green/Gold, cold → Frost/Cold). 30 × 24 = 720 combinations; collisions are possible but rare. Name lives on `SettlementStub.Name`.
+
+**Settlement reach:** Each settlement draws resources from a fixed-radius zone around its tile (radius = `clamp(2 + pop/2000, 2, 5)`). All land tiles within reach contribute food, water, timber, and mineral deposits. No Voronoi competition — settlements are typically far apart and overlap is rare.
+
+**Extensible resource ledger:** `SettlementStub.ResourceLedger` is a `Dictionary<string, float>` keyed by resource type string (lowercase). New resource types defined in `sim_config.toml` automatically flow through founding scores, goal seeding, merchant trade, and strain events. Ledger is rebuilt from scratch each tick by `ResourcePressurePhase`. Food/water are stored as supply/demand ratios; minerals/timber as absolute supply units.
+
+**Founding score:** Characters score `EstablishSettlement` using both fertility and deposit value. Tiles with valuable deposits can be settled even if fertility is below `MinFertilityToSettle`. A route-position bonus (`1/(dist_a × dist_b)` across pairs of existing settlements) rewards settling on natural trade routes.
+
+**Ledger-aware merchant trade:** Merchants pick the destination settlement with the most complementary resource balance (home surplus vs. dest deficit). On trade completion, 10% of the traded surplus is transferred from home to destination in their respective ledgers. `MerchantTradeCompleted` events include the traded resource type.
+
 ---
 
 *Document Version: 0.3*  
 *Last Updated: June 23, 2026*  
-*Status: All Tier A and Tier B decisions complete. Post-M2 ancestry and trust system added.*
+*Status: All Tier A and Tier B decisions complete. Post-M2 ancestry, trust, wellbeing, and settlement economics added.*

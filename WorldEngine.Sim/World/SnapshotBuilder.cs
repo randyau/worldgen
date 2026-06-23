@@ -55,11 +55,13 @@ public sealed class SnapshotBuilder
             string civName = world.Civilizations.TryGetValue(stub.CivId, out var civ)
                 ? civ.Name : "Unknown";
             dict[coord] = new SettlementSnapshot(
-                Coord:       coord,
-                CivName:     civName,
-                Population:  stub.Population,
-                Health:      stub.Health,
-                FoundedYear: stub.FoundedYear);
+                Coord:          coord,
+                Name:           stub.Name,
+                CivName:        civName,
+                Population:     stub.Population,
+                Health:         stub.Health,
+                FoundedYear:    stub.FoundedYear,
+                ResourceLedger: stub.ResourceLedger);
         }
         return dict;
     }

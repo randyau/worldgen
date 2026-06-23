@@ -29,6 +29,11 @@ public sealed class WorldState : IWorldStateReadOnly
 
     // === REGISTRIES ===
     public Dictionary<TileCoord, List<ResourceDeposit>> ResourceRegistry { get; }
+
+    // IWorldStateReadOnly view (covariant wrapper built lazily — same data, no copy)
+    IReadOnlyDictionary<TileCoord, IReadOnlyList<ResourceDeposit>> IWorldStateReadOnly.ResourceDeposits
+        => _resourceDepositsView ??= new ResourceDepositsView(ResourceRegistry);
+    private ResourceDepositsView? _resourceDepositsView;
     public Dictionary<TileCoord, List<ActiveDisaster>> ActiveTileDisasters { get; } = new();
     public List<ActiveDrought> ActiveDroughts { get; } = new();
     public EntityRegistry Entities { get; } = new();
@@ -136,4 +141,27 @@ public sealed class WorldState : IWorldStateReadOnly
 
     public RelationshipEdge? GetRelationship(EntityId a, EntityId b) =>
         Relationships.Get(a, b);
+}
+
+/// <summary>
+/// Lightweight read-only adapter that presents Dictionary{TileCoord, List{ResourceDeposit}}
+/// as IReadOnlyDictionary{TileCoord, IReadOnlyList{ResourceDeposit}} without copying data.
+/// </summary>
+internal sealed class ResourceDepositsView(Dictionary<TileCoord, List<ResourceDeposit>> inner)
+    : IReadOnlyDictionary<TileCoord, IReadOnlyList<ResourceDeposit>>
+{
+    public IReadOnlyList<ResourceDeposit> this[TileCoord key] => inner[key];
+    public IEnumerable<TileCoord> Keys   => inner.Keys;
+    public IEnumerable<IReadOnlyList<ResourceDeposit>> Values => inner.Values;
+    public int Count => inner.Count;
+    public bool ContainsKey(TileCoord key) => inner.ContainsKey(key);
+    public bool TryGetValue(TileCoord key, out IReadOnlyList<ResourceDeposit> value)
+    {
+        if (inner.TryGetValue(key, out var list)) { value = list; return true; }
+        value = Array.Empty<ResourceDeposit>(); return false;
+    }
+    public IEnumerator<KeyValuePair<TileCoord, IReadOnlyList<ResourceDeposit>>> GetEnumerator()
+        => inner.Select(kv => new KeyValuePair<TileCoord, IReadOnlyList<ResourceDeposit>>(kv.Key, kv.Value))
+                .GetEnumerator();
+    System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
 }

@@ -309,6 +309,17 @@ A second pass addressing narrative gaps found during playtest — zero wars/conf
 - **Beast-character combat** — Aggressive predators on same tile as characters have 15% chance to attack per tick. Added `EventType.BeastAttackedChar = 2007`. Characters can die from beast attacks.
 - **Ancestry system** — 6 ancestries (human, elf, dwarf, dark_elf, orc, halfling) loaded from `config/ancestries.toml`. Ancestry selected at spawn by biome weights; personality/aptitude biases shift trait distributions; ancestry-specific name lists; distinct lifespan ranges. Cultural trust drains: first-meeting modifier applied once; per-tick drain scaled by cultural distance + personality stability mismatch. `AncestryId` stored on `IdentityData`, `EntitySnapshot`, `CharacterSnapshot`. Inspector shows ancestry next to name.
 
+**Post-M2 Goal System + Wellbeing** ✓ (June 23, 2026)  
+Symmetric emotional model on `Tier1Character.Wellbeing` (float -1 spiraling → +1 flourishing). Five bands: Flourishing (≥0.7), Content (≥0.3), Neutral, Distressed (≤-0.3), Spiraling (≤-0.7). Goal types extended with Bond, Create, Protect, Avenge, Grieve, Acquire, Flee, Endure. Goal objects extended with companion Person targets and resource tags. Grief spirals on trusted-person death; art/joy upward spirals on Flourishing characters. Resource pressure via `ResourcePressurePhase` seeds Acquire/Flee goals. `CharacterGrieved`, `CharacterFlourishing`, `CharacterSpiraling`, `ArtworkCreated`, `GoalFormed`, `GoalResolved`, `SettlementStraining` event types added.
+
+**Post-M2 Settlement Economics** ✓ (June 23, 2026)  
+Settlement identity, reach-based resource extraction, and ledger-aware merchant trade:
+- **Settlement names** — deterministic `Prefix+Suffix` name generated from world seed + tile coord at founding; biome-biased prefix selection; shown prominently in inspector and event log.
+- **Resource ledger** — extensible `Dictionary<string, float>` on `SettlementStub.ResourceLedger` covering food, water, timber, and any mineral deposit type. New resource types flow through automatically from config. Rebuilt from reach tiles each tick by `ResourcePressurePhase`.
+- **Settlement reach** — radius `clamp(2 + pop/2000, 2, 5)` tiles; all land tiles within reach contribute resources.
+- **Founding score** — characters now consider deposit value + route position bonus (between existing settlements) when evaluating `EstablishSettlement`; valuable deposits allow settling otherwise low-fertility tiles.
+- **Merchant trade** — Tier2 merchants pick the most complementary destination (home surplus vs. dest deficit) and transfer 10% of the surplus in the ledger. `MerchantTradeCompleted` events include the traded resource.
+
 ---
 
 ## Milestone 3: Narrative Exploration (Summary)
@@ -339,5 +350,5 @@ Polish and features for the full experience.
 
 ---
 
-*Document Version: 0.3*  
-*Last Updated: June 23, 2026 (Milestone 2 complete)*
+*Document Version: 0.4*  
+*Last Updated: June 23, 2026 (Milestone 2 complete + goal system + settlement economics)*

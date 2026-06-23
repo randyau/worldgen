@@ -1,3 +1,4 @@
+using WorldEngine.Sim.Civilizations;
 using WorldEngine.Sim.Config;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.World;
@@ -68,15 +69,23 @@ public static class UtilityScorer
                 Score(c, ActionType.Travel, 0.5f, world, cfg) + wanderlust));
         }
 
-        // EstablishSettlement — only if tile is fertile, empty, and char has no existing settlement
+        // EstablishSettlement — fertility OR valuable deposits required; route position is a bonus
         bool alreadyHasSettlement = isFounder;
-        if (!alreadyHasSettlement
-            && !world.Settlements.ContainsKey(c.Location)
-            && world.GetTile(c.Location).Fertility >= cfg.MinFertilityToSettle)
+        if (!alreadyHasSettlement && !world.Settlements.ContainsKey(c.Location))
         {
-            float successProb = (c.Skills.Leadership + c.Aptitude.Diligence) * 0.5f;
-            actions.Add(new(new EstablishSettlement(c.Id, c.Location),
-                Score(c, ActionType.Establish, successProb, world, cfg)));
+            var tileFert = world.GetTile(c.Location);
+            float depositVal  = ComputeDepositValue(c.Location, world);
+            bool  worthSettle = tileFert.Fertility >= cfg.MinFertilityToSettle
+                              || depositVal > cfg.DepositSettleThreshold;
+            if (worthSettle)
+            {
+                float routeBonus = ComputeRouteBonus(c.Location, world);
+                float successProb = (c.Skills.Leadership + c.Aptitude.Diligence) * 0.5f
+                                  * (1f + depositVal * cfg.DepositScoreMultiplier
+                                       + routeBonus  * cfg.RouteScoreMultiplier);
+                actions.Add(new(new EstablishSettlement(c.Id, c.Location),
+                    Score(c, ActionType.Establish, successProb, world, cfg)));
+            }
         }
 
         // AllyWith / Negotiate — pick the single best social target per tick.
@@ -318,5 +327,49 @@ public static class UtilityScorer
             if (score > bestScore) { bestScore = score; best = coord; }
         }
         return best;
+    }
+
+    // ─── Founding score helpers ────────────────────────────────────────────────
+
+    /// <summary>
+    /// Sum of deposit quality contributions on a tile, normalized to 0–1 range.
+    /// A single high-quality surface deposit scores ~1.0.
+    /// </summary>
+    private static float ComputeDepositValue(TileCoord coord, IWorldStateReadOnly world)
+    {
+        if (!world.ResourceDeposits.TryGetValue(coord, out var deposits))
+            return 0f;
+        float total = 0f;
+        foreach (var dep in deposits)
+            total += dep.Quality / 255f * (1f - dep.Depth / 255f * 0.5f);
+        return Math.Min(total, 2f);  // cap; a tile with 3+ rich deposits is still just "very rich"
+    }
+
+    /// <summary>
+    /// Bonus for being positioned on a trade route between existing settlements.
+    /// For each pair of settlements, score = 1/(dist_a × dist_b); sum across all pairs.
+    /// Returns 0 when there are fewer than two settlements.
+    /// </summary>
+    private static float ComputeRouteBonus(TileCoord coord, IWorldStateReadOnly world)
+    {
+        var settlementsAsList = world.Settlements.Keys.ToList();
+        if (settlementsAsList.Count < 2) return 0f;
+
+        float bonus = 0f;
+        for (int i = 0; i < settlementsAsList.Count; i++)
+        for (int j = i + 1; j < settlementsAsList.Count; j++)
+        {
+            float dA = TileDistance(coord, settlementsAsList[i]);
+            float dB = TileDistance(coord, settlementsAsList[j]);
+            if (dA > 0f && dB > 0f)
+                bonus += 1f / (dA * dB);
+        }
+        return Math.Min(bonus, 1f);  // cap so a perfectly central tile doesn't dominate the score
+    }
+
+    private static float TileDistance(TileCoord a, TileCoord b)
+    {
+        int dx = a.X - b.X, dy = a.Y - b.Y;
+        return MathF.Sqrt(dx * dx + dy * dy);
     }
 }

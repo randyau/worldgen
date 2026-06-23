@@ -52,4 +52,9 @@ public sealed class GoalData
     public int        StaleSince     { get; set; }   // tick when last advanced
     public float      Intensity      { get; set; }   // emotional weight 0–1; drives Wellbeing impact
     public int        FormedTick     { get; set; }
+    /// <summary>
+    /// For Acquire goals: the specific resource type string ("food", "iron", etc.).
+    /// Null for non-resource goals. Lowercase, matches ResourceLedger keys.
+    /// </summary>
+    public string?    ResourceTag    { get; set; }
 }

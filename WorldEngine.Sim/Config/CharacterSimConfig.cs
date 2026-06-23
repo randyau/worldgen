@@ -29,7 +29,13 @@ public sealed class CharacterSimConfig
     public int   PerceptionRadius       { get; set; } = 3;
     public int   HealthPerSeasonHeal    { get; set; } = 5;
     public int   CombatDamageBase       { get; set; } = 20;
-    public int   MinFertilityToSettle   { get; set; } = 100;
+    public int   MinFertilityToSettle    { get; set; } = 100;
+    // Characters will also settle low-fertility tiles that have deposits above this threshold
+    public float DepositSettleThreshold  { get; set; } = 0.5f;
+    // How much deposit value boosts the EstablishSettlement success probability multiplier
+    public float DepositScoreMultiplier  { get; set; } = 0.5f;
+    // How much route-position bonus boosts the EstablishSettlement success probability multiplier
+    public float RouteScoreMultiplier    { get; set; } = 0.3f;
 
     // Civilization-born character generation
     public int   CivBirthMinPop         { get; set; } = 30;   // settlement needs this many people
