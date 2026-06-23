@@ -70,8 +70,12 @@ public sealed class PopulationDynamicsPhase
                 ? (1f - foodRatio) * _cfg.StarvationDecayRate
             : 0f;
 
-        // Population change this season
-        float growthF  = fertility * safetyScore * _cfg.PopGrowthRate;
+        // Population change this season.
+        // Growth is gated by food availability — a settlement can't grow faster than it can feed
+        // itself. When food is plentiful (ratio ≥ 1) growth runs at full rate; below 1 it throttles
+        // proportionally. This creates a natural carrying capacity before the hard cap is ever reached.
+        float foodGrowthScale = Math.Clamp(foodRatio, 0f, 1f);
+        float growthF  = fertility * safetyScore * _cfg.PopGrowthRate * foodGrowthScale;
         float decayF   = _cfg.PopDecayRate + starvationDecay;
         float deltaF   = growthF - decayF;
 

@@ -36,8 +36,9 @@ public sealed class CharacterSimConfig
     public float DepositScoreMultiplier  { get; set; } = 0.5f;
     // How much route-position bonus boosts the EstablishSettlement success probability multiplier
     public float RouteScoreMultiplier    { get; set; } = 0.3f;
-    // Effective fertility multiplier for tiles already inside a same-civ settlement's hinterland
-    public float HinterlandDrainFactor       { get; set; } = 0.15f;
+    // Effective fertility multiplier for tiles already inside a same-civ settlement's hinterland.
+    // 0.5 = "half the resources are claimed" — discourages but doesn't block high-fertility tiles.
+    public float HinterlandDrainFactor       { get; set; } = 0.5f;
     // Base cooldown years between same-civ settlements; scales down with civ population
     public int   BaseFoundingCooldownYears   { get; set; } = 20;
     // Minimum cooldown years regardless of population (a civ can't expand instantly even if huge)

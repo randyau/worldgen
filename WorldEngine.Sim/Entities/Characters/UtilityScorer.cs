@@ -80,8 +80,10 @@ public static class UtilityScorer
             float hinterlandFactor = HinterlandFactor(c.Location, c.Identity.CivId, world, cfg);
             float effectiveFertility = tileFert.Fertility * hinterlandFactor;
             float depositVal  = ComputeDepositValue(c.Location, world);
+            // Deposit override works regardless of hinterland — a rich mine is worth settling
+            // even if an existing settlement already works the surrounding farmland.
             bool  worthSettle = effectiveFertility >= cfg.MinFertilityToSettle
-                              || (hinterlandFactor >= 1f && depositVal > cfg.DepositSettleThreshold);
+                              || depositVal > cfg.DepositSettleThreshold;
             if (worthSettle)
             {
                 float routeBonus = ComputeRouteBonus(c.Location, world);
