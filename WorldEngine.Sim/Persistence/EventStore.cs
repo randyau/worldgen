@@ -205,6 +205,7 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
     /// </summary>
     public void Truncate()
     {
+        _conn.Execute("DELETE FROM EventEntities;");
         _conn.Execute("DELETE FROM CausalEdges;");
         _conn.Execute("DELETE FROM Events;");
         _conn.Execute("PRAGMA wal_checkpoint(TRUNCATE);");
