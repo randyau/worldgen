@@ -73,7 +73,7 @@ ultrafast_snapshot_years = 10     # Push UI snapshot every N sim-years in Ultraf
 # Active gate keys (consumed by EventsConfig / EventGate)
 minimum_recorded_tier        = 0        # 0=Background, 1=Character, 2=Regional, 3=Headline
 recent_event_cache_size      = 500
-suppressed_types = ["SettlementGrew", "SettlementShrank"]  # high-volume per-tick noise; still visible via population stats
+suppressed_types = ["SettlementGrew", "SettlementShrank", "Negotiated"]  # suppress per-tick noise; Negotiated floods DB before chars ally
 
 # --- Legacy keys below are ignored (IgnoreMissingProperties=true) ---
 # Pre-write gate minimums
@@ -615,6 +615,9 @@ combat_damage_base        = 20
 min_fertility_to_settle   = 100
 civ_birth_min_pop         = 30
 civ_birth_chance_per_season = 0.02
+# Wanderlust: travel urgency that builds the longer a character stays in one place
+wanderlust_max_ticks      = 8     # full bonus after 2 seasons (half a year) stationary
+wanderlust_bonus          = 0.4   # travel score bonus at max wanderlust; ~0.15 base → ~0.55 after 2 seasons
 # Tier 2 sub-tuning (appended to [character] section — Tomlyn merges same-section keys)
 tier2_per_population        = 10
 tier2_max_age_seasons_min   = 60

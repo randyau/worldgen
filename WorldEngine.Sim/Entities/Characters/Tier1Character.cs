@@ -30,6 +30,9 @@ public sealed class Tier1Character : IEntity
     public int AgeSeason { get; internal set; }
     public int MaxAgeSeason { get; }
 
+    // Wanderlust — ticks on the same tile; drives travel utility bonus
+    public int TicksInCurrentTile { get; internal set; }
+
     public Tier1Character(
         EntityId id,
         TileCoord location,

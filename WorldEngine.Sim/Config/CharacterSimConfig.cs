@@ -35,6 +35,10 @@ public sealed class CharacterSimConfig
     public int   CivBirthMinPop         { get; set; } = 30;   // settlement needs this many people
     public float CivBirthChancePerSeason { get; set; } = 0.02f; // ~1 birth per 50 seasons at min pop
 
+    // Wanderlust — travel urge that builds the longer a character stays in one place
+    public int   WanderlustMaxTicks       { get; set; } = 8;   // full bonus after 2 seasons stationary
+    public float WanderlustBonus          { get; set; } = 0.4f; // added to travel score at max wanderlust
+
     // Tier 2 tuning
     public int   Tier2PerPopulation     { get; set; } = 10;  // one Tier2 per this many pop
     public int   Tier2MaxAgeSeasonsMin  { get; set; } = 60;

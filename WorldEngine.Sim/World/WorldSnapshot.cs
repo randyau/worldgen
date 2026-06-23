@@ -3,6 +3,14 @@ using WorldEngine.Sim.Entities;
 
 namespace WorldEngine.Sim.World;
 
+/// <summary>Immutable settlement info for UI display.</summary>
+public sealed record SettlementSnapshot(
+    TileCoord Coord,
+    string    CivName,
+    int       Population,
+    int       Health,
+    int       FoundedYear);
+
 /// <summary>
 /// Immutable projection of world state for the UI. Created after each tick.
 /// UI thread reads this every frame — never touches WorldState directly.
@@ -29,6 +37,9 @@ public sealed record WorldSnapshot(
 
     // Entities — flat lookup by EntityId; used by inspector and map renderer
     IReadOnlyDictionary<EntityId, EntitySnapshot> EntitySnapshots,
+
+    // Settlements — keyed by tile coord; used by inspector and map renderer
+    IReadOnlyDictionary<TileCoord, SettlementSnapshot> Settlements,
 
     // World-level drift parameters for UI status display
     float GlobalTemperatureAnomaly,

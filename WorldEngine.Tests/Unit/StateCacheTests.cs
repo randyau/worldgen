@@ -15,6 +15,7 @@ public class StateCacheTests
         RecentEvents: Array.Empty<SimEvent>(),
         InspectedTile: null,
         EntitySnapshots: new Dictionary<EntityId, EntitySnapshot>(),
+        Settlements: new Dictionary<TileCoord, SettlementSnapshot>(),
         GlobalTemperatureAnomaly: 0f,
         GlobalPrecipitationMultiplier: 1f,
         StormCorridorNormalizedLat: 0.35f

@@ -35,6 +35,7 @@ public sealed class CharacterBehaviorPhase
             if (!c.IsAlive) continue;
             UpdateLifecycle(c, world, tick, pending);
             if (!c.IsAlive) continue;
+            c.TicksInCurrentTile++;
             NeedsUpdater.Update(c, world, _cfg);
             GoalManager.UpdateGoals(c, world, tick);
             var cmd = UtilityScorer.SelectAction(c, world, _cfg);
@@ -188,6 +189,7 @@ public sealed class CharacterBehaviorPhase
     {
         world.Entities.UpdateLocation(c.Id, c.Location, dest);
         c.Location = dest;
+        c.TicksInCurrentTile = 0;
     }
 
     private static void ResolveRest(Tier1Character c)

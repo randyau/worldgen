@@ -54,11 +54,15 @@ public static class UtilityScorer
         // Rest — always available
         actions.Add(new(new Rest(c.Id), Score(c, ActionType.Rest, 0f, world, cfg)));
 
-        // Travel — pick best adjacent tile (highest fertility + settlement presence)
+        // Travel — pick best adjacent tile; wanderlust bonus grows with time stationary
         var travelDest = BestAdjacentTile(c, world);
         if (travelDest.HasValue)
+        {
+            float wanderlust = Math.Min(1f, (float)c.TicksInCurrentTile / cfg.WanderlustMaxTicks)
+                             * cfg.WanderlustBonus;
             actions.Add(new(new MoveToTile(c.Id, travelDest.Value),
-                Score(c, ActionType.Travel, 0.5f, world, cfg)));
+                Score(c, ActionType.Travel, 0.5f, world, cfg) + wanderlust));
+        }
 
         // EstablishSettlement — only if tile is fertile, empty, and char has no existing settlement
         bool alreadyHasSettlement = c.Identity.CivId.IsValid

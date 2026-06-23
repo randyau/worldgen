@@ -20,10 +20,11 @@ public sealed class SnapshotBuilder
         IReadOnlyList<SimEvent> recentEvents)
     {
         var entitySnapshots = BuildEntitySnapshots(world);
-        var tiles = BuildAllTiles(world, entitySnapshots);
-        var inspected = world.InspectedTile.HasValue
+        var tiles           = BuildAllTiles(world, entitySnapshots);
+        var inspected       = world.InspectedTile.HasValue
             ? BuildInspectorData(world, world.InspectedTile.Value)
             : null;
+        var settlements     = BuildSettlementSnapshots(world);
 
         return new WorldSnapshot(
             CurrentYear:                 world.CurrentYear,
@@ -38,10 +39,29 @@ public sealed class SnapshotBuilder
             RecentEvents:                recentEvents,
             InspectedTile:               inspected,
             EntitySnapshots:             entitySnapshots,
+            Settlements:                 settlements,
             GlobalTemperatureAnomaly:    world.GlobalTemperatureAnomaly,
             GlobalPrecipitationMultiplier: world.GlobalPrecipitationMultiplier,
             StormCorridorNormalizedLat:  world.StormCorridorNormalizedLat
         );
+    }
+
+    private static IReadOnlyDictionary<TileCoord, SettlementSnapshot> BuildSettlementSnapshots(
+        WorldState world)
+    {
+        var dict = new Dictionary<TileCoord, SettlementSnapshot>(world.Settlements.Count);
+        foreach (var (coord, stub) in world.Settlements)
+        {
+            string civName = world.Civilizations.TryGetValue(stub.CivId, out var civ)
+                ? civ.Name : "Unknown";
+            dict[coord] = new SettlementSnapshot(
+                Coord:       coord,
+                CivName:     civName,
+                Population:  stub.Population,
+                Health:      stub.Health,
+                FoundedYear: stub.FoundedYear);
+        }
+        return dict;
     }
 
     private static IReadOnlyDictionary<EntityId, EntitySnapshot> BuildEntitySnapshots(WorldState world)

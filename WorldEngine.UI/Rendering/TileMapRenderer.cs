@@ -67,6 +67,9 @@ public sealed class TileMapRenderer(GraphicsDevice gd, Camera2D camera)
         if (camera.Zoom >= 2f)
             DrawCharacterMarkers(sb, snapshot, tw, th, minX, maxX, minY, maxY);
 
+        // Draw settlement markers — always visible regardless of zoom
+        DrawSettlementMarkers(sb, snapshot, tw, th, minX, maxX, minY, maxY);
+
         // Draw selection highlight over the inspected tile
         if (snapshot.InspectedTile?.Coord is TileCoord sel)
         {
@@ -154,6 +157,42 @@ public sealed class TileMapRenderer(GraphicsDevice gd, Camera2D camera)
             int cx  = (int)MathF.Round(pos.X + camera.Zoom * 0.5f);
             int cy  = (int)MathF.Round(pos.Y + camera.Zoom * 0.2f); // top of tile
             sb.Draw(_pixel, new Rectangle(cx - half, cy - half, dotSize, dotSize), blue);
+        }
+    }
+
+    private void DrawSettlementMarkers(
+        SpriteBatch sb, WorldSnapshot snapshot,
+        int tw, int th, int minX, int maxX, int minY, int maxY)
+    {
+        if (snapshot.Settlements.Count == 0) return;
+
+        // Scale marker with zoom but keep it readable at all zoom levels
+        int markerSize = Math.Max(3, (int)(camera.Zoom * 0.4f));
+        int half       = markerSize / 2;
+
+        // White fill with dark border — stands out on any biome color
+        var fill   = Color.White;
+        var border = new Color(30, 20, 10);
+
+        for (int ty = minY; ty <= maxY; ty++)
+        for (int tx = minX; tx <= maxX; tx++)
+        {
+            int wx    = ((tx % tw) + tw) % tw;
+            var coord = new TileCoord(wx, ty);
+            if (!snapshot.Settlements.TryGetValue(coord, out var s)) continue;
+
+            var pos = camera.TileToScreen(coord);
+            int cx  = (int)MathF.Round(pos.X + camera.Zoom * 0.5f);
+            int cy  = (int)MathF.Round(pos.Y + camera.Zoom * 0.5f);
+
+            // Tint red if settlement is in poor health
+            if (s.Health < 40) fill = new Color(220, 80, 60);
+            else if (s.Health < 70) fill = new Color(230, 200, 80);
+            else fill = Color.White;
+
+            // Border then fill (border drawn as slightly larger rect)
+            sb.Draw(_pixel, new Rectangle(cx - half - 1, cy - half - 1, markerSize + 2, markerSize + 2), border);
+            sb.Draw(_pixel, new Rectangle(cx - half, cy - half, markerSize, markerSize), fill);
         }
     }
 

@@ -26,6 +26,19 @@ public sealed class TileInspectorPanel
         _content.Widgets.Clear();
         var tile = data.RawTile;
 
+        // Settlement info first — most interesting to the user
+        if (snapshot?.Settlements.TryGetValue(data.Coord, out var settlement) == true)
+        {
+            AddLine("=== SETTLEMENT ===");
+            AddLine($"Civ: {settlement.CivName}");
+            AddLine($"Pop: {settlement.Population}");
+            string healthLabel = settlement.Health >= 70 ? "Good"
+                               : settlement.Health >= 40 ? "Struggling" : "Critical";
+            AddLine($"Health: {settlement.Health}/100 ({healthLabel})");
+            AddLine($"Founded: Year {settlement.FoundedYear}");
+            AddLine("");
+        }
+
         AddLine($"Tile ({data.Coord.X}, {data.Coord.Y})");
         AddLine($"Biome: {(BiomeType)tile.BiomeType}");
         AddLine($"Elevation: {tile.Elevation}");
