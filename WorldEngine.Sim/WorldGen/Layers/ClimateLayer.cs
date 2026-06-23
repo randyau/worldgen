@@ -28,6 +28,11 @@ public sealed class ClimateLayer : IWorldGenLayer<ClimateResult>
 
         var result = new ClimateResult(n);
 
+        // --- Step 0: Maritime influence map ---
+        // BFS distance from ocean+lake tiles, converted to exponential decay [0,1].
+        // Used by temperature (continental amplification) and moisture (lake recharge).
+        float[] maritime = ComputeMaritimeInfluence(ocean, ctx.River, w, h, ctx, cfg.ContinentalRadiusTiles);
+
         // --- Step 1: Base temperature from latitude + lapse rate ---
         FastNoiseLite? tempNoise = null;
         if (cfg.TemperatureNoiseScale > 0f)
@@ -36,12 +41,12 @@ public sealed class ClimateLayer : IWorldGenLayer<ClimateResult>
             tempNoise.SetNoiseType(FastNoiseLite.NoiseType.OpenSimplex2);
             tempNoise.SetFrequency(cfg.TemperatureNoiseFrequency);
         }
-        ComputeBaseTemperature(elev, ocean, cfg, w, h, ctx, result.BaseTemperature, tempNoise);
+        ComputeBaseTemperature(elev, ocean, cfg, w, h, ctx, result.BaseTemperature, tempNoise, maritime);
         progress?.Report(0.2f);
         ct.ThrowIfCancellationRequested();
 
         // --- Step 2: Base moisture via two-band wind sweep ---
-        ComputeBaseMoisture(elev, ocean, cfg, w, h, ctx, result.BaseMoisture);
+        ComputeBaseMoisture(elev, ocean, ctx.River, cfg, w, h, ctx, result.BaseMoisture);
 
         // Apply moisture noise after sweep to break horizontal banding.
         // Moisture from wind sweeps is constant across each latitude row; noise
@@ -81,19 +86,16 @@ public sealed class ClimateLayer : IWorldGenLayer<ClimateResult>
 
     private static void ComputeBaseTemperature(
         ElevationResult elev, OceanResult ocean, ClimateConfig cfg,
-        int w, int h, WorldGenContext ctx, byte[] temp, FastNoiseLite? noise)
+        int w, int h, WorldGenContext ctx, byte[] temp, FastNoiseLite? noise,
+        float[] maritime)
     {
-        // Lapse rate: −6°C per 1000m, scaled to byte. World height ≈ 255 → ~128 max elevation m.
-        // DECISION: byte 255 ≈ 2550m altitude → max lapse reduction ≈ 15°C → ~0.25 fraction.
         const float lapseScale = 0.25f;
-        float noiseScale = cfg.TemperatureNoiseScale;
+        float noiseScale  = cfg.TemperatureNoiseScale;
+        float contAmp     = cfg.ContinentalAmplification;
 
         for (int y = 0; y < h; y++)
         {
-            // Normalised latitude: 0 = south pole, 1 = north pole
-            // Equator is at 0.5. Cosine is hottest at equator.
             float normLat = (float)y / (h - 1);
-            // Temperature fraction from latitude [0,1]: cos(|lat-0.5| * π) maps 1.0 at equator to 0 at poles
             float latFrac = MathF.Cos(MathF.Abs(normLat - 0.5f) * MathF.PI);
             latFrac = Math.Clamp(latFrac, 0f, 1f);
 
@@ -103,12 +105,19 @@ public sealed class ClimateLayer : IWorldGenLayer<ClimateResult>
                 float elevation01 = elev.Elevation[idx] / 255f;
                 float lapseFrac   = elevation01 * lapseScale;
 
-                // Regional temperature anomaly: breaks horizontal banding without
-                // destroying the latitude gradient. Noise is in [-1,1]; scale keeps
-                // it below the lapse-rate contribution so elevation still dominates locally.
                 float noiseT = noise != null ? noise.GetNoise(x, y) * noiseScale : 0f;
 
-                float t = Math.Clamp(latFrac - lapseFrac + noiseT, 0f, 1f);
+                // Continental/maritime effect: coasts are moderated (pulled toward mean);
+                // deep interiors are amplified (pushed away from mean). Same latitude can
+                // produce temperate forest on the coast and desert inland.
+                // Formula: (1 - 2*maritime) maps [0,1] → [+1,-1]:
+                //   maritime=0 (interior) → +contAmp * deviation (warmer in tropics, colder at poles)
+                //   maritime=1 (coast)    → -contAmp * deviation (cooler in tropics, warmer at poles)
+                float contMod = contAmp > 0f
+                    ? (1f - 2f * maritime[idx]) * contAmp * (latFrac - 0.5f)
+                    : 0f;
+
+                float t = Math.Clamp(latFrac - lapseFrac + noiseT + contMod, 0f, 1f);
                 temp[idx] = (byte)(t * 255f);
             }
         }
@@ -117,16 +126,73 @@ public sealed class ClimateLayer : IWorldGenLayer<ClimateResult>
     private static bool InTropical(int y, int h, float tropHalf)
         => MathF.Abs((float)y / (h - 1) - 0.5f) < tropHalf;
 
+    /// <summary>
+    /// BFS distance from ocean and lake tiles, converted to exponential decay.
+    /// Returns 1.0 at water, decaying to ~0 at distance >> radius tiles.
+    /// If radius is 0 or no config, returns all-zeros (continental effect disabled).
+    /// </summary>
+    private static float[] ComputeMaritimeInfluence(
+        OceanResult ocean, RiverResult? river,
+        int w, int h, WorldGenContext ctx, float radiusTiles)
+    {
+        var influence = new float[ctx.TileCount];
+        if (radiusTiles <= 0f) return influence; // disabled
+
+        var dist = new float[ctx.TileCount];
+        Array.Fill(dist, float.MaxValue);
+        var queue = new Queue<int>(ctx.TileCount / 4);
+
+        for (int y = 0; y < h; y++)
+        {
+            for (int x = 0; x < w; x++)
+            {
+                int idx = ctx.IndexOf(x, y);
+                if (ocean.IsOcean[idx] || (river?.IsLake[idx] ?? false))
+                {
+                    dist[idx] = 0f;
+                    queue.Enqueue(idx);
+                }
+            }
+        }
+
+        while (queue.Count > 0)
+        {
+            int idx = queue.Dequeue();
+            float next = dist[idx] + 1f;
+            int x = idx % w, y = idx / w;
+
+            void Relax(int ni)
+            {
+                if (next < dist[ni]) { dist[ni] = next; queue.Enqueue(ni); }
+            }
+
+            if (x > 0)     Relax(idx - 1);
+            if (x < w - 1) Relax(idx + 1);
+            if (x == 0)    Relax(idx + w - 1); // cylinder wrap
+            if (x == w-1)  Relax(idx - w + 1);
+            if (y > 0)     Relax(idx - w);
+            if (y < h - 1) Relax(idx + w);
+        }
+
+        float scale = 1f / radiusTiles;
+        for (int i = 0; i < ctx.TileCount; i++)
+            influence[i] = dist[i] == float.MaxValue ? 0f : MathF.Exp(-dist[i] * scale);
+
+        return influence;
+    }
+
     private static void ComputeBaseMoisture(
-        ElevationResult elev, OceanResult ocean, ClimateConfig cfg,
+        ElevationResult elev, OceanResult ocean, RiverResult? river, ClimateConfig cfg,
         int w, int h, WorldGenContext ctx, byte[] moisture)
     {
-        float[] raw      = new float[ctx.TileCount];
-        float tropHalf   = cfg.TropicalBandHalfWidth;
-        float rainShadow = cfg.RainShadowLossFraction;
-        byte  mtThresh   = cfg.MountainElevationThreshold;
-        float decay      = cfg.MoistureCarryDecay;
-        float angle      = cfg.MoistureAngleBlend;
+        float[] raw       = new float[ctx.TileCount];
+        float tropHalf    = cfg.TropicalBandHalfWidth;
+        float rainShadow  = cfg.RainShadowLossFraction;
+        byte  mtThresh    = cfg.MountainElevationThreshold;
+        float decay       = cfg.MoistureCarryDecay;
+        float angle       = cfg.MoistureAngleBlend;
+        float lakeRecharge = cfg.LakeMoistureRecharge;
+        float riverBonus   = cfg.RiverMoistureBonus;
 
         // carry[y] holds how much moisture row y is transporting at the current column.
         // Processing column-by-column (rather than row-by-row) lets carry bleed N/S
@@ -149,6 +215,13 @@ public sealed class ClimateLayer : IWorldGenLayer<ClimateResult>
                 }
                 else
                 {
+                    // Lakes recharge the carry (inland moisture sources).
+                    // Rivers add a smaller bonus — moisture evaporates from flowing water.
+                    if (lakeRecharge > 0f && (river?.IsLake[idx] ?? false))
+                        carry[y] = Math.Max(carry[y], lakeRecharge);
+                    else if (riverBonus > 0f && (river?.HasRiver[idx] ?? false))
+                        carry[y] = Math.Min(1f, carry[y] + riverBonus);
+
                     if (elev.Elevation[idx] >= mtThresh) carry[y] *= (1f - rainShadow);
                     raw[idx] = Math.Max(raw[idx], carry[y]);
                     carry[y] *= decay;
@@ -187,6 +260,11 @@ public sealed class ClimateLayer : IWorldGenLayer<ClimateResult>
                 }
                 else
                 {
+                    if (lakeRecharge > 0f && (river?.IsLake[idx] ?? false))
+                        carry[y] = Math.Max(carry[y], lakeRecharge);
+                    else if (riverBonus > 0f && (river?.HasRiver[idx] ?? false))
+                        carry[y] = Math.Min(1f, carry[y] + riverBonus);
+
                     if (elev.Elevation[idx] >= mtThresh) carry[y] *= (1f - rainShadow);
                     raw[idx] = Math.Max(raw[idx], carry[y]);
                     carry[y] *= decay;

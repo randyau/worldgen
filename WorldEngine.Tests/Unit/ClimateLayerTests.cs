@@ -57,7 +57,18 @@ public class ClimateLayerTests
     [Fact]
     public void Climate_ElevationReducesTemperature()
     {
-        var ctx = MakeCtx();
+        // Disable continental amplification so lapse rate is the only elevation signal.
+        // With amplification on, inland mountains can be warmer than coastal plains at
+        // the same latitude (continental warming > lapse cooling), which is realistic
+        // but not what this test is checking.
+        var config = new WorldConfig { Seed = 42, WidthKm = 2000, HeightKm = 1500, TileWidthKm = 10 };
+        var simCfg = TestSimConfig.Default();
+        simCfg.Climate.ContinentalAmplification = 0f;
+        var ctx = new WorldGenContext(config, simCfg);
+        ctx.Tectonic  = new TectonicLayer().Generate(ctx);
+        ctx.Elevation = new ElevationLayer().Generate(ctx);
+        ctx.Ocean     = new OceanLayer().Generate(ctx);
+        ctx.River     = new RiverLayer().Generate(ctx);
         var result = new ClimateLayer().Generate(ctx);
         var elev = ctx.Elevation!;
         int h = ctx.TileHeight, w = ctx.TileWidth;

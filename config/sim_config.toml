@@ -523,6 +523,17 @@ moisture_noise_frequency          = 0.009  # Noise frequency for moisture anomal
 moisture_angle_blend              = 0.22   # Fraction of carry that bleeds to adjacent latitude rows at each column step.
                                            # 0 = pure horizontal sweep (bands strongly). 0.15-0.30 = angled, moisture crosses
                                            # latitude lines. Above 0.40 is unphysical. Works alongside moisture_noise_scale.
+continental_radius_tiles          = 25.0  # E-folding distance (tiles) for maritime influence decay from ocean/lakes.
+                                           # At this distance from water, maritime factor ≈ 37%; 2× distance ≈ 14%.
+                                           # 20-30 tiles = realistic coast-to-interior transition for a 200-tile world.
+continental_amplification         = 0.18  # Temperature deviation: coast cooled, interior warmed by this fraction × latDeviation.
+                                           # Formula: (1 - 2*maritime) * amp * (latFrac - 0.5). Breaks 45° banding by making
+                                           # same-latitude coasts temperate while interiors become desert. 0.10-0.22 = organic.
+lake_moisture_recharge            = 0.40  # Moisture carry level that lake tiles raise the sweep to (0-1, fraction of max).
+                                           # Lakes act as inland moisture sources; arid interiors with lakes stay wetter.
+river_moisture_bonus              = 0.08  # Flat carry bonus added when sweep crosses a river tile. Stacks with existing carry.
+                                           # 0 = pure horizontal sweep (bands strongly). 0.15-0.30 = angled, moisture crosses
+                                           # latitude lines. Above 0.40 is unphysical. Works alongside moisture_noise_scale.
 
 # =============================================================================
 # DISASTERS (runtime, Phase 5)

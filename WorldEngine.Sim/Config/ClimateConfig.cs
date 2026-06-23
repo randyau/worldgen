@@ -74,4 +74,36 @@ public class ClimateConfig
     /// Above 0.40 gets unphysical (more N-S flow than horizontal).
     /// </summary>
     public float MoistureAngleBlend { get; set; } = 0f;
+
+    // Continental/maritime differentiation
+
+    /// <summary>
+    /// E-folding distance in tiles for maritime influence decay away from ocean/lakes.
+    /// At this distance from water, maritime influence is ~37%; at 2× distance, ~14%.
+    /// 20–30 tiles works well for a 200-tile-wide world.
+    /// </summary>
+    public float ContinentalRadiusTiles { get; set; } = 0f;
+
+    /// <summary>
+    /// How strongly maritime/continental position modulates temperature around the
+    /// latitude baseline. Coasts (high maritime influence) are pulled cooler at tropical
+    /// latitudes; interiors (low maritime) are pushed warmer. This breaks horizontal
+    /// banding: the same latitude can be temperate forest on the coast and desert inland.
+    /// Formula: tempMod = (1 - 2 * maritimeFactor) * amp * (latFrac - 0.5)
+    /// 0.10–0.20 produces noticeable differentiation without overriding latitude.
+    /// </summary>
+    public float ContinentalAmplification { get; set; } = 0f;
+
+    /// <summary>
+    /// Moisture carry level that lake tiles recharge the sweep to (0–1).
+    /// Lakes act as inland moisture sources; if carry is below this value when the
+    /// sweep crosses a lake, it is raised to this level. 0.3–0.5 is realistic.
+    /// </summary>
+    public float LakeMoistureRecharge { get; set; } = 0f;
+
+    /// <summary>
+    /// Flat moisture carry bonus added when the sweep crosses a river tile (0–1).
+    /// Stacks additively with existing carry; clamped to 1.0. 0.05–0.12 is subtle.
+    /// </summary>
+    public float RiverMoistureBonus { get; set; } = 0f;
 }
