@@ -358,9 +358,10 @@ public static class UtilityScorer
     }
 
     /// <summary>
-    /// Returns true when the character's civ founded a settlement too recently.
-    /// Prevents multiple characters tipping over the utility threshold in the same
-    /// tick cluster and producing paired same-year settlements.
+    /// Returns true when the character's civ is still in its founding cooldown.
+    /// The cooldown compresses as civ population grows — a large civ can send settlers
+    /// sooner because it has more surplus people to draw from.
+    /// Formula: effectiveCooldown = max(Min, Base / (1 + civPop / PopScale))
     /// </summary>
     private static bool InCivFoundingCooldown(
         Tier1Character c, IWorldStateReadOnly world, CharacterSimConfig cfg)
@@ -368,7 +369,16 @@ public static class UtilityScorer
         if (!c.Identity.CivId.IsValid) return false;
         var civ = world.GetCivilization(c.Identity.CivId);
         if (civ is null) return false;
-        return world.CurrentYear - civ.LastSettlementFoundedYear < cfg.CivFoundingCooldownYears;
+
+        // Sum population across all settlements belonging to this civ
+        int civPop = 0;
+        foreach (var stub in world.Settlements.Values)
+            if (stub.CivId == c.Identity.CivId) civPop += stub.Population;
+
+        float effective = cfg.BaseFoundingCooldownYears
+                        / (1f + civPop / (float)cfg.FoundingCooldownPopScale);
+        int cooldown = Math.Max(cfg.MinFoundingCooldownYears, (int)effective);
+        return world.CurrentYear - civ.LastSettlementFoundedYear < cooldown;
     }
 
     // ─── Founding score helpers ────────────────────────────────────────────────

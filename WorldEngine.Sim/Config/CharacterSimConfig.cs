@@ -37,9 +37,13 @@ public sealed class CharacterSimConfig
     // How much route-position bonus boosts the EstablishSettlement success probability multiplier
     public float RouteScoreMultiplier    { get; set; } = 0.3f;
     // Effective fertility multiplier for tiles already inside a same-civ settlement's hinterland
-    public float HinterlandDrainFactor   { get; set; } = 0.15f;
-    // Years a civ must wait between founding consecutive settlements (prevents paired founding)
-    public int   CivFoundingCooldownYears { get; set; } = 15;
+    public float HinterlandDrainFactor       { get; set; } = 0.15f;
+    // Base cooldown years between same-civ settlements; scales down with civ population
+    public int   BaseFoundingCooldownYears   { get; set; } = 20;
+    // Minimum cooldown years regardless of population (a civ can't expand instantly even if huge)
+    public int   MinFoundingCooldownYears    { get; set; } = 4;
+    // Population scale factor: cooldown halves when civ population reaches this value
+    public int   FoundingCooldownPopScale    { get; set; } = 2000;
 
     // Civilization-born character generation
     public int   CivBirthMinPop         { get; set; } = 30;   // settlement needs this many people

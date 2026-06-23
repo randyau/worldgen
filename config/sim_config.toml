@@ -617,8 +617,10 @@ min_fertility_to_settle      = 100
 deposit_settle_threshold     = 0.5    # min deposit value to settle despite low fertility
 deposit_score_multiplier     = 0.5    # how much deposit value boosts establish score
 route_score_multiplier       = 0.3    # how much route-position bonus boosts establish score
-hinterland_drain_factor      = 0.15   # effective fertility multiplier inside same-civ hinterland
-civ_founding_cooldown_years  = 15     # years between same-civ settlements (prevents paired founding)
+hinterland_drain_factor          = 0.15  # effective fertility multiplier inside same-civ hinterland
+base_founding_cooldown_years     = 20    # base cooldown between same-civ settlements (scales down with pop)
+min_founding_cooldown_years      = 4     # floor — even the largest civ can't expand instantly
+founding_cooldown_pop_scale      = 2000  # civ pop at which cooldown halves (20y→10y, 10y→5y, etc.)
 civ_birth_min_pop            = 30
 civ_birth_chance_per_season = 0.02
 # Territorial aggression: aggressive founders drain trust from foreign visitors on their settlement tile
