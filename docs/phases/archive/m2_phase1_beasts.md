@@ -1,7 +1,7 @@
 # Phase 2.1 — Legendary Beasts
 
 **Milestone:** 2 — The Character System  
-**Status:** IN PROGRESS  
+**Status:** COMPLETE — 2026-06-22  
 **Goal:** Introduce the first entities into the simulation. Beasts are intentionally simple — needs, territory, and survival behaviour only. No politics, no goals beyond survival. This phase validates the entity model, EntityRegistry, command/resolver pipeline, and beast event types in complete isolation before any human character complexity is added.
 
 **Companion docs:**
