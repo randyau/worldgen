@@ -8,9 +8,11 @@
 # ─── Global spawn settings ────────────────────────────────────────────────────
 
 [beast_spawn]
-target_density_per_10k_tiles = 20     # ~240 beasts on a 120k-tile world      # ~60 beasts on a 120k-tile world
+target_density_per_10k_tiles = 20     # ~240 beasts on a 120k-tile world
 myth_start_fraction          = 0.20   # fraction of mythological creatures present at year 0
 myth_emergence_years         = 200    # remaining mythologicals emerge within this many years
+passive_food_recovery        = 0.12  # food need recovered per season from ambient prey (rodents, fish, insects)
+                                      # V2: replace with real prey-population coupling; 0.04 was too low → extinction
 
 [combat]
 max_rounds_per_tick          = 8      # rounds before "standoff" ends this tick

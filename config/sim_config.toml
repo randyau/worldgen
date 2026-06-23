@@ -71,10 +71,9 @@ ultrafast_snapshot_years = 10     # Push UI snapshot every N sim-years in Ultraf
 
 [events]
 # Active gate keys (consumed by EventsConfig / EventGate)
-minimum_recorded_tier        = 1        # 0=Background (dev only), 1=Character, 2=Regional, 3=Headline
-                                        # Background floods DB with every negotiation, movement, etc.
+minimum_recorded_tier        = 0        # 0=Background, 1=Character, 2=Regional, 3=Headline
 recent_event_cache_size      = 500
-suppressed_types = []
+suppressed_types = ["SettlementGrew", "SettlementShrank"]  # high-volume per-tick noise; still visible via population stats
 
 # --- Legacy keys below are ignored (IgnoreMissingProperties=true) ---
 # Pre-write gate minimums
@@ -555,7 +554,7 @@ flood_origin_intensity                 = 0.7      # intensity at origin tile
 flood_spread_intensity                 = 0.5      # intensity at spread tiles
 flood_origin_ticks                     = 6        # duration (seasons) at origin
 flood_spread_ticks                     = 4        # duration (seasons) at spread tiles
-volcanic_eruption_probability_per_tick = 0.0002
+volcanic_eruption_probability_per_tick = 0.00005   # reduced 4× — eruptions are global, so even low prob = frequent events
 volcanic_ash_intensity                 = 1.0      # intensity assigned to VolcanicAsh ActiveDisaster
 volcanic_activity_boost                = 0.05     # added to VolcanicActivityMultiplier per eruption
 volcanic_activity_multiplier_cap       = 10.0     # VolcanicActivityMultiplier is clamped to this ceiling
@@ -587,7 +586,7 @@ drought_fertility_penalty_per_season = 5
 # =============================================================================
 
 [beasts]
-starvation_health_loss = 5    # health points lost per season when FoodNeed < 0.2
+starvation_health_loss     = 5     # health points lost per season when FoodNeed < 0.2
 
 # =============================================================================
 # CHARACTER (Tier 1 — heroes, rulers — Phase 2.2+)

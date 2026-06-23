@@ -10,16 +10,20 @@ public sealed class TileMapRenderer(GraphicsDevice gd, Camera2D camera)
 {
     private readonly Texture2D _pixel = CreatePixel(gd);
 
+    // Must match Game1.SidebarWidth — tiles must not render into the sidebar area
+    private const int SidebarWidth = 360;
+
     public void Draw(SpriteBatch sb, WorldSnapshot snapshot)
     {
         bool drawBorder = camera.Zoom > 4f;
         int tw = snapshot.WorldTileWidth, th = snapshot.WorldTileHeight;
 
-        // Compute visible tile range from current camera — no round-trip through sim thread
-        int screenW = sb.GraphicsDevice.Viewport.Width;
-        int screenH = sb.GraphicsDevice.Viewport.Height;
+        // Compute visible tile range — clip right edge to map area, excluding sidebar
+        int screenW   = sb.GraphicsDevice.Viewport.Width;
+        int screenH   = sb.GraphicsDevice.Viewport.Height;
+        int mapWidth  = screenW - SidebarWidth;
         var tl = camera.ScreenToTile(Vector2.Zero);
-        var br = camera.ScreenToTile(new Vector2(screenW, screenH));
+        var br = camera.ScreenToTile(new Vector2(mapWidth, screenH));  // stop at sidebar boundary
         int minX = tl.X - 1;
         int minY = Math.Max(0, tl.Y - 1);
         int maxX = br.X + 1;

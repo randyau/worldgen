@@ -22,6 +22,8 @@ namespace WorldEngine.UI;
 
 public sealed class Game1 : Game
 {
+    private const int SidebarWidth = 360;  // must match sidebar VerticalStackPanel Width
+
     private GraphicsDeviceManager _graphics;
     private SpriteBatch? _spriteBatch;
     private Desktop? _desktop;
@@ -262,11 +264,21 @@ public sealed class Game1 : Game
             _camera.ZoomAt(new Vector2(mouse.X, mouse.Y), factor);
         }
 
-        // Left-click → inspect tile
+        // Left-click → inspect tile (only if click is in the map area, not the sidebar or Myra widgets)
         if (mouse.LeftButton == ButtonState.Released && _prevMouse.LeftButton == ButtonState.Pressed)
         {
-            var coord = _camera.ScreenToTile(new Vector2(mouse.X, mouse.Y));
-            _commandQueue.Enqueue(new SetInspectedTile(coord));
+            int mapWidth = GraphicsDevice.Viewport.Width - SidebarWidth;
+            bool inMapArea = mouse.X >= 0 && mouse.X < mapWidth
+                          && mouse.Y >= 0 && mouse.Y < GraphicsDevice.Viewport.Height;
+            bool overGui  = _desktop?.IsMouseOverGUI == true;
+            if (inMapArea && !overGui)
+            {
+                var coord = _camera.ScreenToTile(new Vector2(mouse.X, mouse.Y));
+                // Discard clicks that land outside the valid tile grid (zoomed-out empty space)
+                if (coord.Y < 0 || coord.Y >= snapshot.WorldTileHeight)
+                    return;
+                _commandQueue.Enqueue(new SetInspectedTile(coord));
+            }
         }
 
         // Overlay shortcuts
@@ -320,7 +332,10 @@ public sealed class Game1 : Game
         var snapshot = _stateCache.Read();
         if (_simStarted && snapshot is not null && _tileRenderer is not null && _spriteBatch is not null)
         {
-            _spriteBatch.Begin();
+            // Scissor-clip tile rendering to the map area so tiles can't bleed into the sidebar
+            var vp = GraphicsDevice.Viewport;
+            GraphicsDevice.ScissorRectangle = new Rectangle(0, 0, vp.Width - SidebarWidth, vp.Height);
+            _spriteBatch.Begin(rasterizerState: new RasterizerState { ScissorTestEnable = true });
             _tileRenderer.Draw(_spriteBatch, snapshot);
             _spriteBatch.End();
         }
