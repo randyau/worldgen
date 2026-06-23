@@ -520,6 +520,9 @@ moisture_noise_scale              = 60.0   # ±amplitude (byte units 0-255) adde
                                            # Breaks horizontal moisture banding (sweeps are row-by-row so all tiles at
                                            # same latitude get the same base moisture). 50-70 = strong regional variation.
 moisture_noise_frequency          = 0.009  # Noise frequency for moisture anomalies. Matched to temp frequency for same blob size.
+moisture_angle_blend              = 0.22   # Fraction of carry that bleeds to adjacent latitude rows at each column step.
+                                           # 0 = pure horizontal sweep (bands strongly). 0.15-0.30 = angled, moisture crosses
+                                           # latitude lines. Above 0.40 is unphysical. Works alongside moisture_noise_scale.
 
 # =============================================================================
 # DISASTERS (runtime, Phase 5)

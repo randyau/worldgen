@@ -114,78 +114,99 @@ public sealed class ClimateLayer : IWorldGenLayer<ClimateResult>
         }
     }
 
+    private static bool InTropical(int y, int h, float tropHalf)
+        => MathF.Abs((float)y / (h - 1) - 0.5f) < tropHalf;
+
     private static void ComputeBaseMoisture(
         ElevationResult elev, OceanResult ocean, ClimateConfig cfg,
         int w, int h, WorldGenContext ctx, byte[] moisture)
     {
-        float[] raw = new float[ctx.TileCount];
-
-        // --- Tropical band: East-to-West sweep (trade winds blow westward) ---
-        // Each tile receives moisture from its EAST neighbor (wind comes from the east).
-        // Sweep each row from right to left (x = w-1 → 0, then wrap).
+        float[] raw      = new float[ctx.TileCount];
         float tropHalf   = cfg.TropicalBandHalfWidth;
         float rainShadow = cfg.RainShadowLossFraction;
         byte  mtThresh   = cfg.MountainElevationThreshold;
         float decay      = cfg.MoistureCarryDecay;
+        float angle      = cfg.MoistureAngleBlend;
 
-        for (int y = 0; y < h; y++)
+        // carry[y] holds how much moisture row y is transporting at the current column.
+        // Processing column-by-column (rather than row-by-row) lets carry bleed N/S
+        // between adjacent rows at each step, creating diagonal/angled flow.
+        var carry = new float[h];
+        var bleed = new float[h];
+
+        // --- Tropical band: East→West column sweep ---
+        for (int pass = 0; pass < w; pass++)
         {
-            float normLat = (float)y / (h - 1);
-            bool inTropical = MathF.Abs(normLat - 0.5f) < tropHalf;
-            if (!inTropical) continue;
+            int x = ((w - 1 - pass) % w + w) % w;
 
-            // Coastal/ocean tiles seed moisture; inland accumulates with rain shadow
-            // Sweep East→West (trade winds blow westward, moisture carried westward)
-            float carry = 0f;
-            for (int pass = 0; pass < w; pass++)
+            for (int y = 0; y < h; y++)
             {
-                int x = (w - 1 - pass % w + w) % w;
+                if (!InTropical(y, h, tropHalf)) continue;
                 int idx = ctx.IndexOf(x, y);
-
                 if (ocean.IsOcean[idx])
                 {
-                    carry = 0.7f + 0.3f * (1f - elev.Elevation[idx] / 255f);
+                    carry[y] = 0.7f + 0.3f * (1f - elev.Elevation[idx] / 255f);
                 }
                 else
                 {
-                    if (elev.Elevation[idx] >= mtThresh)
-                        carry *= (1f - rainShadow);
-
-                    raw[idx] = Math.Max(raw[idx], carry);
-                    carry *= decay;
+                    if (elev.Elevation[idx] >= mtThresh) carry[y] *= (1f - rainShadow);
+                    raw[idx] = Math.Max(raw[idx], carry[y]);
+                    carry[y] *= decay;
                 }
+            }
+
+            // N-S bleed: carry leaks to adjacent tropical rows each column step.
+            // This is the "angle" — moisture drifts diagonally rather than purely west.
+            if (angle > 0f)
+            {
+                for (int y = 0; y < h; y++)
+                {
+                    if (!InTropical(y, h, tropHalf)) { bleed[y] = 0f; continue; }
+                    float n = (y > 0     && InTropical(y - 1, h, tropHalf)) ? carry[y - 1] : carry[y];
+                    float s = (y < h - 1 && InTropical(y + 1, h, tropHalf)) ? carry[y + 1] : carry[y];
+                    bleed[y] = carry[y] * (1f - 2f * angle) + n * angle + s * angle;
+                }
+                (carry, bleed) = (bleed, carry);
             }
         }
 
-        // --- Mid-latitude + polar: West-to-East sweep (westerlies blow eastward) ---
-        for (int y = 0; y < h; y++)
+        Array.Clear(carry, 0, h);
+
+        // --- Mid-latitude + polar: West→East column sweep ---
+        for (int pass = 0; pass < w; pass++)
         {
-            float normLat = (float)y / (h - 1);
-            bool inTropical = MathF.Abs(normLat - 0.5f) < tropHalf;
-            if (inTropical) continue;
+            int x = pass % w;
 
-            float carry = 0f;
-            for (int pass = 0; pass < w; pass++)
+            for (int y = 0; y < h; y++)
             {
-                int x = pass % w;
+                if (InTropical(y, h, tropHalf)) continue;
                 int idx = ctx.IndexOf(x, y);
-
                 if (ocean.IsOcean[idx])
                 {
-                    carry = 0.6f + 0.3f * (1f - elev.Elevation[idx] / 255f);
+                    carry[y] = 0.6f + 0.3f * (1f - elev.Elevation[idx] / 255f);
                 }
                 else
                 {
-                    if (elev.Elevation[idx] >= mtThresh)
-                        carry *= (1f - rainShadow);
-
-                    raw[idx] = Math.Max(raw[idx], carry);
-                    carry *= decay;
+                    if (elev.Elevation[idx] >= mtThresh) carry[y] *= (1f - rainShadow);
+                    raw[idx] = Math.Max(raw[idx], carry[y]);
+                    carry[y] *= decay;
                 }
+            }
+
+            if (angle > 0f)
+            {
+                for (int y = 0; y < h; y++)
+                {
+                    if (InTropical(y, h, tropHalf)) { bleed[y] = 0f; continue; }
+                    float n = (y > 0     && !InTropical(y - 1, h, tropHalf)) ? carry[y - 1] : carry[y];
+                    float s = (y < h - 1 && !InTropical(y + 1, h, tropHalf)) ? carry[y + 1] : carry[y];
+                    bleed[y] = carry[y] * (1f - 2f * angle) + n * angle + s * angle;
+                }
+                (carry, bleed) = (bleed, carry);
             }
         }
 
-        // Ensure land tiles with no moisture get a small baseline (prevents zero-moisture islands)
+        // Baseline for tiles that received no moisture
         for (int i = 0; i < ctx.TileCount; i++)
         {
             if (!ocean.IsOcean[i] && raw[i] < 0.05f)

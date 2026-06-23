@@ -66,4 +66,12 @@ public class ClimateConfig
     /// frequency so anomaly blobs are roughly the same geographic size.
     /// </summary>
     public float MoistureNoiseFrequency { get; set; } = 0.015f;
+
+    /// <summary>
+    /// Fraction of carry that bleeds to adjacent latitude rows at each column step
+    /// during the moisture sweep. 0 = pure horizontal sweep (bands strongly).
+    /// 0.15–0.30 = angled flow, moisture crosses latitude lines, breaks banding.
+    /// Above 0.40 gets unphysical (more N-S flow than horizontal).
+    /// </summary>
+    public float MoistureAngleBlend { get; set; } = 0f;
 }
