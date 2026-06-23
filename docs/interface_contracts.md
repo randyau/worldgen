@@ -1,8 +1,8 @@
 # World Engine — Interface Contracts
-**Version:** 0.3  
+**Version:** 0.4  
 **Date:** June 2026  
-**Status:** Updated through Milestone 1 completion.  
-**Changes from v0.2:** TileDynFlags — added `RecentlyBurned = 1 << 1` (set when wildfire expires on a forest tile; cleared after post-fire fertility boost applied in annual resource dynamics). EventStore moved to `WorldEngine.Sim/Persistence/` (not `Simulation/`). All EventType values now have explicit stable int IDs (1001–1010 for M1 environmental). IHistoryGraphReadOnly is implemented by EventStore.
+**Status:** Updated for Milestone 2 start (Beast System).  
+**Changes from v0.3:** `IEntity` — added `IsAlive`. `IWorldStateReadOnly` — entity lookup methods uncommented (now live for M2). `TileDisplayData` — added `EntitiesPresent`. `WorldSnapshot` — added `EntitySnapshots`. New type: `EntitySnapshot`. `VerbClass` — added `Interaction = 6`.
 
 **Rule:** Do not add methods to these interfaces without updating this document first. Interface changes are breaking changes.
 
@@ -234,13 +234,14 @@ public interface IEntity
     EntityId Id { get; }
     TileCoord Location { get; }
     EntityKind Kind { get; }
+    bool IsAlive { get; }
 
     /// <summary>
     /// Emit commands for this tick phase. Must not have side effects.
     /// </summary>
     IEnumerable<ICommand> EmitCommands(IWorldStateReadOnly world, SimPhase phase);
 
-    EntityDisplayData ToDisplayData();
+    EntitySnapshot ToSnapshot();
 }
 ```
 
@@ -299,10 +300,12 @@ public interface IWorldStateReadOnly
     float GlobalTemperatureAnomaly { get; }
     float CurrentSeaLevel { get; }
 
-    // Milestone 2+ additions (uncomment when implementing):
-    // IEntity? GetEntity(EntityId id);
-    // IEnumerable<IEntity> GetEntitiesAt(TileCoord coord);
-    // IEnumerable<IEntity> GetEntitiesInRadius(TileCoord center, int radius);
+    // === ENTITY ACCESS (M2+) ===
+    IEntity? GetEntity(EntityId id);
+    IEnumerable<IEntity> GetEntitiesAt(TileCoord coord);
+    IEnumerable<IEntity> GetEntitiesInRadius(TileCoord center, int radius);
+
+    // === HISTORY / RELATIONSHIPS (M3+) ===
     // float GetRelationshipTrust(EntityId from, EntityId to);
     // IEnumerable<SimEvent> GetRecentEvents(int withinYears);
     // float GetAuthorityAt(TileCoord coord, CivId civId);
@@ -370,7 +373,33 @@ public sealed record TileDisplayData(
     byte Fertility,
     TileStaticFlags StaticFlags,
     TileDynFlags DynFlags,
-    bool HasActiveDisaster       // computed: ActiveTileDisasters.ContainsKey(coord)
+    bool HasActiveDisaster,      // computed: ActiveTileDisasters.ContainsKey(coord)
+    EntityId[] EntitiesPresent   // empty array if none — never null
+);
+```
+
+---
+
+## EntitySnapshot
+
+Flat, immutable summary of one entity for use in `WorldSnapshot`. Produced by `IEntity.ToSnapshot()`. Contains only what the UI needs — no behaviour, no mutable references.
+
+```csharp
+/// <summary>
+/// Immutable UI-facing summary of one entity. Read by the UI thread from WorldSnapshot.
+/// Heavy entity data stays on the sim thread inside EntityRegistry.
+/// </summary>
+public sealed record EntitySnapshot(
+    EntityId Id,
+    EntityKind Kind,
+    string Name,
+    string SpeciesId,        // matches beasts.toml id field for beasts; empty for characters
+    bool IsLegendary,
+    TileCoord Location,
+    float HealthFraction,    // 0.0–1.0
+    float FoodFraction,      // 0.0–1.0; -1 if entity has no Food need
+    int AgeSeason,           // age in seasons
+    bool IsAlive
 );
 ```
 
@@ -430,6 +459,9 @@ public sealed record WorldSnapshot(
 
     // Tile inspector (null if no tile selected)
     TileInspectorData? InspectedTile,
+
+    // Entities — flat lookup by EntityId; used by inspector and map renderer
+    IReadOnlyDictionary<EntityId, EntitySnapshot> EntitySnapshots,
 
     // World-level drift parameters for UI status display
     float GlobalTemperatureAnomaly,
@@ -531,7 +563,7 @@ public enum EventTier
 public enum VerbClass
 {
     Creation = 0, Destruction = 1, Transformation = 2,
-    Transfer = 3, Conflict = 4, Maintenance = 5
+    Transfer = 3, Conflict = 4, Maintenance = 5, Interaction = 6
 }
 
 public enum PopulationImpact

@@ -2,150 +2,252 @@
 
 **Milestone:** 2 — The Character System  
 **Status:** IN PROGRESS  
-**Goal:** Introduce the first entities into the simulation. Beasts are intentionally simple: needs, territory, and survival behaviours only. No politics, no goals beyond survival. This phase validates the entity model, EntityRegistry, RelationshipGraph, and character event types in complete isolation before any human character complexity is added.
+**Goal:** Introduce the first entities into the simulation. Beasts are intentionally simple — needs, territory, and survival behaviour only. No politics, no goals beyond survival. This phase validates the entity model, EntityRegistry, command/resolver pipeline, and beast event types in complete isolation before any human character complexity is added.
 
 **Companion docs:**
-- `docs/implementation_decisions_v0.3.md` §9 (Entity Model), §16 (Character Decision-Making), §17 (Trait System)
-- `docs/interface_contracts.md` — IEntity contract
+- `docs/design/beast_design.md` — full beast catalog, stat block schema, DS-E1 through DS-E8
+- `config/beasts.toml` — all species definitions (26 normal predators, 18 mythological)
+- `docs/implementation_decisions_v0.3.md` §9 (Entity Model), §16 (Character Decision-Making)
+- `docs/interface_contracts.md` v0.4 — IEntity, EntitySnapshot, EntityId, VerbClass
 - `docs/snippets/patterns.md` — Command pattern, WorldRng
 
 ---
 
-## What a Legendary Beast Is
+## What a Beast Is
 
-- A named, unique entity (e.g. "The Pale Serpent of Ashenveil")
-- Has a home tile (territory centre) and a wander radius
-- Has a `NeedsVector` subset: Safety, Food only (no Belonging/Status/Purpose/Spiritual)
-- Has a `PersonalityVector` subset: Aggression, Curiosity only (drives roam vs rest decisions)
-- Has Health (can be injured and die)
-- Has a species type (`BeastSpecies` enum) that sets baseline stats
-- Can reproduce rarely (produce a child beast with inherited traits + noise)
-- Dies of age, starvation, or combat
+Every beast — whether a mundane wolf pack or a Dragon — is a `LegendaryBeast` instance backed by a species entry in `config/beasts.toml`. "Legendary" in the class name refers to the entity tier (named, tracked, historically significant), not always that it is a legendary specimen of its type.
 
-Beasts do NOT: hold territory politically, form goals, have relationships beyond "encountered" or "attacked", or interact with settlements.
+Two kinds of beast (see DS-E1 in `docs/design/beast_design.md`):
+- **Normal predator** — species `category = "predator"`. Common specimens form packs. A rare one gets `IsLegendary = true` with boosted stats and a unique name.
+- **Mythological** — species `category = "mythological"`. Always rare and named. Stats are always legendary-quality. 20% present at world start; 80% emerge as `BeastAwakened` events.
+
+All beasts:
+- Are named entities in `EntityRegistry`
+- Have a home tile (territory centre) and wander radius
+- Have `NeedsVector` (Food + Safety only; other needs always 1.0)
+- Have `HealthData` (can be injured and die)
+- Die from old age, starvation, or combat
+- Emit commands; state is mutated only by `CommandResolver`
+
+Beasts do NOT: hold territory politically, form goals, interact with settlements (M2.4+), or use ability mechanics beyond simple tags (M2.2+).
 
 ---
 
 ## Stories
 
-### Story 2.1.1 — IEntity interface and EntityRegistry
+### Story 2.1.1 — IEntity, EntityId, and EntityRegistry
 
-**What:** Define `IEntity`, `EntityId`, `EntityKind`, and `EntityRegistry`. Wire `EntityRegistry` into `WorldState`. Add `EntityRegistry` to `WorldSnapshot` / `TileDisplayData` so the UI can see entity locations.
+**What:** Define `IEntity`, `EntityId`, `EntityKind`, and `EntityRegistry`. Wire registry into `WorldState`. Update `WorldSnapshot` and `TileDisplayData` to carry entity data (per interface_contracts.md v0.4).
 
-**IEntity contract:**
+**EntityId** (already specced in interface_contracts.md):
+```csharp
+public readonly record struct EntityId(long Value)
+{
+    public static EntityId New() => new(IdGenerator.Next());
+}
+```
+
+**IEntity** (already in interface_contracts.md — implement exactly):
 ```csharp
 public interface IEntity
 {
     EntityId Id { get; }
-    EntityKind Kind { get; }
     TileCoord Location { get; }
+    EntityKind Kind { get; }
     bool IsAlive { get; }
     IEnumerable<ICommand> EmitCommands(IWorldStateReadOnly world, SimPhase phase);
+    EntitySnapshot ToSnapshot();
 }
 ```
 
-**EntityId:** `readonly record struct EntityId(int Value)`. Auto-incrementing counter on `EntityRegistry`, starting at 1.
-
-**EntityKind enum:** `LegendaryBeast, Tier1Character, Tier2Character, Settlement` (all four defined now even though only Beast is implemented).
-
 **EntityRegistry:**
-- `Dictionary<EntityId, IEntity>` — canonical store
-- `Dictionary<TileCoord, HashSet<EntityId>>` — spatial index (updated on move)
-- `List<LegendaryBeast>` — typed fast-iteration list
-- `Add(IEntity)`, `Remove(EntityId)`, `GetAt(TileCoord)`, `GetAllOfKind<T>()`
+```csharp
+public sealed class EntityRegistry
+{
+    private readonly Dictionary<EntityId, IEntity> _all = new();
+    private readonly Dictionary<TileCoord, HashSet<EntityId>> _spatial = new();
+    private readonly List<LegendaryBeast> _beasts = new();
 
-**TileDisplayData:** add `EntityId[] EntitiesPresent` (empty array if none; avoids null).
+    public void Add(IEntity entity);
+    public void Remove(EntityId id);
+    public IEntity? Get(EntityId id);
+    public IEnumerable<IEntity> GetAt(TileCoord coord);
+    public IEnumerable<IEntity> GetInRadius(TileCoord center, int radius);
+    public IReadOnlyList<LegendaryBeast> Beasts => _beasts;
+    public IReadOnlyDictionary<EntityId, IEntity> All => _all;
 
-**WorldSnapshot:** snapshot builder iterates `EntityRegistry` and populates per-tile entity lists.
+    public void UpdateLocation(EntityId id, TileCoord oldCoord, TileCoord newCoord);
+}
+```
+`UpdateLocation` keeps the spatial index consistent on every move.
+
+**TileDisplayData** — add `EntityId[] EntitiesPresent` (per interface_contracts.md v0.4). `SnapshotBuilder` populates it from the spatial index.
+
+**WorldSnapshot** — add `IReadOnlyDictionary<EntityId, EntitySnapshot> EntitySnapshots`. `SnapshotBuilder` calls `entity.ToSnapshot()` for every live entity.
+
+**IWorldStateReadOnly** — implement the three entity lookup methods now live in v0.4:
+```csharp
+IEntity? GetEntity(EntityId id);
+IEnumerable<IEntity> GetEntitiesAt(TileCoord coord);
+IEnumerable<IEntity> GetEntitiesInRadius(TileCoord center, int radius);
+```
 
 **Tests:**
-- Registry add/remove/spatial index stays consistent
-- Snapshot captures entity locations
+- Registry add/remove keeps spatial index consistent
+- `UpdateLocation` moves entity between spatial buckets correctly
+- Snapshot contains entity for each live entity in registry
 
 ---
 
-### Story 2.1.2 — LegendaryBeast entity
+### Story 2.1.2 — BeastCatalog and LegendaryBeast entity
 
-**What:** Implement `LegendaryBeast` as a concrete `IEntity`. Implement `BeastSpecies` enum and baseline stat table in `SimConfig`.
+**What:** Load `config/beasts.toml` into `BeastCatalog`. Implement `LegendaryBeast` as a concrete `IEntity` driven by catalog data, not a hardcoded enum.
 
-**LegendaryBeast fields:**
+**BeastSpeciesConfig** (one entry per `[[beasts]]` block in beasts.toml):
+```csharp
+public sealed class BeastSpeciesConfig
+{
+    public string Id { get; init; } = "";
+    public string DisplayName { get; init; } = "";
+    public string Category { get; init; } = "";   // "predator" | "mythological"
+    public string[] Biomes { get; init; } = [];
+    public int MaxPerWorld { get; init; }
+    public int PackSizeMin { get; init; }
+    public int PackSizeMax { get; init; }
+    public bool PrefersCompany { get; init; }
+    public bool Hibernates { get; init; }
+    public string[] Abilities { get; init; } = [];
+
+    public int Health { get; init; }
+    public int Strength { get; init; }
+    public int Speed { get; init; }
+    public float Aggression { get; init; }
+    public int TerritoryRadius { get; init; }
+    public float FoodDepletion { get; init; }
+    public float FoodFromHunt { get; init; }
+    public float FoodFromGraze { get; init; }
+    public int AgeMinSeasons { get; init; }
+    public int AgeMaxSeasons { get; init; }
+    public int ReproductionMinAge { get; init; }
+    public float ReproductionFoodThreshold { get; init; }
+    public float ReproductionChance { get; init; }
+
+    // Predator legendary variant (ignored for mythological category)
+    public float LegendaryChance { get; init; }
+    public float LegendaryHealthMult { get; init; }
+    public float LegendaryStrengthMult { get; init; }
+    public float LegendaryAgeMult { get; init; }
+    public float LegendaryTerritoryMult { get; init; }
+    public string[] LegendaryNameAdjectives { get; init; } = [];
+    public string[] LegendaryNameNouns { get; init; } = [];
+
+    // Mythological creature names (replaces legendary_ prefix for this category)
+    public string[] NameAdjectives { get; init; } = [];
+    public string[] NameNouns { get; init; } = [];
+}
+```
+
+**BeastCatalog** — loaded once at startup, injected into `BeastFactory`:
+```csharp
+public sealed class BeastCatalog
+{
+    public IReadOnlyList<BeastSpeciesConfig> AllSpecies { get; }
+    public BeastSpeciesConfig? Get(string id);
+    public IEnumerable<BeastSpeciesConfig> ByCategory(string category);
+    public IEnumerable<BeastSpeciesConfig> ByBiome(string biome);
+
+    public static BeastCatalog Load(string tomlPath);
+}
+```
+
+**LegendaryBeast:**
 ```csharp
 public sealed class LegendaryBeast : IEntity
 {
     public EntityId Id { get; }
     public EntityKind Kind => EntityKind.LegendaryBeast;
-    public TileCoord Location { get; private set; }
-    public TileCoord HomeTile { get; }          // territory centre
-    public bool IsAlive { get; private set; } = true;
+    public TileCoord Location { get; internal set; }
+    public TileCoord HomeTile { get; }
+    public bool IsAlive { get; internal set; } = true;
 
-    public BeastSpecies Species { get; }
-    public string Name { get; }                  // generated at spawn
+    public string SpeciesId { get; }          // matches BeastSpeciesConfig.Id
+    public string Name { get; }               // generated at spawn
+    public bool IsLegendary { get; }          // legendary specimen or mythological
 
-    // Component data
-    public NeedsVector Needs;       // Safety, Food only (others always 1.0)
-    public PersonalityVector Personality; // Aggression, Curiosity only
-    public HealthData Health;
+    public int MaxHealth { get; }
+    public int Health { get; internal set; }
+    public int Strength { get; }
+    public int Speed { get; }
+    public float Aggression { get; }
+    public int TerritoryRadius { get; }
+    public string[] Abilities { get; }        // tags — no mechanical effect in M2.1
 
-    public int Age { get; private set; }         // in seasons
-    public int MaxAge { get; }                   // from species config + noise
+    public float FoodNeed { get; internal set; }    // 0.0–1.0
+    public float SafetyNeed { get; internal set; }  // 0.0–1.0
+    public int AgeSeason { get; internal set; }
+    public int MaxAgeSeason { get; }
+
+    // Derived from species config — carried for hot-path access
+    public float FoodDepletion { get; }
+    public float FoodFromHunt { get; }
+    public float FoodFromGraze { get; }
+    public float ReproductionChance { get; }
+    public int ReproductionMinAge { get; }
+    public float ReproductionFoodThreshold { get; }
+    public bool Hibernates { get; }
+
+    public IEnumerable<ICommand> EmitCommands(IWorldStateReadOnly world, SimPhase phase);
+    public EntitySnapshot ToSnapshot();
 }
 ```
 
-**BeastSpecies enum:** `Serpent, Drake, Wurm, Colossus, Phantom` — five types. Stats in `SimConfig.Beasts.Species[BeastSpecies]`.
-
-**SimConfig additions** (`[beasts]` section):
-```toml
-[beasts]
-spawn_count           = 8      # Beasts alive at world start
-wander_radius_tiles   = 15     # Max tiles from home tile per season
-food_depletion_rate   = 0.15   # Needs.Food depletes this much per season
-food_from_fertile_tile = 0.4   # Grazing: Food restored per season on fertile tile
-starvation_health_loss = 0.2   # Health lost per season when Food < 0.2
-old_age_min_seasons   = 80
-old_age_max_seasons   = 200
-reproduction_min_age  = 20
-reproduction_food_threshold = 0.7
-reproduction_chance   = 0.04   # Per season when conditions met
-```
-
 **Tests:**
-- Beast construction sets correct species stats
-- Age increments each season tick
+- `BeastCatalog.Load` parses wolf entry correctly
+- Constructed `LegendaryBeast` carries stats from species config
 
 ---
 
 ### Story 2.1.3 — Beast spawning at world start
 
-**What:** Spawn `N` beasts during world init (after world gen completes, before first sim tick). Beasts are placed on valid land tiles with biome appropriate to their species. Beast names are procedurally generated from a seeded word list.
+**What:** Spawn beasts after world gen completes, before the first sim tick, using `BeastFactory` + `BeastSpawner`.
 
-**Spawning logic** (in `WorldInitializer` or similar, called from `SimLoop` init path):
-1. Collect candidate tiles: land, not ocean, not HighMountain, fertility ≥ threshold
-2. Filter by species biome affinity (Serpent prefers coastal/swamp, Drake prefers mountain, etc.)
-3. Pick N tiles with minimum separation (Poisson-disc style, reuse `WorldRng`)
-4. Generate beast via `BeastFactory.Spawn(species, tile, seed)`
-5. Register in `EntityRegistry`, add to spatial index
+**Spawn budget** from `beasts.toml` `[beast_spawn]`:
+- `target_density_per_10k_tiles` → total beast count scales with world size
+- `myth_start_fraction` = 0.20 → 20% of mythological creatures present at year 0; others scheduled via `BeastEmergenceSchedule`
 
-**Name generation:** Two-part: adjective + noun from small seeded word lists. `WorldRng.IntAt(seed, 0, entitySeq, 0, SaltName) % wordList.Length`. Deterministic from seed.
+**BeastFactory.Spawn:**
+```csharp
+public static LegendaryBeast Spawn(
+    BeastSpeciesConfig species,
+    TileCoord home,
+    bool isLegendary,
+    WorldRng rng,
+    long entitySeq)
+```
+1. Roll `isLegendary` check if `category == "predator"`: `rng.FloatAt(worldSeed, 0, entitySeq, 0, SaltLegendary) < species.LegendaryChance`
+2. Apply legendary multipliers to health, strength, age, territory radius if legendary
+3. Generate name: pick adjective-form or noun-form at 50/50 if both lists non-empty; prepend "The"
+4. `FoodNeed` starts at `0.8f`, `SafetyNeed` starts at `1.0f`
+
+**BeastSpawner.SpawnAll** (called from `WorldInitializer`):
+1. For each predator species: collect biome-matching land tiles → Poisson-disc select N spawn points (N ≈ `maxPerWorld × startFraction`, min 1) → call `BeastFactory.Spawn` per beast, register in `EntityRegistry`
+2. For mythological species: roll spawn count from `myth_start_fraction` (floor/ceil); remaining go into `BeastEmergenceSchedule` — a `List<(int EmergenceYear, string SpeciesId)>` stored on `WorldState`, year seeded deterministically
+3. Emit `BeastSpawned` event for each beast placed at world start; emit `BeastScheduledEmergence` (Background, not shown in event log) for each deferred one
+
+**BeastEmergenceSchedule** processed each annual tick in `EntityBehaviorPhase`: if `CurrentYear >= entry.EmergenceYear`, spawn the beast and emit `BeastAwakened` (Regional tier).
 
 **Tests:**
-- Spawned beasts are on valid tiles
-- Same seed produces same beasts at same locations
+- Same seed produces same beast positions
+- Spawned beasts are on valid biome-matching tiles
+- Mythological count at spawn respects `myth_start_fraction`
 
 ---
 
 ### Story 2.1.4 — Beast behaviour (EmitCommands)
 
-**What:** Implement `LegendaryBeast.EmitCommands()` producing `MoveToTile`, `Rest`, `Graze`, `Attack` commands. Simple priority-based selection, no utility scoring needed (beasts are not complex enough).
+**What:** Implement `LegendaryBeast.EmitCommands()`. Priority-based, not utility-scored — beasts are not complex enough to need softmax.
 
-**Behaviour priority (checked in order):**
-1. **Safety threat** — if another entity with `IsAggressive` is on same or adjacent tile: emit `Flee` (move away from threat, toward home if possible)
-2. **Starving** — if `Needs.Food < 0.2`: move toward highest-fertility adjacent tile
-3. **Graze** — if on fertile tile and `Needs.Food < 0.8`: emit `Graze` (restore food)
-4. **Wander** — if within wander radius: pick random adjacent tile weighted by biome affinity, emit `MoveToTile`
-5. **Return** — if outside wander radius: emit `MoveToTile` toward home tile
-6. **Rest** — otherwise: emit `Rest`
-
-**Commands needed** (add to `PlayerCommands.cs` or a new `EntityCommands.cs`):
+**Entity commands** (new file `WorldEngine.Sim/Entities/EntityCommands.cs`):
 ```csharp
 public sealed record MoveToTile(EntityId EntityId, TileCoord Destination) : ICommand;
 public sealed record Graze(EntityId EntityId) : ICommand;
@@ -154,108 +256,197 @@ public sealed record Attack(EntityId Attacker, EntityId Target) : ICommand;
 public sealed record Flee(EntityId EntityId, TileCoord AwayFrom) : ICommand;
 ```
 
-**CommandResolver additions:** Resolve each command. `MoveToTile` → update `Location`, update spatial index. `Graze` → increment `Needs.Food`. `Attack` → reduce target `Health`. `Flee` → move to safest adjacent tile.
+**Behaviour priority (checked top to bottom, first match wins):**
+1. **Hibernation check** — if `Hibernates && world.CurrentSeason == Season.Winter`: emit `Rest`, done
+2. **Safety threat** — if any entity with `IsAggressive(e)` is on the same or adjacent tile and is not same species: emit `Flee(this.Id, threatCoord)`
+3. **Starving** — if `FoodNeed < 0.2f`: move toward highest-fertility adjacent non-ocean tile
+4. **Hunt opportunity** — if `FoodNeed < 0.7f` and `Aggression > 0.4f` and a huntable entity (small beast, no `IsAlive` check needed — resolver handles) is adjacent: emit `Attack(this.Id, target.Id)`
+5. **Graze** — if on tile with `Fertility > 80` and `FoodFromGraze > 0` and `FoodNeed < 0.8f`: emit `Graze(this.Id)`
+6. **Wander** — if within `TerritoryRadius` of `HomeTile`: pick weighted-random adjacent land tile (weight = biome affinity from species config), emit `MoveToTile`
+7. **Return home** — if outside `TerritoryRadius`: emit `MoveToTile` toward `HomeTile` (step along direction vector)
+8. **Rest** — default
+
+`IsAggressive(IEntity e)` helper: returns `true` if `e` is a `LegendaryBeast` with `Aggression > 0.4f`. In M2.2+ this will cover characters too.
 
 **Tests:**
-- Beast on fertile tile with low food emits Graze
-- Beast outside wander radius emits MoveToTile toward home
-- MoveToTile resolution updates spatial index correctly
+- Beast on fertile tile with `FoodNeed < 0.8` and `FoodFromGraze > 0` emits `Graze`
+- Beast outside territory radius emits `MoveToTile` toward home
+- Hibernating beast in winter emits `Rest` unconditionally
 
 ---
 
-### Story 2.1.5 — Beast needs and health resolution
+### Story 2.1.5 — Combat resolution (CommandResolver additions)
 
-**What:** Implement the seasonal needs update and health consequences. Runs in `EnvironmentalPhase` (or a new `EntityPhase` — see decision below).
+**What:** Resolve `Attack`, `MoveToTile`, `Graze`, `Rest`, `Flee` commands. Combat is a **multi-round sub-process within a single tick** (DS-E5).
 
-**// DECISION:** Beast needs are updated in a new `EntityPhase` that runs after `EnvironmentalPhase`. This keeps entity logic out of the environmental update and sets up the slot for all future character phases.
+**MoveToTile:** Update `Location`, call `EntityRegistry.UpdateLocation`.
 
-**Each season tick per living beast:**
-1. `Needs.Food -= cfg.FoodDepletionRate`
-2. If on fertile tile and emitted Graze last tick: `Needs.Food += cfg.FoodFromFertileTile`
-3. If `Needs.Food < 0.2`: `Health.Value -= cfg.StarvationHealthLoss`
-4. `Age += 1`
-5. If `Age >= MaxAge`: mark dead, emit `BeastDied` event
-6. If `Health.Value <= 0`: mark dead, emit `BeastDied` event
-7. Reproduction check: if `Age >= ReproductionMinAge && Needs.Food >= FoodThreshold && WorldRng < ReproductionChance`: spawn child beast near home tile, emit `BeastReproduced` event
+**Graze:** `FoodNeed = Math.Min(1.0f, FoodNeed + species.FoodFromGraze)`.
 
-**Removal:** Dead beasts are removed from `EntityRegistry` at end of tick (after all commands resolved, before snapshot).
+**Rest:** No state change. Placeholder for future fatigue system.
 
-**Tests:**
-- Beast with low food loses health each season
-- Beast dies when health reaches zero; removed from registry
-- Reproduction only fires when conditions met
+**Flee:** Find adjacent tile furthest from `AwayFrom`; emit `MoveToTile` to that tile (resolver processes moves in order, so this effectively chains).
 
----
+**Attack — multi-round combat loop:**
+```csharp
+// Collect all Attack commands targeting the same pair this tick
+// Run up to CombatMaxRoundsPerTick rounds:
+for (int round = 0; round < cfg.CombatMaxRoundsPerTick && attacker.IsAlive && target.IsAlive; round++)
+{
+    // Attacker side: up to CombatMaxGangSize pack members attack target
+    foreach (var gangMember in GetGangMembers(attacker, cfg.CombatMaxGangSize))
+    {
+        float atkRoll = gangMember.Strength * world.GetRandomFloat(gangMember.Id, round * 10);
+        float defRoll = (target.Health / (float)target.MaxHealth) * world.GetRandomFloat(target.Id, round * 10 + 1);
+        if (atkRoll > defRoll)
+            target.Health -= gangMember.Strength;
+    }
+    if (target.Health <= 0) { KillEntity(target, attacker, pendingEvents); break; }
 
-### Story 2.1.6 — Beast event types
+    // Target retaliates against one random gang member
+    var retaliationTarget = gangMembers[rng.Next(gangMembers.Count)];
+    float retRoll = target.Strength * world.GetRandomFloat(target.Id, round * 10 + 2);
+    float retDefRoll = (retaliationTarget.Health / (float)retaliationTarget.MaxHealth)
+                       * world.GetRandomFloat(retaliationTarget.Id, round * 10 + 3);
+    if (retRoll > retDefRoll)
+        retaliationTarget.Health -= target.Strength;
+    if (retaliationTarget.Health <= 0) KillEntity(retaliationTarget, target, pendingEvents);
 
-**What:** Add beast-related `EventType` values and emit them from `EntityPhase`.
-
-**New EventType values:**
-- `BeastSpawned` — emitted at world init for each beast
-- `BeastDied` — natural death (age or starvation); payload includes `{BeastId, Name, Species, Cause, Age}`
-- `BeastSlain` — killed by another entity; payload includes attacker
-- `BeastReproduced` — payload: `{ParentId, ChildId, ChildName}`
-- `BeastEncounter` — two beasts on same tile (informational, Background tier)
-- `BeastMigrated` — beast home tile shifted (if we implement home drift)
-
-**VerbClass assignments:**
-- `BeastDied/Slain` → `Death`
-- `BeastReproduced` → `Creation`
-- `BeastEncounter` → `Interaction`
-- `BeastSpawned` → `Creation`
-
-**Tier defaults:**
-- `BeastSpawned` → Background
-- `BeastDied/Slain` → Regional (notable named entity dies)
-- `BeastReproduced` → Background
-
-**Tests:**
-- BeastDied event is recorded to DB with correct payload
-- Tier classification matches spec
-
----
-
-### Story 2.1.7 — Beast display in UI
-
-**What:** Show beast locations on the tile map. Show beast info in tile inspector when a beast is present.
-
-**TileMapRenderer:** After drawing tile biome color, draw a small symbol (a 4×4 or 6×6 pixel colored square) for each entity on the tile. Beast = dark red square. Position it slightly offset from tile center to avoid covering the biome color entirely.
-
-**TileInspectorPanel:** When `snapshot.InspectedTile` has entities, add a section below terrain info:
+    // Retreat check after each round
+    if (target.Health < target.MaxHealth * cfg.RetreatHealthFraction)
+    {
+        RetreatEntity(target, attacker.Location, world);
+        break;
+    }
+}
 ```
-Entities (1):
-  The Pale Serpent [Serpent, Age 34, Health 0.82, Food 0.61]
+`GetGangMembers(attacker, max)` — returns all `LegendaryBeast` on the same tile as `attacker` with the same `SpeciesId`, up to `max` count, sorted by `Health` descending.
+
+`KillEntity` marks `IsAlive = false`, adds to removal list, queues `BeastSlain` PendingEvent.
+
+**Tests:**
+- Two beasts of equal strength: one dies or retreats within `CombatMaxRoundsPerTick` rounds
+- Pack of 10 wolves vs bear: at most 3 wolves attack per round (`CombatMaxGangSize = 3`)
+- Retreating beast location moves away from attacker
+
+---
+
+### Story 2.1.6 — Needs, health, and lifecycle resolution
+
+**What:** Per-season needs update, starvation, aging, death, reproduction. Runs in `SimPhase.EntityBehavior = 4`.
+
+**Each season tick per live beast (before EmitCommands is called):**
 ```
-Use existing `TileDisplayData.EntitiesPresent` array (added in 2.1.1). The inspector reads entity data from the snapshot.
+1. AgeSeason += 1
+2. FoodNeed -= species.FoodDepletion
+   if Hibernates && CurrentSeason == Winter: FoodDepletion *= 0.2 (cold-blooded)
+3. Clamp FoodNeed to [0, 1]
+4. if FoodNeed < 0.2f: Health -= starvation_health_loss (from sim_config.toml [beasts] section)
+5. if AgeSeason >= MaxAgeSeason: KillEntity(this, cause=Age)
+6. if Health <= 0: already dead (combat resolver marks this), skip
+7. Reproduction check:
+   if AgeSeason >= ReproductionMinAge
+   && FoodNeed >= ReproductionFoodThreshold
+   && liveCountBySpecies[SpeciesId] < species.MaxPerWorld
+   && rng < species.ReproductionChance:
+     child = BeastFactory.Spawn(species, HomeTile, isLegendary=false, rng, nextEntitySeq)
+     EntityRegistry.Add(child)
+     QueueEvent(BeastReproduced, {ParentId, ChildId, ChildName})
+```
 
-**WorldSnapshot additions:** `EntitySnapshot` record per entity: `(EntityId Id, EntityKind Kind, string Name, TileCoord Location, float Health, float Food, int Age)`. Snapshot builder populates these from `EntityRegistry`.
+**Dead entity cleanup:** after all commands resolved and all events queued for the tick, `EntityRegistry.Remove(id)` for every entity marked `!IsAlive`.
 
-**Tests:** No new tests needed here — this is UI-only. Manual testing: beasts visible on map, inspector shows correct info.
+**sim_config.toml additions** (the few beast lifecycle constants that aren't species-specific):
+```toml
+[beasts]
+starvation_health_loss = 5    # health points lost per season when FoodNeed < 0.2
+```
+
+**Tests:**
+- Beast with `FoodNeed = 0.0` loses health each season
+- Beast reaches `MaxAgeSeason` → marked dead, `BeastDied` event queued
+- Reproduction does not fire when species is at `MaxPerWorld` cap
+
+---
+
+### Story 2.1.7 — Beast event types
+
+**What:** Add beast-specific `EventType` values. All beast events are emitted as `PendingEvent` records; Phase 7 enriches them as with all other events.
+
+**New EventType values** (add stable int IDs starting at 2001):
+```csharp
+BeastSpawned        = 2001,   // world init or BeastFactory.Spawn at runtime
+BeastAwakened       = 2002,   // mythological creature emerges from schedule
+BeastDied           = 2003,   // natural death (age or starvation)
+BeastSlain          = 2004,   // killed by another entity
+BeastReproduced     = 2005,   // offspring spawned
+BeastEncountered    = 2006,   // two beasts on same tile (informational)
+```
+
+**VerbClass and tier assignments:**
+| EventType | VerbClass | Default Tier |
+|---|---|---|
+| BeastSpawned | Creation | Background |
+| BeastAwakened | Creation | Regional |
+| BeastDied | Destruction | Regional |
+| BeastSlain | Destruction | Regional |
+| BeastReproduced | Creation | Background |
+| BeastEncountered | Interaction | Background |
+
+**Payload schemas** (JSON in `PendingEvent.PayloadJson`):
+- `BeastDied/Slain`: `{"beastId": long, "name": str, "speciesId": str, "isLegendary": bool, "ageSeason": int, "cause": "Age"|"Starvation"|"Combat", "killerName": str|null}`
+- `BeastAwakened`: `{"beastId": long, "name": str, "speciesId": str, "location": [x,y]}`
+- `BeastReproduced`: `{"parentId": long, "childId": long, "childName": str, "speciesId": str}`
+
+**Tests:**
+- `BeastDied` event written to DB with correct payload and `VerbClass.Destruction`
+- `BeastAwakened` is `EventTier.Regional`
+
+---
+
+### Story 2.1.8 — Beast display in UI
+
+**What:** Render beast positions on the tile map. Show beast data in tile inspector.
+
+**TileMapRenderer:** After drawing all tile fills, iterate `snapshot.AllTiles` — for each tile with `EntitiesPresent.Length > 0`, draw a 5×5 pixel marker at tile centre. Colour: `Color.DarkRed` for normal beasts, `Color.Gold` for `IsLegendary` beasts. Use the existing 1×1 `_pixel` texture.
+
+**TileInspectorPanel:** When `InspectedTile != null` and `EntitiesPresent.Length > 0`, add a section below terrain data:
+```
+Entities (2):
+  The Pale Wolf [Wolf ★, Age 34s, HP 82%, Food 61%]
+  Wolf         [Wolf,   Age 12s, HP 100%, Food 78%]
+```
+`★` indicates `IsLegendary`. Data comes from `snapshot.EntitySnapshots[id]`. Inspector owns no entity state — all reads are from the snapshot.
+
+**Tests:** UI-only; manual test per runbook update.
 
 ---
 
 ## Definition of Done
 
-- [ ] `IEntity`, `EntityId`, `EntityKind`, `EntityRegistry` implemented and tested
-- [ ] `LegendaryBeast` with `NeedsVector`, `PersonalityVector`, `HealthData` implemented
-- [ ] Beast spawning at world init — deterministic from seed
-- [ ] `EntityPhase` added to sim loop, processes beasts each tick
-- [ ] Beast commands: `MoveToTile`, `Graze`, `Rest`, `Attack`, `Flee` implemented and resolved
-- [ ] Needs/health/age/death/reproduction resolved each season
-- [ ] Beast event types added; `BeastDied`, `BeastSlain`, `BeastReproduced` recorded to DB
-- [ ] Beast locations visible on tile map
-- [ ] Tile inspector shows beast info
-- [ ] All new `SimConfig` values in `sim_config.toml`
+- [ ] `IEntity`, `EntityId`, `EntityKind`, `EntityRegistry` implemented; all tests pass
+- [ ] `BeastCatalog` loads `config/beasts.toml`; `BeastSpeciesConfig` covers all fields
+- [ ] `LegendaryBeast` driven by catalog data; no hardcoded species enum
+- [ ] `BeastFactory` + `BeastSpawner` produce deterministic placements from seed
+- [ ] `BeastEmergenceSchedule` stored on `WorldState`; mythological beasts emerge on schedule
+- [ ] `EntityBehaviorPhase` (SimPhase 4) processes beast lifecycle and EmitCommands each tick
+- [ ] Multi-round combat resolver with gang-size cap and retreat logic
+- [ ] Beast event types 2001–2006 in `EventType` enum with stable IDs
+- [ ] `TileDisplayData.EntitiesPresent` populated; beast markers visible on map
+- [ ] Tile inspector shows beast name, species, legendary flag, age, health, food
+- [ ] `IWorldStateReadOnly` entity lookup methods implemented
+- [ ] `EntitySnapshot.ToSnapshot()` on `LegendaryBeast`
 - [ ] All tests pass, zero warnings
-- [ ] Reproducibility test: same seed → same beast names, locations, deaths
+- [ ] Reproducibility test: same seed → same beast names, positions, death years
 
 ---
 
-## Open Questions (resolve during implementation)
+## Open Decisions (propose and record with `// DECISION:` comment)
 
-1. **Beast–beast combat:** When two beasts occupy the same tile and one is aggressive, does combat resolve immediately or does each emit `Attack` and the resolver handles contention? → Prefer the command/resolver pattern for consistency with the rest of the sim.
+1. **Hibernation food depletion** — `0.2×` multiplier while `Hibernates && Winter`. Confirm this is low enough that hibernators don't starve in a long winter. Tune in beasts.toml if needed.
 
-2. **Beast–tile damage:** Should aggressive beasts reduce tile fertility slightly? → Defer to M3; mark with `// V2: beast terrain damage`.
+2. **Aquatic movement** — `aquatic`-tagged beasts can enter ocean tiles; all others can enter `coastal_water` (wading). Enforce in `BeastSpawner` valid-tile check and in `MoveToTile` resolver.
 
-3. **Beast home tile drift:** Should a beast's home tile shift slowly toward where it feeds? → Not for 2.1; too much complexity for the validation phase.
+3. **Same-species territory** — beasts of the same `SpeciesId` with overlapping territory: movement priority step 7 (Wander) should avoid tiles already occupied by a same-species beast where possible. Cross-species follows normal aggression roll.
+
+4. **Beast–tile damage** — defer; `// V2: beast terrain damage — aggressive beasts reduce tile Fertility`.
