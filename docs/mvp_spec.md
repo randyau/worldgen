@@ -1,7 +1,7 @@
 # World Engine — MVP Specification
 **Version:** 0.3  
-**Date:** June 18, 2026 (updated June 22, 2026)  
-**Status:** Milestone 1 COMPLETE — 2026-06-22. Milestones 2-4 defined at summary level only.
+**Date:** June 18, 2026 (updated June 23, 2026)  
+**Status:** Milestone 1 COMPLETE (2026-06-22). Milestone 2 COMPLETE (2026-06-23). Milestones 3-4 defined at summary level only.
 
 ---
 
@@ -297,6 +297,17 @@ Heroes, rulers, legendary figures. Full personality/aptitude/skills system (12-t
 Aggregate population dynamics via PopulationDynamicsPhase. Settlement growth (fertility × safetyScore × PopGrowthRate) and decline (PopDecayRate). Specialist crystallization from population pressure (configurable thresholds per role). Civ-born character generation: new Tier 1 heroes emerge from stable settlements proportional to population. Population-driven events (SettlementGrew/Shrank/Abandoned). Post-playtest fixes: balanced growth vs. decay rates; gated EstablishSettlement to prevent multi-settlement founding.
 
 Bug fixes applied post-M2 close: `PhaseRunner` EntityId long truncation (int→long in foreach); `CharacterBehaviorPhase` operator precedence in civ-born seq derivation.
+
+**Post-M2 Character Narrative Improvements** ✓ (June 23, 2026)  
+A second pass addressing narrative gaps found during playtest — zero wars/conflicts in 449 simulated years:
+
+- **Settlement map visibility** — `SettlementSnapshot` added to `WorldSnapshot`; map renderer draws colored markers; inspector shows settlement section (civ, pop, health, founded year).
+- **Wanderlust system** — `TicksInCurrentTile` counter on `Tier1Character`; travel utility score scales with time stationary. Role multipliers: founders 15%, members 50%, free agents 100%. Curiosity floor ensures even low-curiosity chars occasionally wander.
+- **Social action cap** — Changed from one social action per co-located character to one best-target social action per tick total, improving action diversity and travel frequency.
+- **Event log suppression** — `Negotiated` events suppressed in config (were 79% of all events, flooding the DB).
+- **Territorial trust drain** — Aggressive founders (Aggression > 0.55) on their settlement tile drain trust of foreign-civ visitors by 0.025/tick — seeds conflict that was previously impossible.
+- **Beast-character combat** — Aggressive predators on same tile as characters have 15% chance to attack per tick. Added `EventType.BeastAttackedChar = 2007`. Characters can die from beast attacks.
+- **Ancestry system** — 6 ancestries (human, elf, dwarf, dark_elf, orc, halfling) loaded from `config/ancestries.toml`. Ancestry selected at spawn by biome weights; personality/aptitude biases shift trait distributions; ancestry-specific name lists; distinct lifespan ranges. Cultural trust drains: first-meeting modifier applied once; per-tick drain scaled by cultural distance + personality stability mismatch. `AncestryId` stored on `IdentityData`, `EntitySnapshot`, `CharacterSnapshot`. Inspector shows ancestry next to name.
 
 ---
 

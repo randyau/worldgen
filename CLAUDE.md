@@ -21,9 +21,9 @@ The primary audience is worldbuilders and writers, not traditional gamers. The c
 **Current milestone status:** Milestone 2 COMPLETE (2026-06-23). All M2 phases archived. Beginning Milestone 3 (History & Narrative).
 
 **For coding sessions — read the active phase doc:**
-- `docs/phases/` — active phase docs for the current milestone (add new M2 phase docs here)
-- `docs/phases/archive/` — all M1 phases archived here for reference
-- `docs/testing/runbook_m1.md` — M1 manual test runbook (use during testing, reference for M2 regression testing)
+- `docs/phases/` — active phase docs for the current milestone (empty until M3 phase docs are written)
+- `docs/phases/archive/` — all M1 and M2 phases archived here for reference
+- `docs/testing/runbook_m1.md` — M1 manual test runbook (reference for regression testing)
 
 **Reusable code patterns and test templates:**
 - `docs/snippets/patterns.md` — command pattern, WorldRng, tile iteration, StateCache, etc.

@@ -1015,8 +1015,17 @@ Pre-write gate (EventGate) blocks noise before database insertion — tuned empi
 ### Simulation Config (Balance Without Recompiling)
 All numeric simulation constants in TOML file loaded at startup. Injected into sim systems via constructor. Multiple named profiles supported.
 
+### Ancestry System (Post-M2 Extension)
+Six playable ancestries defined in `config/ancestries.toml`, loaded by `AncestryLoader` alongside `sim_config.toml`. Each ancestry specifies: biome-weighted spawn probability, personality/aptitude bias offsets (max ±0.2; individual trait noise ≈ stddev 0.2 — individuals are more variable than their ancestry), lifespan range in seasons, ancestry-specific name/epithet pools, first-meeting trust modifiers, and cultural distance values for per-tick trust drains.
+
+**Trait bias formula:** `BiasedTrait(bias) = (0.5 + bias) + (gaussian - 0.5) * 1.2`, clamped to [0.1, 0.9]. A +0.2 bias shifts the mean from 0.5 → 0.7 while individual variation (stddev ≈ 0.2) remains equal to the maximum bias, intentionally keeping individuals more distinctive than their ancestry average.
+
+**Loading architecture:** `AncestryRegistry` is stored as a non-TOML property on `SimConfig` (`SimConfig.AncestryRegistry`), populated by `AncestryLoader.LoadOrDefault()` called inside `SimConfigLoader.LoadOrCreateDefault()` after TOML parsing. This keeps the ancestry file format independent of the flat SimConfig structure Tomlyn expects.
+
+**Trust dynamics added:** Two passive per-tick drains for cross-civ chars sharing a tile: cultural distance drain (proportional to ancestry cultural distance 0–1) + personality stability mismatch drain. One-time first-meeting modifier applied when the relationship edge is first created. These combine with territorial pressure (aggressive founders drain foreign visitors) to make the rivalry pipeline reachable within a few years of contact.
+
 ---
 
 *Document Version: 0.3*  
-*Last Updated: June 18, 2026*  
-*Status: All Tier A and Tier B decisions complete*
+*Last Updated: June 23, 2026*  
+*Status: All Tier A and Tier B decisions complete. Post-M2 ancestry and trust system added.*

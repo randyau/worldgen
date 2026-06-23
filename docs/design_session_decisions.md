@@ -1,9 +1,9 @@
 # World Engine — Design Session Decisions
 **Date:** June 2026  
-**Status:** All four pre-implementation design sessions complete. Decisions are locked.  
-**Companion:** `world_engine_implementation_decisions_v0.3.md` (architecture), `interface_contracts.md` (updated contracts)
+**Status:** Five design sessions complete. Sessions A–D are M1 pre-implementation decisions. Session E covers post-M2 character behavior and ancestry (June 2026).  
+**Companion:** `implementation_decisions_v0.3.md` (architecture), `interface_contracts.md` (updated contracts)
 
-Read this document before implementing any Epic 1.2+ story. Every decision here has downstream implications.
+Read this document before implementing any character-related story. Every decision here has downstream implications.
 
 ---
 
@@ -276,6 +276,56 @@ Candidate lists deferred to M4 profiling. At 120k tiles, simple per-tile checks 
 
 ---
 
+---
+
+## Design Session E — Post-M2 Character Behavior and Ancestry
+
+**Date:** June 2026. Post-milestone playtest found zero wars/rivalries in 449 simulated years. The following decisions address this by seeding the conflict pipeline and giving characters more varied lives.
+
+### E1: Wanderlust via tile-dwell counter
+**Decision:** Add `TicksInCurrentTile` to `Tier1Character`. Travel utility score gets a bonus that scales from 0 → `WanderlustBonus` over `WanderlustMaxTicks` ticks stationary (approximately 2 seasons). The bonus is multiplied by a role factor: founders × 0.15, civ members × 0.5, free agents × 1.0. Curiosity scales from a floor (0.3 at Curiosity=0) to 1.0 at Curiosity=1, so even the least curious roles occasionally leave.  
+**Rationale:** Without wanderlust, staying put and socializing always scored higher than travel — characters never expanded or explored. Role modifiers prevent kings from wandering away from their settlements while keeping rangers and outcasts mobile.
+
+### E2: Social action cap — one target per tick
+**Decision:** Changed from emitting one social command per co-located character to picking the single best-scoring social target. With 10 chars per tile, uncapped softmax allocated ~9.5% probability to travel; capped → ~51%.  
+**Rationale:** The probability mass was spread too thin across many social targets. Capping forces the char to choose their most important relationship interaction, which also makes the action selection more narratively coherent.
+
+### E3: Territorial trust drain to seed rivalry
+**Decision:** Aggressive founders (Aggression > threshold, default 0.55) at their own settlement tile drain trust of foreign-civ visitors by a fixed amount per tick (0.025). This stops when the relationship is already decided (ally/rival/war).  
+**Rationale:** `RivalryDeclared` required Trust < -0.1, but trust only went upward through positive interactions. Territorial pressure creates the first negative trust without requiring explicit hostility, and emergent within a few years of cross-civ contact.
+
+### E4: Beast-character combat
+**Decision:** Predatory beasts (Aggression ≥ 0.4) on the same tile as a character have a 15% per-tick chance to attack. Damage = `beast.Strength × 0.3`, floored at 1. Characters can die. New event type `BeastAttackedChar = 2007`.  
+**Rationale:** `FindPrey()` on `LegendaryBeast` only targeted other beasts — characters were completely invisible to them. Adding this creates the adventure/survival narrative the history log needed.
+
+### E5: Ancestry system design
+**Decision:** Six ancestries loaded from `config/ancestries.toml`: human (baseline), elf (long-lived, curious), dwarf (steadfast, mountain-born), dark_elf (aggressive, long-lived), orc (short-lived, aggressive), halfling (sociable, honest). Each ancestry defines:
+- Biome-weighted spawn probability
+- Personality and aptitude bias offsets (max ±0.2 — individual variation ≈ stddev 0.2, equal to max bias, keeping individuals more distinctive than their ancestry stereotype)
+- Lifespan range in seasons (orc 120–320 → 30–80 years; elf 800–2000 → 200–500 years)
+- Ancestry-specific first-name and epithet lists
+- First-meeting trust modifiers and cultural distance values
+
+**Rejected alternatives:**
+- Configuring ancestry at world-builder time (deferred — UI for world config is M3/M4 scope)
+- Mixed-ancestry tracking (deferred — 5% cutoff threshold designed but not implemented; traces below threshold are dropped on birth)
+- Color-coding by ancestry in UI (deferred — would require filtering controls not in scope for the current debug UI)
+- Tolkien-style names (rejected — own lists instead; more original and avoids IP issues)
+
+### E6: Cultural and personality trust drains
+**Decision:** Two passive per-tick drains applied when characters of different civs share a tile:
+1. `CulturalDistance × CulturalDistanceDrainRate` — how alien the ancestries feel to each other (elf/dark_elf: 0.70; human/halfling: 0.10)
+2. `|stabilityA - stabilityB| × PersonalityMismatchDrainRate` — chars with very different Stability punish each other
+
+First-meeting modifier (one-time): average of both ancestries' `FirstMeetingTrust` for the other, applied at the tick the relationship edge is first created.  
+**Rationale:** These create organic negative trust gradients between mixed-ancestry civs even without direct conflict, making cross-ancestry political situations naturally more volatile.
+
+### E7: Ancestry loaded alongside SimConfig, not in it
+**Decision:** `AncestryRegistry` is stored as `SimConfig.AncestryRegistry` but NOT populated by Tomlyn — it's set by `AncestryLoader.LoadOrDefault()` called inside `SimConfigLoader.LoadOrCreateDefault()` after TOML loading. `ancestries.toml` lives in the same `config/` directory as `sim_config.toml`.  
+**Rationale:** TOML can't express the nested array-of-tables structure of ancestry configs using the existing flat `SimConfig` mapping approach. Separate loader keeps the ancestry format independent and follows the same pattern as `BeastCatalogLoader`.
+
+---
+
 ## New Types Introduced by Design Sessions
 
 | Type | Location | Purpose |
@@ -295,6 +345,10 @@ Candidate lists deferred to M4 profiling. At 120k tiles, simple per-tile checks 
 | `PendingEvent` | WorldEngine.Sim/Events/ | Phase 1 output, Phase 7 input |
 | `TileInspectorData` | WorldEngine.Sim/World/ | Full tile detail for UI inspector |
 | `WorldGenProgressQueue` | WorldEngine.UI/ | `ConcurrentQueue<(string, float)>` for progress |
+| `SettlementSnapshot` | WorldEngine.Sim/World/ | UI-facing settlement summary in WorldSnapshot |
+| `AncestryConfig` | WorldEngine.Sim/Config/ | Per-ancestry data (lifespan, biases, names, weights) |
+| `AncestryRegistry` | WorldEngine.Sim/Config/ | Dictionary wrapper + biome sampler for all ancestries |
+| `AncestryLoader` | WorldEngine.Sim/Config/ | Loads `config/ancestries.toml` alongside sim_config.toml |
 
 ## SimConfig Sections to Add
 

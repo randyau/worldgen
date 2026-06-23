@@ -1,8 +1,8 @@
 # World Engine — Interface Contracts
-**Version:** 0.5  
+**Version:** 0.6  
 **Date:** June 2026  
-**Status:** Updated for Milestone 2 complete (Character System + Population Dynamics).  
-**Changes from v0.4:** `PendingEvent` — added optional `EntityIds`. `EntitySnapshot` — added optional `CivName`. `CivId` — promoted to value type with `IsValid`. New: `EventEntities` DB table schema, `EventType` ranges for M2, `IHistoryGraphReadOnly.GetEventsByEntity` stub promoted to M3. `IWorldStateReadOnly` — `GetRelationship` uncommented (live for M2).
+**Status:** Updated for post-M2 character behavior (wanderlust, ancestry, cultural trust drains).  
+**Changes from v0.5:** `EntitySnapshot` — added `AncestryId`. `WorldSnapshot` — added `Settlements`. New sections: `IdentityData`, `AncestryConfig`, `AncestryRegistry`. `EventType` ranges updated (`BeastAttackedChar = 2007`).
 
 **Rule:** Do not add methods to these interfaces without updating this document first. Interface changes are breaking changes.
 
@@ -410,8 +410,96 @@ public sealed record EntitySnapshot(
     float FoodFraction,      // 0.0–1.0; -1 if entity has no Food need
     int AgeSeason,           // age in seasons
     bool IsAlive,
-    string? CivName = null   // M2+: set for Tier1Character with a valid CivId
+    string? CivName    = null,  // M2+: set for Tier1Character with a valid CivId
+    string AncestryId  = ""     // M2+: ancestry id from ancestries.toml; empty for non-character entities
 );
+```
+
+---
+
+## IdentityData
+
+Immutable record on `Tier1Character`. All fields are set at spawn and only change via record copy-with (e.g., `with { CivId = ... }`).
+
+```csharp
+public sealed record IdentityData(
+    string     Name,
+    string     Epithet,
+    string     AncestryId,   // key into AncestryRegistry / ancestries.toml
+    EntityId?  MotherId,
+    EntityId?  FatherId,
+    CivId      CivId,        // CivId.None if no civ; check .IsValid before use
+    int        BirthYear,
+    int        BirthSeason);
+```
+
+---
+
+## AncestryConfig
+
+Per-ancestry data loaded from `config/ancestries.toml`. Accessed via `SimConfig.AncestryRegistry`. Personality and aptitude fields are bias offsets added to the Gaussian mean of the `BiasedTrait()` formula in `CharacterFactory`.
+
+```csharp
+public sealed class AncestryConfig
+{
+    public string Id          { get; set; }  // "human", "elf", "dwarf", "dark_elf", "orc", "halfling"
+    public string DisplayName { get; set; }
+
+    public int MinLifespanSeasons { get; set; }  // inclusive lower bound
+    public int MaxLifespanSeasons { get; set; }  // exclusive upper bound
+
+    // Personality biases (+0.2 = mean shifts from 0.5 → 0.7; individual stddev ≈ 0.2 ≥ max bias)
+    public float BiasAmbition, BiasGreed, BiasAggression, BiasCompassion, BiasCuriosity,
+                 BiasCreativity, BiasRationality, BiasWonder, BiasLoyalty, BiasSociability,
+                 BiasHonesty, BiasStability;
+
+    // Aptitude biases — same additive pattern, clamped to [0.1, 0.9]
+    public float BiasDiligence, BiasFocus, BiasPerfectionism, BiasComposure, BiasAcuity, BiasIngenuity;
+
+    // Biome-weighted spawn probability — keys are snake_case BiomeType names
+    public Dictionary<string, float> SpawnWeights   { get; set; }
+    // One-time trust modifier on first interaction with this ancestry
+    public Dictionary<string, float> FirstMeetingTrust { get; set; }
+    // Cultural distance (0–1) driving passive per-tick trust drain
+    public Dictionary<string, float> CulturalDistance  { get; set; }
+
+    public string[] FirstNames { get; set; }  // ancestry-specific name pool
+    public string[] Epithets   { get; set; }
+}
+```
+
+**Trust drain formula (per tick, cross-civ chars sharing a tile):**
+```
+trust -= CulturalDistance[otherAncestryId] × CulturalDistanceDrainRate   // cultural mismatch
+trust -= |stabilityA - stabilityB| × PersonalityMismatchDrainRate         // personality clash
+```
+
+First-meeting modifier applied once (when `RelationshipGraph.Get(a,b) == null` before `GetOrCreate`):
+```
+trust += (FirstMeetingTrust[otherAncestryId] + other.FirstMeetingTrust[myAncestryId]) / 2
+```
+
+---
+
+## AncestryRegistry
+
+Loaded by `AncestryLoader.LoadOrDefault()`, stored on `SimConfig.AncestryRegistry`. Loaded alongside `sim_config.toml`.
+
+```csharp
+public sealed class AncestryRegistry
+{
+    public AncestryConfig? Get(string id);
+    public AncestryConfig GetOrHuman(string id);    // fallback to human default
+    public IReadOnlyCollection<AncestryConfig> All { get; }
+
+    // Biome-weighted ancestry sampling — used by CharacterFactory.Spawn()
+    public string SampleAncestry(BiomeType biome, int worldSeed, long seq, int salt);
+
+    public float GetFirstMeetingTrust(string idA, string idB);
+    public float GetCulturalDistance(string idA, string idB);  // symmetric fallback
+
+    public static readonly AncestryRegistry Empty;
+}
 ```
 
 ---
@@ -489,17 +577,25 @@ Query all events for a character: `SELECT * FROM Events WHERE Id IN (SELECT Even
 ## EventType Ranges
 
 ```
-Environmental / M1:  1xx–9xx    (volcanic, flood, drought, etc.)
-Beast:              2001–2006   (BeastSpawned, BeastDied, BeastHunted, BeastMigrated, BeastEvolved, BeastExtinct)
-Character lifecycle:3001–3004   (CharacterBorn, CharacterDied, CharacterCrystallized, CharacterLeveledUp)
-Character actions:  3101–3107   (CharacterMoved, CharacterRested, CharacterExplored, CharacterTrained,
-                                  CharacterForaged, CharacterHealed, CharacterCrafted)
-Civ/settlement:     3201–3205   (CivilizationFounded, CivilizationCollapsed, SettlementFounded,
-                                  RaidOccurred, NegotiationCompleted)
-Tier2 events:       3301–3306   (AppointedToRole, MerchantTradeCompleted, ScholarDiscovery,
-                                  PhysicianHealed, DiplomacyCompleted, ArtisanCrafted)
-Population:         3401–3403   (SettlementGrew, SettlementShrank, SettlementAbandoned)
+Environmental / M1:  1001–1099  (VolcanicEruption, EarthquakeOccurred, WildfireOccurred, FloodOccurred,
+                                  DroughtBegan, DroughtEnded, SeaLevelChanged, BiomeChanged,
+                                  ClimateShifted, ResourceRecovered)
+Beast:              2001–2099   (BeastSpawned=2001, BeastAwakened=2002, BeastDied=2003, BeastSlain=2004,
+                                  BeastReproduced=2005, BeastEncountered=2006, BeastAttackedChar=2007)
+Character lifecycle:3001–3099   (CharacterBorn=3001, CharacterDied=3002, CharacterCrystallized=3003)
+Character actions:  3101–3199   (CharacterMoved=3101, CharacterRested=3102, CharacterExplored=3103,
+                                  CharacterTrained=3104, CharacterForaged=3105, CharacterHealed=3106,
+                                  CharacterCrafted=3107)
+Civ/settlement:     3201–3299   (CivilizationFounded=3201, CivilizationCollapsed=3202,
+                                  SettlementFounded=3203, RaidOccurred=3204, NegotiationCompleted=3205,
+                                  RivalryDeclared=3206, AllianceFormed=3207, WarDeclared=3208)
+Tier2 events:       3301–3399   (AppointedToRole=3301, MerchantTradeCompleted=3302,
+                                  ScholarDiscovery=3303, PhysicianHealed=3304,
+                                  DiplomacyCompleted=3305, ArtisanCrafted=3306)
+Population:         3401–3499   (SettlementGrew=3401, SettlementShrank=3402, SettlementAbandoned=3403)
 ```
+
+**Note:** `BeastAttackedChar = 2007` was added post-M2 when beast-character combat was implemented.
 
 ---
 
@@ -537,11 +633,22 @@ public sealed record WorldSnapshot(
     // Entities — flat lookup by EntityId; used by inspector and map renderer
     IReadOnlyDictionary<EntityId, EntitySnapshot> EntitySnapshots,
 
+    // Settlements — keyed by tile coord; used by map renderer and inspector
+    IReadOnlyDictionary<TileCoord, SettlementSnapshot> Settlements,
+
     // World-level drift parameters for UI status display
     float GlobalTemperatureAnomaly,
     float GlobalPrecipitationMultiplier,
     float StormCorridorNormalizedLat
 );
+
+// SettlementSnapshot — companion record for WorldSnapshot.Settlements
+public sealed record SettlementSnapshot(
+    TileCoord Coord,
+    string CivName,
+    int Population,
+    int Health,         // 0–100
+    int FoundedYear);
 ```
 
 ---
