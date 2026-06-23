@@ -1,5 +1,6 @@
 using Myra.Graphics2D.UI;
 using WorldEngine.Sim.Core;
+using WorldEngine.Sim.Entities;
 using WorldEngine.Sim.World;
 
 namespace WorldEngine.UI.UI;
@@ -17,7 +18,7 @@ public sealed class TileInspectorPanel
         Root.Widgets.Add(scroll);
     }
 
-    public void Update(TileInspectorData? data)
+    public void Update(TileInspectorData? data, WorldSnapshot? snapshot = null)
     {
         Root.Visible = data is not null;
         if (data is null) return;
@@ -50,6 +51,29 @@ public sealed class TileInspectorPanel
         else foreach (var d in data.Disasters)
             AddLine($"{d.Type} {d.Intensity:F2} [{(d.TicksRemaining < 0 ? "∞" : d.TicksRemaining.ToString())} ticks]");
         AddLine($"In drought: {data.IsInActiveDrought}");
+
+        // Beast section — built from EntitySnapshots filtered by tile coord
+        if (snapshot is not null)
+            AddBeastSection(data.Coord, snapshot.EntitySnapshots);
+    }
+
+    private void AddBeastSection(
+        TileCoord coord,
+        IReadOnlyDictionary<EntityId, EntitySnapshot> entitySnapshots)
+    {
+        var beasts = entitySnapshots.Values
+            .Where(e => e.Kind == EntityKind.LegendaryBeast && e.IsAlive && e.Location == coord)
+            .ToList();
+
+        if (beasts.Count == 0) return;
+
+        AddLine("--- Creatures ---");
+        foreach (var b in beasts)
+        {
+            string tag = b.IsLegendary ? " [Legendary]" : "";
+            AddLine($"{b.Name}{tag}");
+            AddLine($"  HP {b.HealthFraction:P0}  Food {b.FoodFraction:P0}  Age {b.AgeSeason}");
+        }
     }
 
     private void AddLine(string text) =>

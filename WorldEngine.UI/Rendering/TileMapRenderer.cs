@@ -1,6 +1,7 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using WorldEngine.Sim.Core;
+using WorldEngine.Sim.Entities;
 using WorldEngine.Sim.World;
 
 namespace WorldEngine.UI.Rendering;
@@ -54,6 +55,10 @@ public sealed class TileMapRenderer(GraphicsDevice gd, Camera2D camera)
             }
         }
 
+        // Draw beast markers — a small dot centered on each occupied tile
+        if (camera.Zoom >= 4f)
+            DrawBeastMarkers(sb, snapshot, tw, th, minX, maxX, minY, maxY);
+
         // Draw selection highlight over the inspected tile
         if (snapshot.InspectedTile?.Coord is TileCoord sel)
         {
@@ -69,6 +74,48 @@ public sealed class TileMapRenderer(GraphicsDevice gd, Camera2D camera)
             sb.Draw(_pixel, new Rectangle(x0s,      y1s - B,  w, B),    hi); // bottom
             sb.Draw(_pixel, new Rectangle(x0s,      y0s,      B, h),    hi); // left
             sb.Draw(_pixel, new Rectangle(x1s - B,  y0s,      B, h),    hi); // right
+        }
+    }
+
+    private void DrawBeastMarkers(
+        SpriteBatch sb, WorldSnapshot snapshot,
+        int tw, int th, int minX, int maxX, int minY, int maxY)
+    {
+        // Build a tile → beast presence lookup from EntitySnapshots
+        // Legendary (or mythological) = gold dot; normal = dark-red dot
+        var legendary = new HashSet<TileCoord>();
+        var normal    = new HashSet<TileCoord>();
+
+        foreach (var kvp in snapshot.EntitySnapshots)
+        {
+            var snap = kvp.Value;
+            if (!snap.IsAlive) continue;
+            if (snap.Kind != EntityKind.LegendaryBeast) continue;
+            if (snap.IsLegendary) legendary.Add(snap.Location);
+            else normal.Add(snap.Location);
+        }
+
+        int dotSize = Math.Max(2, (int)(camera.Zoom * 0.3f));
+        int half    = dotSize / 2;
+
+        void DrawDot(TileCoord coord, Color color)
+        {
+            var pos = camera.TileToScreen(coord);
+            int cx  = (int)MathF.Round(pos.X + camera.Zoom / 2f);
+            int cy  = (int)MathF.Round(pos.Y + camera.Zoom / 2f);
+            sb.Draw(_pixel, new Rectangle(cx - half, cy - half, dotSize, dotSize), color);
+        }
+
+        var goldColor    = Color.Gold;
+        var darkRedColor = new Color(160, 30, 30);
+
+        for (int ty = minY; ty <= maxY; ty++)
+        for (int tx = minX; tx <= maxX; tx++)
+        {
+            int wx  = ((tx % tw) + tw) % tw;
+            var coord = new TileCoord(wx, ty);
+            if (legendary.Contains(coord)) DrawDot(coord, goldColor);
+            else if (normal.Contains(coord)) DrawDot(coord, darkRedColor);
         }
     }
 

@@ -185,7 +185,7 @@ public sealed class Game1 : Game
                 _lastSnapshot = snapshot;
                 _timeControls?.Update(snapshot);
                 _eventLog?.Update(snapshot);
-                _tileInspector?.Update(snapshot.InspectedTile);
+                _tileInspector?.Update(snapshot.InspectedTile, snapshot);
             }
         }
 
