@@ -84,17 +84,33 @@ Abilities are tags on a species. They modify behaviour, combat resolution, or wo
 
 ### DS-E5: Combat resolution
 
-When two entities occupy the same tile and one has `aggression > 0`:
+**The time-scale problem:** A sim tick is one season (≈3 months). A real fight lasts hours. Resolving combat as a single roll per tick means "the wolf pack spent the entire summer deciding whether to bite the bear once." Instead, combat is a **multi-round sub-process that runs to resolution within the tick**. The tick records the outcome; the rounds are the mechanism.
 
-1. Aggressor rolls: `attack = strength × WorldRng.FloatAt(seed, tick, attackerId, targetId, 0)`
-2. Defender rolls: `defend = health_fraction × WorldRng.FloatAt(seed, tick, targetId, attackerId, 1)`
-3. If `attack > defend`: attacker hits, target loses `strength` health
-4. Target's retaliation (if alive): reverse the roles, apply to attacker
-5. Winner = entity that survives. Loser emits `BeastSlain` or equivalent.
+**Model:**
+1. Two entities on the same tile, one rolls aggression → if passes, combat begins
+2. Run rounds until one side retreats or dies (max `CombatMaxRoundsPerTick`, configurable):
+   - Each round: attacker rolls `attack = strength × WorldRng.FloatAt(seed, tick, attackerId, targetId, round)`
+   - Defender rolls `defend = (health/maxHealth) × WorldRng.FloatAt(seed, tick, targetId, attackerId, round)`
+   - If `attack > defend`: target loses `strength` health
+   - Defender retaliates if still alive (same formula reversed)
+   - Retreat check: if either entity's health drops below `RetreatHealthFraction` (config), they flee to an adjacent tile
+3. Fight ends: winner stays, loser is dead or on a different tile
 
-**Combat is resolved in CommandResolver**, not in EmitCommands. EmitCommands emits `Attack(attacker, target)`. Resolver applies health changes and emits death events.
+**Pack participation:** All pack members on the tile participate, but attack in sequence within each round (strongest first). Only `min(packCount, CombatMaxGangSize)` members can reach the target per round — models physical space constraints. `CombatMaxGangSize` defaults to 3. A 15-wolf pack vs a bear: 3 wolves attack per round, bear retaliates against one randomly; fight resolves in a few rounds. Still dangerous, not instantly lethal.
 
-**Mythological vs Normal combat:** No special cases. Stats reflect the power differential — a Dragon has 10× the health and strength of a Wolf. Let the numbers speak.
+**Between-season attrition:** If neither side dies and neither retreats after `CombatMaxRoundsPerTick` rounds, combat ends for this tick. Both entities stay on the tile. Next tick: aggression check fires again. This produces natural "prolonged conflict" — a bear den with an encircling pack gradually losing members over multiple seasons.
+
+**Combat is resolved in CommandResolver**, not in EmitCommands. EmitCommands emits `Attack(attacker, target)`. Resolver runs the round loop.
+
+**Mythological vs Normal:** No special cases in the formula. Stats reflect the power differential — a Dragon has 10× health and strength of a Wolf. The numbers speak.
+
+**Config additions needed:**
+```toml
+[combat]
+max_rounds_per_tick       = 8     # rounds before "standoff" for this tick
+max_gang_size             = 3     # max pack members attacking per round
+retreat_health_fraction   = 0.25  # flee when health drops below 25%
+```
 
 ---
 
@@ -309,12 +325,12 @@ If a species has no valid biome tiles on this world, it is skipped silently.
 
 2. **Aquatic movement** — `aquatic` beasts can enter ocean tiles; non-aquatic cannot. Should the ocean tile boundary be strict, or can a non-aquatic beast wade into `coastal_water` tiles? **Proposed:** coastal_water tiles are wading-accessible to all beasts; ocean tiles require `aquatic` ability.
 
-3. **Legendary name generation** — adjective from `legendary_name_adjectives` + species display name, prefixed by "The". Enough? Or do we want more variety (noun forms: "The Frostmaw", "The Pale Hunger")? **Proposed:** add an optional `legendary_name_nouns` list per species for noun-form names; generator picks randomly between adjective-form and noun-form.
+3. **Legendary name generation** — **Decided:** Both forms, picked randomly. Each species has `legendary_name_adjectives` (produces "The Pale Wolf") and optionally `legendary_name_nouns` (produces "The Frostmaw"). Generator rolls 50/50 between forms if both are present, adjective-only if nouns list is absent.
 
 4. **Pack coordination in combat** — should a pack of wolves all attack the same target in one tick, or only one per turn? **Proposed:** only the pack member who first detects the target attacks that season; others may join in subsequent seasons if still alive. Prevents instant one-tick murder by a 15-wolf hyena pack.
 
 5. **Beast vs Beast territory disputes** — two packs of the same species with overlapping territory: do they fight for the home tile, or avoid each other? **Proposed:** same-species packs avoid each other (wander radius pulls them away). Cross-species: follow aggression roll normally.
 
-6. **Mythological creature spawn timing** — do mythological beasts spawn at world start, or emerge later (after N years of sim time) as a narrative event? **Proposed:** 50% spawn at world start, 50% emerge at random points in the first 200 years via `BeastAwakened` event. Makes their appearance a historical moment.
+6. **Mythological creature spawn timing** — **Decided:** 20% of mythological creatures (configurable, `myth_start_fraction`) spawn at world start. The remaining 80% emerge as `BeastAwakened` events at random points within the first `myth_emergence_years` years (default 200). Emergence tick is seeded deterministically. Makes most mythological appearances historical moments while the world feels inhabited from year 0.
 
 7. **Beast corpse / remains** — when a beast dies, does it leave a tile marker? **Proposed:** no tile marker in M2.1. The death event is recorded in the DB; future archaeology systems can query it.

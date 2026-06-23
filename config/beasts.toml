@@ -1,0 +1,1462 @@
+# config/beasts.toml
+# Beast species catalog. Loaded alongside sim_config.toml.
+# Each [[beasts]] entry is one species.
+# category: "predator" = real-world analogue (has normal + legendary variant)
+#           "mythological" = always rare, always legendary-quality, no normal herd
+# abilities: tags — effects are stubs until Phase 2.2+. See docs/design/beast_design.md DS-E4.
+
+# ─── Global spawn settings ────────────────────────────────────────────────────
+
+[beast_spawn]
+target_density_per_10k_tiles = 5      # ~60 beasts on a 120k-tile world
+myth_start_fraction          = 0.20   # fraction of mythological creatures present at year 0
+myth_emergence_years         = 200    # remaining mythologicals emerge within this many years
+
+[combat]
+max_rounds_per_tick          = 8      # rounds before "standoff" ends this tick
+max_gang_size                = 3      # max pack members that can attack per round
+retreat_health_fraction      = 0.25   # entity flees when health drops below this fraction
+
+# ─── Normal Predators ─────────────────────────────────────────────────────────
+
+[[beasts]]
+id                          = "wolf"
+display_name                = "Wolf"
+category                    = "predator"
+biomes                      = ["tundra", "boreal_forest", "grassland", "temperate_forest"]
+max_per_world               = 30
+pack_size_min               = 2
+pack_size_max               = 8
+prefers_company             = true
+hibernates                  = false
+abilities                   = []
+
+health                      = 30
+strength                    = 12
+speed                       = 4
+aggression                  = 0.65
+territory_radius            = 10
+food_depletion              = 0.12
+food_from_hunt              = 0.55
+food_from_graze             = 0.0
+age_min_seasons             = 24
+age_max_seasons             = 60
+reproduction_min_age        = 12
+reproduction_food_threshold = 0.65
+reproduction_chance         = 0.08
+
+legendary_chance            = 0.04
+legendary_health_mult       = 2.8
+legendary_strength_mult     = 2.2
+legendary_age_mult          = 3.0
+legendary_territory_mult    = 2.5
+legendary_name_adjectives   = ["Pale", "Gray", "Iron", "Shadow", "Frost", "Blood"]
+legendary_name_nouns        = ["Frostmaw", "Pale Hunger", "Iron Fang", "The Shadow"]
+
+# ──────────────────────────────────────────────────────────────────────────────
+
+[[beasts]]
+id                          = "polar_bear"
+display_name                = "Polar Bear"
+category                    = "predator"
+biomes                      = ["tundra"]
+max_per_world               = 12
+pack_size_min               = 1
+pack_size_max               = 2
+prefers_company             = false
+hibernates                  = false
+abilities                   = []
+
+health                      = 90
+strength                    = 28
+speed                       = 3
+aggression                  = 0.55
+territory_radius            = 14
+food_depletion              = 0.16
+food_from_hunt              = 0.70
+food_from_graze             = 0.0
+age_min_seasons             = 60
+age_max_seasons             = 100
+reproduction_min_age        = 20
+reproduction_food_threshold = 0.70
+reproduction_chance         = 0.05
+
+legendary_chance            = 0.03
+legendary_health_mult       = 2.5
+legendary_strength_mult     = 2.0
+legendary_age_mult          = 2.5
+legendary_territory_mult    = 2.0
+legendary_name_adjectives   = ["White", "Ancient", "Frost", "Pale"]
+legendary_name_nouns        = ["The White Death", "Icewarden", "Pale Colossus"]
+
+# ──────────────────────────────────────────────────────────────────────────────
+
+[[beasts]]
+id                          = "snow_leopard"
+display_name                = "Snow Leopard"
+category                    = "predator"
+biomes                      = ["tundra", "mountain"]
+max_per_world               = 15
+pack_size_min               = 1
+pack_size_max               = 1
+prefers_company             = false
+hibernates                  = false
+abilities                   = []
+
+health                      = 40
+strength                    = 22
+speed                       = 5
+aggression                  = 0.50
+territory_radius            = 12
+food_depletion              = 0.13
+food_from_hunt              = 0.60
+food_from_graze             = 0.0
+age_min_seasons             = 32
+age_max_seasons             = 68
+reproduction_min_age        = 12
+reproduction_food_threshold = 0.60
+reproduction_chance         = 0.07
+
+legendary_chance            = 0.04
+legendary_health_mult       = 2.2
+legendary_strength_mult     = 2.0
+legendary_age_mult          = 2.5
+legendary_territory_mult    = 2.2
+legendary_name_adjectives   = ["Silver", "Ghost", "Pale", "Ash"]
+legendary_name_nouns        = ["The Ghost", "Ashwalker", "Silver Shadow"]
+
+# ──────────────────────────────────────────────────────────────────────────────
+
+[[beasts]]
+id                          = "brown_bear"
+display_name                = "Brown Bear"
+category                    = "predator"
+biomes                      = ["boreal_forest", "mountain", "temperate_forest"]
+max_per_world               = 20
+pack_size_min               = 1
+pack_size_max               = 2
+prefers_company             = false
+hibernates                  = true      # inactive, low food depletion in winter
+abilities                   = []
+
+health                      = 100
+strength                    = 32
+speed                       = 3
+aggression                  = 0.45
+territory_radius            = 8
+food_depletion              = 0.14
+food_from_hunt              = 0.65
+food_from_graze             = 0.15     # omnivore
+age_min_seasons             = 60
+age_max_seasons             = 120
+reproduction_min_age        = 20
+reproduction_food_threshold = 0.65
+reproduction_chance         = 0.06
+
+legendary_chance            = 0.03
+legendary_health_mult       = 2.5
+legendary_strength_mult     = 2.2
+legendary_age_mult          = 2.8
+legendary_territory_mult    = 2.5
+legendary_name_adjectives   = ["Great", "Iron", "Ancient", "Scarred", "Black"]
+legendary_name_nouns        = ["Ironhide", "The Great One", "Scarback"]
+
+# ──────────────────────────────────────────────────────────────────────────────
+
+[[beasts]]
+id                          = "wolverine"
+display_name                = "Wolverine"
+category                    = "predator"
+biomes                      = ["boreal_forest", "tundra"]
+max_per_world               = 15
+pack_size_min               = 1
+pack_size_max               = 1
+prefers_company             = false
+hibernates                  = false
+abilities                   = []
+
+health                      = 35
+strength                    = 20       # punches above weight
+speed                       = 4
+aggression                  = 0.85    # extremely aggressive
+territory_radius            = 12
+food_depletion              = 0.15
+food_from_hunt              = 0.60
+food_from_graze             = 0.0
+age_min_seasons             = 20
+age_max_seasons             = 48
+reproduction_min_age        = 10
+reproduction_food_threshold = 0.60
+reproduction_chance         = 0.09
+
+legendary_chance            = 0.05
+legendary_health_mult       = 2.0
+legendary_strength_mult     = 2.5
+legendary_age_mult          = 2.2
+legendary_territory_mult    = 2.0
+legendary_name_adjectives   = ["Infernal", "Iron", "Cursed", "Bitter"]
+legendary_name_nouns        = ["The Infernal", "Bitterrage", "Iron Spite"]
+
+# ──────────────────────────────────────────────────────────────────────────────
+
+[[beasts]]
+id                          = "lynx"
+display_name                = "Lynx"
+category                    = "predator"
+biomes                      = ["boreal_forest", "temperate_forest"]
+max_per_world               = 20
+pack_size_min               = 1
+pack_size_max               = 2
+prefers_company             = false
+hibernates                  = false
+abilities                   = []
+
+health                      = 25
+strength                    = 14
+speed                       = 6       # fast
+aggression                  = 0.40
+territory_radius            = 10
+food_depletion              = 0.11
+food_from_hunt              = 0.55
+food_from_graze             = 0.0
+age_min_seasons             = 20
+age_max_seasons             = 52
+reproduction_min_age        = 8
+reproduction_food_threshold = 0.60
+reproduction_chance         = 0.10
+
+legendary_chance            = 0.04
+legendary_health_mult       = 2.0
+legendary_strength_mult     = 2.0
+legendary_age_mult          = 2.5
+legendary_territory_mult    = 2.0
+legendary_name_adjectives   = ["Silent", "Shadow", "Pale", "Swift"]
+legendary_name_nouns        = ["Silent Death", "The Pale One", "Shadowstep"]
+
+# ──────────────────────────────────────────────────────────────────────────────
+
+[[beasts]]
+id                          = "mountain_lion"
+display_name                = "Mountain Lion"
+category                    = "predator"
+biomes                      = ["temperate_forest", "mountain", "grassland"]
+max_per_world               = 20
+pack_size_min               = 1
+pack_size_max               = 1
+prefers_company             = false
+hibernates                  = false
+abilities                   = []
+
+health                      = 45
+strength                    = 20
+speed                       = 5
+aggression                  = 0.45
+territory_radius            = 14
+food_depletion              = 0.12
+food_from_hunt              = 0.60
+food_from_graze             = 0.0
+age_min_seasons             = 36
+age_max_seasons             = 72
+reproduction_min_age        = 12
+reproduction_food_threshold = 0.60
+reproduction_chance         = 0.07
+
+legendary_chance            = 0.04
+legendary_health_mult       = 2.2
+legendary_strength_mult     = 2.0
+legendary_age_mult          = 2.5
+legendary_territory_mult    = 2.5
+legendary_name_adjectives   = ["Tawny", "Gold", "Ancient", "Stone"]
+legendary_name_nouns        = ["The Tawny", "Goldstrike", "Stoneclaws"]
+
+# ──────────────────────────────────────────────────────────────────────────────
+
+[[beasts]]
+id                          = "black_bear"
+display_name                = "Black Bear"
+category                    = "predator"
+biomes                      = ["temperate_forest", "boreal_forest"]
+max_per_world               = 22
+pack_size_min               = 1
+pack_size_max               = 2
+prefers_company             = false
+hibernates                  = true
+abilities                   = []
+
+health                      = 70
+strength                    = 22
+speed                       = 3
+aggression                  = 0.40
+territory_radius             = 8
+food_depletion              = 0.12
+food_from_hunt              = 0.55
+food_from_graze             = 0.20    # omnivore
+age_min_seasons             = 48
+age_max_seasons             = 96
+reproduction_min_age        = 16
+reproduction_food_threshold = 0.60
+reproduction_chance         = 0.07
+
+legendary_chance            = 0.03
+legendary_health_mult       = 2.3
+legendary_strength_mult     = 2.0
+legendary_age_mult          = 2.5
+legendary_territory_mult    = 2.0
+legendary_name_adjectives   = ["Ancient", "Scarred", "Old", "Dark"]
+legendary_name_nouns        = ["The Ancient", "Darkpaw", "Old Scar"]
+
+# ──────────────────────────────────────────────────────────────────────────────
+
+[[beasts]]
+id                          = "wild_boar"
+display_name                = "Wild Boar"
+category                    = "predator"
+biomes                      = ["temperate_forest", "grassland"]
+max_per_world               = 25
+pack_size_min               = 2
+pack_size_max               = 6
+prefers_company             = true
+hibernates                  = false
+abilities                   = []
+
+health                      = 50
+strength                    = 18       # dangerous when cornered
+speed                       = 3
+aggression                  = 0.55    # defensive aggression
+territory_radius            = 6
+food_depletion              = 0.10
+food_from_hunt              = 0.30
+food_from_graze             = 0.40    # primarily forager
+age_min_seasons             = 24
+age_max_seasons             = 60
+reproduction_min_age        = 8
+reproduction_food_threshold = 0.55
+reproduction_chance         = 0.12
+
+legendary_chance            = 0.03
+legendary_health_mult       = 2.5
+legendary_strength_mult     = 2.2
+legendary_age_mult          = 2.5
+legendary_territory_mult    = 1.8
+legendary_name_adjectives   = ["Great", "Iron", "Black", "Ancient"]
+legendary_name_nouns        = ["Ironhusk", "The Black Boar", "Greatrusk"]
+
+# ──────────────────────────────────────────────────────────────────────────────
+
+[[beasts]]
+id                          = "lion"
+display_name                = "Lion"
+category                    = "predator"
+biomes                      = ["savanna", "grassland"]
+max_per_world               = 20
+pack_size_min               = 3
+pack_size_max               = 12
+prefers_company             = true
+hibernates                  = false
+abilities                   = []
+
+health                      = 65
+strength                    = 26
+speed                       = 4
+aggression                  = 0.60
+territory_radius             = 12
+food_depletion              = 0.14
+food_from_hunt              = 0.65
+food_from_graze             = 0.0
+age_min_seasons             = 40
+age_max_seasons             = 80
+reproduction_min_age        = 16
+reproduction_food_threshold = 0.65
+reproduction_chance         = 0.07
+
+legendary_chance            = 0.04
+legendary_health_mult       = 2.5
+legendary_strength_mult     = 2.2
+legendary_age_mult          = 2.8
+legendary_territory_mult    = 2.5
+legendary_name_adjectives   = ["Golden", "Ancient", "Scarred", "Maned"]
+legendary_name_nouns        = ["The Maned God", "Goldmane", "The Ancient Pride"]
+
+# ──────────────────────────────────────────────────────────────────────────────
+
+[[beasts]]
+id                          = "cheetah"
+display_name                = "Cheetah"
+category                    = "predator"
+biomes                      = ["savanna", "grassland"]
+max_per_world               = 15
+pack_size_min               = 1
+pack_size_max               = 3
+prefers_company             = false
+hibernates                  = false
+abilities                   = []
+
+health                      = 28        # fragile
+strength                    = 16
+speed                       = 8         # fastest land predator
+aggression                  = 0.30      # avoids conflict
+territory_radius            = 16
+food_depletion              = 0.13
+food_from_hunt              = 0.60
+food_from_graze             = 0.0
+age_min_seasons             = 28
+age_max_seasons             = 56
+reproduction_min_age        = 10
+reproduction_food_threshold = 0.60
+reproduction_chance         = 0.09
+
+legendary_chance            = 0.03
+legendary_health_mult       = 2.0
+legendary_strength_mult     = 1.8
+legendary_age_mult          = 2.5
+legendary_territory_mult    = 2.5
+legendary_name_adjectives   = ["Swift", "Golden", "Ghost"]
+legendary_name_nouns        = ["Swiftdeath", "The Ghost Runner", "Gold Wind"]
+
+# ──────────────────────────────────────────────────────────────────────────────
+
+[[beasts]]
+id                          = "hyena"
+display_name                = "Hyena"
+category                    = "predator"
+biomes                      = ["savanna", "grassland"]
+max_per_world               = 25
+pack_size_min               = 4
+pack_size_max               = 15
+prefers_company             = true
+hibernates                  = false
+abilities                   = []
+
+health                      = 40
+strength                    = 16
+speed                       = 4
+aggression                  = 0.70
+territory_radius            = 10
+food_depletion              = 0.11
+food_from_hunt              = 0.50
+food_from_graze             = 0.0
+age_min_seasons             = 28
+age_max_seasons             = 64
+reproduction_min_age        = 10
+reproduction_food_threshold = 0.55
+reproduction_chance         = 0.10
+
+legendary_chance            = 0.03
+legendary_health_mult       = 2.2
+legendary_strength_mult     = 2.0
+legendary_age_mult          = 2.5
+legendary_territory_mult    = 2.0
+legendary_name_adjectives   = ["Laughing", "Bone", "Pale", "Shadow"]
+legendary_name_nouns        = ["The Laughing Death", "Bonecrusher", "Shadowclan"]
+
+# ──────────────────────────────────────────────────────────────────────────────
+
+[[beasts]]
+id                          = "african_wild_dog"
+display_name                = "African Wild Dog"
+category                    = "predator"
+biomes                      = ["savanna", "grassland"]
+max_per_world               = 15
+pack_size_min               = 5
+pack_size_max               = 20
+prefers_company             = true
+hibernates                  = false
+abilities                   = []
+
+health                      = 30
+strength                    = 12
+speed                       = 5
+aggression                  = 0.65
+territory_radius            = 15        # endurance hunters, large range
+food_depletion              = 0.12
+food_from_hunt              = 0.55
+food_from_graze             = 0.0
+age_min_seasons             = 20
+age_max_seasons             = 44
+reproduction_min_age        = 8
+reproduction_food_threshold = 0.60
+reproduction_chance         = 0.12
+
+legendary_chance            = 0.03
+legendary_health_mult       = 2.0
+legendary_strength_mult     = 1.8
+legendary_age_mult          = 2.5
+legendary_territory_mult    = 2.0
+legendary_name_adjectives   = ["Painted", "Swift", "Iron", "Ancient"]
+legendary_name_nouns        = ["The Painted One", "Ironrun", "Swift Hunt"]
+
+# ──────────────────────────────────────────────────────────────────────────────
+
+[[beasts]]
+id                          = "sand_viper"
+display_name                = "Sand Viper"
+category                    = "predator"
+biomes                      = ["desert"]
+max_per_world               = 20
+pack_size_min               = 1
+pack_size_max               = 1
+prefers_company             = false
+hibernates                  = false
+abilities                   = ["venom"]   # M2.2+
+
+health                      = 18
+strength                    = 8           # low direct damage, venom does the work
+speed                       = 2
+aggression                  = 0.60
+territory_radius            = 5
+food_depletion              = 0.08        # cold-blooded, low metabolism
+food_from_hunt              = 0.45
+food_from_graze             = 0.0
+age_min_seasons             = 20
+age_max_seasons             = 60
+reproduction_min_age        = 8
+reproduction_food_threshold = 0.50
+reproduction_chance         = 0.12
+
+legendary_chance            = 0.04
+legendary_health_mult       = 2.0
+legendary_strength_mult     = 1.8
+legendary_age_mult          = 3.0
+legendary_territory_mult    = 2.0
+legendary_name_adjectives   = ["Golden", "Ancient", "Sand", "Dusty"]
+legendary_name_nouns        = ["The Golden Death", "Sandwhisper", "Ancient Venom"]
+
+# ──────────────────────────────────────────────────────────────────────────────
+
+[[beasts]]
+id                          = "giant_scorpion"
+display_name                = "Giant Scorpion"
+category                    = "predator"
+biomes                      = ["desert"]
+max_per_world               = 15
+pack_size_min               = 1
+pack_size_max               = 3
+prefers_company             = false
+hibernates                  = false
+abilities                   = ["venom"]   # M2.2+
+
+health                      = 30
+strength                    = 10
+speed                       = 2
+aggression                  = 0.55
+territory_radius            = 4
+food_depletion              = 0.07
+food_from_hunt              = 0.45
+food_from_graze             = 0.0
+age_min_seasons             = 20
+age_max_seasons             = 80
+reproduction_min_age        = 10
+reproduction_food_threshold = 0.50
+reproduction_chance         = 0.10
+
+legendary_chance            = 0.04
+legendary_health_mult       = 2.5
+legendary_strength_mult     = 2.2
+legendary_age_mult          = 3.0
+legendary_territory_mult    = 2.0
+legendary_name_adjectives   = ["Black", "Ancient", "Iron", "Crimson"]
+legendary_name_nouns        = ["The Black Claw", "Ironsting", "Crimson Death"]
+
+# ──────────────────────────────────────────────────────────────────────────────
+
+[[beasts]]
+id                          = "monitor_lizard"
+display_name                = "Monitor Lizard"
+category                    = "predator"
+biomes                      = ["desert", "savanna"]
+max_per_world               = 15
+pack_size_min               = 1
+pack_size_max               = 2
+prefers_company             = false
+hibernates                  = false
+abilities                   = ["venom"]   # M2.2+
+
+health                      = 45
+strength                    = 18
+speed                       = 3
+aggression                  = 0.50
+territory_radius            = 7
+food_depletion              = 0.08
+food_from_hunt              = 0.55
+food_from_graze             = 0.0
+age_min_seasons             = 40
+age_max_seasons             = 120
+reproduction_min_age        = 16
+reproduction_food_threshold = 0.55
+reproduction_chance         = 0.07
+
+legendary_chance            = 0.04
+legendary_health_mult       = 2.5
+legendary_strength_mult     = 2.2
+legendary_age_mult          = 3.0
+legendary_territory_mult    = 2.0
+legendary_name_adjectives   = ["Ancient", "Gray", "Stone", "Iron"]
+legendary_name_nouns        = ["The Ancient One", "Graystone", "Ironscale"]
+
+# ──────────────────────────────────────────────────────────────────────────────
+
+[[beasts]]
+id                          = "jaguar"
+display_name                = "Jaguar"
+category                    = "predator"
+biomes                      = ["tropical_rainforest", "swamp"]
+max_per_world               = 18
+pack_size_min               = 1
+pack_size_max               = 1
+prefers_company             = false
+hibernates                  = false
+abilities                   = []
+
+health                      = 55
+strength                    = 28       # kills by crushing skull
+speed                       = 4
+aggression                  = 0.55
+territory_radius             = 12
+food_depletion              = 0.13
+food_from_hunt              = 0.65
+food_from_graze             = 0.0
+age_min_seasons             = 40
+age_max_seasons             = 80
+reproduction_min_age        = 14
+reproduction_food_threshold = 0.65
+reproduction_chance         = 0.07
+
+legendary_chance            = 0.04
+legendary_health_mult       = 2.3
+legendary_strength_mult     = 2.5
+legendary_age_mult          = 2.5
+legendary_territory_mult    = 2.5
+legendary_name_adjectives   = ["Black", "Shadow", "Spotted", "Ancient"]
+legendary_name_nouns        = ["The Black", "Shadowpelt", "Ancient Spots"]
+
+# ──────────────────────────────────────────────────────────────────────────────
+
+[[beasts]]
+id                          = "anaconda"
+display_name                = "Anaconda"
+category                    = "predator"
+biomes                      = ["tropical_rainforest", "swamp"]
+max_per_world               = 12
+pack_size_min               = 1
+pack_size_max               = 1
+prefers_company             = false
+hibernates                  = false
+abilities                   = []
+
+health                      = 80        # very high health
+strength                    = 24        # constriction
+speed                       = 1         # slow
+aggression                  = 0.45
+territory_radius            = 5
+food_depletion              = 0.07      # very low metabolism
+food_from_hunt              = 0.80      # eats large prey, sated for a long time
+food_from_graze             = 0.0
+age_min_seasons             = 60
+age_max_seasons             = 200
+reproduction_min_age        = 24
+reproduction_food_threshold = 0.70
+reproduction_chance         = 0.05
+
+legendary_chance            = 0.04
+legendary_health_mult       = 2.5
+legendary_strength_mult     = 2.2
+legendary_age_mult          = 2.0
+legendary_territory_mult    = 2.5
+legendary_name_adjectives   = ["Great", "Ancient", "Black", "Golden"]
+legendary_name_nouns        = ["The Great Coil", "Worldwrap", "Ancient Crush"]
+
+# ──────────────────────────────────────────────────────────────────────────────
+
+[[beasts]]
+id                          = "harpy_eagle"
+display_name                = "Harpy Eagle"
+category                    = "predator"
+biomes                      = ["tropical_rainforest"]
+max_per_world               = 12
+pack_size_min               = 1
+pack_size_max               = 2
+prefers_company             = false
+hibernates                  = false
+abilities                   = ["flight"]  # M2.2+
+
+health                      = 25
+strength                    = 20
+speed                       = 6
+aggression                  = 0.45
+territory_radius            = 18
+food_depletion              = 0.13
+food_from_hunt              = 0.60
+food_from_graze             = 0.0
+age_min_seasons             = 40
+age_max_seasons             = 120
+reproduction_min_age        = 16
+reproduction_food_threshold = 0.60
+reproduction_chance         = 0.05
+
+legendary_chance            = 0.04
+legendary_health_mult       = 2.0
+legendary_strength_mult     = 2.2
+legendary_age_mult          = 2.5
+legendary_territory_mult    = 3.0
+legendary_name_adjectives   = ["Shadow", "Storm", "Gray", "Ancient"]
+legendary_name_nouns        = ["Skyclaws", "The Storm Wing", "Shadowtalon"]
+
+# ──────────────────────────────────────────────────────────────────────────────
+
+[[beasts]]
+id                          = "crocodile"
+display_name                = "Crocodile"
+category                    = "predator"
+biomes                      = ["swamp", "beach", "coastal_water"]
+max_per_world               = 18
+pack_size_min               = 1
+pack_size_max               = 4
+prefers_company             = false
+hibernates                  = false
+abilities                   = ["aquatic"]   # M2.2+
+
+health                      = 75
+strength                    = 30
+speed                       = 2
+aggression                  = 0.65
+territory_radius            = 6
+food_depletion              = 0.08
+food_from_hunt              = 0.70
+food_from_graze             = 0.0
+age_min_seasons             = 80
+age_max_seasons             = 400
+reproduction_min_age        = 28
+reproduction_food_threshold = 0.65
+reproduction_chance         = 0.06
+
+legendary_chance            = 0.03
+legendary_health_mult       = 2.8
+legendary_strength_mult     = 2.5
+legendary_age_mult          = 2.0
+legendary_territory_mult    = 2.0
+legendary_name_adjectives   = ["Ancient", "Scarred", "Iron", "Stone"]
+legendary_name_nouns        = ["The Ancient One", "Ironjaw", "Stonehide"]
+
+# ──────────────────────────────────────────────────────────────────────────────
+
+[[beasts]]
+id                          = "giant_otter"
+display_name                = "Giant Otter"
+category                    = "predator"
+biomes                      = ["swamp", "boreal_forest"]
+max_per_world               = 12
+pack_size_min               = 3
+pack_size_max               = 8
+prefers_company             = true
+hibernates                  = false
+abilities                   = []
+
+health                      = 30
+strength                    = 14
+speed                       = 4
+aggression                  = 0.60
+territory_radius            = 8
+food_depletion              = 0.14
+food_from_hunt              = 0.55
+food_from_graze             = 0.0
+age_min_seasons             = 16
+age_max_seasons             = 40
+reproduction_min_age        = 6
+reproduction_food_threshold = 0.60
+reproduction_chance         = 0.14
+
+legendary_chance            = 0.03
+legendary_health_mult       = 2.2
+legendary_strength_mult     = 2.0
+legendary_age_mult          = 2.5
+legendary_territory_mult    = 2.0
+legendary_name_adjectives   = ["Giant", "Ancient", "River"]
+legendary_name_nouns        = ["The River King", "Ironwhisker"]
+
+# ──────────────────────────────────────────────────────────────────────────────
+
+[[beasts]]
+id                          = "cave_bear"
+display_name                = "Cave Bear"
+category                    = "predator"
+biomes                      = ["mountain", "boreal_forest"]
+max_per_world               = 10
+pack_size_min               = 1
+pack_size_max               = 2
+prefers_company             = false
+hibernates                  = true
+abilities                   = []
+
+health                      = 120
+strength                    = 38
+speed                       = 2
+aggression                  = 0.50
+territory_radius            = 10
+food_depletion              = 0.16
+food_from_hunt              = 0.70
+food_from_graze             = 0.20   # omnivore
+age_min_seasons             = 60
+age_max_seasons             = 120
+reproduction_min_age        = 20
+reproduction_food_threshold = 0.65
+reproduction_chance         = 0.05
+
+legendary_chance            = 0.04
+legendary_health_mult       = 2.5
+legendary_strength_mult     = 2.2
+legendary_age_mult          = 2.5
+legendary_territory_mult    = 2.2
+legendary_name_adjectives   = ["Great", "Ancient", "Stone", "Iron"]
+legendary_name_nouns        = ["The Cave Lord", "Stoneshoulders", "Ironhide"]
+
+# ──────────────────────────────────────────────────────────────────────────────
+
+[[beasts]]
+id                          = "golden_eagle"
+display_name                = "Golden Eagle"
+category                    = "predator"
+biomes                      = ["mountain", "tundra", "grassland"]
+max_per_world               = 16
+pack_size_min               = 1
+pack_size_max               = 2
+prefers_company             = false
+hibernates                  = false
+abilities                   = ["flight"]   # M2.2+
+
+health                      = 22
+strength                    = 16
+speed                       = 7
+aggression                  = 0.45
+territory_radius            = 20
+food_depletion              = 0.12
+food_from_hunt              = 0.55
+food_from_graze             = 0.0
+age_min_seasons             = 60
+age_max_seasons             = 160
+reproduction_min_age        = 16
+reproduction_food_threshold = 0.60
+reproduction_chance         = 0.05
+
+legendary_chance            = 0.04
+legendary_health_mult       = 2.0
+legendary_strength_mult     = 2.2
+legendary_age_mult          = 2.5
+legendary_territory_mult    = 3.0
+legendary_name_adjectives   = ["Golden", "Storm", "Ancient", "Sky"]
+legendary_name_nouns        = ["The Sky King", "Stormwing", "Golden Sovereign"]
+
+# ──────────────────────────────────────────────────────────────────────────────
+
+[[beasts]]
+id                          = "great_white_shark"
+display_name                = "Great White Shark"
+category                    = "predator"
+biomes                      = ["ocean", "coastal_water"]
+max_per_world               = 12
+pack_size_min               = 1
+pack_size_max               = 1
+prefers_company             = false
+hibernates                  = false
+abilities                   = ["aquatic"]
+
+health                      = 80
+strength                    = 35
+speed                       = 5
+aggression                  = 0.55
+territory_radius            = 25
+food_depletion              = 0.14
+food_from_hunt              = 0.70
+food_from_graze             = 0.0
+age_min_seasons             = 60
+age_max_seasons             = 280
+reproduction_min_age        = 40
+reproduction_food_threshold = 0.65
+reproduction_chance         = 0.04
+
+legendary_chance            = 0.04
+legendary_health_mult       = 2.5
+legendary_strength_mult     = 2.2
+legendary_age_mult          = 2.0
+legendary_territory_mult    = 2.5
+legendary_name_adjectives   = ["Ancient", "White", "Iron", "Shadow"]
+legendary_name_nouns        = ["The Ancient White", "Ironteeth", "The Deep"]
+
+# ──────────────────────────────────────────────────────────────────────────────
+
+[[beasts]]
+id                          = "giant_squid"
+display_name                = "Giant Squid"
+category                    = "predator"
+biomes                      = ["ocean"]
+max_per_world               = 6
+pack_size_min               = 1
+pack_size_max               = 1
+prefers_company             = false
+hibernates                  = false
+abilities                   = ["aquatic"]
+
+health                      = 110
+strength                    = 28
+speed                       = 3
+aggression                  = 0.40
+territory_radius            = 20
+food_depletion              = 0.10
+food_from_hunt              = 0.70
+food_from_graze             = 0.0
+age_min_seasons             = 12
+age_max_seasons             = 40       # short-lived but massive
+reproduction_min_age        = 6
+reproduction_food_threshold = 0.65
+reproduction_chance         = 0.10
+
+legendary_chance            = 0.05
+legendary_health_mult       = 2.5
+legendary_strength_mult     = 2.2
+legendary_age_mult          = 2.5
+legendary_territory_mult    = 2.5
+legendary_name_adjectives   = ["Ancient", "Blind", "Dark", "Black"]
+legendary_name_nouns        = ["The Ancient Eye", "Darkcoil", "The Blind God"]
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Mythological Creatures
+# No pack_size, no legendary_chance — all are unique by category definition.
+# Spawn: myth_start_fraction appear at year 0; rest emerge via BeastAwakened events.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[beasts]]
+id                          = "dragon"
+display_name                = "Dragon"
+category                    = "mythological"
+biomes                      = ["mountain", "volcanic"]
+max_per_world               = 2
+pack_size_min               = 1
+pack_size_max               = 1
+prefers_company             = false
+hibernates                  = false
+abilities                   = ["flight", "fire_breath", "fear_aura"]
+
+health                      = 400
+strength                    = 90
+speed                       = 6
+aggression                  = 0.55
+territory_radius            = 50
+food_depletion              = 0.08
+food_from_hunt              = 0.90
+food_from_graze             = 0.0
+age_min_seasons             = 400
+age_max_seasons             = 2000
+reproduction_min_age        = 200
+reproduction_food_threshold = 0.80
+reproduction_chance         = 0.01
+name_adjectives             = ["Ancient", "Red", "Black", "Golden", "Ashen", "Iron"]
+name_nouns                  = ["The Ancient Flame", "Worldburner", "Ashwing", "The Desolation"]
+
+# ──────────────────────────────────────────────────────────────────────────────
+
+[[beasts]]
+id                          = "wyvern"
+display_name                = "Wyvern"
+category                    = "mythological"
+biomes                      = ["mountain", "coastal_water"]
+max_per_world               = 4
+pack_size_min               = 1
+pack_size_max               = 1
+prefers_company             = false
+hibernates                  = false
+abilities                   = ["flight", "venom"]
+
+health                      = 150
+strength                    = 45
+speed                       = 5
+aggression                  = 0.65
+territory_radius            = 30
+food_depletion              = 0.12
+food_from_hunt              = 0.75
+food_from_graze             = 0.0
+age_min_seasons             = 120
+age_max_seasons             = 500
+reproduction_min_age        = 60
+reproduction_food_threshold = 0.75
+reproduction_chance         = 0.02
+name_adjectives             = ["Stone", "Black", "Iron", "Storm", "Pale"]
+name_nouns                  = ["Stonewing", "Irontalon", "The Black Wing"]
+
+# ──────────────────────────────────────────────────────────────────────────────
+
+[[beasts]]
+id                          = "sea_serpent"
+display_name                = "Sea Serpent"
+category                    = "mythological"
+biomes                      = ["ocean", "coastal_water"]
+max_per_world               = 3
+pack_size_min               = 1
+pack_size_max               = 1
+prefers_company             = false
+hibernates                  = false
+abilities                   = ["aquatic"]
+
+health                      = 250
+strength                    = 55
+speed                       = 4
+aggression                  = 0.50
+territory_radius            = 40
+food_depletion              = 0.08
+food_from_hunt              = 0.85
+food_from_graze             = 0.0
+age_min_seasons             = 200
+age_max_seasons             = 1000
+reproduction_min_age        = 100
+reproduction_food_threshold = 0.80
+reproduction_chance         = 0.01
+name_adjectives             = ["Ancient", "Pale", "Deep", "Black"]
+name_nouns                  = ["The Deep One", "Palecoil", "The Ancient Tide"]
+
+# ──────────────────────────────────────────────────────────────────────────────
+
+[[beasts]]
+id                          = "lindworm"
+display_name                = "Lindworm"
+category                    = "mythological"
+biomes                      = ["swamp", "boreal_forest"]
+max_per_world               = 3
+pack_size_min               = 1
+pack_size_max               = 1
+prefers_company             = false
+hibernates                  = false
+abilities                   = ["venom", "burrowing"]
+
+health                      = 180
+strength                    = 40
+speed                       = 2
+aggression                  = 0.60
+territory_radius            = 20
+food_depletion              = 0.09
+food_from_hunt              = 0.75
+food_from_graze             = 0.0
+age_min_seasons             = 160
+age_max_seasons             = 600
+reproduction_min_age        = 80
+reproduction_food_threshold = 0.75
+reproduction_chance         = 0.015
+name_adjectives             = ["Black", "Pale", "Ancient", "Rotting"]
+name_nouns                  = ["The Blight", "Swampcoil", "Pale Pestilence"]
+
+# ──────────────────────────────────────────────────────────────────────────────
+
+[[beasts]]
+id                          = "behemoth"
+display_name                = "Behemoth"
+category                    = "mythological"
+biomes                      = ["plains", "grassland"]
+max_per_world               = 1
+pack_size_min               = 1
+pack_size_max               = 1
+prefers_company             = false
+hibernates                  = false
+abilities                   = ["fear_aura"]
+
+health                      = 600
+strength                    = 80
+speed                       = 2
+aggression                  = 0.40       # mostly ignores things; terrible when roused
+territory_radius             = 30
+food_depletion              = 0.05
+food_from_hunt              = 0.50
+food_from_graze             = 0.60       # enormous grazer
+age_min_seasons             = 400
+age_max_seasons             = 2000
+reproduction_min_age        = 200
+reproduction_food_threshold = 0.80
+reproduction_chance         = 0.005
+name_adjectives             = ["Ancient", "Gray", "Stone", "Iron"]
+name_nouns                  = ["The Earth Shaker", "The Unmoved", "Ancient Ground"]
+
+# ──────────────────────────────────────────────────────────────────────────────
+
+[[beasts]]
+id                          = "roc"
+display_name                = "Roc"
+category                    = "mythological"
+biomes                      = ["mountain", "tundra", "grassland"]
+max_per_world               = 2
+pack_size_min               = 1
+pack_size_max               = 1
+prefers_company             = false
+hibernates                  = false
+abilities                   = ["flight"]
+
+health                      = 280
+strength                    = 70
+speed                       = 7
+aggression                  = 0.50
+territory_radius            = 60
+food_depletion              = 0.12
+food_from_hunt              = 0.90
+food_from_graze             = 0.0
+age_min_seasons             = 200
+age_max_seasons             = 800
+reproduction_min_age        = 80
+reproduction_food_threshold = 0.75
+reproduction_chance         = 0.008
+name_adjectives             = ["Ancient", "Storm", "Sky", "Iron"]
+name_nouns                  = ["The Sky Sovereign", "Stormreign", "Iron Sky"]
+
+# ──────────────────────────────────────────────────────────────────────────────
+
+[[beasts]]
+id                          = "kraken"
+display_name                = "Kraken"
+category                    = "mythological"
+biomes                      = ["ocean"]
+max_per_world               = 1
+pack_size_min               = 1
+pack_size_max               = 1
+prefers_company             = false
+hibernates                  = false
+abilities                   = ["aquatic", "fear_aura"]
+
+health                      = 700
+strength                    = 85
+speed                       = 2
+aggression                  = 0.45
+territory_radius            = 50
+food_depletion              = 0.06
+food_from_hunt              = 0.90
+food_from_graze             = 0.0
+age_min_seasons             = 400
+age_max_seasons             = 4000
+reproduction_min_age        = 400
+reproduction_food_threshold = 0.85
+reproduction_chance         = 0.002
+name_adjectives             = ["Ancient", "Black", "Deep", "Pale"]
+name_nouns                  = ["The Waking Deep", "Tide's End", "The Sunken God"]
+
+# ──────────────────────────────────────────────────────────────────────────────
+
+[[beasts]]
+id                          = "leviathan"
+display_name                = "Leviathan"
+category                    = "mythological"
+biomes                      = ["ocean"]
+max_per_world               = 1
+pack_size_min               = 1
+pack_size_max               = 1
+prefers_company             = false
+hibernates                  = false
+abilities                   = ["aquatic", "regeneration"]
+
+health                      = 800
+strength                    = 75
+speed                       = 3
+aggression                  = 0.35
+territory_radius            = 80
+food_depletion              = 0.05
+food_from_hunt              = 0.85
+food_from_graze             = 0.0
+age_min_seasons             = 800
+age_max_seasons             = 8000
+reproduction_min_age        = 800
+reproduction_food_threshold = 0.90
+reproduction_chance         = 0.001
+name_adjectives             = ["Ancient", "Endless", "The First"]
+name_nouns                  = ["The Endless", "Sea's Memory", "The First Tide"]
+
+# ──────────────────────────────────────────────────────────────────────────────
+
+[[beasts]]
+id                          = "griffin"
+display_name                = "Griffin"
+category                    = "mythological"
+biomes                      = ["mountain", "grassland"]
+max_per_world               = 3
+pack_size_min               = 1
+pack_size_max               = 2
+prefers_company             = false
+hibernates                  = false
+abilities                   = ["flight"]
+
+health                      = 120
+strength                    = 38
+speed                       = 6
+aggression                  = 0.55
+territory_radius            = 30
+food_depletion              = 0.13
+food_from_hunt              = 0.70
+food_from_graze             = 0.0
+age_min_seasons             = 100
+age_max_seasons             = 400
+reproduction_min_age        = 40
+reproduction_food_threshold = 0.70
+reproduction_chance         = 0.015
+name_adjectives             = ["Golden", "Iron", "Storm", "Ancient", "Scarred"]
+name_nouns                  = ["The Golden Talon", "Ironwing", "Stormcrest"]
+
+# ──────────────────────────────────────────────────────────────────────────────
+
+[[beasts]]
+id                          = "manticore"
+display_name                = "Manticore"
+category                    = "mythological"
+biomes                      = ["desert", "savanna"]
+max_per_world               = 3
+pack_size_min               = 1
+pack_size_max               = 1
+prefers_company             = false
+hibernates                  = false
+abilities                   = ["venom"]
+
+health                      = 110
+strength                    = 36
+speed                       = 5
+aggression                  = 0.70
+territory_radius            = 18
+food_depletion              = 0.14
+food_from_hunt              = 0.70
+food_from_graze             = 0.0
+age_min_seasons             = 80
+age_max_seasons             = 300
+reproduction_min_age        = 40
+reproduction_food_threshold = 0.70
+reproduction_chance         = 0.02
+name_adjectives             = ["Red", "Iron", "Scarred", "Pale"]
+name_nouns                  = ["Redsting", "Ironmane", "The Pale Terror"]
+
+# ──────────────────────────────────────────────────────────────────────────────
+
+[[beasts]]
+id                          = "chimera"
+display_name                = "Chimera"
+category                    = "mythological"
+biomes                      = ["volcanic", "mountain"]
+max_per_world               = 2
+pack_size_min               = 1
+pack_size_max               = 1
+prefers_company             = false
+hibernates                  = false
+abilities                   = ["fire_breath"]
+
+health                      = 200
+strength                    = 55
+speed                       = 3
+aggression                  = 0.65
+territory_radius            = 25
+food_depletion              = 0.12
+food_from_hunt              = 0.75
+food_from_graze             = 0.0
+age_min_seasons             = 120
+age_max_seasons             = 500
+reproduction_min_age        = 60
+reproduction_food_threshold = 0.75
+reproduction_chance         = 0.01
+name_adjectives             = ["Three-Headed", "Ancient", "Flame", "Iron"]
+name_nouns                  = ["The Burning Tangle", "Flameform", "The Trihead"]
+
+# ──────────────────────────────────────────────────────────────────────────────
+
+[[beasts]]
+id                          = "cockatrice"
+display_name                = "Cockatrice"
+category                    = "mythological"
+biomes                      = ["swamp", "desert"]
+max_per_world               = 4
+pack_size_min               = 1
+pack_size_max               = 1
+prefers_company             = false
+hibernates                  = false
+abilities                   = ["petrification", "flight"]
+
+health                      = 55
+strength                    = 18
+speed                       = 5
+aggression                  = 0.60
+territory_radius            = 12
+food_depletion              = 0.11
+food_from_hunt              = 0.60
+food_from_graze             = 0.0
+age_min_seasons             = 40
+age_max_seasons             = 200
+reproduction_min_age        = 20
+reproduction_food_threshold = 0.65
+reproduction_chance         = 0.03
+name_adjectives             = ["Stone-Eyed", "Ancient", "Pale", "Black"]
+name_nouns                  = ["Stonegazer", "The Pale Eye", "Stonebringer"]
+
+# ──────────────────────────────────────────────────────────────────────────────
+
+[[beasts]]
+id                          = "phoenix"
+display_name                = "Phoenix"
+category                    = "mythological"
+biomes                      = ["volcanic", "desert"]
+max_per_world               = 1
+pack_size_min               = 1
+pack_size_max               = 1
+prefers_company             = false
+hibernates                  = false
+abilities                   = ["flight", "fire_breath", "rebirth"]
+
+health                      = 160
+strength                    = 42
+speed                       = 7
+aggression                  = 0.40
+territory_radius            = 40
+food_depletion              = 0.09
+food_from_hunt              = 0.65
+food_from_graze             = 0.0
+age_min_seasons             = 200
+age_max_seasons             = 800     # reborn after death, so effective age resets
+reproduction_min_age        = 200
+reproduction_food_threshold = 0.80
+reproduction_chance         = 0.005
+name_adjectives             = ["Eternal", "Golden", "Undying", "Ancient"]
+name_nouns                  = ["The Eternal Flame", "Undying Light", "The Ashbird"]
+
+# ──────────────────────────────────────────────────────────────────────────────
+
+[[beasts]]
+id                          = "thunderbird"
+display_name                = "Thunderbird"
+category                    = "mythological"
+biomes                      = ["mountain", "tundra"]
+max_per_world               = 2
+pack_size_min               = 1
+pack_size_max               = 1
+prefers_company             = false
+hibernates                  = false
+abilities                   = ["flight", "storm_call"]
+
+health                      = 180
+strength                    = 48
+speed                       = 8
+aggression                  = 0.45
+territory_radius            = 45
+food_depletion              = 0.11
+food_from_hunt              = 0.70
+food_from_graze             = 0.0
+age_min_seasons             = 160
+age_max_seasons             = 600
+reproduction_min_age        = 80
+reproduction_food_threshold = 0.75
+reproduction_chance         = 0.008
+name_adjectives             = ["Storm", "Ancient", "Lightning", "Dark"]
+name_nouns                  = ["The Stormcaller", "Lightning Wing", "Dark Thunder"]
+
+# ──────────────────────────────────────────────────────────────────────────────
+
+[[beasts]]
+id                          = "basilisk"
+display_name                = "Basilisk"
+category                    = "mythological"
+biomes                      = ["desert", "mountain"]
+max_per_world               = 2
+pack_size_min               = 1
+pack_size_max               = 1
+prefers_company             = false
+hibernates                  = false
+abilities                   = ["petrification"]
+
+health                      = 130
+strength                    = 30
+speed                       = 2
+aggression                  = 0.55
+territory_radius            = 15
+food_depletion              = 0.08
+food_from_hunt              = 0.70
+food_from_graze             = 0.0
+age_min_seasons             = 200
+age_max_seasons             = 1000
+reproduction_min_age        = 100
+reproduction_food_threshold = 0.75
+reproduction_chance         = 0.005
+name_adjectives             = ["Ancient", "Stone-Eyed", "Black", "The First"]
+name_nouns                  = ["The Stone Gaze", "Ancient Eyes", "Stonewill"]
+
+# ──────────────────────────────────────────────────────────────────────────────
+
+[[beasts]]
+id                          = "hydra"
+display_name                = "Hydra"
+category                    = "mythological"
+biomes                      = ["swamp"]
+max_per_world               = 2
+pack_size_min               = 1
+pack_size_max               = 1
+prefers_company             = false
+hibernates                  = false
+abilities                   = ["regeneration"]
+
+health                      = 350
+strength                    = 60
+speed                       = 1
+aggression                  = 0.50
+territory_radius            = 12
+food_depletion              = 0.07
+food_from_hunt              = 0.80
+food_from_graze             = 0.0
+age_min_seasons             = 200
+age_max_seasons             = 2000
+reproduction_min_age        = 200
+reproduction_food_threshold = 0.80
+reproduction_chance         = 0.005
+name_adjectives             = ["Nine-Headed", "Ancient", "Pale", "Black"]
+name_nouns                  = ["The Regrowing", "Pale Hydra", "The Unslain"]
+
+# ──────────────────────────────────────────────────────────────────────────────
+
+[[beasts]]
+id                          = "wendigo"
+display_name                = "Wendigo"
+category                    = "mythological"
+biomes                      = ["boreal_forest", "tundra"]
+max_per_world               = 2
+pack_size_min               = 1
+pack_size_max               = 1
+prefers_company             = false
+hibernates                  = false
+abilities                   = ["fear_aura", "burrowing"]
+
+health                      = 140
+strength                    = 42
+speed                       = 5
+aggression                  = 0.70
+territory_radius            = 20
+food_depletion              = 0.12
+food_from_hunt              = 0.75
+food_from_graze             = 0.0
+age_min_seasons             = 160
+age_max_seasons             = 800
+reproduction_min_age        = 100
+reproduction_food_threshold = 0.75
+reproduction_chance         = 0.008
+name_adjectives             = ["Starving", "Ancient", "Hollow", "Winter"]
+name_nouns                  = ["The Hollow", "Winter Hunger", "The Starving One"]
+
+# ──────────────────────────────────────────────────────────────────────────────
+
+[[beasts]]
+id                          = "dire_wolf"
+display_name                = "Dire Wolf"
+category                    = "mythological"
+biomes                      = ["tundra", "boreal_forest", "grassland", "mountain"]
+max_per_world               = 3
+pack_size_min               = 2
+pack_size_max               = 6
+prefers_company             = true
+hibernates                  = false
+abilities                   = ["pack_leader"]
+
+health                      = 80
+strength                    = 28
+speed                       = 5
+aggression                  = 0.75
+territory_radius            = 18
+food_depletion              = 0.14
+food_from_hunt              = 0.65
+food_from_graze             = 0.0
+age_min_seasons             = 80
+age_max_seasons             = 300
+reproduction_min_age        = 24
+reproduction_food_threshold = 0.65
+reproduction_chance         = 0.03
+name_adjectives             = ["Iron", "Shadow", "Pale", "Ancient", "Black"]
+name_nouns                  = ["The Iron Pack", "Shadowfang", "Pale Death"]
