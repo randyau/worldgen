@@ -1,5 +1,6 @@
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities.Beasts;
+using WorldEngine.Sim.Entities.Characters;
 
 namespace WorldEngine.Sim.Entities;
 
@@ -12,8 +13,10 @@ public sealed class EntityRegistry
     private readonly Dictionary<EntityId, IEntity> _all = new();
     private readonly Dictionary<TileCoord, HashSet<EntityId>> _spatial = new();
     private readonly List<LegendaryBeast> _beasts = new();
+    private readonly List<Tier1Character> _characters = new();
 
-    public IReadOnlyList<LegendaryBeast> Beasts => _beasts;
+    public IReadOnlyList<LegendaryBeast> Beasts     => _beasts;
+    public IReadOnlyList<Tier1Character> Characters => _characters;
     public IReadOnlyDictionary<EntityId, IEntity> All => _all;
     public int Count => _all.Count;
 
@@ -22,6 +25,7 @@ public sealed class EntityRegistry
         _all[entity.Id] = entity;
         AddToSpatial(entity.Id, entity.Location);
         if (entity is LegendaryBeast b) _beasts.Add(b);
+        else if (entity is Tier1Character c) _characters.Add(c);
     }
 
     public void Remove(EntityId id)
@@ -30,6 +34,7 @@ public sealed class EntityRegistry
         RemoveFromSpatial(id, entity.Location);
         _all.Remove(id);
         if (entity is LegendaryBeast b) _beasts.Remove(b);
+        else if (entity is Tier1Character c) _characters.Remove(c);
     }
 
     public IEntity? Get(EntityId id) => _all.GetValueOrDefault(id);

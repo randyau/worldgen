@@ -1,5 +1,7 @@
+using WorldEngine.Sim.Civilizations;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities;
+using WorldEngine.Sim.Entities.Characters;
 using WorldEngine.Sim.Tiles;
 
 namespace WorldEngine.Sim.World;
@@ -41,6 +43,10 @@ public interface IWorldStateReadOnly
     IEntity? GetEntity(EntityId id);
     IEnumerable<IEntity> GetEntitiesAt(TileCoord coord);
     IEnumerable<IEntity> GetEntitiesInRadius(TileCoord center, int radius);
+
+    // === CIVILIZATION / CHARACTER (Phase 2.2+) ===
+    IReadOnlyDictionary<TileCoord, SettlementStub> Settlements { get; }
+    RelationshipEdge? GetRelationship(EntityId a, EntityId b);
 
     // === RELATIONSHIPS / HISTORY (M3+) ===
     // float GetRelationshipTrust(EntityId from, EntityId to);

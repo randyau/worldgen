@@ -1,6 +1,8 @@
+using WorldEngine.Sim.Civilizations;
 using WorldEngine.Sim.Config;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities;
+using WorldEngine.Sim.Entities.Characters;
 using WorldEngine.Sim.Tiles;
 
 namespace WorldEngine.Sim.World;
@@ -33,6 +35,12 @@ public sealed class WorldState : IWorldStateReadOnly
 
     /// <summary>Deferred mythological beast emergence schedule. Processed annually.</summary>
     public List<(int EmergenceYear, string SpeciesId)> BeastEmergenceSchedule { get; } = new();
+
+    // === CIVILIZATION / CHARACTER STATE ===
+    public Dictionary<CivId, Civilization>        Civilizations   { get; } = new();
+    public Dictionary<TileCoord, SettlementStub>  Settlements     { get; } = new();
+    public RelationshipGraph                       Relationships   { get; } = new();
+    public int NextCivId { get; set; } = 1;
 
     // === TIME ===
     public int CurrentYear { get; internal set; } = 1;
@@ -121,4 +129,11 @@ public sealed class WorldState : IWorldStateReadOnly
 
     public IEnumerable<IEntity> GetEntitiesInRadius(TileCoord center, int radius) =>
         Entities.GetInRadius(center, radius);
+
+    // === IWorldStateReadOnly — civilization / character ===
+
+    IReadOnlyDictionary<TileCoord, SettlementStub> IWorldStateReadOnly.Settlements => Settlements;
+
+    public RelationshipEdge? GetRelationship(EntityId a, EntityId b) =>
+        Relationships.Get(a, b);
 }
