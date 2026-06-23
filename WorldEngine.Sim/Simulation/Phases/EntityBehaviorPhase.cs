@@ -19,10 +19,13 @@ public sealed class EntityBehaviorPhase
     private const int SaltReproduction = 300;
     private const int SaltEmergeTile   = 301;
 
+    private readonly float _passiveFoodRecovery;
+
     public EntityBehaviorPhase(BeastCatalog catalog, int starvationHealthLoss = 5)
     {
-        _catalog             = catalog;
+        _catalog              = catalog;
         _starvationHealthLoss = starvationHealthLoss;
+        _passiveFoodRecovery  = catalog.SpawnConfig.PassiveFoodRecovery;
     }
 
     public void RunTick(WorldState world, List<PendingEvent> pending, bool isAnnualTick)
@@ -84,6 +87,11 @@ public sealed class EntityBehaviorPhase
             if (!beast.IsAlive) continue;
 
             beast.AgeSeason++;
+
+            // Passive recovery from ambient prey (lower food web — rodents, fish, insects).
+            // Keeps apex predators viable until Phase 2.4 population dynamics arrive.
+            // V2: replace with actual prey-population coupling
+            beast.FoodNeed = Math.Min(1f, beast.FoodNeed + _passiveFoodRecovery);
 
             // Food depletion — reduced in hibernation
             float depletion = beast.Hibernates && world.CurrentSeason == Season.Winter
