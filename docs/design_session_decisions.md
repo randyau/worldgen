@@ -93,14 +93,17 @@ TileDynFlags (byte):
 **Decision:** N random plate center points generated from `worldSeed + LayerSeeds.Tectonic`. Each tile assigned to nearest center (cylinder-aware distance). Plate count is explicit config parameter.  
 **Rejected:** FastNoiseLite Cellular — produces roughly equal-area plates (unrealistic). For a narrative sim, interesting geographic variation is more valuable than physical realism.
 
+**Addendum (M1 bugfix):** Pure Voronoi produces perfectly straight plate boundaries, which propagate through every downstream layer as visible straight-line artifacts (mountain ridges, river valleys, biome bands). Fix: `boundary_perturb_strength` and `boundary_perturb_frequency` config params displace each tile's (x,y) by coherent OpenSimplex2 noise before the nearest-center lookup, making boundaries wavy. A value of 10 tiles of strength is the current default. Set to 0 to restore original straight Voronoi edges.
+
 ### B2: Plate center distribution via Poisson disc sampling
 **Decision:** Plate centers placed using Poisson disc rejection sampling with `min_plate_separation_fraction` from config. Prevents degenerate sliver plates.  
-**New SimConfig section needed:**
 ```toml
 [world_gen.tectonics]
 plate_count = 15
 min_plate_separation_fraction = 0.12
 continental_plate_fraction = 0.45
+boundary_perturb_strength  = 10.0   # tiles of noise displacement at Voronoi assignment
+boundary_perturb_frequency = 0.07   # noise frequency (lower = broader curves)
 ```
 
 ### B3: Continental plate fraction is config-driven
@@ -121,12 +124,29 @@ major_river_threshold = 500
 **Decision:** Tropical band (|normalizedLat - 0.5| < 0.25) uses East-to-West moisture sweep (trade winds). Mid-latitude + polar uses West-to-East (westerlies). Two separate passes over the world grid.  
 **Rejected:** Single sweep (tropical East coasts incorrectly dry). Three bands (polar easterlies add marginal value at polar regions that are already dry from cold).
 
+**Addendum (M1 bugfix):** The per-tile moisture carry decay was hardcoded at 0.97, causing interiors to reach near-zero moisture (~22% remaining at 50 tiles inland) and become desert. Changed to configurable `moisture_carry_decay = 0.993` in `[climate]`, giving ~70% moisture at 50 tiles and ~45% at 100 tiles. Deep interiors now produce grassland/savanna instead of uniform desert.
+
 ### B6: Storm corridors stored in WorldState, not as a flag
 **Decision:** Storm corridor membership is computed at runtime from `WorldState.StormCorridorNormalizedLat` and `WorldState.StormCorridorHalfWidth`. `IsStormCorridor` StaticFlag (bit 8) is set at world gen but is secondary — the authoritative check at sim time is the WorldState parameters, which can drift.  
 **Rationale:** Storm tracks shift with climate change (poleward drift during warming). A baked flag cannot shift. Computing membership inline is trivial (float subtraction + comparison).
 
 ### B7: Biome thresholds in SimConfig
 **Decision:** All biome classification thresholds are config parameters under `[world_gen.biome_thresholds]`. `BiomeClassifier` is a pure static function: `Classify(temperature, moisture, elevation, flags, config) → BiomeType`. Hard biome boundaries in M1 (one biome per tile). Interpolation deferred to post-M1.
+
+### B8: Ocean erosion pass to remove thin ridge artifacts
+**Decision (M1 bugfix):** After OceanLayer marks tiles as ocean by elevation rank, a configurable erosion pass reclassifies narrow protrusions. Any non-ocean tile with ≥ `min_ocean_8neighbors` (default 5) of its 8 neighbours being ocean is converted to ocean. Applied `erosion_passes` times (default 2). This removes 1–2 tile wide continental fault lines that protrude above sea level as Mountain/Tundra ridges in the middle of ocean tiles, without touching solid continental coastlines (which have ≤4 ocean 8-neighbours). Implemented in `OceanLayer` after the elevation threshold pass and before coastal marking.
+```toml
+[world_gen.ocean]
+erosion_passes       = 2
+min_ocean_8neighbors = 5
+```
+
+### B9: Elevation smoothing to break fault-line river channels
+**Decision (M1 bugfix):** After normalization, `ElevationLayer` applies `smoothing_passes` box-blur iterations (centre weight 4, 4-neighbour weight 1 each, divisor 8). This softens the sharp elevation step at plate boundaries so `RiverLayer` finds a smooth gradient rather than snapping to the lowest point of a fault trench (which was straight). Default 3 passes. Set to 0 to disable.
+```toml
+[world_gen.elevation]
+smoothing_passes = 3
+```
 
 ### Climate drift parameters in WorldState
 These are WorldState fields initialized from SimConfig, can drift during sim:
