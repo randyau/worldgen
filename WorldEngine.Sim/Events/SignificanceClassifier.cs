@@ -67,6 +67,10 @@ public static class SignificanceClassifier
             EventType.RivalryFormed     => PopulationImpact.None,
             EventType.Negotiated        => PopulationImpact.None,
             EventType.SuccessionOccurred      => PopulationImpact.Minor,
+            // Population events (3400-range)
+            EventType.SettlementGrew      => PopulationImpact.None,   // suppressed: too noisy
+            EventType.SettlementShrank    => PopulationImpact.None,
+            EventType.SettlementAbandoned => PopulationImpact.Major,  // → Regional tier
             // Tier 2 character events
             EventType.AppointedToRole         => PopulationImpact.None,
             EventType.DismissedFromRole       => PopulationImpact.None,

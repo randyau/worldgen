@@ -10,6 +10,7 @@ public class SimConfig
     public BeastsSimConfig Beasts { get; set; } = new();
     public CharacterSimConfig Character { get; set; } = new();
     public CharacterNamesConfig CharacterNames { get; set; } = new();
+    public SettlementConfig Settlement { get; set; } = new();
 
     public static SimConfig Default() => new();
 }

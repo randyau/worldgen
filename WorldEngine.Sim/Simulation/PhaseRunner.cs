@@ -22,7 +22,8 @@ public sealed class PhaseRunner
     private readonly EnvironmentalPhase _envPhase;
     private readonly EntityBehaviorPhase _entityPhase;
     private readonly CharacterBehaviorPhase _charPhase;
-    private readonly Tier2BehaviorPhase     _tier2Phase;
+    private readonly Tier2BehaviorPhase       _tier2Phase;
+    private readonly PopulationDynamicsPhase  _popPhase;
     private readonly Action<SimPhase>? _phaseObserver;
     private readonly List<PendingEvent> _injectedEvents = new();
     private int _lastAnnualTickYear;
@@ -45,6 +46,7 @@ public sealed class PhaseRunner
             config.Beasts.StarvationHealthLoss);
         _charPhase     = new CharacterBehaviorPhase(config);
         _tier2Phase    = new Tier2BehaviorPhase(config);
+        _popPhase      = new PopulationDynamicsPhase(config);
         _phaseObserver = phaseObserver;
     }
 
@@ -66,7 +68,7 @@ public sealed class PhaseRunner
         _injectedEvents.Clear();
 
         RunPhaseStub(world, SimPhase.ResourceProduction);
-        RunPhaseStub(world, SimPhase.PopulationDynamics);
+        RunPopulationDynamicsPhase(world, pending);
         RunEntityBehaviorPhase(world, pending, isAnnualTick);
         RunCharacterBehaviorPhase(world, pending);
         RunPhaseStub(world, SimPhase.ConflictResolution);
@@ -81,6 +83,12 @@ public sealed class PhaseRunner
         var pending = new List<PendingEvent>();
         _envPhase.RunTick(world, pending, isAnnualTick);
         return pending;
+    }
+
+    private void RunPopulationDynamicsPhase(WorldState world, List<PendingEvent> pending)
+    {
+        _phaseObserver?.Invoke(SimPhase.PopulationDynamics);
+        pending.AddRange(_popPhase.Execute(world));
     }
 
     private void RunEntityBehaviorPhase(WorldState world, List<PendingEvent> pending, bool isAnnualTick)

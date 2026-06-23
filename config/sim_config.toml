@@ -622,3 +622,17 @@ tier2_needs_decay_food      = 0.06
 tier2_needs_decay_safety    = 0.04
 tier2_needs_decay_belonging = 0.03
 tier2_needs_decay_status    = 0.04
+
+# =============================================================================
+# SETTLEMENT (Phase 2.4 — Population Dynamics)
+# =============================================================================
+
+[settlement]
+pop_growth_rate          = 0.5   # population added per season per fertility unit (fertility/255 × this)
+pop_decay_rate           = 0.2   # population lost per season unconditionally (hunger/disease stub)
+pop_min_viable           = 5     # below this → settlement abandoned
+pop_max                  = 50000 # hard cap
+crystal_pop_artisan      = 200
+crystal_pop_scholar      = 300
+crystal_pop_physician    = 500
+crystal_pop_merchant     = 1000

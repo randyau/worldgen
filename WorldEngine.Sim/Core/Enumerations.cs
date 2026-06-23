@@ -102,6 +102,11 @@ public enum EventType
     SettlementDestroyed     = 3204,
     SuccessionOccurred      = 3205,
 
+    // M2+ population events (3400-range)
+    SettlementGrew          = 3401,
+    SettlementShrank        = 3402,
+    SettlementAbandoned     = 3403,
+
     // M2+ Tier 2 character events (3300-range)
     AppointedToRole         = 3301,
     DismissedFromRole       = 3302,
@@ -153,6 +158,9 @@ public static class VerbClassification
         EventType.SettlementFounded       => VerbClass.Creation,
         EventType.SettlementDestroyed     => VerbClass.Destruction,
         EventType.SuccessionOccurred      => VerbClass.Transfer,
+        EventType.SettlementGrew          => VerbClass.Creation,
+        EventType.SettlementShrank        => VerbClass.Destruction,
+        EventType.SettlementAbandoned     => VerbClass.Destruction,
         EventType.AppointedToRole         => VerbClass.Transfer,
         EventType.DismissedFromRole       => VerbClass.Transfer,
         EventType.MerchantTradeCompleted  => VerbClass.Transfer,
