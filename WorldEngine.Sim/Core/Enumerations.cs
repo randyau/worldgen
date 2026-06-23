@@ -102,6 +102,14 @@ public enum EventType
     SettlementDestroyed     = 3204,
     SuccessionOccurred      = 3205,
 
+    // M2+ Tier 2 character events (3300-range)
+    AppointedToRole         = 3301,
+    DismissedFromRole       = 3302,
+    MerchantTradeCompleted  = 3303,
+    ScholarDiscovery        = 3304,
+    PhysicianHealed         = 3305,
+    CharacterCrystallized   = 3306,
+
     // M3+ artifacts / religion (6000+/4000+ ranges reserved)
     ArtifactCreated         = 6001,
     ArtifactDestroyed       = 6002,
@@ -145,6 +153,12 @@ public static class VerbClassification
         EventType.SettlementFounded       => VerbClass.Creation,
         EventType.SettlementDestroyed     => VerbClass.Destruction,
         EventType.SuccessionOccurred      => VerbClass.Transfer,
+        EventType.AppointedToRole         => VerbClass.Transfer,
+        EventType.DismissedFromRole       => VerbClass.Transfer,
+        EventType.MerchantTradeCompleted  => VerbClass.Transfer,
+        EventType.ScholarDiscovery        => VerbClass.Creation,
+        EventType.PhysicianHealed         => VerbClass.Maintenance,
+        EventType.CharacterCrystallized   => VerbClass.Transformation,
         EventType.ArtifactCreated         => VerbClass.Creation,
         EventType.ArtifactDestroyed       => VerbClass.Destruction,
         EventType.ReligionFounded         => VerbClass.Creation,

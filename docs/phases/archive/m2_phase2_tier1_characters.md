@@ -1,7 +1,7 @@
 # Phase 2.2 — Tier 1 Characters
 
 **Milestone:** 2 — The Character System  
-**Status:** IN PROGRESS  
+**Status:** COMPLETE — 2026-06-23  
 **Goal:** Introduce Tier 1 (hero/ruler) characters. Each character has personality, aptitude, skills, and needs. They make utility-scored decisions each season, form relationships, establish settlements, and trigger civilization emergence. This is the first phase that produces political and social history.
 
 **Companion docs:**

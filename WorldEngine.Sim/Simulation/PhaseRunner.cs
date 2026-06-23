@@ -22,6 +22,7 @@ public sealed class PhaseRunner
     private readonly EnvironmentalPhase _envPhase;
     private readonly EntityBehaviorPhase _entityPhase;
     private readonly CharacterBehaviorPhase _charPhase;
+    private readonly Tier2BehaviorPhase     _tier2Phase;
     private readonly Action<SimPhase>? _phaseObserver;
     private readonly List<PendingEvent> _injectedEvents = new();
     private int _lastAnnualTickYear;
@@ -43,6 +44,7 @@ public sealed class PhaseRunner
             beastCatalog ?? BeastCatalogLoader.LoadOrCreateDefault(),
             config.Beasts.StarvationHealthLoss);
         _charPhase     = new CharacterBehaviorPhase(config);
+        _tier2Phase    = new Tier2BehaviorPhase(config);
         _phaseObserver = phaseObserver;
     }
 
@@ -91,6 +93,7 @@ public sealed class PhaseRunner
     {
         _phaseObserver?.Invoke(SimPhase.CharacterDecisions);
         pending.AddRange(_charPhase.Execute(world, world.CurrentTick));
+        pending.AddRange(_tier2Phase.Execute(world, world.CurrentTick));
     }
 
     private void RunPhaseStub(WorldState world, SimPhase phase)

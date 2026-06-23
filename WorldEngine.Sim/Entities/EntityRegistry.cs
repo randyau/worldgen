@@ -12,11 +12,13 @@ public sealed class EntityRegistry
 {
     private readonly Dictionary<EntityId, IEntity> _all = new();
     private readonly Dictionary<TileCoord, HashSet<EntityId>> _spatial = new();
-    private readonly List<LegendaryBeast> _beasts = new();
-    private readonly List<Tier1Character> _characters = new();
+    private readonly List<LegendaryBeast>  _beasts      = new();
+    private readonly List<Tier1Character>  _characters  = new();
+    private readonly List<Tier2Character>  _tier2chars  = new();
 
-    public IReadOnlyList<LegendaryBeast> Beasts     => _beasts;
-    public IReadOnlyList<Tier1Character> Characters => _characters;
+    public IReadOnlyList<LegendaryBeast>  Beasts      => _beasts;
+    public IReadOnlyList<Tier1Character>  Characters  => _characters;
+    public IReadOnlyList<Tier2Character>  Tier2Chars  => _tier2chars;
     public IReadOnlyDictionary<EntityId, IEntity> All => _all;
     public int Count => _all.Count;
 
@@ -24,8 +26,9 @@ public sealed class EntityRegistry
     {
         _all[entity.Id] = entity;
         AddToSpatial(entity.Id, entity.Location);
-        if (entity is LegendaryBeast b) _beasts.Add(b);
+        if (entity is LegendaryBeast b)      _beasts.Add(b);
         else if (entity is Tier1Character c) _characters.Add(c);
+        else if (entity is Tier2Character c2) _tier2chars.Add(c2);
     }
 
     public void Remove(EntityId id)
@@ -33,8 +36,9 @@ public sealed class EntityRegistry
         if (!_all.TryGetValue(id, out var entity)) return;
         RemoveFromSpatial(id, entity.Location);
         _all.Remove(id);
-        if (entity is LegendaryBeast b) _beasts.Remove(b);
+        if (entity is LegendaryBeast b)      _beasts.Remove(b);
         else if (entity is Tier1Character c) _characters.Remove(c);
+        else if (entity is Tier2Character c2) _tier2chars.Remove(c2);
     }
 
     public IEntity? Get(EntityId id) => _all.GetValueOrDefault(id);

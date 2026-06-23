@@ -613,3 +613,12 @@ perception_radius         = 3
 health_per_season_heal    = 5
 combat_damage_base        = 20
 min_fertility_to_settle   = 100
+# Tier 2 sub-tuning (appended to [character] section — Tomlyn merges same-section keys)
+tier2_per_population        = 10
+tier2_max_age_seasons_min   = 60
+tier2_max_age_seasons_max   = 120
+tier2_crystal_chance        = 0.001
+tier2_needs_decay_food      = 0.06
+tier2_needs_decay_safety    = 0.04
+tier2_needs_decay_belonging = 0.03
+tier2_needs_decay_status    = 0.04

@@ -66,8 +66,15 @@ public static class SignificanceClassifier
             EventType.AllianceBroken    => PopulationImpact.None,
             EventType.RivalryFormed     => PopulationImpact.None,
             EventType.Negotiated        => PopulationImpact.None,
-            EventType.SuccessionOccurred => PopulationImpact.Minor,
-            _                           => PopulationImpact.None,
+            EventType.SuccessionOccurred      => PopulationImpact.Minor,
+            // Tier 2 character events
+            EventType.AppointedToRole         => PopulationImpact.None,
+            EventType.DismissedFromRole       => PopulationImpact.None,
+            EventType.MerchantTradeCompleted  => PopulationImpact.None,
+            EventType.ScholarDiscovery        => PopulationImpact.Minor,
+            EventType.PhysicianHealed         => PopulationImpact.None,
+            EventType.CharacterCrystallized   => PopulationImpact.Minor,
+            _                                 => PopulationImpact.None,
         };
     }
 

@@ -30,4 +30,14 @@ public sealed class CharacterSimConfig
     public int   HealthPerSeasonHeal    { get; set; } = 5;
     public int   CombatDamageBase       { get; set; } = 20;
     public int   MinFertilityToSettle   { get; set; } = 100;
+
+    // Tier 2 tuning
+    public int   Tier2PerPopulation     { get; set; } = 10;  // one Tier2 per this many pop
+    public int   Tier2MaxAgeSeasonsMin  { get; set; } = 60;
+    public int   Tier2MaxAgeSeasonsMax  { get; set; } = 120;
+    public float Tier2CrystalChance     { get; set; } = 0.001f;  // per season
+    public float Tier2NeedsDecayFood    { get; set; } = 0.06f;
+    public float Tier2NeedsDecaySafety  { get; set; } = 0.04f;
+    public float Tier2NeedsDecayBelonging { get; set; } = 0.03f;
+    public float Tier2NeedsDecayStatus   { get; set; } = 0.04f;
 }

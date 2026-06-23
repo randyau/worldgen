@@ -221,7 +221,8 @@ public sealed class Game1 : Game
         _eventStore.InitializeSchema();
 
         var spawnEvents = BeastSpawner.SpawnAll(world, beastCatalog);
-        var charSpawnEvents = CharacterSpawner.SpawnAll(world, simCfg);
+        var charSpawnEvents  = CharacterSpawner.SpawnAll(world, simCfg);
+        var tier2SpawnEvents = Tier2Spawner.SpawnAll(world, simCfg);
 
         var eventCache = new EventCache(simCfg.Events.RecentEventCacheSize);
         var gate = new EventGate(simCfg);
@@ -231,6 +232,8 @@ public sealed class Game1 : Game
         foreach (var pe in spawnEvents)
             phaseRunner.InjectPendingEvent(pe);
         foreach (var pe in charSpawnEvents)
+            phaseRunner.InjectPendingEvent(pe);
+        foreach (var pe in tier2SpawnEvents)
             phaseRunner.InjectPendingEvent(pe);
 
         var snapshotBuilder = new SnapshotBuilder();

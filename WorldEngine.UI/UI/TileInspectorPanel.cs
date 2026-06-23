@@ -83,17 +83,25 @@ public sealed class TileInspectorPanel
         TileCoord coord,
         IReadOnlyDictionary<EntityId, EntitySnapshot> entitySnapshots)
     {
-        var chars = entitySnapshots.Values
+        var tier1 = entitySnapshots.Values
             .Where(e => e.Kind == EntityKind.Tier1Character && e.IsAlive && e.Location == coord)
             .ToList();
+        var tier2 = entitySnapshots.Values
+            .Where(e => e.Kind == EntityKind.Tier2Character && e.IsAlive && e.Location == coord)
+            .ToList();
 
-        if (chars.Count == 0) return;
+        if (tier1.Count == 0 && tier2.Count == 0) return;
 
         AddLine("--- Characters ---");
-        foreach (var c in chars)
+        foreach (var c in tier1)
         {
             string civTag = c.CivName is not null ? $" [{c.CivName}]" : "";
             AddLine($"{c.Name}{civTag}");
+            AddLine($"  HP {c.HealthFraction:P0}  Age {c.AgeSeason}s");
+        }
+        foreach (var c in tier2)
+        {
+            AddLine($"{c.Name} [Tier2]");
             AddLine($"  HP {c.HealthFraction:P0}  Age {c.AgeSeason}s");
         }
     }
