@@ -34,40 +34,32 @@ public static class BiomeClassifier
         if (flags.HasFlag(TileStaticFlags.IsCoastal) && elevation < t.HillsElevation)
             return BiomeType.Beach;
 
-        // Priority 5: Hill elevation
-        bool isHills = elevation >= t.HillsElevation;
+        // Hills elevation (140–179) is a terrain feature, not a biome — tiles in this
+        // range classify by temperature/moisture like any other land tile. Mountain and
+        // HighMountain (handled above) are the only elevation-driven biome overrides.
 
-        // Priority 6: Polar temperature (any moisture → Tundra)
+        // Priority 5: Polar temperature (any moisture → Tundra)
         if (temperature < t.PolarTemperature) return BiomeType.Tundra;
 
-        // Priority 7: Cold temperature
+        // Priority 6: Cold temperature
         if (temperature < t.ColdTemperature)
         {
             return moisture >= t.WetMoisture ? BiomeType.BorealForest : BiomeType.Tundra;
         }
 
-        // Priority 8: Hot temperature + moisture matrix
+        // Priority 7: Hot temperature + moisture matrix
         if (temperature >= t.HotTemperature)
         {
             if (moisture >= t.WetMoisture) return BiomeType.TropicalRainforest;
-            if (moisture >= t.DryMoisture) return isHills ? BiomeType.Hills : BiomeType.Savanna;
+            if (moisture >= t.DryMoisture) return BiomeType.Savanna;
             if (moisture >= t.AridMoisture) return BiomeType.Savanna;
             return BiomeType.Desert;
         }
 
-        // Priority 9: Temperate zone — temperature between ColdTemperature and HotTemperature
-        if (moisture >= t.WetMoisture)
-        {
-            return isHills ? BiomeType.Hills : BiomeType.TemperateForest;
-        }
-        if (moisture >= t.DryMoisture)
-        {
-            return isHills ? BiomeType.Hills : BiomeType.Grassland;
-        }
-        if (moisture >= t.AridMoisture)
-        {
-            return isHills ? BiomeType.Hills : BiomeType.Plains;
-        }
+        // Priority 8: Temperate zone — temperature between ColdTemperature and HotTemperature
+        if (moisture >= t.WetMoisture)  return BiomeType.TemperateForest;
+        if (moisture >= t.DryMoisture)  return BiomeType.Grassland;
+        if (moisture >= t.AridMoisture) return BiomeType.Plains;
 
         // Arid temperate → effectively desert conditions
         return BiomeType.Desert;

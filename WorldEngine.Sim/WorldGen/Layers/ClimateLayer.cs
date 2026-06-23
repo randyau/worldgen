@@ -42,6 +42,28 @@ public sealed class ClimateLayer : IWorldGenLayer<ClimateResult>
 
         // --- Step 2: Base moisture via two-band wind sweep ---
         ComputeBaseMoisture(elev, ocean, cfg, w, h, ctx, result.BaseMoisture);
+
+        // Apply moisture noise after sweep to break horizontal banding.
+        // Moisture from wind sweeps is constant across each latitude row; noise
+        // introduces east-west variation between regions.
+        if (cfg.MoistureNoiseScale > 0f)
+        {
+            var moistNoise = new FastNoiseLite(seed ^ 0x3D9A17);
+            moistNoise.SetNoiseType(FastNoiseLite.NoiseType.OpenSimplex2);
+            moistNoise.SetFrequency(cfg.MoistureNoiseFrequency);
+            float mScale = cfg.MoistureNoiseScale;
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    int idx = ctx.IndexOf(x, y);
+                    if (ocean.IsOcean[idx]) continue; // don't perturb ocean tiles
+                    int m = result.BaseMoisture[idx] + (int)(moistNoise.GetNoise(x, y) * mScale);
+                    result.BaseMoisture[idx] = (byte)Math.Clamp(m, 0, 255);
+                }
+            }
+        }
+
         progress?.Report(0.5f);
         ct.ThrowIfCancellationRequested();
 

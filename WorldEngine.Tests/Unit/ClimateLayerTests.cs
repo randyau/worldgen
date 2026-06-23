@@ -89,7 +89,15 @@ public class ClimateLayerTests
     [Fact]
     public void Climate_RainShadowBehindMountains()
     {
-        var ctx = MakeCtx();
+        // Use a no-noise config so the rain shadow signal isn't masked by moisture noise.
+        var config = new WorldConfig { Seed = 42, WidthKm = 2000, HeightKm = 1500, TileWidthKm = 10 };
+        var simCfg = TestSimConfig.Default();
+        simCfg.Climate.MoistureNoiseScale = 0f;
+        simCfg.Climate.TemperatureNoiseScale = 0f;
+        var ctx = new WorldGenContext(config, simCfg);
+        ctx.Tectonic  = new TectonicLayer().Generate(ctx);
+        ctx.Elevation = new ElevationLayer().Generate(ctx);
+        ctx.Ocean     = new OceanLayer().Generate(ctx);
         var result = new ClimateLayer().Generate(ctx);
         var elev = ctx.Elevation!;
         int w = ctx.TileWidth, h = ctx.TileHeight;
@@ -99,8 +107,8 @@ public class ClimateLayerTests
         // Wind direction depends on latitude band — use equatorial tiles (trade winds: E→W, so leeward=east).
         int eqStart = h * 4 / 10, eqEnd = h * 6 / 10;
 
-        float mountainMoisture  = 0f;
-        float leeSideMoisture   = 0f;
+        float windwardMoisture = 0f;
+        float leeSideMoisture  = 0f;
         int count = 0;
 
         for (int y = eqStart; y < eqEnd; y++)
@@ -110,21 +118,22 @@ public class ClimateLayerTests
                 int idx = ctx.IndexOf(x, y);
                 if (elev.Elevation[idx] < mountainThreshold) continue;
 
-                // Leeward (east side for trade winds = west-to-east flow...
-                // Actually tropical trade winds blow from E→W, so leeward is to the west)
-                int leeX = (x - 1 + w) % w;
-                int leeIdx = ctx.IndexOf(leeX, y);
+                // Tropical trade winds blow E→W: windward = east (+1), leeward = west (-1)
+                int windX = (x + 1) % w;
+                int leeX  = (x - 1 + w) % w;
 
-                mountainMoisture += result.BaseMoisture[idx];
-                leeSideMoisture  += result.BaseMoisture[leeIdx];
+                windwardMoisture += result.BaseMoisture[ctx.IndexOf(windX, y)];
+                leeSideMoisture  += result.BaseMoisture[ctx.IndexOf(leeX, y)];
                 count++;
             }
         }
 
         if (count < 10) return; // too few mountains in test world, skip
 
-        (leeSideMoisture / count).Should().BeLessThan(mountainMoisture / count,
-            "leeward tiles of equatorial mountains should have lower moisture (rain shadow)");
+        // Compare windward to leeward directly. This is robust to moisture noise
+        // because the rain shadow deficit is directional; noise is symmetric.
+        (leeSideMoisture / count).Should().BeLessThan(windwardMoisture / count,
+            "leeward tiles of equatorial mountains should have lower moisture than windward tiles (rain shadow)");
     }
 
     [Fact]

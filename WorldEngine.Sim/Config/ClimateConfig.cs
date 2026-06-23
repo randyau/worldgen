@@ -43,7 +43,7 @@ public class ClimateConfig
     /// Amplitude of coherent noise added to the latitude temperature fraction [0–1].
     /// Breaks horizontal biome banding by introducing regional temperature anomalies
     /// (analogous to ocean currents, land mass effects). 0 = pure latitude bands.
-    /// 0.12–0.18 produces realistic regional variation without destroying the gradient.
+    /// 0.12–0.20 produces realistic regional variation without destroying the gradient.
     /// </summary>
     public float TemperatureNoiseScale { get; set; } = 0f;
 
@@ -52,4 +52,18 @@ public class ClimateConfig
     /// broad regional anomalies; higher values produce finer-grained variation.
     /// </summary>
     public float TemperatureNoiseFrequency { get; set; } = 0.015f;
+
+    /// <summary>
+    /// Amplitude of coherent noise (in byte units, 0–255) added to base moisture
+    /// after wind sweeps. Breaks horizontal moisture banding — moisture from wind
+    /// sweeps is identical across each latitude row, so noise is the only source of
+    /// east-west variation. 30–50 produces noticeable region-to-region differences.
+    /// </summary>
+    public float MoistureNoiseScale { get; set; } = 0f;
+
+    /// <summary>
+    /// Noise frequency for moisture anomalies. Should be similar to temperature
+    /// frequency so anomaly blobs are roughly the same geographic size.
+    /// </summary>
+    public float MoistureNoiseFrequency { get; set; } = 0.015f;
 }
