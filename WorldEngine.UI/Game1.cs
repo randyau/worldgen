@@ -283,7 +283,8 @@ public sealed class Game1 : Game
             {
                 var coord = _camera.ScreenToTile(new Vector2(mouse.X, mouse.Y));
                 // Discard clicks that land outside the valid tile grid (zoomed-out empty space)
-                if (coord.Y < 0 || coord.Y >= snapshot.WorldTileHeight)
+                if (coord.X < 0 || coord.X >= snapshot.WorldTileWidth
+                 || coord.Y < 0 || coord.Y >= snapshot.WorldTileHeight)
                     return;
                 _commandQueue.Enqueue(new SetInspectedTile(coord));
             }
