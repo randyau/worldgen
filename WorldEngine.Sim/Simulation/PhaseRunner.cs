@@ -71,7 +71,7 @@ public sealed class PhaseRunner
         _injectedEvents.Clear();
 
         RunPhaseStub(world, SimPhase.ResourceProduction);
-        RunPopulationDynamicsPhase(world, pending);
+        RunPopulationDynamicsPhase(world, pending, isAnnualTick);
         pending.AddRange(_pressurePhase.Execute(world, world.CurrentTick));
         RunEntityBehaviorPhase(world, pending, isAnnualTick);
         RunCharacterBehaviorPhase(world, pending, isAnnualTick);
@@ -91,10 +91,10 @@ public sealed class PhaseRunner
         return pending;
     }
 
-    private void RunPopulationDynamicsPhase(WorldState world, List<PendingEvent> pending)
+    private void RunPopulationDynamicsPhase(WorldState world, List<PendingEvent> pending, bool isAnnualTick)
     {
         _phaseObserver?.Invoke(SimPhase.PopulationDynamics);
-        pending.AddRange(_popPhase.Execute(world));
+        pending.AddRange(_popPhase.Execute(world, isAnnualTick));
     }
 
     private void RunEntityBehaviorPhase(WorldState world, List<PendingEvent> pending, bool isAnnualTick)

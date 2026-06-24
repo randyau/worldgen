@@ -16,12 +16,14 @@ namespace WorldEngine.Sim.Simulation.Phases;
 public sealed class CharacterBehaviorPhase
 {
     private readonly CharacterSimConfig _cfg;
+    private readonly SettlementConfig   _settleCfg;
     private readonly SimConfig _simCfg;
 
     public CharacterBehaviorPhase(SimConfig cfg)
     {
-        _simCfg = cfg;
-        _cfg    = cfg.Character;
+        _simCfg    = cfg;
+        _cfg       = cfg.Character;
+        _settleCfg = cfg.Settlement;
     }
 
     public List<PendingEvent> Execute(WorldState world, long tick, bool isAnnualTick = false)
@@ -100,6 +102,18 @@ public sealed class CharacterBehaviorPhase
             float popFactor = Math.Min(3f, (float)stub.Population / _cfg.CivBirthMinPop);
             float chance    = _cfg.CivBirthChancePerSeason * popFactor;
 
+            // Emigration pressure: over-capacity settlements get an extra spawn boost and the
+            // new character is seeded with a Colonize goal so they actively seek distant land.
+            bool overCapacity = stub.CarryingCapacity > 0
+                && stub.Population > _settleCfg.EmigrationThreshold * stub.CarryingCapacity;
+            if (overCapacity)
+            {
+                float pressureFactor = Math.Clamp(
+                    ((float)stub.Population / stub.CarryingCapacity - _settleCfg.EmigrationThreshold)
+                    / (1f - _settleCfg.EmigrationThreshold), 0f, 1f);
+                chance += _settleCfg.EmigrationBonusChance * pressureFactor;
+            }
+
             float r = WorldRng.FloatAt(world.WorldSeed, (int)tick, (int)(stub.FounderId.Value & 0x7FFFFFFF), 0, SaltCivBirth);
             if (r > chance) continue;
 
@@ -110,6 +124,22 @@ public sealed class CharacterBehaviorPhase
             born.Identity = born.Identity with { CivId = stub.CivId };
             civ.Members.Add(born.Id);
             world.Entities.Add(born);
+
+            // Emigrant: seed Colonize goal immediately and deduct population from parent
+            if (overCapacity)
+            {
+                born.Goals.Add(new GoalData
+                {
+                    Type       = GoalType.Colonize,
+                    Priority   = 0.9f,
+                    StaleSince = (int)tick,
+                    FormedTick = (int)tick
+                });
+                // Re-read stub in case it was updated earlier this tick
+                if (world.Settlements.TryGetValue(kvp.Key, out var freshStub))
+                    world.Settlements[kvp.Key] = freshStub with
+                        { Population = Math.Max(0, freshStub.Population - _settleCfg.EmigrantPopCost) };
+            }
 
             var payload = System.Text.Json.JsonSerializer.Serialize(new
             {

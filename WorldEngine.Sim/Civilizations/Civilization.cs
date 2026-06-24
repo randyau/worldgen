@@ -28,6 +28,12 @@ public sealed class Civilization
     public int TotalPopulation { get; set; } = 0;
 
     /// <summary>
+    /// Year the succession crisis ends. int.MinValue = founder still alive, no crisis pending.
+    /// Set when the founder dies; distant settlements decay faster until this year passes.
+    /// </summary>
+    public int SuccessionCrisisEndYear { get; set; } = int.MinValue;
+
+    /// <summary>
     /// Accumulated territorial tension toward each other civ.
     /// Increases annually when their settlements are within WarProximityRadius tiles;
     /// decays when they're not. Crossing TensionWarThreshold triggers war if the ruler

@@ -25,7 +25,9 @@ public sealed record SettlementStub(
     int       ConqueredFromCivId   = 0,   // CivId of previous owner at time of conquest (0 = never)
     IReadOnlyDictionary<string, float>? ResourceStores = null,  // persistent resource reserves keyed by resource name
     int CarryingCapacity = 50_000,                              // biome-based population ceiling; computed by ResourcePressurePhase each tick
-    bool IsColony = false)                                       // true when founded beyond ColonyMinDistance from all same-civ settlements
+    bool IsColony = false,                                       // true when founded beyond ColonyMinDistance from all same-civ settlements
+    bool IsInfected = false,                                    // currently suffering a disease outbreak
+    int  InfectedSinceYear = 0)                                 // year the current infection started
                                            // vital (food, water): measured in seasons of supply; draws during deficit
                                            // wealth (gold, minerals, timber): raw accumulated units; no demand draw
 {

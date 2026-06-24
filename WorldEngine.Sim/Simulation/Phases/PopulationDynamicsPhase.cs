@@ -17,7 +17,13 @@ public sealed class PopulationDynamicsPhase
     private readonly SettlementConfig _cfg;
     private readonly SimConfig _simCfg;
 
-    private const int SaltCrystal = 950;
+    private const int SaltCrystal          = 950;
+    private const int SaltDiseaseOutbreak  = 810;
+    private const int SaltDiseaseSpread    = 811;
+    private const int SaltDiseaseRecovery  = 812;
+    private const int SaltWildlife         = 820;
+    // 4 seasons × 4 ticks per season = 16 ticks per in-game year
+    private const int TicksPerYear = 16;
 
     public PopulationDynamicsPhase(SimConfig cfg)
     {
@@ -25,7 +31,7 @@ public sealed class PopulationDynamicsPhase
         _cfg    = cfg.Settlement;
     }
 
-    public List<PendingEvent> Execute(WorldState world)
+    public List<PendingEvent> Execute(WorldState world, bool isAnnualTick = false)
     {
         var pending = new List<PendingEvent>();
         var toAbandon = new List<TileCoord>();
@@ -44,6 +50,12 @@ public sealed class PopulationDynamicsPhase
 
         foreach (var tile in toAbandon)
             AbandonSettlement(tile, world, pending);
+
+        if (isAnnualTick)
+        {
+            RunAnnualDiseaseChecks(world, pending);
+            RunAnnualWildlifeAttacks(world, pending);
+        }
 
         // Refresh TotalPopulation on each civ so InCivFoundingCooldown can read it without
         // scanning all settlements. Cost: O(settlements), paid once here vs. per-character.
@@ -98,11 +110,30 @@ public sealed class PopulationDynamicsPhase
         float foodGrowthScale = Math.Clamp(foodRatio, 0f, 1f);
         float growthF  = fertility * safetyScore * _cfg.PopGrowthRate * foodGrowthScale * logisticFactor;
         float decayF   = _cfg.PopDecayRate + starvationDecay;
-        float deltaF   = growthF - decayF;
 
+        // Succession crisis: distant settlements decay faster after the founding ruler dies
+        var charCfg = _simCfg.Character;
+        if (world.Civilizations.TryGetValue(stub.CivId, out var settleCiv)
+            && settleCiv.SuccessionCrisisEndYear != int.MinValue
+            && world.CurrentYear < settleCiv.SuccessionCrisisEndYear)
+        {
+            int sdx = stub.Tile.X - settleCiv.CapitalTile.X;
+            int sdy = stub.Tile.Y - settleCiv.CapitalTile.Y;
+            if (sdx * sdx + sdy * sdy > charCfg.SuccessionStableRadius * charCfg.SuccessionStableRadius)
+                decayF *= charCfg.SuccessionCrisisDecayMult;
+        }
+
+        float deltaF   = growthF - decayF;
         float newPopF  = stub.PopulationF + deltaF;
         int   newPop   = Math.Clamp(stub.Population + (int)Math.Floor(newPopF), 0, Math.Min(carryingCapacity, _cfg.PopMax));
         float remainder = newPopF - (int)Math.Floor(newPopF);
+
+        // Disease: proportional per-tick mortality while settlement is infected
+        if (stub.IsInfected && newPop > 0)
+        {
+            int diseaseDrain = Math.Max(1, (int)(newPop * _cfg.DiseaseMortalityPerYear / TicksPerYear));
+            newPop = Math.Max(0, newPop - diseaseDrain);
+        }
 
         // SettlementGrew/Shrank are suppressed in config — don't generate them to avoid
         // O(settlements) pending event allocations per tick.
@@ -188,6 +219,94 @@ public sealed class PopulationDynamicsPhase
             timesSettled
         });
         pending.Add(new PendingEvent(EventType.SettlementAbandoned, tile, null, payload));
+    }
+
+    // ─── Annual disease checks ────────────────────────────────────────────────
+
+    /// <summary>
+    /// Annual pass: new outbreaks (scaled by population density), disease spread between nearby
+    /// settlements, and recovery checks. Per-tick mortality is applied in UpdateSettlement.
+    /// </summary>
+    private void RunAnnualDiseaseChecks(WorldState world, List<PendingEvent> pending)
+    {
+        int year        = world.CurrentYear;
+        var settlements = world.Settlements.ToList(); // snapshot; we mutate the dict during iteration
+        var toInfect    = new HashSet<TileCoord>();
+        var toRecover   = new HashSet<TileCoord>();
+
+        foreach (var (coord, stub) in settlements)
+        {
+            if (stub.IsInfected)
+            {
+                int yearsInfected = year - stub.InfectedSinceYear;
+                bool recover = yearsInfected >= _cfg.DiseaseMaxDurationYears;
+                if (!recover)
+                {
+                    float roll = WorldRng.FloatAt(world.WorldSeed, year, coord.X * 31 + coord.Y, 0, SaltDiseaseRecovery);
+                    recover = roll < _cfg.DiseaseRecoveryChance;
+                }
+                if (recover) { toRecover.Add(coord); continue; }
+
+                // Spread to nearby uninfected settlements
+                foreach (var (nCoord, nStub) in settlements)
+                {
+                    if (nCoord == coord || nStub.IsInfected || toInfect.Contains(nCoord)) continue;
+                    int dx = coord.X - nCoord.X, dy = coord.Y - nCoord.Y;
+                    if (dx * dx + dy * dy > _cfg.DiseaseSpreadRadius * _cfg.DiseaseSpreadRadius) continue;
+                    float roll = WorldRng.FloatAt(world.WorldSeed, year, nCoord.X * 31 + nCoord.Y, 1, SaltDiseaseSpread);
+                    if (roll < _cfg.DiseaseSpreadChance) toInfect.Add(nCoord);
+                }
+            }
+            else
+            {
+                // New outbreak: density-scaled probability
+                float density       = Math.Min(1f, (float)stub.Population / Math.Max(1, stub.CarryingCapacity));
+                float outbreakChance = _cfg.DiseaseBaseChance * (1f + density * _cfg.DiseaseDensityMult);
+                float roll = WorldRng.FloatAt(world.WorldSeed, year, coord.X * 31 + coord.Y, 0, SaltDiseaseOutbreak);
+                if (roll < outbreakChance) toInfect.Add(coord);
+            }
+        }
+
+        foreach (var coord in toInfect)
+        {
+            if (!world.Settlements.TryGetValue(coord, out var stub) || stub.IsInfected) continue;
+            world.Settlements[coord] = stub with { IsInfected = true, InfectedSinceYear = year };
+            pending.Add(new PendingEvent(EventType.DiseaseOutbreak, coord, null,
+                JsonSerializer.Serialize(new { settlementName = stub.Name, civId = stub.CivId.Value, year })));
+        }
+
+        foreach (var coord in toRecover)
+        {
+            if (!world.Settlements.TryGetValue(coord, out var stub)) continue;
+            world.Settlements[coord] = stub with { IsInfected = false, InfectedSinceYear = 0 };
+            pending.Add(new PendingEvent(EventType.DiseaseRecovered, coord, null,
+                JsonSerializer.Serialize(new { settlementName = stub.Name, civId = stub.CivId.Value, year })));
+        }
+    }
+
+    // ─── Annual wildlife attacks ──────────────────────────────────────────────
+
+    /// <summary>
+    /// Annual pass: each settlement has a chance of a wildlife raid proportional to its
+    /// vulnerability (inverse of population). Large settlements can defend themselves.
+    /// </summary>
+    private void RunAnnualWildlifeAttacks(WorldState world, List<PendingEvent> pending)
+    {
+        int year = world.CurrentYear;
+        foreach (var (coord, stub) in world.Settlements.ToList())
+        {
+            if (stub.Population <= 0) continue;
+
+            float sizeDefense  = Math.Min(1f, (float)stub.Population / _cfg.WildlifeDefensePopScale);
+            float attackChance = _cfg.WildlifeAttackBaseChance * (1f - sizeDefense * 0.8f);
+            float roll = WorldRng.FloatAt(world.WorldSeed, year, coord.X * 31 + coord.Y, 0, SaltWildlife);
+            if (roll >= attackChance) continue;
+
+            int damage = Math.Max(1, (int)(stub.Population * _cfg.WildlifeAttackDamage * (1f - sizeDefense)));
+            world.Settlements[coord] = stub with { Population = Math.Max(0, stub.Population - damage) };
+            pending.Add(new PendingEvent(EventType.WildlifeRaid, coord, null,
+                JsonSerializer.Serialize(new { settlementName = stub.Name, civId = stub.CivId.Value, populationLost = damage, year })));
+        }
     }
 
     // ─── Helper ───────────────────────────────────────────────────────────────

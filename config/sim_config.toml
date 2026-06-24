@@ -711,6 +711,11 @@ alliance_search_radius       = 4     # tile radius when scanning for nearby neut
 bond_search_radius           = 3     # tile radius when scanning for Bond companions
 war_aggression_threshold     = 0.5   # minimum Aggression to consider DeclareWar action
 
+# Succession crisis — when the founding ruler dies, distant settlements enter instability
+succession_crisis_years      = 10    # how long the crisis lasts after founder death
+succession_crisis_decay_mult = 2.5   # decay rate multiplier for settlements beyond stable radius during crisis
+succession_stable_radius     = 15    # tile radius from capital immune to succession instability
+
 # Border tension — civ-level territorial pressure that triggers war without ruler proximity
 war_proximity_radius        = 15    # tile radius within which settlements build tension toward each other
 tension_accrual_per_pair    = 0.12  # tension added per close settlement pair per year (× proximity factor × ruler Aggression)
@@ -776,6 +781,25 @@ carry_cap_desert              = 15
 carry_cap_volcanic            = 50
 carry_cap_default             = 40
 carry_cap_minimum             = 50  # floor: even the poorest biome supports a small community
+
+# Disease outbreaks — annual probability; spreads between nearby settlements; drains population while active
+disease_base_chance          = 0.04   # annual outbreak probability per uninfected settlement
+disease_density_mult         = 2.0    # at full carrying capacity, base chance is multiplied by (1 + this)
+disease_mortality_per_year   = 0.08   # fraction of population lost per year while infected (split across 16 ticks)
+disease_spread_radius        = 12     # tile radius within which disease can spread annually
+disease_spread_chance        = 0.25   # annual probability of spreading to each nearby settlement
+disease_max_duration_years   = 6      # infection auto-clears after this many years
+disease_recovery_chance      = 0.25   # annual probability of spontaneous recovery before max duration
+
+# Wildlife raids — annual attacks; large settlements can better defend themselves
+wildlife_attack_base_chance  = 0.08   # annual attack probability per settlement
+wildlife_attack_damage       = 0.10   # fraction of population killed when attack lands (at minimum defense)
+wildlife_defense_pop_scale   = 150    # settlements at this population have 80% reduced vulnerability
+
+# Emigration — pressure-driven colonization triggered when settlements exceed carrying capacity
+emigration_threshold         = 0.75   # fraction of carrying cap above which emigration activates
+emigration_bonus_chance      = 0.08   # additional annual spawn probability when over threshold (scaled by pressure)
+emigrant_pop_cost            = 20     # population deducted from parent settlement per emigrant spawned
 
 crystal_pop_artisan         = 200
 crystal_pop_scholar         = 300

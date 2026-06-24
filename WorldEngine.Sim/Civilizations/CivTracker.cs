@@ -489,7 +489,25 @@ public static class CivTracker
         // 3. Border tension: accumulate territorial pressure; declare war if threshold crossed
         RunBorderTension(world, pending);
 
-        // 4. Civ-level war resolution: expiry, surrender, and collapse
+        // 4. Succession crisis: detect founding ruler death and flag distant settlements
+        foreach (var civ in world.Civilizations.Values)
+        {
+            if (civ.IsCollapsed || civ.SuccessionCrisisEndYear != int.MinValue) continue;
+            bool founderAlive = world.GetEntity(civ.FounderId) is Tier1Character fc && fc.IsAlive;
+            if (founderAlive) continue;
+
+            civ.SuccessionCrisisEndYear = world.CurrentYear + cfg.SuccessionCrisisYears;
+            var payload = JsonSerializer.Serialize(new
+            {
+                civId           = civ.Id.Value,
+                civName         = civ.Name,
+                crisisEndYear   = civ.SuccessionCrisisEndYear,
+                year            = world.CurrentYear
+            });
+            pending.Add(new PendingEvent(EventType.SuccessionCrisis, civ.CapitalTile, null, payload));
+        }
+
+        // 5. Civ-level war resolution: expiry, surrender, and collapse
         //    Iterate all civs; EndWarBetween handles symmetry so process each pair once.
         var processed = new HashSet<(CivId, CivId)>();
         foreach (var civ in world.Civilizations.Values)

@@ -115,6 +115,10 @@ public enum EventType
     SettlementGrew          = 3401,
     SettlementShrank        = 3402,
     SettlementAbandoned     = 3403,
+    DiseaseOutbreak         = 3404,  // settlement struck by disease; population drains while infected
+    DiseaseRecovered        = 3405,  // settlement cleared of infection
+    WildlifeRaid            = 3406,  // beast pack attacks settlement; direct population loss
+    SuccessionCrisis        = 3407,  // founding ruler died; distant settlements enter instability
 
     // M2+ Tier 2 character events (3300-range)
     AppointedToRole         = 3301,
@@ -178,6 +182,10 @@ public static class VerbClassification
         EventType.SettlementGrew          => VerbClass.Creation,
         EventType.SettlementShrank        => VerbClass.Destruction,
         EventType.SettlementAbandoned     => VerbClass.Destruction,
+        EventType.DiseaseOutbreak         => VerbClass.Destruction,
+        EventType.DiseaseRecovered        => VerbClass.Maintenance,
+        EventType.WildlifeRaid            => VerbClass.Destruction,
+        EventType.SuccessionCrisis        => VerbClass.Transformation,
         EventType.AppointedToRole         => VerbClass.Transfer,
         EventType.DismissedFromRole       => VerbClass.Transfer,
         EventType.MerchantTradeCompleted  => VerbClass.Transfer,

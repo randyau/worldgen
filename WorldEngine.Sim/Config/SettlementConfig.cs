@@ -32,6 +32,39 @@ public sealed class SettlementConfig
     public int CarryCapDefault            { get; set; } = 40;
     // Minimum carrying capacity regardless of biome tiles (prevents instant abandonment on poor land)
     public int CarryCapMinimum            { get; set; } = 50;
+    // ─── Disease ──────────────────────────────────────────────────────────────
+    // Annual outbreak probability per uninfected settlement; multiplied by density factor.
+    public float DiseaseBaseChance       { get; set; } = 0.04f;
+    // At full carrying capacity, outbreak chance is multiplied by (1 + DensityMult).
+    public float DiseaseDensityMult      { get; set; } = 2.0f;
+    // Fraction of population lost per year while a settlement is infected.
+    // Applied per-tick as MortalityPerYear / TicksPerYear.
+    public float DiseaseMortalityPerYear { get; set; } = 0.08f;
+    // Tile radius within which an infected settlement can spread disease annually.
+    public int   DiseaseSpreadRadius     { get; set; } = 12;
+    // Annual probability of spreading to each nearby settlement.
+    public float DiseaseSpreadChance     { get; set; } = 0.25f;
+    // Infection auto-clears after this many years regardless of recovery rolls.
+    public int   DiseaseMaxDurationYears { get; set; } = 6;
+    // Annual probability of spontaneous recovery before max duration.
+    public float DiseaseRecoveryChance   { get; set; } = 0.25f;
+
+    // ─── Wildlife raids ───────────────────────────────────────────────────────
+    // Annual probability of a wildlife attack on any settlement.
+    public float WildlifeAttackBaseChance { get; set; } = 0.08f;
+    // Fraction of population killed when an attack lands (at minimum defense).
+    public float WildlifeAttackDamage     { get; set; } = 0.10f;
+    // Settlements at this population have 80% reduced attack vulnerability.
+    public int   WildlifeDefensePopScale  { get; set; } = 150;
+
+    // ─── Emigration (pressure-driven colonization) ────────────────────────────
+    // When population exceeds this fraction of carrying capacity, emigration is triggered.
+    public float EmigrationThreshold    { get; set; } = 0.75f;
+    // Additional annual character-spawn probability when over the threshold (scaled by pressure).
+    public float EmigrationBonusChance  { get; set; } = 0.08f;
+    // Population deducted from parent settlement each time an emigrant character spawns.
+    public int   EmigrantPopCost        { get; set; } = 20;
+
     public int   CrystalPopArtisan        { get; set; } = 200;
     public int   CrystalPopScholar        { get; set; } = 300;
     public int   CrystalPopPhysician      { get; set; } = 500;

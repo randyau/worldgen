@@ -144,6 +144,14 @@ public sealed class CharacterSimConfig
     public float BeastEncounterChance        { get; set; } = 0.15f; // probability of attack per shared tick
     public float BeastDamageMultiplier       { get; set; } = 0.3f;  // beast.Strength × this = damage to char
 
+    // ─── Succession crisis ────────────────────────────────────────────────────
+    // How many years distant settlements suffer increased decay after the founding ruler dies.
+    public int   SuccessionCrisisYears     { get; set; } = 10;
+    // Decay rate multiplier applied to settlements beyond SuccessionStableRadius during crisis.
+    public float SuccessionCrisisDecayMult { get; set; } = 2.5f;
+    // Settlements within this tile radius of the capital are insulated from succession crisis.
+    public int   SuccessionStableRadius    { get; set; } = 15;
+
     // ─── Goal formation thresholds ────────────────────────────────────────────
     // Minimum personality trait value required to generate each goal type.
     // Tuning these shifts how common each goal is across the population.
