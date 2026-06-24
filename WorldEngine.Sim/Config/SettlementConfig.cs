@@ -15,6 +15,23 @@ public sealed class SettlementConfig
     public float FertilityVariance        { get; set; } = 0.15f;
     // Effective fertility multiplier applied to tiles already in a same-civ settlement's hinterland
     public float HinterlandDrainFactor    { get; set; } = 0.15f;
+    // Biome carrying capacity: max population supported per reach tile, by biome.
+    // Sums across all land tiles in reach radius to give a soft population ceiling.
+    public int CarryCapGrassland          { get; set; } = 200;
+    public int CarryCapPlains             { get; set; } = 160;
+    public int CarryCapTropicalRainforest { get; set; } = 180;
+    public int CarryCapSavanna            { get; set; } = 80;
+    public int CarryCapTemperateForest    { get; set; } = 120;
+    public int CarryCapBorealForest       { get; set; } = 50;
+    public int CarryCapSwamp              { get; set; } = 60;
+    public int CarryCapBeach              { get; set; } = 40;
+    public int CarryCapMountain           { get; set; } = 30;
+    public int CarryCapHighMountain       { get; set; } = 10;
+    public int CarryCapDesert             { get; set; } = 15;
+    public int CarryCapVolcanic           { get; set; } = 50;
+    public int CarryCapDefault            { get; set; } = 40;
+    // Minimum carrying capacity regardless of biome tiles (prevents instant abandonment on poor land)
+    public int CarryCapMinimum            { get; set; } = 50;
     public int   CrystalPopArtisan        { get; set; } = 200;
     public int   CrystalPopScholar        { get; set; } = 300;
     public int   CrystalPopPhysician      { get; set; } = 500;

@@ -62,6 +62,10 @@ public sealed class PopulationDynamicsPhase
             .Count(e => e is Tier1Character or Tier2Character);
         float safetyScore = Math.Clamp(0.3f + nearby * 0.1f, 0f, 1f);
 
+        // Biome-based carrying capacity: sum capacity contributions across all reach tiles.
+        // Creates a soft ceiling determined by the land quality around the settlement.
+        int carryingCapacity = ComputeCarryingCapacity(tile, stub.ReachRadius(), world);
+
         // Decay responds to food pressure from the resource ledger
         float foodRatio = stub.FoodPressureRatio;
         float starvationDecay = foodRatio < _cfg.PopMinViable / 100f ? 0f
@@ -71,17 +75,16 @@ public sealed class PopulationDynamicsPhase
                 ? (1f - foodRatio) * _cfg.StarvationDecayRate
             : 0f;
 
-        // Population change this season.
-        // Growth is gated by food availability — a settlement can't grow faster than it can feed
-        // itself. When food is plentiful (ratio ≥ 1) growth runs at full rate; below 1 it throttles
-        // proportionally. This creates a natural carrying capacity before the hard cap is ever reached.
+        // Logistic suppression: as population approaches carrying capacity, growth decelerates.
+        // Below half capacity growth is nearly unconstrained; above it growth increasingly fights back.
+        float logisticFactor = Math.Clamp(1f - (float)stub.Population / carryingCapacity, 0f, 1f);
         float foodGrowthScale = Math.Clamp(foodRatio, 0f, 1f);
-        float growthF  = fertility * safetyScore * _cfg.PopGrowthRate * foodGrowthScale;
+        float growthF  = fertility * safetyScore * _cfg.PopGrowthRate * foodGrowthScale * logisticFactor;
         float decayF   = _cfg.PopDecayRate + starvationDecay;
         float deltaF   = growthF - decayF;
 
         float newPopF  = stub.PopulationF + deltaF;
-        int   newPop   = Math.Clamp(stub.Population + (int)Math.Floor(newPopF), 0, _cfg.PopMax);
+        int   newPop   = Math.Clamp(stub.Population + (int)Math.Floor(newPopF), 0, Math.Min(carryingCapacity, _cfg.PopMax));
         float remainder = newPopF - (int)Math.Floor(newPopF);
 
         // Fire SettlementGrew/Shrank events (suppressed by gate normally, but fire anyway)
@@ -150,6 +153,37 @@ public sealed class PopulationDynamicsPhase
         }
         return currentThresh;
     }
+
+    // ─── Carrying capacity ────────────────────────────────────────────────────
+
+    private int ComputeCarryingCapacity(TileCoord center, int radius, WorldState world)
+    {
+        int total = 0;
+        foreach (var coord in world.GetTilesInRadius(center, radius))
+        {
+            if (!world.IsLand(coord)) continue;
+            var tile = world.TileGrid.GetTile(coord);
+            total += BiomeCarryingCapacity((BiomeType)tile.BiomeType);
+        }
+        return Math.Max(_cfg.CarryCapMinimum, total);
+    }
+
+    private int BiomeCarryingCapacity(BiomeType biome) => biome switch
+    {
+        BiomeType.Grassland          => _cfg.CarryCapGrassland,
+        BiomeType.Plains             => _cfg.CarryCapPlains,
+        BiomeType.TropicalRainforest => _cfg.CarryCapTropicalRainforest,
+        BiomeType.Savanna            => _cfg.CarryCapSavanna,
+        BiomeType.TemperateForest    => _cfg.CarryCapTemperateForest,
+        BiomeType.BorealForest       => _cfg.CarryCapBorealForest,
+        BiomeType.Swamp              => _cfg.CarryCapSwamp,
+        BiomeType.Beach              => _cfg.CarryCapBeach,
+        BiomeType.Mountain           => _cfg.CarryCapMountain,
+        BiomeType.HighMountain       => _cfg.CarryCapHighMountain,
+        BiomeType.Desert             => _cfg.CarryCapDesert,
+        BiomeType.Volcanic           => _cfg.CarryCapVolcanic,
+        _                            => _cfg.CarryCapDefault,
+    };
 
     // ─── Abandonment ──────────────────────────────────────────────────────────
 

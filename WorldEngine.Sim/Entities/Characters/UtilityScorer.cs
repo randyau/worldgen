@@ -421,12 +421,24 @@ public static class UtilityScorer
             }
             else if (isExpandingChar)
             {
-                // Bonus for tiles outside any settlement's hinterland — this is where they want to be
+                // Bonus for tiles outside any settlement's hinterland — this is where they want to be.
+                // Compactness bonus: if the tile is also near an existing same-civ settlement, reward it
+                // extra — this pulls expansion toward the civ's existing blob rather than forming tendrils.
                 bool inAnyHinterland = false;
+                bool nearSameCiv = false;
                 foreach (var (st, stub) in world.Settlements)
-                    if (TileDistance(coord, st) <= stub.ReachRadius()) { inAnyHinterland = true; break; }
+                {
+                    float dist = TileDistance(coord, st);
+                    if (dist <= stub.ReachRadius()) { inAnyHinterland = true; break; }
+                    if (stub.CivId == c.Identity.CivId && dist <= cfg.ExpansionCompactnessRadius)
+                        nearSameCiv = true;
+                }
                 if (!inAnyHinterland)
+                {
                     score += cfg.ExpansionEmptyTileBonus;
+                    if (nearSameCiv)
+                        score += cfg.ExpansionCompactnessBonus;
+                }
             }
 
             // When shelter is critically low, prefer terrain that provides natural cover.

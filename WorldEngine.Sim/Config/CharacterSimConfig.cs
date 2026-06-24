@@ -23,6 +23,10 @@ public sealed class CharacterSimConfig
     public int   ExpansionHomePenalty     { get; set; } = 120;
     // Tiles outside every settlement's hinterland get this bonus — draws expansion chars toward open land
     public int   ExpansionEmptyTileBonus  { get; set; } = 80;
+    // Additional bonus when an unclaimed tile is within this many tiles of a same-civ settlement;
+    // encourages blob-shaped growth rather than linear tendrils
+    public int   ExpansionCompactnessRadius { get; set; } = 8;
+    public int   ExpansionCompactnessBonus  { get; set; } = 60;
 
     // When shelter drops below this threshold, characters actively prefer tiles with natural cover
     public float ShelterSeekThreshold   { get; set; } = 0.35f;

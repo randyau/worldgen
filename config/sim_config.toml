@@ -614,6 +614,8 @@ shelter_temperature_scale = 0.8   # max additional decay multiplier at temp extr
                                    # At scale=0.8: extreme cold/heat → 1.8× decay; settlement (+0.10) still net-positive
 expansion_home_penalty    = 120   # tile score penalty applied to own-civ settlement tiles when character has Expansion goal (pushes them to leave)
 expansion_empty_tile_bonus = 80   # tile score bonus for tiles outside every settlement's hinterland when Expansion goal is active
+expansion_compactness_radius = 8  # max tile distance from a same-civ settlement that earns the compactness bonus
+expansion_compactness_bonus  = 60 # bonus added when an unclaimed tile is near an existing same-civ settlement (encourages blob growth)
 shelter_seek_threshold    = 0.35  # below this shelter level, characters prefer terrain with natural cover when choosing where to move
 shelter_seek_tile_bonus   = 80    # max tile-score bonus for a perfect-shelter biome (forest/mountain) when shelter-seeking
                                    # scales by desperation: bonus × BiomeShelterScore × (1 - shelter)
@@ -741,8 +743,27 @@ pop_decay_rate              = 0.05  # population lost per season unconditionally
 starvation_decay_rate       = 0.3   # extra decay per unit food deficit when food < shortage_threshold
 famine_decay_rate           = 0.8   # extra decay per unit food deficit when food < crisis_threshold
 pop_min_viable              = 5     # below this → settlement abandoned
-pop_max                     = 50000 # hard cap
+pop_max                     = 50000 # absolute hard cap (biome carrying capacity usually binds first)
 fertility_variance          = 0.15  # per-settlement founding-time multiplier range (±this around 1.0)
+
+# Biome carrying capacity: population supported per reach tile, by biome type.
+# Sums across all land tiles in the settlement's reach to compute a soft population ceiling.
+# Logistic suppression makes growth decelerate as population approaches this ceiling.
+carry_cap_grassland           = 200
+carry_cap_plains              = 160
+carry_cap_tropical_rainforest = 180
+carry_cap_savanna             = 80
+carry_cap_temperate_forest    = 120
+carry_cap_boreal_forest       = 50
+carry_cap_swamp               = 60
+carry_cap_beach               = 40
+carry_cap_mountain            = 30
+carry_cap_high_mountain       = 10
+carry_cap_desert              = 15
+carry_cap_volcanic            = 50
+carry_cap_default             = 40
+carry_cap_minimum             = 50  # floor: even the poorest biome supports a small community
+
 crystal_pop_artisan         = 200
 crystal_pop_scholar         = 300
 crystal_pop_physician       = 500
