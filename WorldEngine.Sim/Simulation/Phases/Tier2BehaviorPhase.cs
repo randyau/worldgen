@@ -123,7 +123,8 @@ public sealed class Tier2BehaviorPhase
         var homeTile = c.Livelihood.SettlementTile;
         if (!world.Settlements.TryGetValue(homeTile, out var home)) return;
 
-        // Find the best complementary destination: where home has surplus, dest has deficit
+        // Find the best complementary destination: where home has surplus stores, dest has less.
+        // Uses ResourceStores (persistent) not ResourceLedger (ephemeral per-tick ratios).
         TileCoord? bestDest     = null;
         string?    bestResource = null;
         float      bestScore    = 0f;
@@ -131,26 +132,28 @@ public sealed class Tier2BehaviorPhase
         foreach (var (destTile, dest) in world.Settlements)
         {
             if (destTile == homeTile) continue;
-            if (dest.ResourceLedger is null || home.ResourceLedger is null) continue;
-
             bool isAllyDest = IsAlliedWithDestination(home, dest, world);
 
-            foreach (var (res, homeSupply) in home.ResourceLedger)
+            // Score each resource by (homeStores - destStores); higher = better trade opportunity
+            var homeStores = home.ResourceStores;
+            if (homeStores is null) continue;
+
+            foreach (var (res, homeAmount) in homeStores)
             {
-                if (homeSupply <= 1.1f) continue; // home needs at least a 10% surplus
-                dest.ResourceLedger.TryGetValue(res, out float destSupply);
-                float complementarity = homeSupply - destSupply;
-                if (isAllyDest) complementarity += 0.3f; // prefer allied settlements
-                if (complementarity > bestScore)
+                if (homeAmount <= 0f) continue;
+                float destAmount  = dest.GetStore(res);
+                float opportunity = homeAmount - destAmount;
+                if (isAllyDest) opportunity += homeAmount * 0.3f; // prefer allied routes
+                if (opportunity > bestScore)
                 {
-                    bestScore    = complementarity;
+                    bestScore    = opportunity;
                     bestDest     = destTile;
                     bestResource = res;
                 }
             }
         }
 
-        // Fallback: pick any settlement if no ledger data
+        // Fallback: pick any settlement when stores are all empty
         if (bestDest is null)
         {
             foreach (var kv in world.Settlements)
@@ -158,21 +161,26 @@ public sealed class Tier2BehaviorPhase
         }
         if (bestDest is null) return;
 
-        // Transfer value in the ledger (merchant moves the surplus toward the deficit)
+        // Transfer from home ResourceStores to destination ResourceStores — this is now persistent.
         if (bestResource is not null && world.Settlements.TryGetValue(bestDest.Value, out var destStub))
         {
-            float transfer = home.ResourceLedger![bestResource] * MerchantTradeTransfer;
-            var newHomeLedger = new Dictionary<string, float>(home.ResourceLedger, StringComparer.OrdinalIgnoreCase);
-            newHomeLedger[bestResource] = home.ResourceLedger[bestResource] - transfer;
+            float available = home.GetStore(bestResource);
+            float transfer  = available * MerchantTradeTransfer;
+            if (transfer > 0f)
+            {
+                var newHomeStores = home.ResourceStores is null
+                    ? new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase)
+                    : new Dictionary<string, float>(home.ResourceStores, StringComparer.OrdinalIgnoreCase);
+                newHomeStores[bestResource] = Math.Max(0f, available - transfer);
 
-            var newDestLedger = destStub.ResourceLedger is null
-                ? new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase)
-                : new Dictionary<string, float>(destStub.ResourceLedger, StringComparer.OrdinalIgnoreCase);
-            newDestLedger[bestResource] = newDestLedger.TryGetValue(bestResource, out float dv)
-                ? dv + transfer : transfer;
+                var newDestStores = destStub.ResourceStores is null
+                    ? new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase)
+                    : new Dictionary<string, float>(destStub.ResourceStores, StringComparer.OrdinalIgnoreCase);
+                newDestStores[bestResource] = destStub.GetStore(bestResource) + transfer;
 
-            world.Settlements[homeTile]       = home     with { ResourceLedger = newHomeLedger };
-            world.Settlements[bestDest.Value] = destStub with { ResourceLedger = newDestLedger };
+                world.Settlements[homeTile]       = home     with { ResourceStores = newHomeStores };
+                world.Settlements[bestDest.Value] = destStub with { ResourceStores = newDestStores };
+            }
         }
 
         c.Needs = c.Needs with { Status = Math.Min(1f, c.Needs.Status + 0.05f) };

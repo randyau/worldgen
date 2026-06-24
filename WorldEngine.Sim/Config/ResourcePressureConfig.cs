@@ -13,16 +13,25 @@ public sealed class ResourcePressureConfig
     // 0.25 = even in the driest winter, 25% of base moisture is assumed available (root storage, wells, etc.)
     public float FoodMoistureFloor     { get; set; } = 0.25f;
 
-    // ─── Food stores ─────────────────────────────────────────────────────────
-    // Fraction of per-tick surplus accumulated into stores each tick (rest is consumed immediately).
-    public float StoreAccumulateRate   { get; set; } = 0.4f;
-    // Max store depth in "seasons of food supply" per 1000 population.
-    // e.g. 2.0 at pop 500 → max 1.0 season stored; at pop 2000 → max 4.0 seasons.
-    public float StoreMaxSeasonsPerKPop { get; set; } = 2.0f;
-    // Hard floor on max store size so even tiny settlements can hold something.
-    public float StoreMinSeasons       { get; set; } = 0.5f;
-    // Fraction of stores that spoil per tick (decay toward 0 even without draws).
-    public float StoreSpoilageRate     { get; set; } = 0.002f;
-    // Fraction of stores destroyed per point of raid damage (granaries burn).
-    public float StoreRaidDestructionPerDamage { get; set; } = 0.008f;
+    // ─── Resource stores ─────────────────────────────────────────────────────
+    // Fraction of per-tick surplus that goes into stores (rest consumed immediately).
+    public float StoreAccumulateRate            { get; set; } = 0.4f;
+
+    // Vital resources (food/water): max store depth in "seasons of supply" scaled with population.
+    public float StoreMaxSeasonsPerKPop         { get; set; } = 2.0f;
+    public float StoreMinSeasons                { get; set; } = 0.5f;
+
+    // Per-resource spoilage rates (fraction lost per tick regardless of draws).
+    public float FoodSpoilageRate               { get; set; } = 0.002f;  // ~500 ticks to fully spoil
+    public float WaterSpoilageRate              { get; set; } = 0.010f;  // cisterns evaporate faster
+    public float WealthSpoilageRate             { get; set; } = 0.0001f; // gold/gems essentially permanent
+    public float StockpileSpoilageRate          { get; set; } = 0.0005f; // iron/timber decay slowly
+
+    // Wealth resources accumulate at a fraction of the raw ledger supply per tick.
+    // For non-vital resources (minerals, gold, timber), the ledger value is absolute supply;
+    // this rate controls how fast it banks into persistent stores.
+    public float WealthAccumulateRate           { get; set; } = 0.2f;
+
+    // Fraction of ALL stores destroyed per point of raid damage (granaries/vaults burn).
+    public float StoreRaidDestructionPerDamage  { get; set; } = 0.008f;
 }

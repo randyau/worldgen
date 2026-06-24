@@ -65,7 +65,7 @@ public sealed class SnapshotBuilder
                 ResourceLedger:     stub.ResourceLedger,
                 ConqueredYear:      stub.ConqueredYear,
                 ConqueredFromCivId: stub.ConqueredFromCivId,
-                FoodStores:         stub.FoodStores);
+                ResourceStores:     stub.ResourceStores);
         }
         return dict;
     }

@@ -36,45 +36,45 @@ public sealed class ResourcePressurePhase
             int reachRadius = stub.ReachRadius();
             var ledger = BuildLedger(coord, stub, reachRadius, world);
 
-            float rawFoodRatio = ledger.TryGetValue("food",  out var f) ? f : 1f;
-            float waterRatio   = ledger.TryGetValue("water", out var w) ? w : 1f;
+            // ─── Update resource stores ──────────────────────────────────────
+            // Build new stores dict from existing stores, applying spoilage and accumulating
+            // from this tick's tile yields. Vital resources (food, water) also draw during deficit.
+            var newStores = stub.ResourceStores is null
+                ? new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase)
+                : new Dictionary<string, float>(stub.ResourceStores, StringComparer.OrdinalIgnoreCase);
 
-            // ─── Food stores ─────────────────────────────────────────────────
-            float maxStore = Math.Max(_cfg.StoreMinSeasons,
-                                      stub.Population / 1000f * _cfg.StoreMaxSeasonsPerKPop);
-            float stores   = stub.FoodStores;
+            float maxVitalStore = Math.Max(_cfg.StoreMinSeasons,
+                                           stub.Population / 1000f * _cfg.StoreMaxSeasonsPerKPop);
 
-            // Spoilage every tick (food degrades even in the granary)
-            stores *= (1f - _cfg.StoreSpoilageRate);
+            // Process vital resources: food and water (supply/demand ratios → season-units in stores)
+            float effectiveFoodRatio  = ApplyVitalStore("food",  GoalObject.Food,
+                ledger, newStores, maxVitalStore, _cfg.FoodSpoilageRate,  _cfg);
+            float effectiveWaterRatio = ApplyVitalStore("water", GoalObject.Water,
+                ledger, newStores, maxVitalStore, _cfg.WaterSpoilageRate, _cfg);
 
-            float effectiveFoodRatio;
-            if (rawFoodRatio >= 1f)
+            // Process non-vital resources: minerals, timber, gold, trade goods
+            // These just accumulate from surplus tile production; no demand draw.
+            foreach (var (res, supply) in ledger)
             {
-                // Surplus — fill stores with a fraction of excess
-                float surplus = (rawFoodRatio - 1f) * _cfg.StoreAccumulateRate;
-                stores = Math.Min(stores + surplus, maxStore);
-                effectiveFoodRatio = rawFoodRatio; // surplus doesn't need store support
-            }
-            else
-            {
-                // Deficit — draw from stores to cover the gap (up to what's available)
-                float needed = 1f - rawFoodRatio;
-                float drawn  = Math.Min(stores, needed);
-                stores -= drawn;
-                effectiveFoodRatio = rawFoodRatio + drawn;
-            }
+                if (res is "food" or "water") continue; // already handled above
 
-            stores = Math.Max(0f, stores);
+                float spoilage = res is "gold" or "gems" or "silver" ? _cfg.WealthSpoilageRate
+                               : _cfg.StockpileSpoilageRate;
+                float current  = newStores.GetValueOrDefault(res, 0f);
+                current *= (1f - spoilage);
+                current += supply * _cfg.WealthAccumulateRate;
+                newStores[res] = Math.Max(0f, current);
+            }
 
             world.Settlements[coord] = stub with
             {
                 FoodPressureRatio  = effectiveFoodRatio,
-                WaterPressureRatio = waterRatio,
+                WaterPressureRatio = effectiveWaterRatio,
                 ResourceLedger     = ledger,
-                FoodStores         = stores
+                ResourceStores     = newStores
             };
 
-            // Shortage response (based on effective ratio after store draw)
+            // Shortage response (based on effective ratios after store draw)
             if (effectiveFoodRatio < _cfg.ShortageThreshold)
             {
                 SeedResourceGoals(coord, GoalObject.Food, "food", effectiveFoodRatio, world, tick);
@@ -89,8 +89,8 @@ public sealed class ResourcePressurePhase
                 }
             }
 
-            if (waterRatio < _cfg.ShortageThreshold)
-                SeedResourceGoals(coord, GoalObject.Water, "water", waterRatio, world, tick);
+            if (effectiveWaterRatio < _cfg.ShortageThreshold)
+                SeedResourceGoals(coord, GoalObject.Water, "water", effectiveWaterRatio, world, tick);
         }
 
         return pending;
@@ -159,6 +159,39 @@ public sealed class ResourcePressurePhase
     private static void Accumulate(Dictionary<string, float> dict, string key, float value)
     {
         dict[key] = dict.TryGetValue(key, out float existing) ? existing + value : value;
+    }
+
+    /// <summary>
+    /// Applies spoilage, accumulates surplus, and draws deficit from stores for a vital resource.
+    /// Returns the effective ratio after store support (may differ from raw tile ratio).
+    /// </summary>
+    private static float ApplyVitalStore(
+        string resource, GoalObject _,
+        Dictionary<string, float> ledger,
+        Dictionary<string, float> stores,
+        float maxStore, float spoilageRate,
+        ResourcePressureConfig cfg)
+    {
+        float rawRatio = ledger.TryGetValue(resource, out var r) ? r : 1f;
+        float current  = stores.GetValueOrDefault(resource, 0f);
+
+        current *= (1f - spoilageRate);
+
+        float effective;
+        if (rawRatio >= 1f)
+        {
+            current  = Math.Min(current + (rawRatio - 1f) * cfg.StoreAccumulateRate, maxStore);
+            effective = rawRatio;
+        }
+        else
+        {
+            float drawn = Math.Min(current, 1f - rawRatio);
+            current  -= drawn;
+            effective = rawRatio + drawn;
+        }
+
+        stores[resource] = Math.Max(0f, current);
+        return effective;
     }
 
     // ─── Goal seeding ─────────────────────────────────────────────────────────

@@ -706,12 +706,18 @@ strain_event_cooldown   = 8      # ticks between SettlementStraining events per 
 population_cap_per_tile = 100.0  # pop count that equals "full demand" for one tile's food
 food_moisture_floor     = 0.25   # fraction of base moisture always assumed available for food (wells, root storage, irrigation); prevents winter moisture crashes from zeroing food supply
 
-# Food stores — settlements accumulate reserves during surplus seasons and draw on them during shortage
-store_accumulate_rate              = 0.4    # fraction of per-tick surplus that goes into stores (rest consumed immediately)
-store_max_seasons_per_k_pop        = 2.0    # max store depth in seasons per 1000 population (scales with settlement size)
-store_min_seasons                  = 0.5    # hard floor on store capacity (even tiny settlements can hold half a season)
-store_spoilage_rate                = 0.002  # fraction of stores that spoils per tick
-store_raid_destruction_per_damage  = 0.008  # fraction of stores destroyed per point of raid damage (granaries burn)
+# Resource stores — settlements accumulate persistent reserves for all resources
+# Vital resources (food, water) draw from stores during shortages; wealth/stockpile resources just accumulate.
+store_accumulate_rate              = 0.4     # fraction of per-tick surplus that goes into stores (vital resources)
+store_max_seasons_per_k_pop        = 2.0    # max vital store depth in seasons per 1000 population
+store_min_seasons                  = 0.5    # hard floor on vital store capacity
+# Per-resource spoilage rates (fraction lost per tick regardless of draws)
+food_spoilage_rate                 = 0.002  # ~500 ticks (35y) to fully spoil if never drawn
+water_spoilage_rate                = 0.010  # cisterns evaporate faster; settlements need continuous rainfall
+wealth_spoilage_rate               = 0.0001 # gold/gems essentially permanent
+stockpile_spoilage_rate            = 0.0005 # iron/copper/timber decay slowly
+wealth_accumulate_rate             = 0.2    # fraction of non-vital ledger supply that banks into stores per tick
+store_raid_destruction_per_damage  = 0.008  # fraction of ALL stores destroyed per point of raid damage
 
 [settlement_names]
 prefixes = [

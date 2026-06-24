@@ -268,11 +268,16 @@ public static class CivTracker
                     * (RaidDamageMax - RaidDamageMin));
         int newHealth = settlement.Health - damage;
 
-        // Raids burn granaries — food stores take proportional damage.
-        float storeDestroyed = settlement.FoodStores
-            * damage
-            * world.SimConfig.ResourcePressure.StoreRaidDestructionPerDamage;
-        float newFoodStores = Math.Max(0f, settlement.FoodStores - storeDestroyed);
+        // Raids burn granaries and loot vaults — all resource stores take proportional damage.
+        float destroyFraction = Math.Min(1f, damage * world.SimConfig.ResourcePressure.StoreRaidDestructionPerDamage);
+        IReadOnlyDictionary<string, float>? newStores = null;
+        if (settlement.ResourceStores is { Count: > 0 } existingStores)
+        {
+            var damaged = new Dictionary<string, float>(existingStores, StringComparer.OrdinalIgnoreCase);
+            foreach (var key in damaged.Keys.ToList())
+                damaged[key] = Math.Max(0f, damaged[key] * (1f - destroyFraction));
+            newStores = damaged;
+        }
 
         raider.Skills = raider.Skills with
             { Combat = Math.Min(1f, raider.Skills.Combat + 0.02f) };
@@ -310,7 +315,7 @@ public static class CivTracker
                     PopulationF        = 0f,
                     ConqueredYear      = world.CurrentYear,
                     ConqueredFromCivId = previousCivId.Value,
-                    FoodStores         = newFoodStores, // granaries looted/burned during conquest
+                    ResourceStores     = newStores, // granaries looted/burned during conquest
                 };
 
                 pending.Add(new PendingEvent(EventType.SettlementConquered, cmd.SettlementTile, null,
@@ -356,8 +361,8 @@ public static class CivTracker
         {
             world.Settlements[cmd.SettlementTile] = settlement with
             {
-                Health     = newHealth,
-                FoodStores = newFoodStores
+                Health         = newHealth,
+                ResourceStores = newStores
             };
         }
     }

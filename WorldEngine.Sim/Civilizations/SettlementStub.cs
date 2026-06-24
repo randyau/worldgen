@@ -23,8 +23,13 @@ public sealed record SettlementStub(
     float     FertilityMultiplier  = 1f,   // per-settlement founding-time variance; permanent
     int       ConqueredYear        = 0,    // year this settlement was last conquered (0 = never)
     int       ConqueredFromCivId   = 0,   // CivId of previous owner at time of conquest (0 = never)
-    float     FoodStores           = 0f)  // seasons of food supply in reserve; draws down during shortage, fills during surplus
+    IReadOnlyDictionary<string, float>? ResourceStores = null)  // persistent resource reserves keyed by resource name
+                                           // vital (food, water): measured in seasons of supply; draws during deficit
+                                           // wealth (gold, minerals, timber): raw accumulated units; no demand draw
 {
+    public float GetStore(string resource) =>
+        ResourceStores?.TryGetValue(resource, out float v) == true ? v : 0f;
+
     /// <summary>
     /// Radius (in tiles) of this settlement's hinterland.
     /// Scales with population; capped at 5. Shared by ResourcePressurePhase and UtilityScorer.
