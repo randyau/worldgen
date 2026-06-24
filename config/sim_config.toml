@@ -704,6 +704,7 @@ acquire_goal_intensity  = 0.7
 flee_goal_intensity     = 0.5
 strain_event_cooldown   = 8      # ticks between SettlementStraining events per settlement
 population_cap_per_tile = 100.0  # pop count that equals "full demand" for one tile's food
+food_moisture_floor     = 0.25   # fraction of base moisture always assumed available for food (wells, root storage, irrigation); prevents winter moisture crashes from zeroing food supply
 
 [settlement_names]
 prefixes = [

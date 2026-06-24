@@ -82,8 +82,14 @@ public sealed class ResourcePressurePhase
             var tile = world.TileGrid.GetTile(coord);
             tileCount++;
 
-            // Food: fertility × moisture (both 0–255, normalized to 0–1)
-            float foodContrib = (tile.Fertility / 255f) * (tile.CurrentMoisture / 255f);
+            // Food: fertility × moisture.
+            // CurrentMoisture is seasonal and can crash to near-zero in winter on inland tiles,
+            // zeroing food supply and triggering famine even on fertile land. Use the higher of
+            // actual moisture or a fraction of base moisture to represent stored food, wells, etc.
+            float effectiveMoisture = Math.Max(
+                tile.CurrentMoisture / 255f,
+                tile.BaseMoisture / 255f * _cfg.FoodMoistureFloor);
+            float foodContrib = (tile.Fertility / 255f) * effectiveMoisture;
             Accumulate(supply, "food", foodContrib);
 
             // Water: moisture alone (wells, streams, rainfall access)

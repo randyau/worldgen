@@ -84,9 +84,12 @@ public static class UtilityScorer
             // regardless of how valuable the deposits are.
             bool inRuinCooldown = world.Ruins.TryGetValue(c.Location, out var ruin)
                 && world.CurrentYear - ruin.DestroyedYear < cfg.RuinCooldownYears;
-            // Deposit override works regardless of hinterland — a rich mine is worth settling
-            // even if an existing settlement already works the surrounding farmland.
+            // Deposit override: a rich deposit is worth settling even if hinterland drains fertility.
+            // BUT: tiles with zero base fertility cannot sustain a population at all — no food
+            // production means growthF=0 and the settlement bleeds to death over decades.
+            // Until food import mechanics exist, block founding on truly barren tiles.
             bool  worthSettle = !inRuinCooldown
+                              && tileFert.Fertility > 0
                               && (effectiveFertility >= cfg.MinFertilityToSettle
                                   || depositVal > cfg.DepositSettleThreshold);
             if (worthSettle)
