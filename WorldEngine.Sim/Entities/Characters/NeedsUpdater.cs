@@ -1,4 +1,5 @@
 using WorldEngine.Sim.Config;
+using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Tiles;
 using WorldEngine.Sim.World;
 
@@ -29,10 +30,14 @@ public static class NeedsUpdater
         // Situational recovery (stub — Phase 2.3 will use real territory/settlement data)
         n.Safety += 0.05f;  // stub: ambient safety recovery
         n.Food   += 0.07f;  // stub: lower food web (same rationale as beasts)
-        if (world.Settlements.ContainsKey(c.Location))
-            n.Shelter = Math.Min(1f, n.Shelter + 0.10f);
-        else
-            n.Shelter = Math.Min(1f, n.Shelter + 0.01f);
+
+        // Shelter recovery from environment. Settlements provide the best shelter;
+        // forests and mountains provide meaningful natural shelter so explorers can
+        // sustain themselves by camping in the right terrain.
+        float shelterRecovery = world.Settlements.ContainsKey(c.Location)
+            ? 0.10f
+            : BiomeShelterRecovery((BiomeType)tile.BiomeType);
+        n.Shelter = Math.Min(1f, n.Shelter + shelterRecovery);
 
         // Ally presence slightly helps Belonging
         if (world.GetEntitiesAt(c.Location)
@@ -63,4 +68,32 @@ public static class NeedsUpdater
             return (float)(baseTemp - cfg.ShelterComfortTempHigh) / (255 - cfg.ShelterComfortTempHigh);
         return 0f;
     }
+
+    /// <summary>
+    /// How much shelter a character naturally recovers per tick in the given biome,
+    /// absent a settlement. Dense canopy and rocky terrain provide real cover;
+    /// open plains and desert offer very little.
+    /// </summary>
+    private static float BiomeShelterRecovery(BiomeType biome) => biome switch
+    {
+        // Dense forest — canopy + deadfall = functional camp; near-settlement recovery
+        BiomeType.TemperateForest    => 0.05f,
+        BiomeType.TropicalRainforest => 0.05f,
+        BiomeType.BorealForest       => 0.04f,  // good shelter, brutal temperature (offset by cold pressure)
+        BiomeType.Swamp              => 0.03f,  // cover but wet; net mediocre
+        // Elevated terrain — rock faces, overhangs, natural caves
+        BiomeType.Mountain           => 0.04f,
+        // HighMountain excluded from movement so characters won't be there; include for completeness
+        BiomeType.HighMountain       => 0.02f,
+        // Open terrain — can make a lean-to or windbreak but nothing substantial
+        BiomeType.Grassland          => 0.02f,
+        BiomeType.Plains             => 0.015f,
+        BiomeType.Savanna            => 0.015f,
+        BiomeType.Tundra             => 0.015f,
+        // Exposed / hostile — minimal shelter, exposed to elements
+        BiomeType.Beach              => 0.01f,
+        BiomeType.Desert             => 0.01f,
+        BiomeType.Volcanic           => 0.01f,
+        _                            => 0.01f,
+    };
 }

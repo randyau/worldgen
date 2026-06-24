@@ -612,6 +612,9 @@ shelter_comfort_temp_low  = 80    # byte; tile BaseTemperature below this → co
 shelter_comfort_temp_high = 180   # byte; tile BaseTemperature above this → heat shelter pressure
 shelter_temperature_scale = 0.8   # max additional decay multiplier at temp extremes (0→low or 255→high)
                                    # At scale=0.8: extreme cold/heat → 1.8× decay; settlement (+0.10) still net-positive
+shelter_seek_threshold    = 0.35  # below this shelter level, characters prefer terrain with natural cover when choosing where to move
+shelter_seek_tile_bonus   = 80    # max tile-score bonus for a perfect-shelter biome (forest/mountain) when shelter-seeking
+                                   # scales by desperation: bonus × BiomeShelterScore × (1 - shelter)
 needs_decay_belonging     = 0.03
 needs_decay_status        = 0.03
 needs_decay_purpose       = 0.04

@@ -18,6 +18,11 @@ public sealed class CharacterSimConfig
     public byte  ShelterComfortTempLow  { get; set; } = 80;   // byte; below → cold pressure
     public byte  ShelterComfortTempHigh { get; set; } = 180;  // byte; above → heat pressure
     public float ShelterTemperatureScale { get; set; } = 0.8f; // max additional multiplier at extreme temp
+    // When shelter drops below this threshold, characters actively prefer tiles with natural cover
+    public float ShelterSeekThreshold   { get; set; } = 0.35f;
+    // Max tile-score bonus added per unit of BiomeShelterScore when shelter-seeking
+    // (scaled by desperation: bonus × (1 - shelter), so critically low = full bonus)
+    public int   ShelterSeekTileBonus   { get; set; } = 80;
     public float NeedsDecayBelonging    { get; set; } = 0.03f;
     public float NeedsDecayStatus       { get; set; } = 0.03f;
     public float NeedsDecayPurpose      { get; set; } = 0.04f;

@@ -57,7 +57,7 @@ public static class UtilityScorer
 
         // Travel — pick best adjacent tile; wanderlust bonus grows with time stationary,
         // dampened by settled role (founder > civ member > free agent) and Curiosity
-        var travelDest = BestAdjacentTile(c, world);
+        var travelDest = BestAdjacentTile(c, world, cfg);
         bool isFounder = c.Identity.CivId.IsValid
             && world.Settlements.Values.Any(s => s.FounderId == c.Id);
         if (travelDest.HasValue)
@@ -204,7 +204,7 @@ public static class UtilityScorer
         var fleeGoal = c.Goals.FirstOrDefault(g => g.Type == GoalType.Flee);
         if (fleeGoal != null && c.Wellbeing < 0f)
         {
-            var fleeDest = BestAdjacentTile(c, world); // move toward any better tile
+            var fleeDest = BestAdjacentTile(c, world, cfg); // move toward any better tile
             if (fleeDest.HasValue)
                 actions.Add(new(new FleeRegion(c.Id, fleeDest.Value),
                     Score(c, ActionType.Flee, 1f, world, cfg)));
@@ -252,7 +252,8 @@ public static class UtilityScorer
 
     private static float NeedsSatisfaction(Tier1Character c, ActionType a) => a switch
     {
-        ActionType.Rest      => (2f - c.Needs.Safety - c.Needs.Food) * 0.2f,
+        // Rest scores higher when safety, food, OR shelter is depleted — camping is a valid shelter strategy
+        ActionType.Rest      => (2f - c.Needs.Safety - c.Needs.Food) * 0.2f + (1f - c.Needs.Shelter) * 0.15f,
         ActionType.Establish => (1f - c.Needs.Shelter) * 0.7f + (1f - c.Needs.Status) * 0.3f,
         ActionType.Ally      => (1f - c.Needs.Belonging) * 0.6f + (1f - c.Needs.Safety) * 0.4f,
         ActionType.Negotiate => (1f - c.Needs.Belonging) * 0.5f,
@@ -333,7 +334,7 @@ public static class UtilityScorer
         return roleBase * curiosityScale;
     }
 
-    private static TileCoord? BestAdjacentTile(Tier1Character c, IWorldStateReadOnly world)
+    private static TileCoord? BestAdjacentTile(Tier1Character c, IWorldStateReadOnly world, CharacterSimConfig cfg)
     {
         TileCoord? best = null;
         int bestScore = -1;
@@ -376,6 +377,16 @@ public static class UtilityScorer
             // Foreign settlements still get the generic bonus — trade/diplomacy motivation.
             if (world.Settlements.TryGetValue(coord, out var s))
                 score += (c.Identity.CivId.IsValid && s.CivId == c.Identity.CivId) ? 150 : 50;
+
+            // When shelter is critically low, prefer terrain that provides natural cover.
+            // This makes explorers navigate toward forests and mountains rather than open plains.
+            if (c.Needs.Shelter < cfg.ShelterSeekThreshold)
+            {
+                var candidateTile = world.GetTile(coord);
+                score += (int)(BiomeShelterScore((BiomeType)candidateTile.BiomeType)
+                             * cfg.ShelterSeekTileBonus
+                             * (1f - c.Needs.Shelter)); // bonus scales with how desperate they are
+            }
 
             if (score > bestScore) { bestScore = score; best = coord; }
         }
@@ -487,4 +498,26 @@ public static class UtilityScorer
         int dx = a.X - b.X, dy = a.Y - b.Y;
         return MathF.Sqrt(dx * dx + dy * dy);
     }
+
+    /// <summary>
+    /// 0–1 score for how much natural shelter a biome provides.
+    /// Mirrors BiomeShelterRecovery in NeedsUpdater but as a normalised 0–1 value
+    /// so it can be used as a weighted score component in BestAdjacentTile.
+    /// </summary>
+    private static float BiomeShelterScore(BiomeType biome) => biome switch
+    {
+        BiomeType.TemperateForest    => 1.0f,
+        BiomeType.TropicalRainforest => 1.0f,
+        BiomeType.BorealForest       => 0.8f,
+        BiomeType.Mountain           => 0.8f,
+        BiomeType.Swamp              => 0.6f,
+        BiomeType.Grassland          => 0.4f,
+        BiomeType.Plains             => 0.3f,
+        BiomeType.Savanna            => 0.3f,
+        BiomeType.Tundra             => 0.3f,
+        BiomeType.Beach              => 0.1f,
+        BiomeType.Desert             => 0.1f,
+        BiomeType.Volcanic           => 0.1f,
+        _                            => 0.2f,
+    };
 }
