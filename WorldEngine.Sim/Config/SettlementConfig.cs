@@ -34,26 +34,30 @@ public sealed class SettlementConfig
     public int CarryCapMinimum            { get; set; } = 50;
     // ─── Disease ──────────────────────────────────────────────────────────────
     // Annual outbreak probability per uninfected settlement; multiplied by density factor.
-    public float DiseaseBaseChance       { get; set; } = 0.04f;
-    // At full carrying capacity, outbreak chance is multiplied by (1 + DensityMult).
-    public float DiseaseDensityMult      { get; set; } = 2.0f;
+    // Lowered from 0.04: disease should concentrate in dense cities, not plague every hamlet.
+    public float DiseaseBaseChance       { get; set; } = 0.02f;
+    // Density multiplier raised from 2.0 to 3.0 so large cities are still very vulnerable:
+    // at pop/cap=1.0: chance = 0.02*(1+3.0) = 8%; at pop/cap=0.3: chance = 0.02*(1+0.9) = 3.8%
+    public float DiseaseDensityMult      { get; set; } = 3.0f;
     // Fraction of population lost per year while a settlement is infected.
     // Applied per-tick as MortalityPerYear / TicksPerYear.
-    public float DiseaseMortalityPerYear { get; set; } = 0.08f;
+    public float DiseaseMortalityPerYear { get; set; } = 0.05f;
+    // Outbreaks cannot start below this population — too few people to sustain endemic disease.
+    public int   DiseaseMinPop           { get; set; } = 40;
     // Tile radius within which an infected settlement can spread disease annually.
     public int   DiseaseSpreadRadius     { get; set; } = 12;
     // Annual probability of spreading to each nearby settlement.
-    public float DiseaseSpreadChance     { get; set; } = 0.25f;
+    public float DiseaseSpreadChance     { get; set; } = 0.20f;
     // Infection auto-clears after this many years regardless of recovery rolls.
     public int   DiseaseMaxDurationYears { get; set; } = 6;
     // Annual probability of spontaneous recovery before max duration.
-    public float DiseaseRecoveryChance   { get; set; } = 0.25f;
+    public float DiseaseRecoveryChance   { get; set; } = 0.30f;
 
     // ─── Wildlife raids ───────────────────────────────────────────────────────
-    // Annual probability of a wildlife attack on any settlement.
-    public float WildlifeAttackBaseChance { get; set; } = 0.08f;
+    // Annual probability of a wildlife attack on any settlement (before biome modifier).
+    public float WildlifeAttackBaseChance { get; set; } = 0.04f;
     // Fraction of population killed when an attack lands (at minimum defense).
-    public float WildlifeAttackDamage     { get; set; } = 0.10f;
+    public float WildlifeAttackDamage     { get; set; } = 0.08f;
     // Settlements at this population have 80% reduced attack vulnerability.
     public int   WildlifeDefensePopScale  { get; set; } = 150;
 

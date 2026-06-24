@@ -790,17 +790,21 @@ carry_cap_default             = 40
 carry_cap_minimum             = 50  # floor: even the poorest biome supports a small community
 
 # Disease outbreaks — annual probability; spreads between nearby settlements; drains population while active
-disease_base_chance          = 0.04   # annual outbreak probability per uninfected settlement
-disease_density_mult         = 2.0    # at full carrying capacity, base chance is multiplied by (1 + this)
-disease_mortality_per_year   = 0.08   # fraction of population lost per year while infected (split across 16 ticks)
+# Risk concentrates in dense cities; small remote settlements are largely immune.
+disease_base_chance          = 0.02   # reduced from 0.04 — disease shouldn't plague every hamlet
+disease_density_mult         = 3.0    # raised from 2.0 — keeps large dense cities vulnerable (8% at full cap)
+disease_mortality_per_year   = 0.05   # reduced from 0.08 — meaningful but not instantly lethal
+disease_min_pop              = 40     # outbreaks cannot start below this population (too few to sustain endemic disease)
 disease_spread_radius        = 12     # tile radius within which disease can spread annually
-disease_spread_chance        = 0.25   # annual probability of spreading to each nearby settlement
+disease_spread_chance        = 0.20   # reduced from 0.25 — slightly slower inter-settlement spread
 disease_max_duration_years   = 6      # infection auto-clears after this many years
-disease_recovery_chance      = 0.25   # annual probability of spontaneous recovery before max duration
+disease_recovery_chance      = 0.30   # raised from 0.25 — slightly faster natural recovery
 
-# Wildlife raids — annual attacks; large settlements can better defend themselves
-wildlife_attack_base_chance  = 0.08   # annual attack probability per settlement
-wildlife_attack_damage       = 0.10   # fraction of population killed when attack lands (at minimum defense)
+# Wildlife raids — annual attacks scaled by biome danger and settlement size
+# Open biomes (plains, savanna, desert) have lower risk; dense cover (forest, jungle, swamp) is higher.
+# See BiomeWildlifeRisk() in PopulationDynamicsPhase.cs for per-biome multipliers.
+wildlife_attack_base_chance  = 0.04   # reduced from 0.08; biome multiplier then adjusts (0.3x–2.0x)
+wildlife_attack_damage       = 0.08   # reduced from 0.10
 wildlife_defense_pop_scale   = 150    # settlements at this population have 80% reduced vulnerability
 
 # Emigration — pressure-driven colonization triggered when settlements exceed carrying capacity

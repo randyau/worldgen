@@ -259,8 +259,9 @@ public sealed class PopulationDynamicsPhase
             }
             else
             {
-                // New outbreak: density-scaled probability
-                float density       = Math.Min(1f, (float)stub.Population / Math.Max(1, stub.CarryingCapacity));
+                // Outbreaks require minimum population — small settlements can't sustain endemic disease
+                if (stub.Population < _cfg.DiseaseMinPop) continue;
+                float density        = Math.Min(1f, (float)stub.Population / Math.Max(1, stub.CarryingCapacity));
                 float outbreakChance = _cfg.DiseaseBaseChance * (1f + density * _cfg.DiseaseDensityMult);
                 float roll = WorldRng.FloatAt(world.WorldSeed, year, coord.X * 31 + coord.Y, 0, SaltDiseaseOutbreak);
                 if (roll < outbreakChance) toInfect.Add(coord);
@@ -297,8 +298,10 @@ public sealed class PopulationDynamicsPhase
         {
             if (stub.Population <= 0) continue;
 
-            float sizeDefense  = Math.Min(1f, (float)stub.Population / _cfg.WildlifeDefensePopScale);
-            float attackChance = _cfg.WildlifeAttackBaseChance * (1f - sizeDefense * 0.8f);
+            var biome         = (BiomeType)world.TileGrid.GetTile(coord).BiomeType;
+            float biomeMult   = BiomeWildlifeRisk(biome);
+            float sizeDefense = Math.Min(1f, (float)stub.Population / _cfg.WildlifeDefensePopScale);
+            float attackChance = _cfg.WildlifeAttackBaseChance * biomeMult * (1f - sizeDefense * 0.8f);
             float roll = WorldRng.FloatAt(world.WorldSeed, year, coord.X * 31 + coord.Y, 0, SaltWildlife);
             if (roll >= attackChance) continue;
 
@@ -310,6 +313,26 @@ public sealed class PopulationDynamicsPhase
     }
 
     // ─── Helper ───────────────────────────────────────────────────────────────
+
+    // Open terrain (plains/savanna/desert) offers visibility — raiding predators prefer dense cover.
+    // Forest/jungle/swamp multipliers are above 1.0; open biomes below 1.0.
+    private static float BiomeWildlifeRisk(BiomeType biome) => biome switch
+    {
+        BiomeType.TropicalRainforest => 2.0f,
+        BiomeType.BorealForest       => 1.6f,
+        BiomeType.TemperateForest    => 1.4f,
+        BiomeType.Swamp              => 1.5f,
+        BiomeType.Grassland          => 1.0f,
+        BiomeType.Hills              => 0.9f,
+        BiomeType.Mountain           => 0.8f,
+        BiomeType.Savanna            => 0.6f,
+        BiomeType.Plains             => 0.5f,
+        BiomeType.Desert             => 0.4f,
+        BiomeType.Tundra             => 0.5f,
+        BiomeType.HighMountain       => 0.3f,
+        BiomeType.Volcanic           => 0.4f,
+        _                            => 0.6f
+    };
 
     private static PendingEvent MakePopEvent(EventType type, SettlementStub stub, TileCoord tile, int newPop)
     {
