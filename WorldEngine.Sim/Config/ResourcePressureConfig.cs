@@ -13,6 +13,15 @@ public sealed class ResourcePressureConfig
     // 0.25 = even in the driest winter, 25% of base moisture is assumed available (root storage, wells, etc.)
     public float FoodMoistureFloor     { get; set; } = 0.25f;
 
+    // ─── Temperature → food production ───────────────────────────────────────
+    // Growing-season factor: multiplies food contribution per hinterland tile.
+    // Piecewise linear: 0 at frost, ramp up to 1.0 at optimal low, flat 1.0 through
+    // optimal high, then ramp down to HeatStressFactor at 255.
+    public byte  FrostTemperatureThreshold   { get; set; } = 45;   // below this → no crop growth
+    public byte  OptimalTemperatureLow       { get; set; } = 100;  // ramp 0→1 between frost and this
+    public byte  OptimalTemperatureHigh      { get; set; } = 200;  // ramp 1→heat_floor between this and 255
+    public float HeatStressFactor            { get; set; } = 0.7f; // multiplier at extreme heat (255)
+
     // ─── Resource stores ─────────────────────────────────────────────────────
     // Fraction of per-tick surplus that goes into stores (rest consumed immediately).
     public float StoreAccumulateRate            { get; set; } = 0.4f;

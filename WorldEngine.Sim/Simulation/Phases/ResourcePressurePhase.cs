@@ -104,20 +104,24 @@ public sealed class ResourcePressurePhase
         var supply = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);
         int tileCount = 0;
 
+        int w = world.TileGrid.TileWidth;
+
         foreach (var coord in world.GetTilesInRadius(center, radius))
         {
             if (!world.IsLand(coord)) continue;
             var tile = world.TileGrid.GetTile(coord);
             tileCount++;
 
-            // Food: fertility × moisture.
-            // CurrentMoisture is seasonal and can crash to near-zero in winter on inland tiles,
-            // zeroing food supply and triggering famine even on fertile land. Use the higher of
-            // actual moisture or a fraction of base moisture to represent stored food, wells, etc.
+            // Food: fertility × moisture × growing-season temperature factor.
+            // Moisture floor: use higher of current or 25% of base to represent wells/irrigation.
+            // Temperature factor: 0 at frost, 1.0 in the optimal temperate band, tapering at extreme heat.
             float effectiveMoisture = Math.Max(
                 tile.CurrentMoisture / 255f,
                 tile.BaseMoisture / 255f * _cfg.FoodMoistureFloor);
-            float foodContrib = (tile.Fertility / 255f) * effectiveMoisture;
+            int   idx        = coord.X + coord.Y * w;
+            byte  effTemp    = TileTemperature.Effective(tile, idx, world);
+            float tempFactor = GrowingSeasonFactor(effTemp, _cfg);
+            float foodContrib = (tile.Fertility / 255f) * effectiveMoisture * tempFactor;
             Accumulate(supply, "food", foodContrib);
 
             // Water: moisture alone (wells, streams, rainfall access)
@@ -159,6 +163,23 @@ public sealed class ResourcePressurePhase
     private static void Accumulate(Dictionary<string, float> dict, string key, float value)
     {
         dict[key] = dict.TryGetValue(key, out float existing) ? existing + value : value;
+    }
+
+    /// <summary>
+    /// Piecewise linear growing-season factor based on effective temperature.
+    /// 0 at and below frost threshold → ramp to 1.0 at optimal low → flat 1.0 through optimal high
+    /// → ramp down to HeatStressFactor at 255.
+    /// </summary>
+    private static float GrowingSeasonFactor(byte effTemp, ResourcePressureConfig cfg)
+    {
+        if (effTemp <= cfg.FrostTemperatureThreshold) return 0f;
+        if (effTemp <= cfg.OptimalTemperatureLow)
+            return (float)(effTemp - cfg.FrostTemperatureThreshold)
+                 / (cfg.OptimalTemperatureLow - cfg.FrostTemperatureThreshold);
+        if (effTemp <= cfg.OptimalTemperatureHigh) return 1f;
+        // Linear ramp from 1.0 at OptimalHigh to HeatStressFactor at 255
+        float t = (float)(effTemp - cfg.OptimalTemperatureHigh) / (255 - cfg.OptimalTemperatureHigh);
+        return 1f - t * (1f - cfg.HeatStressFactor);
     }
 
     /// <summary>

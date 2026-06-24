@@ -11,6 +11,13 @@ public sealed class CharacterSimConfig
     public float NeedsDecaySafety       { get; set; } = 0.05f;
     public float NeedsDecayFood         { get; set; } = 0.08f;
     public float NeedsDecayShelter      { get; set; } = 0.04f;
+    // Temperature scales shelter decay outside the comfort band.
+    // At the extremes (polar cold, desert heat) decay is multiplied by (1 + ShelterTemperatureScale).
+    // Inside the comfort band the multiplier is 1.0 (no extra pressure).
+    // Keep scale ≤ 1.5 so settlements (which recover +0.10/tick) still net-positive in all climates.
+    public byte  ShelterComfortTempLow  { get; set; } = 80;   // byte; below → cold pressure
+    public byte  ShelterComfortTempHigh { get; set; } = 180;  // byte; above → heat pressure
+    public float ShelterTemperatureScale { get; set; } = 0.8f; // max additional multiplier at extreme temp
     public float NeedsDecayBelonging    { get; set; } = 0.03f;
     public float NeedsDecayStatus       { get; set; } = 0.03f;
     public float NeedsDecayPurpose      { get; set; } = 0.04f;

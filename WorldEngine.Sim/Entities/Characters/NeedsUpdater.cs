@@ -1,4 +1,5 @@
 using WorldEngine.Sim.Config;
+using WorldEngine.Sim.Tiles;
 using WorldEngine.Sim.World;
 
 namespace WorldEngine.Sim.Entities.Characters;
@@ -10,9 +11,16 @@ public static class NeedsUpdater
         var n = c.Needs;
 
         // Decay
-        n.Safety    = Math.Max(0f, n.Safety    - cfg.NeedsDecaySafety);
-        n.Food      = Math.Max(0f, n.Food      - cfg.NeedsDecayFood);
-        n.Shelter   = Math.Max(0f, n.Shelter   - cfg.NeedsDecayShelter);
+        n.Safety = Math.Max(0f, n.Safety - cfg.NeedsDecaySafety);
+        n.Food   = Math.Max(0f, n.Food   - cfg.NeedsDecayFood);
+
+        // Shelter decay scales with temperature extremes. BaseTemperature (annual average)
+        // is used here because IWorldStateReadOnly doesn't expose SeasonalProfiles —
+        // seasonal effects already show up via character movement responses to settlement pulls.
+        var tile        = world.GetTile(c.Location);
+        float tempPress = TileShelterPressure(tile.BaseTemperature, cfg);
+        float shelterDecay = cfg.NeedsDecayShelter * (1f + tempPress * cfg.ShelterTemperatureScale);
+        n.Shelter = Math.Max(0f, n.Shelter - shelterDecay);
         n.Belonging = Math.Max(0f, n.Belonging - cfg.NeedsDecayBelonging);
         n.Status    = Math.Max(0f, n.Status    - cfg.NeedsDecayStatus);
         n.Purpose   = Math.Max(0f, n.Purpose   - cfg.NeedsDecayPurpose);
@@ -41,5 +49,18 @@ public static class NeedsUpdater
         n.Spiritual = Math.Min(1f, n.Spiritual);
 
         c.Needs = n;
+    }
+
+    /// <summary>
+    /// Returns 0 in the comfort band [low, high] and rises linearly to 1.0
+    /// at the temperature extremes. Used to scale shelter need decay.
+    /// </summary>
+    private static float TileShelterPressure(byte baseTemp, CharacterSimConfig cfg)
+    {
+        if (baseTemp < cfg.ShelterComfortTempLow)
+            return (float)(cfg.ShelterComfortTempLow - baseTemp) / cfg.ShelterComfortTempLow;
+        if (baseTemp > cfg.ShelterComfortTempHigh)
+            return (float)(baseTemp - cfg.ShelterComfortTempHigh) / (255 - cfg.ShelterComfortTempHigh);
+        return 0f;
     }
 }

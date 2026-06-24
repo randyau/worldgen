@@ -377,6 +377,9 @@ public sealed class EnvironmentalPhase
                 float prob = dcfg.WildfireIgnitionProbabilityPerTick;
                 if (tile.CurrentMoisture < dcfg.WildfireDryMoistureThreshold)
                     prob *= dcfg.WildfireIgnitionDryMultiplier;
+                int tileIdx = coord.X + coord.Y * world.TileGrid.TileWidth;
+                if (TileTemperature.Effective(tile, tileIdx, world) > dcfg.WildfireHotTemperatureThreshold)
+                    prob *= dcfg.WildfireIgnitionHotMultiplier;
 
                 float roll = WorldRng.FloatAt(world.WorldSeed, world.CurrentTick, coord.X, coord.Y, DisasterSalts.Wildfire);
                 if (roll >= prob) continue;

@@ -550,6 +550,8 @@ wildfire_ignition_dry_multiplier       = 3.0      # multiplier when moisture < d
 wildfire_spread_probability_per_tick   = 0.20
 wildfire_max_ticks                     = 16
 wildfire_dry_moisture_threshold        = 60
+wildfire_hot_temperature_threshold     = 170      # effective temp above which heat multiplier kicks in
+wildfire_ignition_hot_multiplier       = 2.0      # stacks with dry multiplier; hot+dry = 6× base probability
 wildfire_intensity                     = 1.0      # 0-1 severity assigned to wildfire ActiveDisaster
 flood_ignition_probability_per_tick    = 0.0002
 flood_wet_moisture_threshold           = 200
@@ -606,6 +608,10 @@ max_health                = 100
 needs_decay_safety        = 0.05
 needs_decay_food          = 0.08
 needs_decay_shelter       = 0.04
+shelter_comfort_temp_low  = 80    # byte; tile BaseTemperature below this → cold shelter pressure
+shelter_comfort_temp_high = 180   # byte; tile BaseTemperature above this → heat shelter pressure
+shelter_temperature_scale = 0.8   # max additional decay multiplier at temp extremes (0→low or 255→high)
+                                   # At scale=0.8: extreme cold/heat → 1.8× decay; settlement (+0.10) still net-positive
 needs_decay_belonging     = 0.03
 needs_decay_status        = 0.03
 needs_decay_purpose       = 0.04
@@ -711,6 +717,12 @@ flee_goal_intensity     = 0.5
 strain_event_cooldown   = 8      # ticks between SettlementStraining events per settlement
 population_cap_per_tile = 100.0  # pop count that equals "full demand" for one tile's food
 food_moisture_floor     = 0.25   # fraction of base moisture always assumed available for food (wells, root storage, irrigation); prevents winter moisture crashes from zeroing food supply
+# Growing-season temperature factor (multiplies food contribution per hinterland tile)
+# Piecewise linear: 0 at frost threshold → ramp to 1.0 at optimal_low → flat 1.0 to optimal_high → ramp to heat_stress_factor at 255
+frost_temperature_threshold = 45   # effective temp (byte) below which crops don't grow; ~polar/high-alpine
+optimal_temperature_low     = 100  # lower bound of peak growing band; below this food scales up from 0
+optimal_temperature_high    = 200  # upper bound of peak growing band; above this heat stress begins
+heat_stress_factor          = 0.7  # multiplier at extreme heat (255); tropical-desert crops still viable but stressed
 
 # Resource stores — settlements accumulate persistent reserves for all resources
 # Vital resources (food, water) draw from stores during shortages; wealth/stockpile resources just accumulate.

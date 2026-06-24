@@ -14,8 +14,10 @@ public class DisasterConfig
     public float EarthquakeProbabilityPerTick { get; set; } = 0.0005f;
     public float EarthquakeIntensity { get; set; } = 0.8f;
     public int EarthquakeDecayTicks { get; set; } = 8;
-    public float WildfireIgnitionDryMultiplier { get; set; } = 3.0f;
-    public byte WildfireDryMoistureThreshold { get; set; } = 60;
+    public float WildfireIgnitionDryMultiplier   { get; set; } = 3.0f;
+    public byte  WildfireDryMoistureThreshold    { get; set; } = 60;
+    public byte  WildfireHotTemperatureThreshold { get; set; } = 170; // effective temp above which heat boosts ignition
+    public float WildfireIgnitionHotMultiplier   { get; set; } = 2.0f; // stacks multiplicatively with dry multiplier
     public float WildfireIntensity { get; set; } = 1.0f;
     public byte FloodWetMoistureThreshold { get; set; } = 200;
     public float FloodWetMultiplier { get; set; } = 2.0f;
