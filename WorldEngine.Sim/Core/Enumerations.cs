@@ -149,6 +149,7 @@ public enum EventType
     ScholarDiscovery        = 3304,
     PhysicianHealed         = 3305,
     CharacterCrystallized   = 3306,
+    ArtisanCrafted          = 3307,  // artisan completed a notable piece; exceptional=true in payload marks a masterwork
 
     // M3+ artifacts / religion (6000+/4000+ ranges reserved)
     ArtifactCreated         = 6001,
@@ -214,6 +215,7 @@ public static class VerbClassification
         EventType.ScholarDiscovery        => VerbClass.Creation,
         EventType.PhysicianHealed         => VerbClass.Maintenance,
         EventType.CharacterCrystallized   => VerbClass.Transformation,
+        EventType.ArtisanCrafted          => VerbClass.Creation,
         EventType.ArtifactCreated         => VerbClass.Creation,
         EventType.ArtifactDestroyed       => VerbClass.Destruction,
         EventType.ReligionFounded         => VerbClass.Creation,

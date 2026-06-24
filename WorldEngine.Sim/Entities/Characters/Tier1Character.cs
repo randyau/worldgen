@@ -32,6 +32,9 @@ public sealed class Tier1Character : SimEntity
     // Wanderlust — ticks on the same tile; drives travel utility bonus
     public int TicksInCurrentTile { get; internal set; }
 
+    // Tick when the most recent Create goal completed (used to gate re-formation)
+    public int LastCreateCompletedTick { get; internal set; } = -1;
+
     public Tier1Character(
         EntityId id,
         TileCoord location,

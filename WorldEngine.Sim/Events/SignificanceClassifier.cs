@@ -86,6 +86,7 @@ public static class SignificanceClassifier
             EventType.ScholarDiscovery        => PopulationImpact.Minor,
             EventType.PhysicianHealed         => PopulationImpact.None,
             EventType.CharacterCrystallized   => PopulationImpact.Minor,
+            EventType.ArtisanCrafted          => PopulationImpact.None,
             _                                 => PopulationImpact.None,
         };
     }

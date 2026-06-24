@@ -148,8 +148,11 @@ public static class GoalManager
             }
         }
 
-        // Create goal: high-Ingenuity characters want to make things
-        if (!hasCreate && c.Aptitude.Ingenuity > cfg.GoalIngenuityThreshold && !c.Goals.Any(g => g.Type == GoalType.Grieve))
+        // Create goal: high-Ingenuity characters want to make things.
+        // Cooldown prevents immediate re-formation after completing a project.
+        bool createCooldownClear = currentTick - c.LastCreateCompletedTick > cfg.CreateGoalCooldownTicks;
+        if (!hasCreate && createCooldownClear && c.Aptitude.Ingenuity > cfg.GoalIngenuityThreshold
+            && !c.Goals.Any(g => g.Type == GoalType.Grieve))
         {
             var createGoal = new GoalData
             {

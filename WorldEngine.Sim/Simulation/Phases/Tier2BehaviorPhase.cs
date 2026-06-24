@@ -35,7 +35,7 @@ public sealed class Tier2BehaviorPhase
             UpdateLifecycle(c, world, tick, pending);
             if (!c.IsAlive) continue;
             UpdateNeeds(c, world);
-            RunRoleBehavior(c, world, pending);
+            RunRoleBehavior(c, world, pending, tick);
             TryCrystallize(c, world, pending, tick);
         }
 
@@ -104,25 +104,62 @@ public sealed class Tier2BehaviorPhase
     // ─── Role Behavior ────────────────────────────────────────────────────────
 
     private void RunRoleBehavior(
-        Tier2Character c, WorldState world, List<PendingEvent> pending)
+        Tier2Character c, WorldState world, List<PendingEvent> pending, long tick)
     {
         switch (c.Livelihood.Role)
         {
             case Tier2Role.Merchant:
-                RunMerchant(c, world, pending); break;
+                RunMerchant(c, world, pending, tick); break;
             case Tier2Role.Scholar:
-                RunScholar(c, world, pending); break;
+                RunScholar(c, world, pending, tick); break;
             case Tier2Role.General:
                 RunGeneral(c, world); break;
             case Tier2Role.Physician:
-                RunPhysician(c, world, pending); break;
-            // Governor and Artisan are ambient — effect is captured in needs recovery above
+                RunPhysician(c, world, pending, tick); break;
+            case Tier2Role.Artisan:
+                RunArtisan(c, world, pending, tick); break;
+            // Governor is fully ambient — effect is captured in needs recovery above
         }
     }
 
+    // Returns true and emits a notable event if the creator's cooldown has cleared,
+    // then rolls the exceptional (masterwork) check.
+    private bool TryEmitNotableWork(
+        Tier2Character c, WorldState world, long tick,
+        EventType eventType, string payload, long[] entityIds,
+        List<PendingEvent> pending)
+    {
+        if (tick - c.LastNotableWorkTick <= _cfg.Tier2NotableCooldownTicks) return false;
+
+        c.LastNotableWorkTick = (int)tick;
+        pending.Add(new PendingEvent(eventType, c.Location, null, payload, entityIds));
+
+        // Exceptional (masterwork) check — once per lifetime
+        if (!c.HasMasterwork)
+        {
+            float excepRoll = world.GetRandomFloat(c.Id, GetExceptionalSalt(c.Livelihood.Role));
+            if (excepRoll < _cfg.Tier2ExceptionalWorkChance)
+            {
+                c.HasMasterwork = true;
+                // V2: ARTIFACT — when the artifact system is live, emit ArtifactCreated here
+                // using the same payload decorated with isExceptional=true
+            }
+        }
+        return true;
+    }
+
+    private static int GetExceptionalSalt(Tier2Role role) => role switch
+    {
+        Tier2Role.Artisan   => S.T2ArtisanExcep,
+        Tier2Role.Scholar   => S.T2ScholarExcep,
+        Tier2Role.Merchant  => S.T2MerchantExcep,
+        Tier2Role.Physician => S.T2PhysicianExcep,
+        _                   => S.T2ArtisanExcep,
+    };
+
     private const float MerchantTradeTransfer = 0.1f;  // fraction of surplus transferred per trade
 
-    private void RunMerchant(Tier2Character c, WorldState world, List<PendingEvent> pending)
+    private void RunMerchant(Tier2Character c, WorldState world, List<PendingEvent> pending, long tick)
     {
         if (world.Settlements.Count < 2) return;
         float r = world.GetRandomFloat(c.Id, S.T2Merchant);
@@ -142,7 +179,6 @@ public sealed class Tier2BehaviorPhase
             if (destTile == homeTile) continue;
             bool isAllyDest = IsAlliedWithDestination(home, dest, world);
 
-            // Score each resource by (homeStores - destStores); higher = better trade opportunity
             var homeStores = home.ResourceStores;
             if (homeStores is null) continue;
 
@@ -151,7 +187,7 @@ public sealed class Tier2BehaviorPhase
                 if (homeAmount <= 0f) continue;
                 float destAmount  = dest.GetStore(res);
                 float opportunity = homeAmount - destAmount;
-                if (isAllyDest) opportunity += homeAmount * 0.3f; // prefer allied routes
+                if (isAllyDest) opportunity += homeAmount * 0.3f;
                 if (opportunity > bestScore)
                 {
                     bestScore    = opportunity;
@@ -169,7 +205,7 @@ public sealed class Tier2BehaviorPhase
         }
         if (bestDest is null) return;
 
-        // Transfer from home ResourceStores to destination ResourceStores — this is now persistent.
+        // Transfer resources (always, silent)
         if (bestResource is not null && world.Settlements.TryGetValue(bestDest.Value, out var destStub))
         {
             float available = home.GetStore(bestResource);
@@ -193,16 +229,17 @@ public sealed class Tier2BehaviorPhase
 
         c.Needs = c.Needs with { Status = Math.Min(1f, c.Needs.Status + 0.05f) };
 
+        // Notable event: only when cooldown has cleared (most trades are silent)
         var payload = JsonSerializer.Serialize(new
         {
-            merchantId   = c.Id.Value,
-            name         = c.Name,
-            fromTile     = new[] { homeTile.X, homeTile.Y },
-            toTile       = new[] { bestDest.Value.X, bestDest.Value.Y },
+            merchantId     = c.Id.Value,
+            name           = c.Name,
+            fromTile       = new[] { homeTile.X, homeTile.Y },
+            toTile         = new[] { bestDest.Value.X, bestDest.Value.Y },
             tradedResource = bestResource ?? "general"
         });
-        pending.Add(new PendingEvent(EventType.MerchantTradeCompleted, c.Location, null, payload,
-            new[] { c.Id.Value }));
+        TryEmitNotableWork(c, world, tick, EventType.MerchantTradeCompleted,
+            payload, [c.Id.Value], pending);
     }
 
     // Checks if home founder has an ally whose CivId matches the destination settlement's civ.
@@ -230,20 +267,19 @@ public sealed class Tier2BehaviorPhase
         "bonus_military_strength",   // Metallurgy
     ];
 
-    private void RunScholar(Tier2Character c, WorldState world, List<PendingEvent> pending)
+    private void RunScholar(Tier2Character c, WorldState world, List<PendingEvent> pending, long tick)
     {
         float r = world.GetRandomFloat(c.Id, S.T2Scholar);
         float discoveryChance = _cfg.ScholarDiscoveryChance * c.Personality.Rationality;
         if (r > discoveryChance) return;
 
-        // Weighted by personality — rational scholars lean toward hard sciences,
-        // spiritual ones toward philosophy, curious ones anywhere.
+        // Pick discovery type weighted by personality
         int typeCount = Enum.GetValues<DiscoveryType>().Length;
         int typeIndex = (int)(world.GetRandomFloat(c.Id, S.T2Scholar + 1) * typeCount) % typeCount;
         var discovery = (DiscoveryType)typeIndex;
         string bonusKey = DiscoveryBonusKey[typeIndex];
 
-        // Apply discovery bonus to the scholar's home settlement ResourceStores
+        // Apply discovery bonus silently (always)
         if (c.Livelihood.SettlementTile != default
             && world.Settlements.TryGetValue(c.Livelihood.SettlementTile, out var homeStub))
         {
@@ -254,6 +290,7 @@ public sealed class Tier2BehaviorPhase
             world.Settlements[c.Livelihood.SettlementTile] = homeStub with { ResourceStores = stores };
         }
 
+        // Notable event: only when cooldown has cleared (most scholarly work is routine)
         var payload = JsonSerializer.Serialize(new
         {
             scholarId     = c.Id.Value,
@@ -263,8 +300,8 @@ public sealed class Tier2BehaviorPhase
             bonusAmount   = _cfg.ScholarDiscoveryBonusAmount,
             location      = new[] { c.Location.X, c.Location.Y }
         });
-        pending.Add(new PendingEvent(EventType.ScholarDiscovery, c.Location, null, payload,
-            new[] { c.Id.Value }));
+        TryEmitNotableWork(c, world, tick, EventType.ScholarDiscovery,
+            payload, [c.Id.Value], pending);
     }
 
     private static void RunGeneral(Tier2Character c, WorldState world)
@@ -281,9 +318,10 @@ public sealed class Tier2BehaviorPhase
         }
     }
 
-    private void RunPhysician(Tier2Character c, WorldState world, List<PendingEvent> pending)
+    private void RunPhysician(Tier2Character c, WorldState world, List<PendingEvent> pending, long tick)
     {
-        // 1. Heal the nearest injured Tier1 character in the same tile
+        // 1. Heal the nearest injured Tier1 character in the same tile (always, silent).
+        // Notable event fires only when cooldown allows — most healing goes unrecorded.
         foreach (var e in world.GetEntitiesAt(c.Location))
         {
             if (e is not Entities.Characters.Tier1Character t1) continue;
@@ -294,27 +332,62 @@ public sealed class Tier2BehaviorPhase
 
             var payload = JsonSerializer.Serialize(new
             {
-                physicianId  = c.Id.Value,
+                physicianId   = c.Id.Value,
                 physicianName = c.Name,
-                patientId    = t1.Id.Value,
-                patientName  = t1.Identity.Name,
+                patientId     = t1.Id.Value,
+                patientName   = t1.Identity.Name,
                 healed,
-                location     = new[] { c.Location.X, c.Location.Y }
+                critical      = t1.Health <= t1.MaxHealth / 4,  // true = pulled from near-death
+                location      = new[] { c.Location.X, c.Location.Y }
             });
-            pending.Add(new PendingEvent(EventType.PhysicianHealed, c.Location, null, payload,
-                new[] { c.Id.Value, t1.Id.Value }));
+            TryEmitNotableWork(c, world, tick, EventType.PhysicianHealed,
+                payload, [c.Id.Value, t1.Id.Value], pending);
             break; // one patient per tick
         }
 
-        // 2. Reduce disease burden on the physician's home settlement each tick.
-        // Physicians slow the spread and improve recovery odds — modeled as a
-        // direct health recovery bonus on infected settlements.
+        // 2. Reduce disease burden on the physician's home settlement (always, silent)
         if (c.Livelihood.SettlementTile == default) return;
         if (!world.Settlements.TryGetValue(c.Livelihood.SettlementTile, out var stub)) return;
         if (!stub.IsInfected) return;
         float healRate = _cfg.PhysicianSettlementHealRate * c.Personality.Rationality;
         world.Settlements[c.Livelihood.SettlementTile] = stub with
             { Health = (int)Math.Min(100f, stub.Health + healRate) };
+    }
+
+    private static readonly string[] ArtisanGoodType = [
+        "textiles", "pottery", "metalwork", "woodcraft", "leatherwork", "stonework",
+    ];
+
+    private void RunArtisan(Tier2Character c, WorldState world, List<PendingEvent> pending, long tick)
+    {
+        // Artisans work every tick (ambient economic contribution), but notable craftsmanship
+        // is occasional. The exceptional (masterwork) path is once per lifetime.
+        float r = world.GetRandomFloat(c.Id, S.T2General);
+        if (r > 0.25f) return;  // most ticks produce silent routine goods
+
+        int goodCount = ArtisanGoodType.Length;
+        int goodIndex = (int)(world.GetRandomFloat(c.Id, S.T2General + 1) * goodCount) % goodCount;
+        string goodType = ArtisanGoodType[goodIndex];
+
+        // Ambient bonus: slightly raise settlement Status recovery via crafted goods
+        if (world.Settlements.TryGetValue(c.Location, out var homeStub))
+        {
+            var stores = homeStub.ResourceStores is null
+                ? new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase)
+                : new Dictionary<string, float>(homeStub.ResourceStores, StringComparer.OrdinalIgnoreCase);
+            stores["bonus_civ_cohesion"] = (stores.TryGetValue("bonus_civ_cohesion", out var cur) ? cur : 0f) + 0.01f;
+            world.Settlements[c.Location] = homeStub with { ResourceStores = stores };
+        }
+
+        var payload = JsonSerializer.Serialize(new
+        {
+            artisanId   = c.Id.Value,
+            artisanName = c.Name,
+            goodType,
+            location    = new[] { c.Location.X, c.Location.Y }
+        });
+        TryEmitNotableWork(c, world, tick, EventType.ArtisanCrafted,
+            payload, [c.Id.Value], pending);
     }
 
     // ─── Crystallization ──────────────────────────────────────────────────────

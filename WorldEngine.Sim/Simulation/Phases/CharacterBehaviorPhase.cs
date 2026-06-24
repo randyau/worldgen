@@ -494,7 +494,13 @@ public sealed class CharacterBehaviorPhase
         if (createGoal != null)
         {
             createGoal.Progress = Math.Min(1f, createGoal.Progress + 0.2f);
-            createGoal.StaleSince = (int)tick;
+            // Don't reset StaleSince — let the existing staleness pruning work normally.
+            // Mark complete when the project finishes (5 artworks at +0.2 each).
+            if (createGoal.Progress >= 1.0f)
+            {
+                createGoal.IsComplete = true;
+                c.LastCreateCompletedTick = (int)tick;
+            }
         }
         c.Wellbeing = Math.Min(1f, c.Wellbeing + 0.05f);
 

@@ -283,4 +283,18 @@ public sealed class CharacterSimConfig
     // ─── Physician settlement healing ─────────────────────────────────────────
     // Per-tick settlement health recovery (applied while settlement IsInfected) = this × Rationality
     public float PhysicianSettlementHealRate  { get; set; } = 0.5f;
+
+    // ─── Tier2 creator notable/exceptional event pacing ───────────────────────
+    // Minimum ticks between notable work events per character (applies to Scholar, Merchant,
+    // Physician, and Artisan). Routine work happens silently; this gates when it becomes
+    // noteworthy enough to enter the history log.
+    public int   Tier2NotableCooldownTicks   { get; set; } = 32;   // 2 years between notable events
+    // Per-tick probability that a notable work event is also flagged as exceptional
+    // (would create an artifact once the artifact system is live). Expected ~once per lifetime.
+    public float Tier2ExceptionalWorkChance  { get; set; } = 0.002f;
+
+    // ─── Tier1 Create goal cooldown ───────────────────────────────────────────
+    // Ticks after completing a Create goal before the character can start a new one.
+    // Prevents back-to-back creative obsession; 80 ticks = 5 years at 16 ticks/year.
+    public int   CreateGoalCooldownTicks     { get; set; } = 80;
 }

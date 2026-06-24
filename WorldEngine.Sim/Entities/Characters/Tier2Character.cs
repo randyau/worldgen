@@ -18,6 +18,11 @@ public sealed class Tier2Character : SimEntity
 
     public string Name { get; }
 
+    // Notable work pacing — set when a notable event fires; gates re-emission via cooldown
+    public int  LastNotableWorkTick { get; internal set; } = -1000;
+    // Masterwork flag — set when exceptional work fires; only one per lifetime (// V2: ARTIFACT)
+    public bool HasMasterwork       { get; internal set; } = false;
+
     public Tier2Character(
         EntityId id,
         TileCoord location,

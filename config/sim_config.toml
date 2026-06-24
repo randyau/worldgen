@@ -788,6 +788,14 @@ scholar_discovery_bonus_amount = 0.05  # bonus added to settlement ResourceStore
 # Physician settlement healing
 physician_settlement_heal_rate = 0.5   # health restored per tick to infected settlement = this × Rationality
 
+# Tier2 creator event pacing
+# Most work happens silently; these control when it becomes a history-log event.
+tier2_notable_cooldown_ticks  = 32     # minimum ticks between notable events per character (2 years)
+tier2_exceptional_work_chance = 0.002  # per-tick chance of exceptional work during a notable event (~1 per lifetime)
+
+# Tier1 Create goal cooldown
+create_goal_cooldown_ticks = 80        # ticks after completing a Create goal before a new one can form (5 years)
+
 # =============================================================================
 # SETTLEMENT (Phase 2.4 — Population Dynamics)
 # =============================================================================
