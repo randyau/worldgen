@@ -15,8 +15,6 @@ public static class CivTracker
 {
     private const int SettlementStartPop    = 50;
     private const int SettlementStartHealth = 100;
-    private const int RaidDamageMin         = 10;
-    private const int RaidDamageMax         = 30;
     private const int SaltRaidDamage        = 700;
 
     public static void Resolve(
@@ -61,7 +59,7 @@ public static class CivTracker
             var civ = new Civilization(civId, civName, founder.Id, cmd.Tile, world.CurrentYear);
             civ.Members.Add(founder.Id);
             world.Civilizations[civId] = civ;
-            founder.Identity = founder.Identity with { CivId = civId };
+            founder.Identity = founder.Identity with { CivId = civId, RulerOrdinal = 1 };
 
             FireCivFounded(civ, founder, world, pending);
         }
@@ -229,10 +227,14 @@ public static class CivTracker
     {
         var cfg = world.SimConfig.Character;
         if (declCiv.IsAtWarWith(targCiv.Id)) return;
-        if (declCiv.InPeaceCooldownWith(targCiv.Id, world.CurrentYear, cfg.PeaceCooldownYears)) return;
+        if (declCiv.InPeaceCooldownWith(targCiv.Id, world.CurrentYear, cfg.PeaceCooldownYears, cfg.WarExhaustionYearsPerWar)) return;
 
         declCiv.WarsAgainst[targCiv.Id] = world.CurrentYear;
         targCiv.WarsAgainst[declCiv.Id] = world.CurrentYear;
+
+        // Track war count for exhaustion scaling
+        declCiv.WarHistory[targCiv.Id] = declCiv.WarHistory.GetValueOrDefault(targCiv.Id, 0) + 1;
+        targCiv.WarHistory[declCiv.Id] = targCiv.WarHistory.GetValueOrDefault(declCiv.Id, 0) + 1;
 
         // Trust hit between current rulers even if they've never met — reputation travels
         var declRuler = world.GetEntity(declCiv.RulerId) as Tier1Character;
@@ -249,16 +251,25 @@ public static class CivTracker
             if (wasAllied) FireAllianceBroken(declRuler, targRuler, "war_declared", world, pending);
         }
 
+        int warNumber = declCiv.WarHistory.GetValueOrDefault(targCiv.Id, 1);
+        string causeDescription = cause switch
+        {
+            "character_encounter" => "a hostile encounter between their rulers",
+            "border_tension"      => $"years of territorial friction ({warNumber} total war{(warNumber > 1 ? "s" : "")} between these civs)",
+            _                     => cause
+        };
         var eventTile = declRuler?.Location ?? declCiv.CapitalTile;
         var payload = JsonSerializer.Serialize(new
         {
-            declarerId      = declCiv.RulerId.Value,
-            declarerName    = declRuler?.Identity.Name ?? declCiv.Name,
-            declarerCiv     = declCiv.Id.Value,
-            declarerCivName = declCiv.Name,
-            targetCiv       = targCiv.Id.Value,
-            targetCivName   = targCiv.Name,
+            declarerId        = declCiv.RulerId.Value,
+            declarerName      = declRuler?.Identity.Name ?? declCiv.Name,
+            declarerCiv       = declCiv.Id.Value,
+            declarerCivName   = declCiv.Name,
+            targetCiv         = targCiv.Id.Value,
+            targetCivName     = targCiv.Name,
             cause,
+            causeDescription,
+            warNumber,
         });
         // Link both rulers so "all events involving character X" surfaces wars they were targeted by.
         var warEntityIds = targRuler != null
@@ -275,9 +286,10 @@ public static class CivTracker
         if (world.GetEntity(cmd.CharacterId) is not Tier1Character raider) return;
         if (!world.Settlements.TryGetValue(cmd.SettlementTile, out var settlement)) return;
 
-        int damage = RaidDamageMin
+        var raidCfg = world.SimConfig.Character;
+        int damage = raidCfg.RaidDamageMin
             + (int)(world.GetRandomFloat(raider.Id, SaltRaidDamage)
-                    * (RaidDamageMax - RaidDamageMin));
+                    * (raidCfg.RaidDamageMax - raidCfg.RaidDamageMin));
         int newHealth = settlement.Health - damage;
 
         // Raids burn granaries and loot vaults — all resource stores take proportional damage.
@@ -317,18 +329,24 @@ public static class CivTracker
             break; // one named defender per raid
         }
 
+        bool raiderWounded = raider.Health < raider.MaxHealth / 2;
+        string raidOutcome = newHealth <= 0 ? "conquest" : newHealth < raidCfg.WarConquestHealthThreshold ? "critical_damage" : "damaged";
         var payload = JsonSerializer.Serialize(new
         {
-            raiderId   = raider.Id.Value,
-            raiderName = raider.Identity.Name,
-            tile       = new[] { cmd.SettlementTile.X, cmd.SettlementTile.Y },
+            raiderId         = raider.Id.Value,
+            raiderName       = raider.Identity.Name,
+            tile             = new[] { cmd.SettlementTile.X, cmd.SettlementTile.Y },
             damage,
-            settlementHealth = newHealth
+            settlementHealth = newHealth,
+            raidOutcome,
+            raiderWounded,
+            raiderHealthPct  = (int)(raider.Health * 100f / raider.MaxHealth)
         });
-        // Link the raider and the defending civ's founder — both characters' histories
+        // Link the raider and the defending civ's current ruler — both characters' histories
         // should surface battles they were party to, even as the defender.
-        var battleEntityIds = world.Civilizations.TryGetValue(settlement.CivId, out var defCiv)
-            ? new[] { raider.Id.Value, defCiv.FounderId.Value }
+        bool hasDefender = world.Civilizations.TryGetValue(settlement.CivId, out var defCiv2);
+        var battleEntityIds = hasDefender && defCiv2!.RulerId.Value != 0
+            ? new[] { raider.Id.Value, defCiv2.RulerId.Value }
             : new[] { raider.Id.Value };
         pending.Add(new PendingEvent(EventType.BattleOccurred, cmd.SettlementTile, null, payload,
             battleEntityIds));
@@ -558,9 +576,29 @@ public static class CivTracker
 
                 string? reason = null;
 
-                // Truce by expiry
+                // Truce by expiry — but if the defender's capital is critically damaged, the
+                // attacker can force a conquest rather than accepting a mere truce.
                 if (world.CurrentYear - yearDeclared >= cfg.MaxWarDurationYears)
-                    reason = "truce";
+                {
+                    bool conquestForced = false;
+                    if (world.Civilizations.TryGetValue(enemyCivId, out var enemyCiv)
+                        && world.Settlements.TryGetValue(enemyCiv.CapitalTile, out var capitalStub)
+                        && capitalStub.Health <= cfg.WarConquestHealthThreshold
+                        && civ.RulerId.Value != 0)
+                    {
+                        // Siege complete: attacker's raider forcibly annexes the capital
+                        var attacker = world.GetEntity(civ.RulerId) as Tier1Character;
+                        if (attacker != null)
+                        {
+                            var siegeCmd = new RaidSettlement(attacker.Id, enemyCiv.CapitalTile);
+                            // Set settlement health to 0 to trigger conquest branch in ResolveRaid
+                            world.Settlements[enemyCiv.CapitalTile] = capitalStub with { Health = 0 };
+                            ResolveRaid(siegeCmd, world, pending);
+                            conquestForced = true;
+                        }
+                    }
+                    reason = conquestForced ? null : "truce"; // null = already handled via conquest
+                }
 
                 // Surrender: either side's total population collapsed below the threshold
                 if (reason == null)
@@ -616,6 +654,9 @@ public static class CivTracker
             long seq     = (200_000L + world.CurrentYear * 997L + slot * 31L) & 0x7FFFFFFF;
             var  biome   = (BiomeType)world.TileGrid.GetTile(tile.Value).BiomeType;
             var  founder = CharacterFactory.Spawn(tile.Value, biome, world.WorldSeed, seq, cfg, world.CurrentYear);
+            int  founderOrdinal = world.ClaimNameOrdinal(founder.Identity.Name);
+            if (founderOrdinal > 0)
+                founder.Identity = founder.Identity with { NameOrdinal = founderOrdinal };
 
             // Seed an Expansion goal so they actively seek to settle rather than waiting for
             // the normal goal-formation roll.
@@ -700,14 +741,16 @@ public static class CivTracker
         ca.BorderTension.Remove(civB);
         cb.BorderTension.Remove(civA);
 
+        int warCount = ca.WarHistory.GetValueOrDefault(civB, 0);
         var payload = JsonSerializer.Serialize(new
         {
-            civAId   = civA.Value,
-            civAName = ca.Name,
-            civBId   = civB.Value,
-            civBName = cb.Name,
-            reason,
-            year = world.CurrentYear
+            civAId    = civA.Value,
+            civAName  = ca.Name,
+            civBId    = civB.Value,
+            civBName  = cb.Name,
+            outcome   = reason,
+            warNumber = warCount,
+            year      = world.CurrentYear
         });
         var peaceEntityIds = new List<long> { ca.RulerId.Value };
         if (cb.RulerId.Value != ca.RulerId.Value) peaceEntityIds.Add(cb.RulerId.Value);
@@ -765,7 +808,7 @@ public static class CivTracker
             var b = activeCivs[j];
 
             if (a.IsAtWarWith(b.Id)) continue;
-            if (a.InPeaceCooldownWith(b.Id, world.CurrentYear, cfg.PeaceCooldownYears)) continue;
+            if (a.InPeaceCooldownWith(b.Id, world.CurrentYear, cfg.PeaceCooldownYears, cfg.WarExhaustionYearsPerWar)) continue;
 
             // Measure proximity: sum (1 - dist/r) over all close settlement pairs
             float proximity = 0f;
@@ -804,7 +847,7 @@ public static class CivTracker
             {
                 if (tension < cfg.TensionWarThreshold) continue;
                 if (civ.IsAtWarWith(enemyCivId)) continue;
-                if (civ.InPeaceCooldownWith(enemyCivId, world.CurrentYear, cfg.PeaceCooldownYears)) continue;
+                if (civ.InPeaceCooldownWith(enemyCivId, world.CurrentYear, cfg.PeaceCooldownYears, cfg.WarExhaustionYearsPerWar)) continue;
                 if (!world.Civilizations.TryGetValue(enemyCivId, out var enemy) || enemy.IsCollapsed) continue;
 
                 StartWarBetween(civ, enemy, "border_tension", world, pending);

@@ -179,11 +179,14 @@ public sealed class PopulationDynamicsPhase
             string name     = _simCfg.CharacterNames.FirstNames[
                 Math.Abs(tile.GetHashCode() + threshold) % _simCfg.CharacterNames.FirstNames.Length];
 
+            int ageRange = _simCfg.Character.Tier2MaxAgeSeasonsMax - _simCfg.Character.Tier2MaxAgeSeasonsMin;
+            int maxAge   = _simCfg.Character.Tier2MaxAgeSeasonsMin
+                         + (int)(WorldRng.FloatAt(world.WorldSeed, world.CurrentYear, threshold, 0, SaltCrystal) * ageRange);
             var specialist = new Tier2Character(
                 EntityId.New(), tile, name,
                 personality, livelihood,
                 maxHealth: _simCfg.Character.MaxHealth,
-                maxAgeSeason: _simCfg.Character.Tier2MaxAgeSeasonsMin);
+                maxAgeSeason: maxAge);
             world.Entities.Add(specialist);
 
             var payload = JsonSerializer.Serialize(new

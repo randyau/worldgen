@@ -1,0 +1,335 @@
+WORLD ENGINE — 5876-YEAR SIMULATION RUN
+Civilization Narratives
+Generated from world.db event log (598,980 total events)
+============================================================
+
+OVERVIEW
+--------
+Twenty civilizations were founded in Year 1. Six survived to the end of the
+simulation (Year 5876). Fourteen collapsed within the first 436 years, most
+within the first decade. The simulation records 20 unique rulers as founders,
+229 wars declared, 1,770 settlements founded, 1,665 settlement abandonments,
+75,570 disease outbreaks, and 9,522 wildlife raids across the entire run.
+
+The dominant story of the late era is the endless war between Arlen's Domain
+(Civ 6) and Pella's Domain (Civ 18), which repeated on a ~10-year cycle for
+nearly the entire 5,876-year span.
+
+============================================================
+THE SIX SURVIVORS
+============================================================
+
+--- ARLEN'S DOMAIN (Civ 6) ---
+Founded: Year 1 by Arlen, capital at Flintwatch [87,97]
+Status at Year 5876: ACTIVE — 20 settlements, current ruler Samlo
+Total settlements founded: 241 | Total rulers: 165 | Wars declared: 158
+
+Arlen's Domain is the most militaristic civilization in the simulation.
+Founded by Arlen in the wild central-western region, it passed to a succession
+of rulers (Gorin, Merry, Lanny...) within the first 15 years as the founder
+generation aged out. By the mid-first century the civ had settled into its
+defining pattern: perpetual border war with Pella's Domain.
+
+Every ruler of Arlen's Domain, without exception, declared war on Pella's
+Domain, typically within 10-15 years of taking the throne, citing "border
+tension." The wars lasted 4-6 years, ended in truce, and restarted under the
+next reign. This cycle repeated 158 times across 165 rulers. None ever
+achieved a decisive victory. None ever sued for permanent peace.
+
+By Year 5876 the civ held 20 settlements in a dense band across the
+western-central terrain. It had founded 241 settlements total, of which 221
+were eventually abandoned — a constant churn of expansion and collapse driven
+by disease (the region suffered tens of thousands of outbreaks) and wildlife
+raids. The civ's current ruler, Samlo, took power in Year 5873.
+
+Notable rulers: Ilyarel "the Dreamer" (757–873), who declared 9 wars across
+his 116-year reign; Kaelith "of the Silver Wood" (866–954), maximum aggression
+and ambition by trait; Quince "the Warmhearted" (1370–1391), who died within
+21 years of taking power; Maewyn "Windwalker" (1775–1863).
+
+Character note: The epithet "the Dreamer" appears twice in Arlen's Domain
+across different rulers separated by centuries — names and epithets recycle.
+
+
+--- PELLA'S DOMAIN (Civ 18) ---
+Founded: Year 1 by Pella, capital at Redmill [81,69]
+Status at Year 5876: ACTIVE — 21 settlements, current ruler Lirael
+Total settlements founded: 786 | Total rulers: 179 | Wars declared: 65
+
+Pella's Domain is the most expansionist civilization by raw numbers: 786
+settlements founded over 5,876 years, more than any other civ. It is also the
+most warred-upon — every ruler of neighboring Arlen's Domain declared war on
+it repeatedly, and many of Pella's own rulers eventually returned the favor,
+declaring 65 wars of their own against Arlen.
+
+Founded by Pella in the northwestern terrain adjacent to Arlen's Domain, the
+civ survived the early collapse wave through numbers — it was actively
+expanding even as nine other civs fell in the first 40 years. Unlike Arlen,
+which fought mostly to hold ground, Pella constantly founded and lost
+settlements, cycling through them at a rate that suggests severe environmental
+pressure: disease and wildlife raids destroyed settlements almost as fast as
+new ones were built, particularly in the mid-region around [85, 65–75].
+
+Some notable Pella rulers: Sorvael "of the First Age" (1133–1250), who ruled
+for 117 years and eventually became an aggressor, declaring war on Arlen rather
+than waiting to be attacked; Phaelen "Twilightborn" (1682–1804), who ruled
+for 122 years and also turned aggressor; Faenith "the Undying" (2904–3010),
+who ruled for 106 years with high ambition and aggression. Current ruler
+Lirael took power in Year 5856 and declared war on Arlen in Year 5870.
+
+The endless Arlen/Pella conflict never produced a decisive outcome. No
+settlement was permanently conquered, no ruler succeeded in absorbing the
+rival civ.
+
+
+--- FAELINDRA'S DOMAIN (Civ 16) ---
+Founded: Year 1 by Faelindra, capital at Brightgate [109,148]
+Status at Year 5876: ACTIVE — 21 settlements, current ruler Raelvael
+Total settlements founded: 436 | Total rulers: 173 | Wars declared: 0
+
+Faelindra's Domain is the most peaceable of the survivors. Located in the
+southern terrain [109–115, 140–150], it never appears as a war declarer in
+the event log — not once across 5,876 years and 173 rulers. It simply grew.
+
+The civ expanded outward from Brightgate through the highland approaches,
+founding settlements in a slow but persistent spread. The southern terrain
+appears more hostile than average (436 settlements founded, 415 abandoned),
+but Faelindra's Domain always maintained a core of 20+ active settlements.
+Its 173 rulers succeeded one another without apparent crisis — no succession
+crises appear in the record, no wars, no conquests.
+
+What drove the constant settlement abandonment? Disease and wildlife. The civ
+logged thousands of disease outbreaks in its southern settlements, and the
+highland terrain apparently hosted frequent beast pack activity. But without
+wars consuming resources, the civ could continually rebuild.
+
+The current ruler, Raelvael, took power in Year 5869.
+
+
+--- ELIAN'S DOMAIN (Civ 9) ---
+Founded: Year 1 by Elian, capital at Highreach [94,134]
+Status at Year 5876: ACTIVE — 17 settlements, current ruler Raelvael
+Total settlements founded: 72 | Total rulers: 182 | Wars declared: 2
+
+Elian's Domain had a violent early history and a long peaceful plateau. Founded
+by Elian "the Swift" in Year 1 at the coast-adjacent southern region [94,134],
+it almost immediately fell into war with neighboring Caelen's Domain (Civ 8)
+under Elian's successor Ilaenith. Ilaenith conquered both Caelen's Domain
+settlements within 14 years, absorbed them briefly, lost them back, and
+re-conquered them in a second war. By Year 29 the two civs had fought to
+near-destruction; Caelen's Domain surrendered but survived.
+
+After that early violence, Elian's Domain stopped initiating wars (only 2 total
+in the record, both early). It held its 17 settlements with remarkable
+stability through 182 rulers, enduring waves of disease and wildlife raids
+without the constant war cycle that consumed Arlen and Pella. The late-era
+succession rate was high — 7 rulers in the last 15 years — suggesting the
+region's environmental stress led to short natural lifespans.
+
+The current ruler, Raelvael, took power in Year 5873. (Note: "Raelvael" also
+appears as the current ruler of Faelindra's Domain — name recycling across
+civs is common in the simulation.)
+
+
+--- LRUG'S DOMAIN (Civ 17) ---
+Founded: Year 1 by Lrug, capital at Broadvale [171,96]
+Status at Year 5876: ACTIVE — 21 settlements, current ruler Raelvael
+Total settlements founded: 159 | Total rulers: 323 | Wars declared: 0
+
+Lrug's Domain has the highest succession count of any civilization: 323 rulers
+across 5,876 years. That is roughly one ruler every 18 years on average, with
+many reigns far shorter. Founded by Lrug in the eastern terrain [171,96], the
+civ passed to Taelith within 14 years and maintained an eastern frontier
+through waves of rulers. Like Faelindra's Domain, it never declared a war —
+not once in its entire history.
+
+The rapid succession rate (nearly double any other civ) suggests either a very
+hostile environmental context (short lifespans from disease), or something in
+the eastern terrain's configuration that produced unusually brief reigns. The
+civ is healthy at year 5876 (21 settlements), so the turnover didn't destabilize it.
+
+Current ruler: Raelvael (third civ with this name at year 5876 — name
+collision is increasingly common in the late simulation).
+
+
+--- CAELEN'S DOMAIN (Civ 8) ---
+Founded: Year 1 by Caelen, capital at Deepreach [92,134]
+Status at Year 5876: ACTIVE — 3 settlements, technically surviving
+Total settlements founded: 3 | Total rulers: 1 (founding generation only)
+
+Caelen's Domain is the most improbable survivor. It was conquered in Year 14
+(both settlements taken by Elian's Domain under Ilaenith), reconquered again
+in Year 26–28 (all remaining settlements seized by Elian's Domain in a second
+war), and formally collapsed in Year 138. It appears in the CivilizationCollapsed
+event log multiple times under "reason: conquered."
+
+Yet at year 5876, three settlements appear to carry its civId in the founding
+records. These likely represent a rump state that was never formally absorbed —
+the settlements Caelen's Domain founded but that were re-founded in its name
+after conquests without a proper collapse being registered. It is effectively
+a ghost civilization: 3 tiny settlements at the edge of Elian's Domain's sphere.
+
+The founder, Caelen "Windwalker," was the longest-lived of the first generation
+at 68 years (4 seasons/year = ~272 seasons lived to ageSeason 1080). He
+watched his domain conquered and reconquered before dying of old age.
+
+============================================================
+THE FOURTEEN COLLAPSED CIVILIZATIONS
+============================================================
+
+--- LYRA'S DOMAIN (Civ 15) ---
+Founded: Year 1 by Lyra, capital at Broadmoor [133,78]
+Collapsed: Year 4 — first civilization to fall
+
+Lyra's Domain lasted only 4 years, the briefest run in the simulation. The
+collapse event gives no reason beyond "CivilizationCollapsed." Given that
+disease outbreaks began appearing in nearby settlements by Year 7 and many
+first-generation civs faced immediate disease pressure, Lyra's Domain likely
+lost its single settlement Broadmoor to disease or wildlife before it could
+expand. It left no mark on the record.
+
+
+--- ZOR'S DOMAIN (Civ 4), KIRA'S DOMAIN (Civ 11), CERYN'S DOMAIN (Civ 20) ---
+Founded: Year 1 | Collapsed: Year 8
+
+Three civs fell simultaneously in Year 8. Zor's Domain (Whitemere [162,66]),
+Kira's Domain (Brightcliff [90,133]), and Ceryn's Domain (Greenmere [140,58])
+each held a single settlement that was struck by disease in Year 7. Disease
+outbreaks are recorded at Whitemere and Brightcliff in Year 7 — their single
+settlements apparently collapsed under the infection before the civ could
+expand or recover. Ceryn's Domain at Greenmere shared a tile with Idris's
+Domain's settlement Coldfell — likely outcompeted or destroyed in the
+crowded founding cluster.
+
+
+--- PROGA'S DOMAIN (Civ 7) ---
+Founded: Year 1 by Proga, capital at Stonehollow [140,57]
+Conquered: Year 13 by Yrug of Idris's Domain | Formally collapsed: Year 14
+
+Proga's Domain had its capital Stonehollow [140,57] seized in Year 13 by
+Yrug "Bonecruncher," ruler of Idris's Domain, at the conclusion of a war
+declared in Year 10. The event log records the conquest explicitly:
+survivingPop 30, conquered by Yrug. Proga's Domain held out one more year
+before the CivilizationCollapsed event fired in Year 14. Stonehollow became
+an Idris's Domain settlement.
+
+
+--- XAN'S DOMAIN (Civ 13), ZURG'S DOMAIN (Civ 12) ---
+Founded: Year 1 | Collapsed: Year 11 and Year 13
+
+Xan's Domain (Oldmill [156,98]) and Zurg's Domain (Deepmark [162,103]) occupied
+the eastern cluster near Lrug's Domain and Morda's Domain. Neither engaged in
+recorded wars. Both collapsed to disease and abandonment — the eastern terrain
+appears to have been extremely hostile to early settlement. No conquest events
+are attached to their collapse records.
+
+
+--- TORIN'S DOMAIN (Civ 14), KAVEL'S DOMAIN (Civ 1) ---
+Founded: Year 1 | Collapsed: Year 10
+
+Torin's Domain (Sharppass [138,132]) and Kavel's Domain (Coldhollow [139,74])
+both collapsed in Year 10. Kavel's Domain suffered disease pressure early —
+a disease outbreak at Coldhollow is recorded in Year 14 (though the collapse
+preceded it, suggesting an unlisted early outbreak). Both civs appear to have
+failed through settlement abandonment rather than conquest.
+
+
+--- TURG'S DOMAIN (Civ 19) ---
+Founded: Year 1 by Turg, capital at Stonemoor [155,89]
+Conquered: Year 9 | Collapsed: Year 10
+
+Turg's Domain engaged in the first major war of the simulation. Turg "Warborn"
+declared war on Morda's Domain in Year 8 after an encounter between the two
+rulers. The war was catastrophic for both — each civ's capital exchanged hands
+multiple times within a single year. Morda finally conquered Stonemoor in Year 9
+(survivingPop 30), and Turg's Domain collapsed in Year 10 just as Turg died
+of old age. See Turg's character narrative for the full account.
+
+
+--- MORDA'S DOMAIN (Civ 10) ---
+Founded: Year 1 by Morda, capital at Flintshore [155,88]
+Collapsed: Year 31
+
+Morda "Shieldbreaker" won the war with Turg's Domain, absorbing Stonemoor
+into her domain. But Morda's Domain could not hold its gains. Morda died in
+Year 14. The successor, Proga, inherited a domain of two disputed settlements
+in a volatile region. By Year 31 the civ collapsed — likely through disease
+pressure and the inherent fragility of its single original settlement
+Flintshore, which had been raided and reconquered multiple times.
+
+
+--- CRUG'S DOMAIN (Civ 5) ---
+Founded: Year 1 by Crug, capital at Silverwatch [136,65]
+Collapsed: Year 22
+
+Crug's Domain endured two wars — one declared by Crug against Idris's Domain
+in Year 12 (citing "border_tension"), one apparently from Idris's Domain
+retaliating — before collapsing in Year 22. It had founded 2 settlements
+and held them briefly. Its neighbor Idris's Domain outlasted it by four
+centuries but ultimately fell too.
+
+
+--- BILLA'S DOMAIN (Civ 2) ---
+Founded: Year 1 by Billa, capital at Amberreach [136,45]
+Collapsed: Year 41
+
+Billa's Domain had the longest run of the first-generation collapsed civs.
+It founded 4 settlements (Amberreach and 3 others) and survived 41 years
+before collapsing. No war events are recorded for Billa's Domain — it died
+quietly, presumably overwhelmed by disease and settlement abandonment in the
+northern cluster.
+
+
+--- IDRIS'S DOMAIN (Civ 3) ---
+Founded: Year 1 by Idris, capital at Coldfell [138,58]
+Collapsed: Year 436
+
+Idris's Domain was the most durable of the collapsed civilizations, surviving
+436 years and founding 56 settlements with 52 ruler successions. It began
+aggressively — the second ruler, Yrug "Bonecruncher," declared war and
+conquered Proga's Domain within 14 years — but the civ's history after Yrug
+becomes quieter. It fought two wars total and built steadily before eventually
+losing its last settlement around Year 436.
+
+Its collapse is significant: the civ lasted four centuries, longer than the
+entire existence of most of the failed civs combined. Yet it still fell, while
+Arlen's Domain and Pella's Domain to its west endured indefinitely.
+
+============================================================
+KEY PATTERNS AND OBSERVATIONS
+============================================================
+
+1. EARLY DEATH WAVE: 14 of 20 civs (70%) collapsed within 436 years, with 10
+   falling in the first 31 years. The founding cluster Year 1 was probably
+   too dense — many civs founded at the same tile cluster could not survive
+   simultaneous disease pressure.
+
+2. THE ARLEN/PELLA DEADLOCK: The simulation's dominant narrative for 5,800+
+   years is the Arlen-Pella conflict — 158 wars with no decisive resolution.
+   Every single ruler of Arlen's Domain declared war. Wars end in truce ~4
+   years after declaration and restart ~10-15 years later. The war trigger
+   "border_tension" fires mechanically when rulers have high aggression and
+   are in proximity. No ruler has sufficient leverage to end the conflict
+   permanently. This is the simulation's most urgent design problem.
+
+3. DISEASE DOMINATES: 75,570 disease outbreaks across the run — roughly 13
+   per year. With 20 active settlements per surviving civ, this means nearly
+   every settlement is infected almost continuously. Disease is the primary
+   cause of settlement abandonment (1,665 total) and likely the primary
+   killer of characters (though death cause attribution is imperfect). The
+   disease mechanic vastly overshadows war as a driver of settlement loss.
+
+4. PEACEFUL CIVS SURVIVE JUST AS WELL: Faelindra's Domain and Lrug's Domain
+   never declared a war and both thrive at year 5876 with 21 settlements each.
+   Arlen's Domain declared 158 wars and also has ~20 settlements. Wars do not
+   appear to produce any long-term advantage.
+
+5. NAME RECYCLING IS HEAVY: By Year 5876, "Raelvael" is simultaneously the
+   ruler of three different civilizations (Civs 6, 9, and 17). Common names
+   ("Ilyarel," "Caelen," "Taelith," "Aelindra") repeat across centuries and
+   civs. This is cosmetically jarring and will matter greatly when narrative
+   generation references historical figures.
+
+6. SETTLEMENT CHURN: Pella's Domain founded 786 settlements but only has 21
+   at end — a 97% abandonment rate. Faelindra's Domain: 436 founded, 21
+   surviving — 95% rate. This churn is almost entirely disease-driven.

@@ -151,7 +151,8 @@ public sealed class CharacterBehaviorPhase
             long seq  = (50_000L + tick * 997L + kvp.Key.X * 31 + kvp.Key.Y) & 0x7FFFFFFF;
             var tileData = world.TileGrid.GetTile(kvp.Key);
             var born  = CharacterFactory.Spawn(kvp.Key, (BiomeType)tileData.BiomeType, world.WorldSeed, seq, _simCfg, world.CurrentYear);
-            born.Identity = born.Identity with { CivId = stub.CivId };
+            int bornOrdinal = world.ClaimNameOrdinal(born.Identity.Name);
+            born.Identity = born.Identity with { CivId = stub.CivId, NameOrdinal = bornOrdinal };
             civ.Members.Add(born.Id);
             world.Entities.Add(born);
 
@@ -271,15 +272,19 @@ public sealed class CharacterBehaviorPhase
                 if (successorId.HasValue)
                 {
                     civ.RulerId = successorId.Value;
+                    civ.RulerCount++;
                     var successor = (Tier1Character)world.GetEntity(successorId.Value)!;
+                    successor.Identity = successor.Identity with { RulerOrdinal = civ.RulerCount };
                     var succPayload = JsonSerializer.Serialize(new
                     {
                         civId           = civ.Id.Value,
                         civName         = civ.Name,
                         predecessorId   = c.Id.Value,
                         predecessorName = c.Identity.Name,
+                        predecessorRulerOrdinal = c.Identity.RulerOrdinal,
                         successorId     = successorId.Value.Value,
                         successorName   = successor.Identity.Name,
+                        successorRulerOrdinal   = civ.RulerCount,
                         year            = world.CurrentYear
                     });
                     pending.Add(new PendingEvent(EventType.SuccessionOccurred, civ.CapitalTile, null,

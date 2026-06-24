@@ -41,6 +41,10 @@ public static class CharacterSpawner
                 config:    config,
                 birthYear: world.CurrentYear);
 
+            int nameOrdinal = world.ClaimNameOrdinal(character.Identity.Name);
+            if (nameOrdinal > 0)
+                character.Identity = character.Identity with { NameOrdinal = nameOrdinal };
+
             world.Entities.Add(character);
             pending.Add(MakeBornEvent(character, world));
 

@@ -1,0 +1,483 @@
+WORLD ENGINE — 5876-YEAR SIMULATION RUN
+Character Narratives (25 Sample Characters)
+Generated from world.db event log
+============================================================
+
+Characters are drawn from across the full time span to represent the range of
+character types: founders, long-reigning rulers, short-reigning rulers, and
+specialists (physicians, scholars). Character ages are given in seasons
+(15 seasons/year, so ageSeason 60 = 4 years; ageSeason 1962 = ~131 years).
+
+============================================================
+EARLY ERA (Years 1–100)
+============================================================
+
+--- 1. TURG "WARBORN" (Entity 68) ---
+Born: Year 1 | Died: Year 10 | Civilization: Turg's Domain (Civ 19)
+Ambition: 0.63 | Aggression: 0.85
+
+The first war in the simulation was Turg's. Born Year 1 with the epithet
+"Warborn" and extraordinary aggression, Turg founded the settlement Stonemoor
+at [155,89] and immediately attracted hostility from neighbor Morda across
+the river at [155,88]. By Year 3, Morda had declared a personal rivalry.
+Turg returned the favor in Year 4.
+
+In Year 8, Turg formally declared war on Morda's Domain, citing a "character
+encounter." What followed was the simulation's most chaotic early conflict: in a
+single year, both Stonemoor and Morda's capital Flintshore exchanged hands
+multiple times. Turg raided Flintshore repeatedly (damage 17–28 per strike),
+Morda counter-raided Stonemoor, and by Year 9 both settlements had hit
+negative health, been "conquered," re-garrisoned, and lost again. The two
+settlements traded ownership four times in two years.
+
+Morda ultimately prevailed. By Year 9 Stonemoor fell for good — surviving
+population 30. The war ended in Year 10 with "reason: surrender." Turg died
+of old age in Year 10, at ageSeason 157 (~10 years). His domain collapsed
+the same year. He never held a second settlement; he never made peace.
+
+
+--- 2. MORDA "SHIELDBREAKER" (Entity 72) ---
+Born: Year 1 | Died: Year 14 | Civilization: Morda's Domain (Civ 10)
+Ambition: 0.14 | Aggression: 0.75
+
+Morda "Shieldbreaker" won the war. Despite having the lowest ambition of any
+simulation founder (0.14 — she apparently had no strategic goals, only a
+talent for violence), Morda drove Turg's Domain to collapse and absorbed
+Stonemoor. She founded Flintshore at [155,88] in Year 1 and held it through
+the brutal exchange-conquest war of Year 8–10.
+
+After the war, Morda ruled over two settlements in uneasy peace. She died
+in Year 14 at ageSeason 224, having never declared another war. Her successor,
+Proga, inherited a domain already weakened from the fighting — Morda's Domain
+would collapse in Year 31, 17 years after her death. She won her war and it
+did not matter.
+
+
+--- 3. ELIAN "THE SWIFT" (Entity 71) ---
+Born: Year 1 | Died: Year 12 | Civilization: Elian's Domain (Civ 9)
+Ambition: 0.31 | Aggression: 0.49
+
+Elian was the quietest founder. He established Highreach at [94,134], passed
+succession to Ilaenith in Year 12 just before dying of old age (ageSeason 190),
+and left behind what would become one of the simulation's most durable
+civilizations. He declared no wars, formed no alliances, engaged in no
+recorded conflicts. His 12 years of rule were peaceful, possibly because his
+neighbors were equally overwhelmed with founding settlements.
+
+His legacy was contested — Highreach was later conquered by Ilaenith, then
+recaptured. The civilization that bears his name fought brutal wars in its
+early decades that he never saw coming.
+
+
+--- 4. CAELEN "WINDWALKER" (Entity 83) ---
+Born: Year 1 | Died: Year 68 | Civilization: Caelen's Domain (Civ 8)
+Ambition: 0.24 | Aggression: 0.34
+
+Caelen was the longest-lived member of the founding generation, reaching
+ageSeason 1080 (~68 years). He watched his civilization conquered and
+reconquered across his entire adult life. By Year 5 he had already formed a
+personal rivalry with Ilaenith of Elian's Domain. By Year 12, Ilaenith declared
+war. By Year 14, both of Caelen's Domain's main settlements — Sharpkeep and
+Deepreach — had been seized.
+
+What makes Caelen remarkable is endurance. He survived both conquests, survived
+a second war in Year 26–29 in which Elian's Domain again stripped all his
+settlements, and lived to see a truce in Year 29. He was personally targeted
+by Elian's Domain rulers for decades — AllianceFormed events show 8 different
+rulers of Elian's Domain declaring personal rivalry against him across 40 years.
+
+He died at last in Year 68, leaving his half-ruined civilization to his
+successor Aelindra. His epithet "Windwalker" fits: he bent but never broke.
+
+
+--- 5. ILAENITH "THE PATIENT" (Entity 130) ---
+Born: Year 4 | Died: Year 126 | Civilization: Elian's Domain (Civ 9)
+Ambition: 0.81 | Aggression: 0.54
+
+Ilaenith lived 122 years (ageSeason 1962), the longest reign in the early-era
+record. She succeeded Elian in Year 12 and immediately went to war against
+Caelen's Domain, declaring conflict in Year 12 (the same year she took power).
+She was the aggressor: conquering Sharpkeep in Year 14, Deepreach in Year 14,
+then attacking again in Year 26 when Caelen's Domain had partly recovered.
+
+Her second war was even more thorough. By Year 28, all of Caelen's Domain's
+settlements — Sharpkeep, Deepreach, Oldmark, Cragmere — had been taken. A peace
+truce in Year 29 ended the formal war, but Ilaenith continued declaring personal
+rivalries with Caelen for years afterward, suggesting she regarded him as
+unfinished business.
+
+After the wars, Ilaenith's record becomes quiet. She ruled for 94 more years
+following the Year 29 truce with no further wars. She died in Year 126, the
+same year she transferred power to her successor Haelwyn. Her epithet "the
+Patient" is ironic: she was patient in the sense of outlasting everyone, but
+"the Conqueror" would have fit better.
+
+
+--- 6. YRUG "BONECRUNCHER" (Entity 128) ---
+Born: Year 4 | Died: Year 20 | Civilization: Idris's Domain (Civ 3)
+Ambition: 0.45 | Aggression: 0.58
+
+Yrug was the second ruler of Idris's Domain, succeeding founder Idris in Year 7.
+Within 3 years he had declared war on Proga's Domain and was actively raiding
+its capital Stonehollow [140,57]. The raids were systematic: Year 11–13 saw
+repeated strikes (damage 14–27) that reduced Stonehollow's health to 2, then -17.
+In Year 13 Stonehollow fell — survivingPop 30 — and became an Idris's Domain
+settlement.
+
+Yrug also faced a war from Crug's Domain (Civ 5), which declared against him
+in Year 12, but this conflict produced no conquest and ended in truce by Year 16.
+Yrug died in Year 20 at ageSeason 258, having added one settlement to the domain
+in 13 years of rule. His successor continued Idris's Domain for another 416 years.
+
+
+--- 7. BESSA "THE HAWK" (Entity 298) ---
+Born: Year 12 | Died: Year 16 | Civilization: Caelen's Domain (Civ 8)
+Ambition: 0.63 | Aggression: 0.76
+
+Bessa lived only 4 years (ageSeason 76), but was one of the most destructive
+characters per year of life in the simulation. Born in Year 12, she immediately
+founded Sharpkeep [90,134] for Caelen's Domain, then turned raider — attacking
+Elian's Domain settlements while Ilaenith was simultaneously attacking hers.
+
+In Year 14–15, Bessa conquered two Elian's Domain settlements in counter-raids
+(Sharpkeep and Cragmere), briefly restoring Caelen's Domain's territory. By
+Year 15 she had conquered Cragmere [91,134] with survivingPop 39. She died in
+Year 16, leaving behind a civ in the middle of active war. Her brief life was
+entirely military — born, fight, conquer, die.
+
+
+--- 8. FAENITH "OF THE LONG WATCH" (Entity 514) ---
+Born: Year 21 | Died: Year 123 | Civilization: Elian's Domain (Civ 9)
+Ambition: 0.70 | Aggression: 0.47
+
+Faenith lived 102 years (ageSeason 1640) and spent most of them raiding Caelen's
+Domain settlements during the prolonged second Elian-Caelen war (Years 26–29).
+He founded Ironshore [93,133] in Year 21 and immediately joined the war effort,
+executing at least 4 conquests of Caelen's Domain territories (Oldmark twice,
+Cragmere) during the Year 26–28 campaign.
+
+After the war ended in Year 29, Faenith appears to have lived peacefully for
+94 years. He died in Year 123, outlasting Ilaenith by 3 years. His settlement
+Ironshore was eventually abandoned in Year 273. His epithet "of the Long Watch"
+suits him well — a long life of waiting between the bursts of early violence.
+
+
+--- 9. AELINDRA "STARBORN" (Entity 620) ---
+Born: Year 26 | Long reign | Civilization: Caelen's Domain (Civ 8)
+Ambition: 0.48 | Aggression: 0.67
+
+Aelindra inherited Caelen's Domain from its founder in Year 68, when Caelen died
+after watching his civilization repeatedly conquered. She had been fighting before
+she was ruler — raiding Elian's Domain settlements as early as Year 26 (Year 27:
+conquered Oldmark with survivingPop 21). After taking the throne she continued
+as a target: 8 different Elian's Domain rulers declared personal rivalry against
+her over the following decades.
+
+What Aelindra represents is persistence: the Caelen's Domain that technically
+survives to Year 5876 is arguably her civilization more than Caelen's, since
+she held it together through the post-founder collapse phase. She appears still
+alive and active in Year 75 based on the rivalry declarations. Her eventual
+death date is not captured in the sampled window, but she lived well past Year 68.
+
+
+--- 10. ULRIC THE SCHOLAR (Entity 1924) ---
+Born: ~Year 79 | Died: Year 83 | Civilization: Arlen's Domain (Civ 6)
+Role: Scholar
+
+Ulric is the first Scholar in the simulation record. He was appointed to the
+scholar role in Year 79 at a settlement [91,93] that had just crossed the
+population threshold of 300, then made his discovery in Year 80. He died in
+Year 83 at ageSeason 60 (~4 years).
+
+There is almost nothing else to say about Ulric. He was born old (appointed
+to specialist role immediately at life start), made one discovery, and died.
+The scholar discovery event (Type 3304) captures no content — just his name
+and location. What he discovered, what it meant, what anyone thought of it —
+none of that is recorded. He is a placeholder for a life.
+
+This is the central narrative problem: the simulation generates the fact of
+a Scholar Discovery but not its meaning.
+
+
+============================================================
+MIDDLE ERA (Years 100–2000)
+============================================================
+
+--- 11. ZORAN THE PHYSICIAN (Entity 7096) ---
+Appointed: Year 256 | Died: Year 260 | Civilization: Lrug's Domain (Civ 17)
+
+Zoran was appointed Physician in Year 256 at a settlement [139,96] that had
+just reached population 500. He healed multiple patients across Years 256–260
+(at least 9 distinct healing events), treating recurring patients including
+individuals 5239 and 5859 over multiple consecutive years. He died in Year 260
+at ageSeason 60 — the physician lifespan cap.
+
+What Zoran's record reveals: the Physician role is entirely reactive. He was
+spawned when the settlement hit a threshold, healed the same patients repeatedly,
+and died after exactly 4 years of service regardless of outcome. The healing
+events show "healed: 10" for each patient interaction — there is no recovery
+arc, no crisis, no resolution. He healed people, they may or may not have
+survived, and he died.
+
+
+--- 12. ERYN THE PHYSICIAN (Entity 10098) ---
+Appointed: Year 354 | Died: Year 358 | Civilization: Lrug's Domain (Civ 17)
+
+Eryn followed the same pattern as Zoran exactly — appointed Year 354 at [138,96],
+treated recurring patients (9547, 8672, 9983, 10108) for 4 years, died at
+ageSeason 60. There is nothing to distinguish Eryn from Zoran except names
+and patient IDs.
+
+This interchangeability is a design signal: all Physicians are functionally
+identical in the simulation. There is no variation in their stories. For
+narrative generation purposes, they need differentiated contexts — was there
+a disease outbreak when they were appointed? Did their patients survive? Did
+the settlement's population grow or shrink under their care?
+
+
+--- 13. ILYAREL "THE DREAMER" (Entity 22456) ---
+Born: Year 757 | Died: Year 873 | Civilization: Arlen's Domain (Civ 6)
+Ambition: 0.58 | Aggression: 0.86
+
+Ilyarel "the Dreamer" ruled Arlen's Domain for 116 years and declared 9 wars —
+all against Pella's Domain, all citing "border_tension," all ending in truce
+~4 years later. The pattern was exact: war Year 769, truce Year 773; war
+Year 783, truce Year 787; war Year 797, truce Year 801; and so on, every 14
+years until his death.
+
+The epithet "the Dreamer" contrasts vividly with a character whose entire
+existence in the record consists of border wars. Perhaps the name refers to
+the dream of finally winning — a dream that 9 wars and 116 years never
+fulfilled. He died in Year 873 having changed nothing about the Arlen/Pella
+balance. His successor Kaelith took the throne and resumed the wars.
+
+The tragedy of Ilyarel (if the simulation can produce tragedy) is not that he
+failed at war — it's that the wars were structurally pointless from the start.
+No raid events appear in his record; the wars are declared and then resolved
+without any territorial change. The conflict was purely ceremonial.
+
+
+--- 14. KAELITH "OF THE SILVER WOOD" (Entity 25714) ---
+Born: Year 866 | Died: Year 954 | Civilization: Arlen's Domain (Civ 6)
+Ambition: 0.90 | Aggression: 0.86
+
+Kaelith had the highest ambition in the sample (0.90) and near-maximum
+aggression. He ruled for 88 years and declared 6 wars against Pella's Domain.
+Like Ilyarel, every war ended in truce; unlike Ilyarel, Kaelith's wars came
+in shorter cycles (10–14 years). He achieved nothing that Ilyarel had not
+already failed to achieve.
+
+What Kaelith's record reveals about the simulation: ambition and aggression
+scores do not create differentiated rulers. High ambition + high aggression
+produces only more frequent wars against the same target. There is no
+mechanism for a ruler to translate ambition into strategic gain.
+
+
+--- 15. WROG "BRAVESCAR" (Entity 27551) ---
+Born: Year 926 | Died: Year 938 | Civilization: Pella's Domain (Civ 18)
+Ambition: 0.61 | Aggression: 0.84
+
+Wrog ruled Pella's Domain for 3 years (Year 935–938) and died at ageSeason 205
+(~14 years into his life). He declared no wars in that brief reign — Arlen's
+Domain under a different ruler declared against him. He died just as a
+succession crisis loomed.
+
+Wrog represents the many short-reign rulers in the high-succession-rate civs:
+born, rule briefly, die, forgotten. His epithet "Bravescar" suggests a violent
+history before rulership, but none of it appears in the record.
+
+
+--- 16. SORVAEL "OF THE FIRST AGE" (Entity 33798) ---
+Born: Year 1133 | Died: Year 1250 | Civilization: Pella's Domain (Civ 18)
+Ambition: 0.33 | Aggression: 0.79
+
+Sorvael ruled for 117 years (Year 1133–1250) and broke a pattern: he was one
+of the Pella rulers who turned aggressor, declaring war on Arlen's Domain in
+Year 1241 rather than waiting to be attacked. Despite low ambition, his
+aggression drove him to action eventually. The war ended in truce in Year 1245,
+4 years later. He died in Year 1250 at ageSeason 1884 (~125 years of life).
+
+His epithet "of the First Age" is curious — he lived twelve centuries after
+the founding. Either the simulation applies epithets without historical context,
+or "First Age" refers to something within his culture's mythology that the
+simulation doesn't record.
+
+
+--- 17. QUINCE "THE WARMHEARTED" (Entity 41011) ---
+Born: Year 1370 | Died: Year 1391 | Civilization: Arlen's Domain (Civ 6)
+Ambition: 0.90 | Aggression: 0.82
+
+Quince "the Warmhearted" declared war within 14 years of taking power and died
+21 years into his reign. His epithet is the most ironic in the sample. Maximum
+ambition, high aggression, warmhearted only by name. He ruled from Year 1374
+to 1391, a reign of 17 years, and the only thing the record shows him doing
+is declaring war on Pella's Domain in Year 1388 — which ended in truce 3 years
+later under his successor's management.
+
+Quince is a good example of the epithet disconnect: character epithets are
+generated from some internal attribute, but the events they actually participate
+in often contradict the flavor the epithet implies.
+
+
+--- 18. WREN THE PHYSICIAN (Entity 40657) ---
+Appointed: Year 1358 | Died: Year 1362 | Civilization: Arlen's Domain (Civ 6)
+
+Wren followed the physician pattern exactly — appointed at settlement [92,94]
+at population threshold 500, healed recurring patients (39453, 40583, 38321,
+39701, etc.) for 4 years, died at ageSeason 60. No differentiation from Zoran
+or Eryn three centuries earlier. The physician archetype is structurally
+identical across the full simulation.
+
+
+--- 19. PHAELEN "TWILIGHTBORN" (Entity 50406) ---
+Born: Year 1682 | Died: Year 1804 | Civilization: Pella's Domain (Civ 18)
+Ambition: 0.46 | Aggression: 0.73
+
+Phaelen ruled for 122 years (Year 1701–1804) and, like Sorvael before him,
+eventually became an aggressor — declaring two wars on Arlen's Domain (Year 1778,
+Year 1796) rather than waiting for Arlen's cycle. The wars ended in truce. He
+died at ageSeason 1962 (~131 years), a long life.
+
+The "Twilightborn" epithet is evocative — perhaps a nod to being born in a
+period of decline or conflict — but nothing in his record marks him as born
+in any particular darkness. He is another long-ruling Pella sovereign grinding
+through the same conflict.
+
+
+--- 20. MAEWYN "WINDWALKER" (Entity 53317) ---
+Born: Year 1775 | Died: Year 1863 | Civilization: Arlen's Domain (Civ 6)
+Ambition: 0.48 | Aggression: 0.83
+
+Maewyn ruled Arlen's Domain from Year 1823 to 1863, declaring 2 wars against
+Pella in that span. He died at ageSeason 1409 (~94 years). His epithet
+"Windwalker" is shared with Caelen, the founder of Caelen's Domain — epithets
+recycle across centuries and civilizations. Nothing in Maewyn's record
+distinguishes him from a dozen other Arlen rulers.
+
+
+============================================================
+LATE ERA (Years 2000–5876)
+============================================================
+
+--- 21. ILYAREL "THE DREAMER" (Entity 72161) ---
+Born: Year 2393 | Died: Year 2447 | Civilization: Arlen's Domain (Civ 6)
+Ambition: 0.89 | Aggression: 0.51
+
+This second Ilyarel "the Dreamer" (the name and epithet recycle across
+centuries) died differently from most rulers: he was killed by disease at
+ageSeason 864 (~58 years), not old age. The record shows him as a patient of
+Physician Idris during Years 2437–2440, receiving healing repeatedly (at least
+14 healing events across 4 years), and then dying of disease in Year 2447.
+
+He is the only character in the sample to die of disease rather than old age.
+He was never a ruler (no succession event links him) — he was an ordinary
+citizen who happened to share the famous ruler's name and epithet, was treated
+by a physician for years, and died anyway. His death suggests the healing
+system did not save him — repeated treatments were insufficient against his
+infection.
+
+
+--- 22. FAENITH "THE UNDYING" (Entity 87735) ---
+Born: Year 2904 | Died: Year 3010 | Civilization: Pella's Domain (Civ 18)
+Ambition: 0.87 | Aggression: 0.79
+
+Faenith "the Undying" ruled Pella's Domain for 94 years (Year 2916–3010). The
+name is sardonic — they called her Undying, and she ruled for a century, and
+then she died. She faced 4 wars during her reign (Arlen declared twice under
+Aelindra, twice under Lirael) and the wars always ended in truce. She declared
+no wars herself — unusual for a ruler with 0.79 aggression.
+
+She died at ageSeason 1706 (~114 years) and was succeeded by Caelen — yet
+another recycled founding-era name appearing in year 3010.
+
+
+--- 23. IDRIS THE PHYSICIAN (Entity 73482) ---
+Appointed: Year 2437 | Died: Year 2440 | Civilization: Arlen's Domain (Civ 6)
+
+Idris — the same name as the founder of Idris's Domain, who lived 2,000 years
+earlier — was a Physician appointed in Year 2437 at settlement [95,95] (population
+500). He treated one patient obsessively: Entity 72161 (Ilyarel the Dreamer,
+above). Every healing event in his 4-year life involved either 72161 or a second
+patient, 73028. He died in Year 2440 at ageSeason 60. Ilyarel died 7 years later
+despite the treatment. Physician Idris did not save his most-treated patient.
+
+
+--- 24. JOLARA THE PHYSICIAN (Entity 106567) ---
+Appointed: Year 3520 | Died: Year 3524 | Civilization: Pella's Domain (Civ 18)
+
+Jolara served at settlement [94,67] in Year 3520, treating patients 106225 and
+102980 across 5 years. The pattern is identical to all other physicians in the
+record. She serves as a mid-simulation data point confirming the physician
+archetype is mechanically unchanged from Year 80 to Year 3520: same lifespan,
+same behavior, same lack of narrative distinction.
+
+
+--- 25. ELOWEN THE PHYSICIAN (Entity 141211) ---
+Appointed: Year 4656 | Died: Year 4660 | Civilization: Arlen's Domain (Civ 6)
+
+Elowen served at [93,91] in the late era, treating patients 140437, 141126,
+138741, and 141285. Her record is identical to every other physician. In Year
+4656 — 4,576 years after Ulric the Scholar made his discovery in Year 80 —
+the physician role has not changed. Same 5-year service window. Same recurring
+patient list. Same death at ageSeason 60.
+
+What Elowen's existence at Year 4656 tells us: the simulation has been running
+long enough that characters are deeply indistinguishable from their counterparts
+centuries before. Without external change sources — wars, catastrophes, unique
+events — the specialist characters are fully mechanical. They require substantial
+narrative enrichment to become interesting to a reader.
+
+============================================================
+KEY PATTERNS AND OBSERVATIONS
+============================================================
+
+1. PHYSICIAN UNIFORMITY: All 6 physicians sampled are structurally identical.
+   Appointed at population threshold, serve for exactly 4 years (ageSeason 60),
+   heal recurring patients, die. No variation in outcome, no differentiation by
+   context. For narrative generation, physicians need surrounding context to
+   generate interesting stories: Was there a major outbreak when they were
+   appointed? Did the settlement grow or shrink? Did their primary patient
+   survive or die?
+
+2. THE ARLEN/PELLA WAR CYCLE IS THE DOMINANT RULER NARRATIVE: Every Arlen ruler
+   and most Pella rulers have the same story: declared war, truce, repeat. The
+   character traits (ambition, aggression) generate different frequencies of war
+   declaration but no qualitatively different outcomes. Rulers with 0.90 ambition
+   do the same thing as rulers with 0.33 ambition. The war mechanic needs
+   resolution conditions that can permanently end conflicts, or alternate
+   outcomes that make different rulers feel distinct.
+
+3. CHARACTER DEATHS: Overwhelmingly "old age." Only one character in the 25-sample
+   died of disease. No character died in battle, despite 93 BattleOccurred events
+   in the full log. The BattleOccurred event fires, but apparently does not
+   produce character deaths. This is a gap: wars should have mortal consequences
+   for the rulers who wage them.
+
+4. SPECIALIST LIFESPANS ARE BROKEN: Physicians die at ageSeason 60 regardless of
+   when they were born. If a physician is born as an adult (age 30) and lives to
+   60 seasons, that's 4 years of life. Normal characters live to ageSeason 1000–2000.
+   Physicians either spawn as very old adults, or the lifespan cap for specialists
+   is capped at 60 seasons. Either way, the effective "career" is 4 years and they
+   die immediately after. This should be a lifespan of normal adult duration.
+
+5. NAME RECYCLING CREATES CONFUSION: "Ilyarel the Dreamer" appears twice in the
+   sample across different centuries in the same civ. "Raelvael" rules three civs
+   simultaneously at year 5876. "Caelen," "Aelindra," "Taelith" recycle across
+   centuries. For narrative generation, recurring names will be confusing —
+   readers cannot track lineages when names repeat. A historical deduplication
+   or name-suffix system (Ilyarel II, Ilyarel the Younger) is needed.
+
+6. EVENTS CAPTURE FACTS, NOT MEANING: The Scholar Discovery event exists. It
+   fires once (Ulric, Year 80). It records who, where, when. Not what. Every
+   specialist event (PhysicianHealed, ScholarDiscovery, MerchantTrade) captures
+   mechanical outcomes without semantic content. For narrative generation to work,
+   the event payloads need richer content: what was discovered, who was healed of
+   what, what was traded. Otherwise the narrative layer has only "a thing happened
+   here" to work with.
+
+7. CHARACTER GOALS/ALLIANCES/GRIEF ARE ABSENT: The event types GoalFormed,
+   GoalResolved, AllianceFormed (non-war), CharacterGrieved, CharacterFlourishing,
+   CharacterSpiraling all exist in the enum but none appear in the 5876-year run
+   (except AllianceFormed which appears only as rivalry declarations). These
+   emotional arcs are entirely missing from the character record. Without them,
+   every character's inner life is invisible.

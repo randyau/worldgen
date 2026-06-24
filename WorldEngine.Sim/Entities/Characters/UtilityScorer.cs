@@ -204,7 +204,7 @@ public static class UtilityScorer
                     if (!world.Settlements.TryGetValue(coord, out var nearSettle)) continue;
                     if (!nearSettle.CivId.IsValid || nearSettle.CivId == c.Identity.CivId) continue;
                     if (myCiv.IsAtWarWith(nearSettle.CivId)) continue;
-                    if (myCiv.InPeaceCooldownWith(nearSettle.CivId, world.CurrentYear, cfg.PeaceCooldownYears)) continue;
+                    if (myCiv.InPeaceCooldownWith(nearSettle.CivId, world.CurrentYear, cfg.PeaceCooldownYears, cfg.WarExhaustionYearsPerWar)) continue;
                     var targetCiv = world.GetCivilization(nearSettle.CivId);
                     if (targetCiv == null) continue;
 
@@ -260,10 +260,12 @@ public static class UtilityScorer
             }
         }
 
-        // CreateArtwork — available when Wellbeing ≥ 0.3 and has a Create goal
-        if (c.Wellbeing >= 0.3f && c.Goals.Any(g => g.Type == GoalType.Create))
+        // CreateArtwork — available whenever a Create goal exists.
+        // Wellbeing scales quality/probability but isn't a hard gate; the first act of creation
+        // is what bootstraps wellbeing, so we can't require wellbeing to already be high.
+        if (c.Goals.Any(g => g.Type == GoalType.Create))
         {
-            float artisticProb = c.Aptitude.Ingenuity * (0.5f + c.Wellbeing * 0.5f);
+            float artisticProb = c.Aptitude.Ingenuity * (0.3f + Math.Max(0f, c.Wellbeing) * 0.7f);
             actions.Add(new(new CreateArtwork(c.Id),
                 Score(c, ActionType.Create, artisticProb, world, cfg)));
         }

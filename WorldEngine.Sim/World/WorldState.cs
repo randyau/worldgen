@@ -49,6 +49,23 @@ public sealed class WorldState : IWorldStateReadOnly
     public int NextCivId { get; set; } = 1;
 
     /// <summary>
+    /// Tracks how many characters have ever had each given name.
+    /// Used to assign ordinal suffixes: first "Caelen" = ordinal 0 (no suffix), second = 1 (II), etc.
+    /// </summary>
+    public Dictionary<string, int> NameOrdinals { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Registers a character's name and returns the ordinal to assign (0 = first bearer, 1 = second, etc.).
+    /// Call once at spawn time; ordinal 0 means "no suffix needed" for display purposes.
+    /// </summary>
+    public int ClaimNameOrdinal(string name)
+    {
+        NameOrdinals.TryGetValue(name, out int count);
+        NameOrdinals[name] = count + 1;
+        return count;
+    }
+
+    /// <summary>
     /// EntityIds of characters who founded a currently-live settlement.
     /// Updated by CivTracker on establish/abandon/destroy — allows O(1) isFounder checks
     /// without scanning all Settlements per character per tick.

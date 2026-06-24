@@ -59,9 +59,24 @@ public sealed class Civilization
     /// </summary>
     public Dictionary<CivId, int> PeaceTreaties { get; } = [];
 
-    public bool InPeaceCooldownWith(CivId other, int currentYear, int cooldownYears)
-        => PeaceTreaties.TryGetValue(other, out int peaceYear)
-           && currentYear - peaceYear < cooldownYears;
+    /// <summary>
+    /// Total wars ever declared against each civ (from this civ's perspective).
+    /// Used to scale the peace cooldown — repeated aggressors face growing exhaustion.
+    /// </summary>
+    public Dictionary<CivId, int> WarHistory { get; } = [];
+
+    /// <summary>
+    /// Number of rulers this civ has had (founder = 1). Incremented on each succession.
+    /// </summary>
+    public int RulerCount { get; set; } = 1;
+
+    public bool InPeaceCooldownWith(CivId other, int currentYear, int cooldownYears, int warExhaustionPerWar = 0)
+    {
+        if (!PeaceTreaties.TryGetValue(other, out int peaceYear)) return false;
+        int wars = WarHistory.GetValueOrDefault(other, 0);
+        int scaledCooldown = cooldownYears + wars * warExhaustionPerWar;
+        return currentYear - peaceYear < scaledCooldown;
+    }
 
     public Civilization(CivId id, string name, EntityId founderId, TileCoord capitalTile, int foundedYear)
     {

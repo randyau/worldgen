@@ -665,6 +665,10 @@ ally_disaster_aid_intensity   = 0.3   # (reserved for future goal seeding; merch
 max_war_duration_years        = 4     # wars end by truce after this many years if not ended sooner by surrender/destruction
 max_active_wars               = 2     # hard cap: a civ cannot fight more than this many simultaneous wars
 peace_cooldown_years          = 10    # years after a war ends before the same two civs can declare war again
+war_exhaustion_years_per_war  = 5     # extra cooldown years per prior war between the same pair (1st=10yr, 2nd=15yr, 3rd=20yr...)
+raid_damage_min               = 15    # minimum HP damage to a settlement per raid (was hardcoded 10)
+raid_damage_max               = 40    # maximum HP damage to a settlement per raid (was hardcoded 30)
+war_conquest_health_threshold = 35    # if target settlement health ≤ this at war expiry → conquest instead of truce
 war_surrender_pop_threshold   = 5     # a civ with total population below this sues for peace (surrender)
 # Rivalry cap scales with Aggression: max = floor(base + Aggression × per_aggression)
 # Aggression=0 → 1 rival max; Aggression=1.0 → 4 rivals max
@@ -818,14 +822,14 @@ carry_cap_minimum             = 50  # floor: even the poorest biome supports a s
 
 # Disease outbreaks — annual probability; spreads between nearby settlements; drains population while active
 # Risk concentrates in dense cities; small remote settlements are largely immune.
-disease_base_chance          = 0.02   # reduced from 0.04 — disease shouldn't plague every hamlet
-disease_density_mult         = 3.0    # raised from 2.0 — keeps large dense cities vulnerable (8% at full cap)
-disease_mortality_per_year   = 0.05   # reduced from 0.08 — meaningful but not instantly lethal
-disease_min_pop              = 40     # outbreaks cannot start below this population (too few to sustain endemic disease)
+disease_base_chance          = 0.004  # ~1 outbreak per 250 years per average settlement (was 0.02 — too frequent)
+disease_density_mult         = 3.0    # large dense cities still vulnerable: ~1.2% at pop cap
+disease_mortality_per_year   = 0.05   # meaningful but not instantly lethal
+disease_min_pop              = 40     # outbreaks cannot start below this population
 disease_spread_radius        = 12     # tile radius within which disease can spread annually
-disease_spread_chance        = 0.20   # reduced from 0.25 — slightly slower inter-settlement spread
+disease_spread_chance        = 0.06   # reduced from 0.20 — disease is regional, not instantly global
 disease_max_duration_years   = 6      # infection auto-clears after this many years
-disease_recovery_chance      = 0.30   # raised from 0.25 — slightly faster natural recovery
+disease_recovery_chance      = 0.30   # natural recovery probability per year
 
 # Settlement health recovery — passive repair between raids
 # At 1 HP/tick and 16 ticks/year, a fully destroyed settlement (0 HP) recovers to 100 in ~6 years.

@@ -340,6 +340,10 @@ public sealed class Tier2BehaviorPhase
             config:     _simCfg,
             birthYear:  world.CurrentYear);
 
+        int promotedOrdinal = world.ClaimNameOrdinal(promoted.Identity.Name);
+        if (promotedOrdinal > 0)
+            promoted.Identity = promoted.Identity with { NameOrdinal = promotedOrdinal };
+
         world.Entities.Add(promoted);
 
         var payload = JsonSerializer.Serialize(new

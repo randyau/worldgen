@@ -1,0 +1,281 @@
+WORLD ENGINE — SIM OBSERVATIONS & PROPOSALS
+Based on 5876-year run analysis
+============================================================
+
+This document proposes changes in two categories:
+  A. Sim fixes — things that are actively broken or producing bad simulation output
+  B. M3 prerequisites — features needed before narrative generation can work
+
+============================================================
+A. SIM FIXES (things broken right now)
+============================================================
+
+A1. PHYSICIAN LIFESPAN IS WRONG
+------------------------------------------------------------
+Observation: Every physician in the run (6 sampled, likely all 638 total) dies
+at ageSeason 60 — roughly 4 years of life. Normal rulers live to ageSeason
+1000–2000. This is because specialists appear to be spawned as "old" adults
+already close to their death threshold, or the specialist lifespan cap is
+set to 60.
+
+Impact: Physicians have 4-year careers then die. This is absurd. A physician
+should be a productive adult who lives a normal lifespan, practices medicine
+for decades, and retires or dies of natural causes in old age.
+
+Fix: Audit the specialist spawn logic. If specialists are born at high initial
+age, change them to spawn at a normal young-adult age (ageSeason 50–100 out of
+~1500). If there is a hard cap of 60 on specialist lifespan, remove it. The
+specialist ageSeason at death should match the same distribution as non-rulers.
+
+
+A2. DISEASE IS CATASTROPHICALLY OVERTUNED
+------------------------------------------------------------
+Observation: 75,570 disease outbreaks in 5,876 years = ~13 per year. With
+~100 active settlements across all civs, this means each settlement is infected
+~once per 8 years. But the DiseaseRecovered events (73,870) roughly match
+outbreak events, so settlements cycle in and out of disease perpetually.
+Settlement abandonment (1,665 events) is heavily driven by disease. Pella's
+Domain founded 786 settlements and has 21 surviving — 97% abandonment rate.
+
+Impact: Disease overshadows all other dynamics. Wars, exploration, succession,
+characters — everything is dwarfed by the disease churn. The world feels like
+a perpetual plague simulation, not a civilization builder.
+
+Fix: Reduce disease spawn probability by 5–10x. The current rate produces
+absurd churn. Target: each settlement is infected perhaps once every 50–100
+years, not once every 8 years. Also investigate whether disease is the primary
+driver of settlement abandonment — if so, reduce the abandon threshold so
+settlements survive disease episodes rather than collapsing.
+
+
+A3. WARS PRODUCE NO TERRITORIAL CHANGE AND NO CHARACTER DEATH
+------------------------------------------------------------
+Observation: Arlen's Domain declared 158 wars against Pella's Domain. Not a
+single one produced a conquered settlement, a ruler death, or any lasting
+territorial change. Every war ended in "truce" or "surrender" with the
+status quo restored. The 15 SettlementConquered events in the entire run are
+all from the first 30 years.
+
+Impact: After Year 30, wars are purely ceremonial events. They generate
+events, cost some raid damage, and resolve. No ruler has ever died in battle.
+No settlement has changed hands in thousands of years. War as a mechanic has
+become completely inert.
+
+Fix (two parts):
+  1. War resolution should sometimes produce settlement conquest or ruler death.
+     A war that lasts 4+ years of raids against a weakened settlement should
+     have a real chance of conquest rather than defaulting to truce.
+  2. The BattleOccurred event should carry a risk of ruler death. A ruler with
+     high aggression who has declared multiple wars should be at risk of dying
+     in battle. Currently, rulers die only of old age or disease.
+
+
+A4. THE WAR TRIGGER IS A ONE-TRICK LOOP
+------------------------------------------------------------
+Observation: Every single war between Arlen and Pella cites "border_tension"
+as the cause. The war trigger fires mechanically every ~10-14 years regardless
+of outcome. There is no de-escalation, no lasting peace, no alternate cause
+that could break the cycle.
+
+Impact: The primary narrative of the simulation's mature era is "Arlen declared
+war on Pella. Again." This is narratively exhausting and uninteresting.
+
+Fix:
+  - Add a war exhaustion mechanic: after N consecutive truces with the same
+    target, the declaring civ gets a cooldown period that scales up.
+  - Add alternate outcomes: a decisive ruler death in battle, a great victory
+    by conquest, or a formal peace treaty could end the Arlen/Pella conflict
+    permanently (until a later ruler reignites it).
+  - Add more war causes beyond border_tension and character_encounter.
+    Succession crises, disease weakness, or resource scarcity should be able
+    to trigger opportunistic attacks.
+
+
+A5. CHARACTER EMOTIONAL STATE EVENTS NEVER FIRE
+------------------------------------------------------------
+Observation: GoalFormed, GoalResolved, AllianceFormed (non-war), CharacterGrieved,
+CharacterFlourishing, CharacterSpiraling — zero occurrences in 5,876 years
+(except rivalry declarations). These event types exist in the enum but are
+never generated.
+
+Impact: Character inner lives are completely absent. Every character is
+externally defined by their faction role and wars. There is no grief, no joy,
+no goal, no bond in the record. Narrative generation over this data will
+produce shallow, factual accounts.
+
+Fix: Audit why these events don't fire. Most likely the thresholds are never
+met or the code paths that would emit them are not reached. Specific checks:
+  - CharacterFlourishing (wellbeing > 0.7): is wellbeing tracked? Does any
+    character ever hit 0.7?
+  - CharacterGrieved: requires a "trusted companion" death — are companion
+    bonds ever formed?
+  - GoalFormed: what triggers goal formation? Are the trigger conditions met?
+
+
+A6. EARLY-ERA OVERCROWDING KILLS 70% OF CIVILIZATIONS IN THE FIRST DECADE
+------------------------------------------------------------
+Observation: 10 of 20 civilizations collapsed within 31 years, 14 within 436
+years. The founding cluster placed 20 civs in a small geographic area, all
+starting simultaneously. Disease pressure and early competition destroyed most
+before they could establish viable populations.
+
+Impact: The simulation has a rich early-era history (Years 1–50) and a
+monotonous late-era history (Years 50–5876 with the same 5-6 civs doing the
+same things). The "world" generated feels empty by Year 100 — only a few civs
+survive in a map designed for 20.
+
+Fix: Reduce founding civ count, spread them more widely, or add survival bonuses
+in the first 20 years (guaranteed minimum pop, disease immunity period, or a
+founding grace period). Alternatively, embrace the die-off but make early
+collapse narratively interesting (great founder stories, not just "disease").
+
+
+============================================================
+B. M3 PREREQUISITES (for narrative generation to work)
+============================================================
+
+B1. EVENT PAYLOADS NEED SEMANTIC CONTENT
+------------------------------------------------------------
+What's missing: Events capture facts (who, where, when, what type) but not
+meaning (what was discovered, what was healed, what was traded, why the war
+felt personal). The narrative generation layer has only raw facts to work with.
+
+Required additions to event payloads for M3:
+  - ScholarDiscovery: add `discoveryType` (medical, astronomical, agricultural,
+    philosophical) and optionally `discoveryName` for legendary discoveries.
+  - PhysicianHealed: add `illness` type and `outcome` (cured/managed/died anyway).
+  - MerchantTradeCompleted: add `goods`, `tradePartner` settlement/civ.
+  - ArtworkCreated: add `artType` (song, monument, painting) and `subject`.
+  - WarDeclared / WarEnded: add `cause_description` (a human-readable phrase
+    beyond the enum value) and `outcome_summary`.
+  - BattleOccurred: add `outcome` (victory/defeat/draw) and `casualties` (bool).
+
+
+B2. A SUMMARIZATION LAYER IS NEEDED FOR NARRATIVE RETRIEVAL
+------------------------------------------------------------
+What's missing: 598,980 events cannot be fed to a narrative system directly.
+Narrative generation needs pre-aggregated character summaries and civ summaries.
+
+Required for M3:
+  - CharacterSummary table: for each character, precompute total wars declared,
+    settlements founded, years lived, key events (first war, death cause,
+    ruled which civ, succession from/to whom).
+  - CivilizationSummary table: peak settlement count, total rulers, wars
+    declared/received, first/last year, surviving status.
+  - EraTag system: assign characters and events to named eras (Early Founding,
+    The Collapse Years, The Long Peace, etc.) so narrative can reference eras
+    by name rather than raw year numbers.
+
+
+B3. NAME DISAMBIGUATION IS REQUIRED
+------------------------------------------------------------
+What's missing: Names recycle. "Raelvael" rules 3 civs simultaneously at
+Year 5876. "Ilyarel the Dreamer" appears in two different centuries in the
+same civ. "Caelen" is both the founder of Civ 8 (Year 1) and a ruler of
+Pella's Domain (Year 3010).
+
+Impact for M3: Any narrative reference to "Ilyarel" or "Caelen" is ambiguous.
+A player asking "tell me about Caelen" could mean 10 different characters.
+
+Required for M3:
+  - Name disambiguation suffix: Caelen I, Caelen II, etc. (ordinal by birth year
+    within the same name+epithet combination).
+  - Or: epithet uniqueness enforcement — if "the Dreamer" is already taken in
+    living memory, generate a different epithet.
+  - At minimum: a query interface that returns a disambiguation list when a name
+    refers to multiple characters.
+
+
+B4. A CHARACTER LINEAGE / SUCCESSION GRAPH
+------------------------------------------------------------
+What's missing: The succession chain exists in event data (SuccessionOccurred)
+but is not pre-indexed. To say "Ruler X was the 47th ruler of Arlen's Domain,
+succeeding Ruler Y who had ruled for 30 years," a narrative system must
+reconstruct the chain from raw events.
+
+Required for M3:
+  - Pre-index succession chains per civ into a linked list or adjacency table.
+  - Track "generation number" (ordinal position in the succession line).
+  - Track dynastic groups: consecutive rulers from the same family/bloodline
+    (if family tracking is added) or at minimum consecutive rulers with
+    similar traits.
+
+
+B5. CAUSE-EFFECT CHAINS NEED SURFACE-LEVEL TAGGING
+------------------------------------------------------------
+What's missing: The CausalEdges table exists but is empty or unused. Events
+that are causally linked (a disease outbreak causing settlement abandonment,
+a war declaration causing a character's personal rivalry formation) are not
+explicitly connected in the data.
+
+Required for M3:
+  - Populate CausalEdges for at least: disease → abandonment, war → battle →
+    surrender/truce, succession crisis → instability events.
+  - Add a "consequence" field to key events: "Arlen declared war on Pella;
+    this led to 3 settlement raids and a truce 4 years later."
+  - The narrative system needs to be able to say "because of X, Y happened"
+    — not just enumerate events in year order.
+
+
+B6. REGIONAL IDENTITY / CULTURAL DIFFERENTIATION
+------------------------------------------------------------
+What's missing: All 5 surviving civilizations are mechanically identical except
+for location. Arlen's Domain has fought 158 wars; Faelindra's Domain has fought
+0. But there is no in-world explanation for this difference — no cultural value
+system, no terrain-based isolation, no resource scarcity that would explain
+the behavioral divergence.
+
+Required for M3 (or earlier):
+  - Civilizations should develop traits over time based on their history:
+    Arlen's Domain = "Warrior Culture" (high war frequency), Faelindra's Domain
+    = "Expansionist Culture" (high settlement founding), Lrug's Domain =
+    "Unstable Succession Culture" (high succession rate).
+  - These traits should appear in the event record and be queryable by the
+    narrative layer: "Arlen's Domain, known for its century-spanning conflict
+    with Pella's Domain, has a tradition of warrior rulers..."
+  - Even simple boolean tags (militaristic, expansionist, reclusive) would give
+    the narrative layer something to work with.
+
+
+B7. THE QUERY INTERFACE FOR NARRATIVE
+------------------------------------------------------------
+What's missing: There is no standard way for a narrative system to ask "tell
+me about Civ 6" or "who was the most significant ruler of Pella's Domain in
+Year 2000?" The event store is a flat log. Narrative generation requires
+structured historical queries.
+
+Required for M3:
+  - A HistoryQuery API (in WorldEngine.Sim) that exposes:
+      GetCivHistory(civId, startYear, endYear) → structured summary
+      GetCharacterHistory(charId) → full event timeline
+      GetSignificantEvents(yearRange, tier) → headline events for narrative
+      GetRulerAtYear(civId, year) → who was ruler
+      GetConflictHistory(civA, civB) → all wars between two civs
+  - These queries should be pre-indexed (not recomputed from raw events on
+    each call) given the 598,980-event dataset size.
+  - This is the boundary between the sim (WorldEngine.Sim) and the narrative
+    engine (M3 feature): the sim produces structured historical data; the
+    narrative system consumes it to generate text.
+
+
+============================================================
+PRIORITY ORDER
+============================================================
+
+IMMEDIATE (fix before more sim runs):
+  1. A1 — Physician lifespan (fundamentally broken)
+  2. A2 — Disease overtuning (dominates all other dynamics)
+  3. A5 — Emotional event firing (characters are empty without these)
+
+BEFORE M3 BEGINS:
+  4. A3/A4 — War outcome and war exhaustion (wars need consequences)
+  5. B1 — Richer event payloads (narrative layer needs content)
+  6. B3 — Name disambiguation (required for coherent references)
+  7. B4 — Succession chain indexing (needed for ruler narrative queries)
+
+M3 PARALLEL WORK (can develop alongside narrative):
+  8. B2 — Summarization layer
+  9. B5 — Causal edge population
+  10. B6 — Cultural trait tags
+  11. B7 — HistoryQuery API
+  12. A6 — Early-era survival tuning

@@ -114,6 +114,15 @@ public sealed class CharacterSimConfig
     // After any war ends (expiry, surrender, or truce), neither side can declare war
     // on the other for this many years. Prevents immediate re-declaration.
     public int PeaceCooldownYears         { get; set; } = 10;
+    // Additional cooldown years added per prior war between the same pair (war exhaustion).
+    // 5 means: 1st war → 10 year cooldown, 2nd → 15, 3rd → 20, etc.
+    public int WarExhaustionYearsPerWar   { get; set; } = 5;
+    // Raid damage constants (moved from hardcoded to configurable)
+    public int RaidDamageMin              { get; set; } = 15;
+    public int RaidDamageMax              { get; set; } = 40;
+    // If a settlement's health is at or below this at war expiry, it can be conquered
+    // rather than returning to truce — models a siege that completes at war's end.
+    public int WarConquestHealthThreshold { get; set; } = 35;
     // A civ whose total population falls below this threshold during a war sues for peace
     // (surrender). The war ends immediately regardless of duration.
     public int WarSurrenderPopThreshold   { get; set; } = 5;
