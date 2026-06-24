@@ -218,7 +218,8 @@ public sealed class PopulationDynamicsPhase
             year           = world.CurrentYear,
             timesSettled
         });
-        pending.Add(new PendingEvent(EventType.SettlementAbandoned, tile, null, payload));
+        pending.Add(new PendingEvent(EventType.SettlementAbandoned, tile, null, payload,
+            new[] { stub.FounderId.Value }));
     }
 
     // ─── Annual disease checks ────────────────────────────────────────────────

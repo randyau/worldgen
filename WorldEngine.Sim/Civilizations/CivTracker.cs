@@ -684,7 +684,9 @@ public static class CivTracker
             reason,
             year = world.CurrentYear
         });
-        pending.Add(new PendingEvent(EventType.WarEnded, ca.CapitalTile, null, payload, null));
+        var peaceEntityIds = new List<long> { ca.FounderId.Value };
+        if (cb.FounderId.Value != ca.FounderId.Value) peaceEntityIds.Add(cb.FounderId.Value);
+        pending.Add(new PendingEvent(EventType.WarEnded, ca.CapitalTile, null, payload, peaceEntityIds));
     }
 
     private static void FireAllianceBroken(
@@ -826,7 +828,8 @@ public static class CivTracker
             capital    = new[] { civ.CapitalTile.X, civ.CapitalTile.Y },
             year       = world.CurrentYear
         });
-        pending.Add(new PendingEvent(EventType.CivilizationFounded, civ.CapitalTile, null, payload));
+        pending.Add(new PendingEvent(EventType.CivilizationFounded, civ.CapitalTile, null, payload,
+            new[] { founder.Id.Value }));
     }
 
     private static void FireSettlementFounded(
@@ -841,7 +844,8 @@ public static class CivTracker
             tile           = new[] { stub.Tile.X, stub.Tile.Y },
             year           = world.CurrentYear
         });
-        pending.Add(new PendingEvent(EventType.SettlementFounded, stub.Tile, null, payload));
+        pending.Add(new PendingEvent(EventType.SettlementFounded, stub.Tile, null, payload,
+            new[] { founder.Id.Value }));
     }
 
     // ─── Name generation ─────────────────────────────────────────────────────
