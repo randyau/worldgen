@@ -673,16 +673,38 @@ wanderlust_curiosity_floor      = 0.3  # even the least curious chars have 30% o
 # Ancestry / cultural passive drains — applied per-tick when different-civ chars share a tile
 personality_mismatch_drain_rate = 0.003  # drain × |stability diff| per tick
 cultural_distance_drain_rate    = 0.002  # drain × cultural_distance (0–1) per tick
+# Goal formation — personality trait thresholds below which a character won't form that goal type
+goal_ambition_threshold      = 0.55  # minimum Ambition to generate Expansion goal
+goal_aggression_threshold    = 0.6   # minimum Aggression to generate Dominance goal
+goal_sociability_threshold   = 0.5   # minimum Sociability to generate Alliance goal
+goal_compassion_threshold    = 0.5   # minimum Compassion to generate Bond goal
+goal_ingenuity_threshold     = 0.55  # minimum Ingenuity to generate Create goal
+avenge_aggression_threshold  = 0.6   # minimum Aggression to form Avenge goal on mourning
+avenge_intensity_threshold   = 0.5   # minimum grief intensity required to form Avenge goal
+bond_trust_threshold         = 0.5   # minimum relationship Trust before a character qualifies as Bond companion
+goal_stale_season_limit      = 8     # seasons (2 years) without progress before a non-Grieve goal is pruned
+rival_search_radius          = 5     # tile radius when scanning for nearby rivals (Dominance goal)
+alliance_search_radius       = 4     # tile radius when scanning for nearby neutrals (Alliance goal)
+bond_search_radius           = 3     # tile radius when scanning for Bond companions
+war_aggression_threshold     = 0.5   # minimum Aggression to consider DeclareWar action
+
 # Wellbeing — emotional state dynamics (-1 spiraling … +1 flourishing)
 wellbeing_goal_gain_rate        = 0.01    # per tick when a goal is progressing
 wellbeing_companion_boost       = 0.005   # per tick co-located with Bond target
 wellbeing_hunger_drain          = 0.02    # max drain at zero food
+wellbeing_hunger_threshold      = 0.3     # food need below this triggers hunger wellbeing drain
 wellbeing_mean_reversion_rate   = 0.005   # pull toward 0 each tick
 flourishing_threshold           = 0.7     # Wellbeing ≥ this → Flourishing event fires once
 spiral_threshold                = -0.7    # Wellbeing ≤ this → Spiraling
 distressed_social_suppression   = 0.4     # social action score multiplier when Wellbeing < -0.3
 grief_drain_rate                = 0.015   # Wellbeing drain per tick per Grieve goal
 grief_decay_rate                = 0.002   # grief intensity decay per tick
+grief_wellbeing_shock           = 0.4     # fraction of grief intensity applied as immediate Wellbeing shock on mourning
+grief_completion_threshold      = 0.05    # grief Intensity below this → grief goal auto-completes (grief resolved)
+# Wellbeing drain multipliers for specific goal types (fraction of wellbeing_goal_gain_rate)
+wellbeing_endure_multiplier     = 0.5     # Endure: slow draining perseverance
+wellbeing_survive_multiplier    = 0.3     # Survive: urgent pressure but lower emotional weight
+wellbeing_flee_multiplier       = 0.4     # Flee: flight-or-fight stress
 
 # Tier 2 sub-tuning (appended to [character] section — Tomlyn merges same-section keys)
 tier2_per_population        = 10
@@ -707,7 +729,6 @@ famine_decay_rate           = 0.8   # extra decay per unit food deficit when foo
 pop_min_viable              = 5     # below this → settlement abandoned
 pop_max                     = 50000 # hard cap
 fertility_variance          = 0.15  # per-settlement founding-time multiplier range (±this around 1.0)
-civ_founding_cooldown_years = 15    # years a civ must wait between founding consecutive settlements
 crystal_pop_artisan         = 200
 crystal_pop_scholar         = 300
 crystal_pop_physician       = 500

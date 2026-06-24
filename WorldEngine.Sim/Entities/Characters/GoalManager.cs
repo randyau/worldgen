@@ -6,14 +6,12 @@ namespace WorldEngine.Sim.Entities.Characters;
 
 public static class GoalManager
 {
-    private const int StaleSeasonLimit = 8; // prune goals not progressed for 2 years
-
-    public static void UpdateGoals(Tier1Character c, IWorldStateReadOnly world, long currentTick)
+    public static void UpdateGoals(Tier1Character c, IWorldStateReadOnly world, long currentTick, CharacterSimConfig cfg)
     {
         // 1. Prune: completed or stale (but never prune Grieve — grief doesn't go stale, only decays)
         c.Goals.RemoveAll(g => g.IsComplete
             || (g.Type != GoalType.Grieve
-                && currentTick - g.StaleSince > StaleSeasonLimit
+                && currentTick - g.StaleSince > cfg.GoalStaleSeasonLimit
                 && g.Progress < 0.1f));
 
         // 2. Urgent: unmet need overrides everything
@@ -42,7 +40,7 @@ public static class GoalManager
         // EstablishSettlement scoring gates on the actual tile being worthwhile.
         bool isFounder = c.Identity.CivId.IsValid
             && world.Settlements.Values.Any(s => s.FounderId == c.Id);
-        if (!hasExpansion && !isFounder && c.Personality.Ambition > 0.55f)
+        if (!hasExpansion && !isFounder && c.Personality.Ambition > cfg.GoalAmbitionThreshold)
         {
             c.Goals.Add(new GoalData
             {
@@ -52,9 +50,9 @@ public static class GoalManager
             });
         }
 
-        if (!hasDominance && c.Personality.Aggression > 0.6f)
+        if (!hasDominance && c.Personality.Aggression > cfg.GoalAggressionThreshold)
         {
-            var rival = FindNearbyRival(c, world);
+            var rival = FindNearbyRival(c, world, cfg.RivalSearchRadius);
             if (rival.HasValue)
                 c.Goals.Add(new GoalData
                 {
@@ -65,9 +63,9 @@ public static class GoalManager
                 });
         }
 
-        if (!hasAlliance && c.Personality.Sociability > 0.5f)
+        if (!hasAlliance && c.Personality.Sociability > cfg.GoalSociabilityThreshold)
         {
-            var potential = FindNearbyNeutral(c, world);
+            var potential = FindNearbyNeutral(c, world, cfg.AllianceSearchRadius);
             if (potential.HasValue)
                 c.Goals.Add(new GoalData
                 {
@@ -79,9 +77,9 @@ public static class GoalManager
         }
 
         // Bond goal: compassionate characters form attachments to high-trust co-located chars
-        if (!hasBond && c.Personality.Compassion > 0.5f)
+        if (!hasBond && c.Personality.Compassion > cfg.GoalCompassionThreshold)
         {
-            var companion = FindHighTrustCompanion(c, world);
+            var companion = FindHighTrustCompanion(c, world, cfg.BondSearchRadius, cfg.BondTrustThreshold);
             if (companion.HasValue)
                 c.Goals.Add(new GoalData
                 {
@@ -95,7 +93,7 @@ public static class GoalManager
         }
 
         // Create goal: high-Ingenuity characters want to make things
-        if (!hasCreate && c.Aptitude.Ingenuity > 0.55f && !c.Goals.Any(g => g.Type == GoalType.Grieve))
+        if (!hasCreate && c.Aptitude.Ingenuity > cfg.GoalIngenuityThreshold && !c.Goals.Any(g => g.Type == GoalType.Grieve))
         {
             c.Goals.Add(new GoalData
             {
@@ -130,9 +128,9 @@ public static class GoalManager
                 GoalType.Grieve  => -cfg.GriefDrainRate * g.Intensity,
                 GoalType.Create  => g.Progress > 0f ? cfg.WellbeingGoalGainRate * g.Intensity : 0f,
                 GoalType.Bond    => g.Progress > 0f ? cfg.WellbeingGoalGainRate * g.Intensity : 0f,
-                GoalType.Endure  => -cfg.WellbeingGoalGainRate * 0.5f,
-                GoalType.Survive => -cfg.WellbeingGoalGainRate * 0.3f,
-                GoalType.Flee    => -cfg.WellbeingGoalGainRate * 0.4f,
+                GoalType.Endure  => -cfg.WellbeingGoalGainRate * cfg.WellbeingEndureMultiplier,
+                GoalType.Survive => -cfg.WellbeingGoalGainRate * cfg.WellbeingSurviveMultiplier,
+                GoalType.Flee    => -cfg.WellbeingGoalGainRate * cfg.WellbeingFleeMultiplier,
                 _                => 0f,
             };
         }
@@ -147,8 +145,8 @@ public static class GoalManager
         }
 
         // Resource security: food shortage drains wellbeing
-        if (c.Needs.Food < 0.3f)
-            delta -= cfg.WellbeingHungerDrain * (0.3f - c.Needs.Food) / 0.3f;
+        if (c.Needs.Food < cfg.WellbeingHungerThreshold)
+            delta -= cfg.WellbeingHungerDrain * (cfg.WellbeingHungerThreshold - c.Needs.Food) / cfg.WellbeingHungerThreshold;
 
         // Mean reversion toward 0
         delta -= c.Wellbeing * cfg.WellbeingMeanReversionRate;
@@ -159,7 +157,7 @@ public static class GoalManager
         foreach (var g in c.Goals.Where(g => g.Type == GoalType.Grieve))
         {
             g.Intensity = Math.Max(0f, g.Intensity - cfg.GriefDecayRate);
-            if (g.Intensity < 0.05f)
+            if (g.Intensity < cfg.GriefCompletionThreshold)
                 g.IsComplete = true;
         }
 
@@ -173,7 +171,7 @@ public static class GoalManager
     /// Returns event payloads to emit.
     /// </summary>
     public static void ApplyGriefToMourners(
-        EntityId deadId, string deadName, WorldState world,
+        EntityId deadId, string deadName, WorldState world, CharacterSimConfig cfg,
         List<(EntityId MournerId, float Intensity)> output)
     {
         foreach (var c in world.Entities.Characters)
@@ -197,10 +195,10 @@ public static class GoalManager
             });
 
             // Immediate wellbeing shock
-            c.Wellbeing = Math.Max(-1f, c.Wellbeing - intensity * 0.4f);
+            c.Wellbeing = Math.Max(-1f, c.Wellbeing - intensity * cfg.GriefWellbeingShock);
 
-            // High-Courage characters may form Avenge goal if the death wasn't from old age
-            if (c.Personality.Aggression > 0.6f && intensity > 0.5f)
+            // High-aggression characters may form Avenge goal if the death wasn't from old age
+            if (c.Personality.Aggression > cfg.AvengeAggressionThreshold && intensity > cfg.AvengeIntensityThreshold)
             {
                 c.Goals.Add(new GoalData
                 {
@@ -218,9 +216,9 @@ public static class GoalManager
         }
     }
 
-    private static EntityId? FindNearbyRival(Tier1Character c, IWorldStateReadOnly world)
+    private static EntityId? FindNearbyRival(Tier1Character c, IWorldStateReadOnly world, int radius)
     {
-        foreach (var e in world.GetEntitiesInRadius(c.Location, 5))
+        foreach (var e in world.GetEntitiesInRadius(c.Location, radius))
         {
             if (e is Tier1Character other && other.Id != c.Id && other.IsAlive)
             {
@@ -231,9 +229,9 @@ public static class GoalManager
         return null;
     }
 
-    private static EntityId? FindNearbyNeutral(Tier1Character c, IWorldStateReadOnly world)
+    private static EntityId? FindNearbyNeutral(Tier1Character c, IWorldStateReadOnly world, int radius)
     {
-        foreach (var e in world.GetEntitiesInRadius(c.Location, 4))
+        foreach (var e in world.GetEntitiesInRadius(c.Location, radius))
         {
             if (e is Tier1Character other && other.Id != c.Id && other.IsAlive)
             {
@@ -245,13 +243,13 @@ public static class GoalManager
         return null;
     }
 
-    private static EntityId? FindHighTrustCompanion(Tier1Character c, IWorldStateReadOnly world)
+    private static EntityId? FindHighTrustCompanion(Tier1Character c, IWorldStateReadOnly world, int radius, float trustThreshold)
     {
-        foreach (var e in world.GetEntitiesInRadius(c.Location, 3))
+        foreach (var e in world.GetEntitiesInRadius(c.Location, radius))
         {
             if (e is not Tier1Character other || other.Id == c.Id || !other.IsAlive) continue;
             var rel = world.GetRelationship(c.Id, other.Id);
-            if ((rel?.Trust ?? 0f) >= 0.5f) return other.Id;
+            if ((rel?.Trust ?? 0f) >= trustThreshold) return other.Id;
         }
         return null;
     }

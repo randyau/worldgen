@@ -104,7 +104,42 @@ public sealed class CharacterSimConfig
     public float BeastEncounterChance        { get; set; } = 0.15f; // probability of attack per shared tick
     public float BeastDamageMultiplier       { get; set; } = 0.3f;  // beast.Strength × this = damage to char
 
-    // Wanderlust — travel urge that builds the longer a character stays in one place
+    // ─── Goal formation thresholds ────────────────────────────────────────────
+    // Minimum personality trait value required to generate each goal type.
+    // Tuning these shifts how common each goal is across the population.
+    public float GoalAmbitionThreshold      { get; set; } = 0.55f; // Expansion goal
+    public float GoalAggressionThreshold    { get; set; } = 0.6f;  // Dominance goal
+    public float GoalSociabilityThreshold   { get; set; } = 0.5f;  // Alliance goal
+    public float GoalCompassionThreshold    { get; set; } = 0.5f;  // Bond goal
+    public float GoalIngenuityThreshold     { get; set; } = 0.55f; // Create goal
+    // Avenge goal: triggered on ally death if aggression exceeds threshold and grief intensity is strong enough
+    public float AvengeAggressionThreshold  { get; set; } = 0.6f;
+    public float AvengeIntensityThreshold   { get; set; } = 0.5f;
+    // Trust floor: minimum relationship trust before Bond goal considers a companion
+    public float BondTrustThreshold         { get; set; } = 0.5f;
+    // Seasons a goal can stall (progress < 10%) before being pruned
+    public int   GoalStaleSeasonLimit       { get; set; } = 8;
+    // Radii used when searching for nearby rival / neutral / companion targets
+    public int   RivalSearchRadius          { get; set; } = 5;
+    public int   AllianceSearchRadius       { get; set; } = 4;
+    public int   BondSearchRadius           { get; set; } = 3;
+
+    // ─── Wellbeing constants ──────────────────────────────────────────────────
+    // Food need below this threshold drains wellbeing (full drain when food=0)
+    public float WellbeingHungerThreshold   { get; set; } = 0.3f;
+    // Fraction of grief intensity applied as immediate wellbeing shock on mourning a Bond target
+    public float GriefWellbeingShock        { get; set; } = 0.4f;
+    // Grief Intensity below this → grief goal auto-completes (grief resolved)
+    public float GriefCompletionThreshold   { get; set; } = 0.05f;
+    // Wellbeing gain rate multipliers for specific goal types (fraction of WellbeingGoalGainRate)
+    public float WellbeingEndureMultiplier  { get; set; } = 0.5f;  // Endure: slow negative progress
+    public float WellbeingSurviveMultiplier { get; set; } = 0.3f;  // Survive: urgent but temporary
+    public float WellbeingFleeMultiplier    { get; set; } = 0.4f;  // Flee: flight stress
+
+    // Minimum aggression score required to consider War action against a rival
+    public float WarAggressionThreshold     { get; set; } = 0.5f;
+
+    // ─── Wanderlust — travel urge that builds the longer a character stays in one place
     public int   WanderlustMaxTicks          { get; set; } = 8;   // full bonus after 2 seasons stationary
     public float WanderlustBonus             { get; set; } = 0.4f; // added to travel score at max wanderlust
     // Role dampeners: multiply the wanderlust bonus before applying

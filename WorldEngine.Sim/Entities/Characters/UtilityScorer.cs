@@ -158,7 +158,7 @@ public static class UtilityScorer
         }
 
         // DeclareWar — rival with Aggression
-        if (c.Personality.Aggression > 0.5f)
+        if (c.Personality.Aggression > cfg.WarAggressionThreshold)
         {
             foreach (var e in world.GetEntitiesInRadius(c.Location, cfg.PerceptionRadius))
             {

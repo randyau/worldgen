@@ -43,7 +43,7 @@ public sealed class CharacterBehaviorPhase
             }
             c.TicksInCurrentTile++;
             NeedsUpdater.Update(c, world, _cfg);
-            GoalManager.UpdateGoals(c, world, tick);
+            GoalManager.UpdateGoals(c, world, tick, _cfg);
             bool wasSpiraling = c.Wellbeing <= _cfg.SpiralThreshold;
             bool wasFlourishingBefore = c.Wellbeing >= _cfg.FlourishingThreshold;
             bool isSpiraling = GoalManager.UpdateWellbeing(c, world, _cfg, out bool crossedFlourishing);
@@ -63,7 +63,7 @@ public sealed class CharacterBehaviorPhase
         foreach (var (deadId, deadName) in deathsThisTick)
         {
             var mourners = new List<(EntityId, float)>();
-            GoalManager.ApplyGriefToMourners(deadId, deadName, world, mourners);
+            GoalManager.ApplyGriefToMourners(deadId, deadName, world, _cfg, mourners);
             foreach (var (mournerId, intensity) in mourners)
             {
                 if (world.GetEntity(mournerId) is Tier1Character mourner && mourner.IsAlive)

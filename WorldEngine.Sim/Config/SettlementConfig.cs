@@ -13,8 +13,6 @@ public sealed class SettlementConfig
     public int   PopMax                   { get; set; } = 50_000;
     // Per-settlement variance drawn at founding: effective fertility = fertility × [1 ± FertilityVariance]
     public float FertilityVariance        { get; set; } = 0.15f;
-    // Minimum years between a civ founding two settlements (prevents simultaneous paired founding)
-    public int   CivFoundingCooldownYears { get; set; } = 15;
     // Effective fertility multiplier applied to tiles already in a same-civ settlement's hinterland
     public float HinterlandDrainFactor    { get; set; } = 0.15f;
     public int   CrystalPopArtisan        { get; set; } = 200;
