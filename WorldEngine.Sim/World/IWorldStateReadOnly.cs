@@ -52,7 +52,6 @@ public interface IWorldStateReadOnly
     Civilization? GetCivilization(CivId civId);
     RelationshipEdge? GetRelationship(EntityId a, EntityId b);
     int CountAlliances(EntityId id);
-    int CountWars(EntityId id);
     int CountRivals(EntityId id);
 
     // === RELATIONSHIPS / HISTORY (M3+) ===

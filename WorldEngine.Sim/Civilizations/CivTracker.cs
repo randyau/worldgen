@@ -198,61 +198,42 @@ public static class CivTracker
     private static void ResolveWar(DeclareWar cmd, WorldState world, List<PendingEvent> pending)
     {
         if (world.GetEntity(cmd.CharacterId) is not Tier1Character c) return;
-        if (world.GetEntity(cmd.TargetId) is not Tier1Character target) return;
+        if (!c.Identity.CivId.IsValid) return;
 
-        var rel = world.Relationships.GetOrCreate(c.Id, target.Id);
-        if (rel.IsAtWar) return;
+        var declCiv = world.GetCivilization(c.Identity.CivId);
+        var targCiv = world.GetCivilization(cmd.TargetCivId);
+        if (declCiv == null || targCiv == null) return;
+        if (declCiv.IsAtWarWith(cmd.TargetCivId)) return; // already at war at civ level
 
-        bool wasAllied = rel.IsAlly;
-        world.Relationships.Upsert(rel with
+        // Record war on both sides
+        declCiv.WarsAgainst[cmd.TargetCivId]  = world.CurrentYear;
+        targCiv.WarsAgainst[c.Identity.CivId] = world.CurrentYear;
+
+        // Personal trust hit between the two rulers (ruler-level animosity)
+        var targFounder = world.GetEntity(targCiv.FounderId) as Tier1Character;
+        if (targFounder != null)
         {
-            Trust            = Math.Min(rel.Trust - 0.3f, -0.3f),
-            Flags            = (rel.Flags & ~RelationshipFlags.IsAlly) | RelationshipFlags.IsAtWar | RelationshipFlags.IsRival,
-            WarDeclaredYear  = world.CurrentYear
-        });
-
-        if (wasAllied)
-            FireAllianceBroken(c, target, "war_declared", world, pending);
+            var rel = world.Relationships.GetOrCreate(c.Id, targFounder.Id);
+            bool wasAllied = rel.IsAlly;
+            world.Relationships.Upsert(rel with
+            {
+                Trust = Math.Min(rel.Trust - 0.3f, -0.3f),
+                Flags = (rel.Flags & ~RelationshipFlags.IsAlly) | RelationshipFlags.IsRival,
+            });
+            if (wasAllied) FireAllianceBroken(c, targFounder, "war_declared", world, pending);
+        }
 
         var payload = JsonSerializer.Serialize(new
         {
             declarerId   = c.Id.Value,
             declarerName = c.Identity.Name,
-            targetId     = target.Id.Value,
-            targetName   = target.Identity.Name,
             declarerCiv  = c.Identity.CivId.Value,
-            targetCiv    = target.Identity.CivId.Value
+            declarerCivName = declCiv.Name,
+            targetCiv    = cmd.TargetCivId.Value,
+            targetCivName = targCiv.Name,
         });
         pending.Add(new PendingEvent(EventType.WarDeclared, c.Location, null, payload,
-            new[] { c.Id.Value, target.Id.Value }));
-
-        // Notify target's allies: drain trust toward the aggressor, seed a Protect goal
-        var cfg = world.SimConfig.Character;
-        foreach (var allyEdge in world.Relationships.GetAll(target.Id).Where(e => e.IsAlly).ToList())
-        {
-            var allyId = allyEdge.From == target.Id ? allyEdge.To : allyEdge.From;
-            if (world.GetEntity(allyId) is not Tier1Character ally || !ally.IsAlive) continue;
-            if (ally.Identity.CivId == c.Identity.CivId) continue;
-
-            var allyAggrRel = world.Relationships.GetOrCreate(ally.Id, c.Id);
-            world.Relationships.Upsert(allyAggrRel with
-            {
-                Trust = Math.Clamp(allyAggrRel.Trust - cfg.AllianceWarTrustDrain, -1f, 1f)
-            });
-
-            bool hasProtect = ally.Goals.Any(g => g.Type == GoalType.Protect && g.TargetEntityId == target.Id);
-            if (!hasProtect)
-                ally.Goals.Add(new GoalData
-                {
-                    Type           = GoalType.Protect,
-                    Object         = GoalObject.Person,
-                    TargetEntityId = target.Id,
-                    Priority       = cfg.AllyProtectGoalIntensity,
-                    Intensity      = cfg.AllyProtectGoalIntensity,
-                    FormedTick     = (int)world.CurrentTick,
-                    StaleSince     = (int)world.CurrentTick
-                });
-        }
+            new[] { c.Id.Value }));
     }
 
     // ─── Raid ─────────────────────────────────────────────────────────────────
@@ -454,43 +435,58 @@ public static class CivTracker
                     FireAllianceBroken(a, b, "trust_decay", world, pending);
             }
 
-            // 3. War expiry — auto-peace after MaxWarDurationYears
-            if (edge.IsAtWar && edge.WarDeclaredYear > 0
-                && world.CurrentYear - edge.WarDeclaredYear >= cfg.MaxWarDurationYears)
-            {
-                world.Relationships.Upsert(edge with
-                {
-                    Flags = edge.Flags & ~RelationshipFlags.IsAtWar,
-                    // Small trust recovery — tensions ease after peace
-                    Trust = Math.Clamp(edge.Trust + 0.1f, -1f, 1f),
-                    WarDeclaredYear = 0
-                });
+            // War expiry is handled at civ level below; no character-level war state here.
+        }
 
-                if (aAlive && bAlive &&
-                    world.GetEntity(edge.From) is Tier1Character wa &&
-                    world.GetEntity(edge.To)   is Tier1Character wb)
-                    FireWarEnded(wa, wb, "expired", world, pending);
+        // 3. Civ-level war expiry — end wars that have lasted beyond MaxWarDurationYears
+        foreach (var civ in world.Civilizations.Values)
+        {
+            var expiredEnemies = civ.WarsAgainst
+                .Where(kv => world.CurrentYear - kv.Value >= cfg.MaxWarDurationYears)
+                .Select(kv => kv.Key)
+                .ToList();
+
+            foreach (var enemyCivId in expiredEnemies)
+            {
+                civ.WarsAgainst.Remove(enemyCivId);
+                // Remove from the other side too (avoid asymmetric state)
+                if (world.Civilizations.TryGetValue(enemyCivId, out var enemyCiv))
+                    enemyCiv.WarsAgainst.Remove(civ.Id);
+
+                FireWarEndedCiv(civ.Id, enemyCivId, "expired", world, pending);
+            }
+        }
+
+        // 4. End wars when one civ collapses
+        foreach (var civ in world.Civilizations.Values.Where(c => c.IsCollapsed))
+        {
+            foreach (var enemyCivId in civ.WarsAgainst.Keys.ToList())
+            {
+                civ.WarsAgainst.Remove(enemyCivId);
+                if (world.Civilizations.TryGetValue(enemyCivId, out var enemyCiv))
+                    enemyCiv.WarsAgainst.Remove(civ.Id);
             }
         }
     }
 
-    private static void FireWarEnded(
-        Tier1Character a, Tier1Character b, string reason,
+    private static void FireWarEndedCiv(
+        CivId civA, CivId civB, string reason,
         WorldState world, List<PendingEvent> pending)
     {
+        var nameA = world.Civilizations.TryGetValue(civA, out var ca) ? ca.Name : civA.Value.ToString();
+        var nameB = world.Civilizations.TryGetValue(civB, out var cb) ? cb.Name : civB.Value.ToString();
         var payload = JsonSerializer.Serialize(new
         {
-            characterAId   = a.Id.Value,
-            characterAName = a.Identity.Name,
-            characterBId   = b.Id.Value,
-            characterBName = b.Identity.Name,
-            declarerCiv    = a.Identity.CivId.Value,
-            targetCiv      = b.Identity.CivId.Value,
+            civAId   = civA.Value,
+            civAName = nameA,
+            civBId   = civB.Value,
+            civBName = nameB,
             reason,
             year = world.CurrentYear
         });
-        pending.Add(new PendingEvent(EventType.WarEnded, a.Location, null, payload,
-            new[] { a.Id.Value, b.Id.Value }));
+        // Use capital tile for location if available
+        var loc = ca?.CapitalTile ?? new TileCoord(0, 0);
+        pending.Add(new PendingEvent(EventType.WarEnded, loc, null, payload, null));
     }
 
     private static void FireAllianceBroken(

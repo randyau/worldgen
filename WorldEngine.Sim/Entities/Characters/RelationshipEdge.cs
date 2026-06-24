@@ -5,13 +5,15 @@ namespace WorldEngine.Sim.Entities.Characters;
 [Flags]
 public enum RelationshipFlags
 {
-    None = 0, IsAlly = 1, IsRival = 2, IsAtWar = 4,
+    None = 0, IsAlly = 1, IsRival = 2,
     IsFamily = 8, IsMarried = 16
 }
 
 /// <summary>
 /// Directed relationship edge: how From perceives To.
 /// Stored as canonical pair (smaller Id first) in RelationshipGraph.
+/// War is NOT tracked here — it is a civ-level state on Civilization.WarsAgainst.
+/// This edge only tracks personal relationships: trust, alliances, rivalries.
 /// </summary>
 public sealed record RelationshipEdge(
     EntityId From,
@@ -23,8 +25,4 @@ public sealed record RelationshipEdge(
 {
     public bool IsAlly  => Flags.HasFlag(RelationshipFlags.IsAlly);
     public bool IsRival => Flags.HasFlag(RelationshipFlags.IsRival);
-    public bool IsAtWar => Flags.HasFlag(RelationshipFlags.IsAtWar);
-
-    // Year the war was declared — 0 if not currently at war; used for auto-expiry
-    public int WarDeclaredYear { get; init; } = 0;
 }

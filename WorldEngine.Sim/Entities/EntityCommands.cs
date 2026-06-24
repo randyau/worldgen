@@ -16,7 +16,9 @@ public sealed record Flee(EntityId EntityId, TileCoord AwayFrom) : ICommand;
 public sealed record EstablishSettlement(EntityId CharacterId, TileCoord Tile) : ICommand;
 public sealed record AllyWith(EntityId CharacterId, EntityId TargetId) : ICommand;
 public sealed record DeclareRivalry(EntityId CharacterId, EntityId TargetId) : ICommand;
-public sealed record DeclareWar(EntityId CharacterId, EntityId TargetId) : ICommand;
+// War is a civ-level action: the declaring character must be their civ's ruler;
+// the target is a civilization, not an individual character.
+public sealed record DeclareWar(EntityId CharacterId, CivId TargetCivId) : ICommand;
 public sealed record RaidSettlement(EntityId CharacterId, TileCoord SettlementTile) : ICommand;
 public sealed record Negotiate(EntityId CharacterId, EntityId TargetId) : ICommand;
 public sealed record CreateArtwork(EntityId CharacterId) : ICommand;

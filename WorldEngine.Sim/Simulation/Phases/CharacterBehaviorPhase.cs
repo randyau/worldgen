@@ -155,18 +155,17 @@ public sealed class CharacterBehaviorPhase
     {
         c.IsAlive = false;
 
-        // Wars and rivalries end when a participant dies — you can't fight a corpse.
-        // Dissolve these edges immediately so the relationship graph stays lean.
+        // Rivalries end when a participant dies — you can't have a personal feud with a corpse.
+        // Wars are civ-level and continue regardless of whether this individual is alive.
         // Alliances and bond edges are left in place: they feed grief/mourning logic
         // (ApplyGriefToMourners runs after this) and are pruned by the annual cleanup.
         foreach (var edge in world.Relationships.GetAll(c.Id).ToList())
         {
-            if (edge.IsAtWar || edge.IsRival)
+            if (edge.IsRival)
             {
                 world.Relationships.Upsert(edge with
                 {
-                    Flags           = edge.Flags & ~(RelationshipFlags.IsAtWar | RelationshipFlags.IsRival),
-                    WarDeclaredYear = 0
+                    Flags = edge.Flags & ~RelationshipFlags.IsRival
                 });
             }
         }
@@ -276,7 +275,7 @@ public sealed class CharacterBehaviorPhase
             if (other.Identity.CivId == c.Identity.CivId) continue; // same civ — no pressure
 
             var rel = world.Relationships.GetOrCreate(c.Id, other.Id);
-            if (rel.IsAlly || rel.IsRival || rel.IsAtWar) continue; // relationship already decided
+            if (rel.IsAlly || rel.IsRival) continue; // relationship already decided
 
             // Drain trust by a small amount each tick — enough to reach -0.1 within ~5 years of contact
             world.Relationships.Upsert(rel with
@@ -305,7 +304,7 @@ public sealed class CharacterBehaviorPhase
 
             bool isFirstMeeting = world.Relationships.Get(c.Id, other.Id) == null;
             var rel = world.Relationships.GetOrCreate(c.Id, other.Id);
-            if (rel.IsAlly || rel.IsAtWar) continue;
+            if (rel.IsAlly) continue;
 
             float trust = rel.Trust;
 

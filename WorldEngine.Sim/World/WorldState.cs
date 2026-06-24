@@ -145,7 +145,6 @@ public sealed class WorldState : IWorldStateReadOnly
         Relationships.Get(a, b);
 
     public int CountAlliances(EntityId id) => Relationships.CountAlliances(id);
-    public int CountWars(EntityId id)      => Relationships.CountWars(id);
     public int CountRivals(EntityId id)    => Relationships.CountRivals(id);
 
     public Civilization? GetCivilization(CivId civId) =>

@@ -121,8 +121,13 @@ public static class UtilityScorer
             if (c.Identity.CivId.IsValid && other.Identity.CivId.IsValid
                 && c.Identity.CivId == other.Identity.CivId) continue;
             var rel = world.GetRelationship(c.Id, other.Id);
-            if (rel?.IsAtWar ?? false) continue;
             if (rel?.IsAlly ?? false) continue;
+            // Don't form alliances across enemy civ lines
+            if (c.Identity.CivId.IsValid && other.Identity.CivId.IsValid)
+            {
+                var myCivForAlly = world.GetCivilization(c.Identity.CivId);
+                if (myCivForAlly?.IsAtWarWith(other.Identity.CivId) == true) continue;
+            }
 
             ICommand? cmd;
             float score;
@@ -154,7 +159,7 @@ public static class UtilityScorer
                 if (e is not Tier1Character other || other.Id == c.Id || !other.IsAlive) continue;
                 var rel = world.GetRelationship(c.Id, other.Id);
                 if ((rel?.Trust ?? 0f) < cfg.RivalryTrustThreshold
-                    && !(rel?.IsRival ?? false) && !(rel?.IsAtWar ?? false))
+                    && !(rel?.IsRival ?? false))
                 {
                     actions.Add(new(new DeclareRivalry(c.Id, other.Id),
                         Score(c, ActionType.Rivalry, 1.0f, world, cfg)));
@@ -163,38 +168,57 @@ public static class UtilityScorer
             }
         }
 
-        // DeclareWar — rival with Aggression. Capped at MaxActiveWars to bound the relationship graph.
-        if (c.Personality.Aggression > cfg.WarAggressionThreshold
-            && world.CountWars(c.Id) < cfg.MaxActiveWars)
+        // DeclareWar — civ-level: only the civ's ruler (founder) can start a war.
+        // Targets an entire enemy civilization, not an individual character.
+        // Triggers on: seeing a nearby enemy settlement when ruler has personal rivalry with
+        // that civ's founder, OR when trust with the enemy ruler is very negative.
+        if (isFounder && c.Personality.Aggression > cfg.WarAggressionThreshold
+            && c.Identity.CivId.IsValid)
         {
-            foreach (var e in world.GetEntitiesInRadius(c.Location, cfg.PerceptionRadius))
+            var myCiv = world.GetCivilization(c.Identity.CivId);
+            if (myCiv != null && myCiv.WarsAgainst.Count < cfg.MaxActiveWars)
             {
-                if (e is not Tier1Character other || other.Id == c.Id || !other.IsAlive) continue;
-                var rel = world.GetRelationship(c.Id, other.Id);
-                if ((rel?.IsRival ?? false) && !(rel?.IsAtWar ?? false))
+                foreach (var coord in world.GetTilesInRadius(c.Location, cfg.PerceptionRadius))
                 {
-                    actions.Add(new(new DeclareWar(c.Id, other.Id),
-                        Score(c, ActionType.War, c.Personality.Aggression, world, cfg)));
-                    break;
+                    if (!world.Settlements.TryGetValue(coord, out var nearSettle)) continue;
+                    if (!nearSettle.CivId.IsValid || nearSettle.CivId == c.Identity.CivId) continue;
+                    if (myCiv.IsAtWarWith(nearSettle.CivId)) continue;
+                    var targetCiv = world.GetCivilization(nearSettle.CivId);
+                    if (targetCiv == null) continue;
+                    // Require personal animosity with the enemy ruler OR existing rivalry
+                    var enemyRulerRel = world.GetRelationship(c.Id, targetCiv.FounderId);
+                    bool hostileEnough = (enemyRulerRel?.IsRival ?? false)
+                                     || (enemyRulerRel?.Trust ?? 0f) < cfg.RivalryTrustThreshold;
+                    if (hostileEnough)
+                    {
+                        actions.Add(new(new DeclareWar(c.Id, nearSettle.CivId),
+                            Score(c, ActionType.War, c.Personality.Aggression, world, cfg)));
+                        break;
+                    }
                 }
             }
         }
 
-        // RaidSettlement — nearby enemy settlement; Avenge goal raises chance threshold
+        // RaidSettlement — only available to characters whose civ is at war with the target civ.
+        // Individual characters represent their civ's military effort during wartime.
         bool hasAvengeGoal = c.Goals.Any(g => g.Type == GoalType.Avenge);
         float raidAggressionMin = hasAvengeGoal ? 0.2f : 0.4f;
-        if (c.Personality.Aggression > raidAggressionMin)
+        if (c.Personality.Aggression > raidAggressionMin && c.Identity.CivId.IsValid)
         {
-            foreach (var coord in world.GetTilesInRadius(c.Location, cfg.PerceptionRadius))
+            var myCivForRaid = world.GetCivilization(c.Identity.CivId);
+            if (myCivForRaid != null)
             {
-                if (!world.Settlements.TryGetValue(coord, out var settlement)) continue;
-                var rel = world.GetRelationship(c.Id, settlement.FounderId);
-                if (rel?.IsAtWar ?? false)
+                foreach (var coord in world.GetTilesInRadius(c.Location, cfg.PerceptionRadius))
                 {
-                    float successProb = c.Skills.Combat * c.Aptitude.Diligence;
-                    actions.Add(new(new RaidSettlement(c.Id, coord),
-                        Score(c, ActionType.Raid, successProb, world, cfg)));
-                    break;
+                    if (!world.Settlements.TryGetValue(coord, out var settlement)) continue;
+                    if (!settlement.CivId.IsValid) continue;
+                    if (myCivForRaid.IsAtWarWith(settlement.CivId))
+                    {
+                        float successProb = c.Skills.Combat * c.Aptitude.Diligence;
+                        actions.Add(new(new RaidSettlement(c.Id, coord),
+                            Score(c, ActionType.Raid, successProb, world, cfg)));
+                        break;
+                    }
                 }
             }
         }

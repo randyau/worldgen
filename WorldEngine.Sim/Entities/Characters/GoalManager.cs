@@ -244,7 +244,7 @@ public static class GoalManager
             if (e is Tier1Character other && other.Id != c.Id && other.IsAlive)
             {
                 var rel = world.GetRelationship(c.Id, other.Id);
-                if (rel == null || (!rel.IsAlly && !rel.IsRival && !rel.IsAtWar))
+                if (rel == null || (!rel.IsAlly && !rel.IsRival))
                     return other.Id;
             }
         }
