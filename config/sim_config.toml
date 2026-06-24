@@ -612,6 +612,8 @@ shelter_comfort_temp_low  = 80    # byte; tile BaseTemperature below this → co
 shelter_comfort_temp_high = 180   # byte; tile BaseTemperature above this → heat shelter pressure
 shelter_temperature_scale = 0.8   # max additional decay multiplier at temp extremes (0→low or 255→high)
                                    # At scale=0.8: extreme cold/heat → 1.8× decay; settlement (+0.10) still net-positive
+expansion_home_penalty    = 120   # tile score penalty applied to own-civ settlement tiles when character has Expansion goal (pushes them to leave)
+expansion_empty_tile_bonus = 80   # tile score bonus for tiles outside every settlement's hinterland when Expansion goal is active
 shelter_seek_threshold    = 0.35  # below this shelter level, characters prefer terrain with natural cover when choosing where to move
 shelter_seek_tile_bonus   = 80    # max tile-score bonus for a perfect-shelter biome (forest/mountain) when shelter-seeking
                                    # scales by desperation: bonus × BiomeShelterScore × (1 - shelter)
@@ -651,8 +653,8 @@ hinterland_drain_factor          = 0.5   # effective fertility multiplier inside
 base_founding_cooldown_years     = 8     # base cooldown between same-civ settlements (scales down with pop)
 min_founding_cooldown_years      = 2     # floor — even the largest civ can't expand instantly
 founding_cooldown_pop_scale      = 2000  # civ pop at which cooldown halves (20y→10y, 10y→5y, etc.)
-civ_birth_min_pop            = 30
-civ_birth_chance_per_season = 0.02
+civ_birth_min_pop            = 20   # lowered from 30; settlements reach this faster with improved farming
+civ_birth_chance_per_season = 0.05  # raised from 0.02; need more ambitious characters to drive expansion
 # Territorial aggression: aggressive founders drain trust from foreign visitors on their settlement tile
 territorial_aggression_min    = 0.55  # chars below this aggression don't apply pressure
 territorial_trust_drain       = 0.025 # trust lost per tick; ~-0.1 in 1 season → rivalry within a year

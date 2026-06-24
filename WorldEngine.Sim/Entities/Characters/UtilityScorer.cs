@@ -275,7 +275,7 @@ public static class UtilityScorer
                 (GoalType.Survive,   ActionType.Rest)      => 0.8f,
                 (GoalType.Survive,   ActionType.Travel)    => 0.4f,
                 (GoalType.Expansion, ActionType.Establish) => 1.0f,
-                (GoalType.Expansion, ActionType.Travel)    => 0.3f,
+                (GoalType.Expansion, ActionType.Travel)    => 0.7f,  // strong travel drive — expansion chars must physically leave home
                 (GoalType.Dominance, ActionType.War)       => 1.0f,
                 (GoalType.Dominance, ActionType.Raid)      => 0.8f,
                 (GoalType.Alliance,  ActionType.Ally)      => 1.0f,
@@ -373,10 +373,29 @@ public static class UtilityScorer
             }
             if (candidateExits < currentExits) score -= 60;
 
-            // Same-civ settlement pull: characters belong home, not on scenic coastlines.
-            // Foreign settlements still get the generic bonus — trade/diplomacy motivation.
+            // Settlement pull — home is attractive, but expansion-goal characters need to leave.
+            // An Expansion character sees their own civ's settlements as unattractive (they're
+            // trying to get away from home, not orbit it). They still approach foreign settlements
+            // for trade/diplomacy. Empty tiles beyond any settlement's hinterland get a bonus
+            // so expansion characters actively navigate toward unclaimed land.
+            bool isExpandingChar = c.Goals.Any(g => g.Type == GoalType.Expansion);
             if (world.Settlements.TryGetValue(coord, out var s))
-                score += (c.Identity.CivId.IsValid && s.CivId == c.Identity.CivId) ? 150 : 50;
+            {
+                bool isSameCiv = c.Identity.CivId.IsValid && s.CivId == c.Identity.CivId;
+                if (isSameCiv && isExpandingChar)
+                    score -= cfg.ExpansionHomePenalty; // actively push away from home
+                else
+                    score += isSameCiv ? 150 : 50;
+            }
+            else if (isExpandingChar)
+            {
+                // Bonus for tiles outside any settlement's hinterland — this is where they want to be
+                bool inAnyHinterland = false;
+                foreach (var (st, stub) in world.Settlements)
+                    if (TileDistance(coord, st) <= stub.ReachRadius()) { inAnyHinterland = true; break; }
+                if (!inAnyHinterland)
+                    score += cfg.ExpansionEmptyTileBonus;
+            }
 
             // When shelter is critically low, prefer terrain that provides natural cover.
             // This makes explorers navigate toward forests and mountains rather than open plains.

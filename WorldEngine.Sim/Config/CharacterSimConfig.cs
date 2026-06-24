@@ -18,6 +18,12 @@ public sealed class CharacterSimConfig
     public byte  ShelterComfortTempLow  { get; set; } = 80;   // byte; below → cold pressure
     public byte  ShelterComfortTempHigh { get; set; } = 180;  // byte; above → heat pressure
     public float ShelterTemperatureScale { get; set; } = 0.8f; // max additional multiplier at extreme temp
+    // Expansion movement scoring — tile score adjustments when character has an active Expansion goal
+    // Home-civ settlement tiles get this penalty so expansion characters leave rather than orbit home
+    public int   ExpansionHomePenalty     { get; set; } = 120;
+    // Tiles outside every settlement's hinterland get this bonus — draws expansion chars toward open land
+    public int   ExpansionEmptyTileBonus  { get; set; } = 80;
+
     // When shelter drops below this threshold, characters actively prefer tiles with natural cover
     public float ShelterSeekThreshold   { get; set; } = 0.35f;
     // Max tile-score bonus added per unit of BiomeShelterScore when shelter-seeking
@@ -92,8 +98,8 @@ public sealed class CharacterSimConfig
     public int   FoundingCooldownPopScale    { get; set; } = 2000;
 
     // Civilization-born character generation
-    public int   CivBirthMinPop         { get; set; } = 30;   // settlement needs this many people
-    public float CivBirthChancePerSeason { get; set; } = 0.02f; // ~1 birth per 50 seasons at min pop
+    public int   CivBirthMinPop         { get; set; } = 20;   // settlement needs this many people
+    public float CivBirthChancePerSeason { get; set; } = 0.05f; // ~1 birth per 20 seasons at min pop
 
     // Territorial aggression — aggressive founders develop negative trust with foreign visitors
     public float TerritorialAggressionMin { get; set; } = 0.55f; // aggression threshold to apply pressure
