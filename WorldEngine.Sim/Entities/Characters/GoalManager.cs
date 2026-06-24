@@ -37,8 +37,12 @@ public static class GoalManager
         bool hasBond      = c.Goals.Any(g => g.Type == GoalType.Bond);
         bool hasCreate    = c.Goals.Any(g => g.Type == GoalType.Create);
 
-        if (!hasExpansion && c.Personality.Ambition > 0.55f
-            && !world.Settlements.ContainsKey(c.Location))
+        // Expansion goal: ambitious non-founders want to build a new settlement.
+        // Allowed while inside a home settlement — wanderlust will push them toward open land;
+        // EstablishSettlement scoring gates on the actual tile being worthwhile.
+        bool isFounder = c.Identity.CivId.IsValid
+            && world.Settlements.Values.Any(s => s.FounderId == c.Id);
+        if (!hasExpansion && !isFounder && c.Personality.Ambition > 0.55f)
         {
             c.Goals.Add(new GoalData
             {

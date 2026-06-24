@@ -20,7 +20,9 @@ public sealed record SettlementStub(
     float     WaterPressureRatio   = 1f,
     int       LastStrainEventTick  = 0,    // tick of last SettlementStraining event (rate-limit)
     IReadOnlyDictionary<string, float>? ResourceLedger = null, // extensible supply values per resource type
-    float     FertilityMultiplier  = 1f)   // per-settlement founding-time variance; permanent
+    float     FertilityMultiplier  = 1f,   // per-settlement founding-time variance; permanent
+    int       ConqueredYear        = 0,    // year this settlement was last conquered (0 = never)
+    int       ConqueredFromCivId   = 0)    // CivId of previous owner at time of conquest (0 = never)
 {
     /// <summary>
     /// Radius (in tiles) of this settlement's hinterland.

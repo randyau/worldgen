@@ -50,6 +50,8 @@ public sealed class TileInspectorPanel
                                : settlement.Health >= 40 ? "Struggling" : "Critical";
             AddLine($"Health: {settlement.Health}/100 ({healthLabel})");
             AddLine($"Founded: Year {settlement.FoundedYear}");
+            if (settlement.ConqueredYear > 0)
+                AddLine($"Conquered: Year {settlement.ConqueredYear} (from civ {settlement.ConqueredFromCivId})");
             if (settlement.ResourceLedger is { Count: > 0 } ledger)
             {
                 AddLine("--- Resources ---");

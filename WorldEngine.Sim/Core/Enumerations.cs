@@ -109,6 +109,7 @@ public enum EventType
     SettlementDestroyed     = 3204,
     SuccessionOccurred      = 3205,
     SettlementStraining     = 3206,  // settlement is under food or water shortage
+    SettlementConquered     = 3207,  // raiding civ annexed the settlement; survives under new CivId
 
     // M2+ population events (3400-range)
     SettlementGrew          = 3401,
@@ -171,6 +172,7 @@ public static class VerbClassification
         EventType.CivilizationCollapsed   => VerbClass.Destruction,
         EventType.SettlementFounded       => VerbClass.Creation,
         EventType.SettlementDestroyed     => VerbClass.Destruction,
+        EventType.SettlementConquered     => VerbClass.Transfer,
         EventType.SuccessionOccurred      => VerbClass.Transfer,
         EventType.SettlementStraining     => VerbClass.Transformation,
         EventType.SettlementGrew          => VerbClass.Creation,

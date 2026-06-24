@@ -12,7 +12,9 @@ public sealed record SettlementSnapshot(
     int       Population,
     int       Health,
     int       FoundedYear,
-    IReadOnlyDictionary<string, float>? ResourceLedger = null);
+    IReadOnlyDictionary<string, float>? ResourceLedger = null,
+    int       ConqueredYear      = 0,
+    int       ConqueredFromCivId = 0);
 
 /// <summary>
 /// Immutable projection of world state for the UI. Created after each tick.

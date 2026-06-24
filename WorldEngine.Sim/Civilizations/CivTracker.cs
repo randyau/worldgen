@@ -286,20 +286,64 @@ public static class CivTracker
 
         if (newHealth <= 0)
         {
-            world.Settlements.Remove(cmd.SettlementTile);
+            bool canConquer = raider.Identity.CivId.IsValid
+                           && settlement.CivId.IsValid
+                           && raider.Identity.CivId != settlement.CivId;
 
-            int timesSettled = RegisterRuin(cmd.SettlementTile, settlement, "destroyed", world);
-
-            pending.Add(new PendingEvent(EventType.SettlementDestroyed, cmd.SettlementTile, null,
-                JsonSerializer.Serialize(new
+            if (canConquer)
+            {
+                // Annexation: settlement survives under the raider's civ.
+                // Population and health are reduced; the original founder remains in place (now a subject).
+                CivId previousCivId = settlement.CivId;
+                int   conqueredPop  = Math.Max(1, settlement.Population / 2);
+                world.Settlements[cmd.SettlementTile] = settlement with
                 {
-                    tile           = new[] { cmd.SettlementTile.X, cmd.SettlementTile.Y },
-                    settlementName = settlement.Name,
-                    founderId      = settlement.FounderId.Value,
-                    destroyerId    = raider.Id.Value,
-                    civId          = settlement.CivId.Value,
-                    timesSettled
-                })));
+                    CivId             = raider.Identity.CivId,
+                    Health            = SettlementStartHealth / 2,
+                    Population        = conqueredPop,
+                    PopulationF       = 0f,
+                    ConqueredYear     = world.CurrentYear,
+                    ConqueredFromCivId = previousCivId.Value,
+                };
+
+                pending.Add(new PendingEvent(EventType.SettlementConquered, cmd.SettlementTile, null,
+                    JsonSerializer.Serialize(new
+                    {
+                        tile             = new[] { cmd.SettlementTile.X, cmd.SettlementTile.Y },
+                        settlementName   = settlement.Name,
+                        conqueredByCivId = raider.Identity.CivId.Value,
+                        previousCivId    = previousCivId.Value,
+                        conquererId      = raider.Id.Value,
+                        conquererName    = raider.Identity.Name,
+                        survivingPop     = conqueredPop
+                    })));
+
+                // If the losing civ has no settlements left, it collapses.
+                bool anyLeft = world.Settlements.Values.Any(s => s.CivId == previousCivId);
+                if (!anyLeft)
+                    pending.Add(new PendingEvent(EventType.CivilizationCollapsed, cmd.SettlementTile, null,
+                        JsonSerializer.Serialize(new
+                        {
+                            civId  = previousCivId.Value,
+                            reason = "conquered",
+                            year   = world.CurrentYear
+                        })));
+            }
+            else
+            {
+                world.Settlements.Remove(cmd.SettlementTile);
+                int timesSettled = RegisterRuin(cmd.SettlementTile, settlement, "destroyed", world);
+                pending.Add(new PendingEvent(EventType.SettlementDestroyed, cmd.SettlementTile, null,
+                    JsonSerializer.Serialize(new
+                    {
+                        tile           = new[] { cmd.SettlementTile.X, cmd.SettlementTile.Y },
+                        settlementName = settlement.Name,
+                        founderId      = settlement.FounderId.Value,
+                        destroyerId    = raider.Id.Value,
+                        civId          = settlement.CivId.Value,
+                        timesSettled
+                    })));
+            }
         }
         else
         {

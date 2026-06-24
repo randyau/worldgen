@@ -67,6 +67,7 @@ public static class SignificanceClassifier
             // Settlement events — Regional (Creation/Destruction verb floors apply)
             EventType.SettlementFounded     => PopulationImpact.Minor,
             EventType.SettlementDestroyed   => PopulationImpact.Moderate,
+            EventType.SettlementConquered   => PopulationImpact.Major,    // → Headline (Transfer verb + Major)
             // Relationship events — Character tier
             EventType.AllianceFormed    => PopulationImpact.None,
             EventType.AllianceBroken    => PopulationImpact.None,

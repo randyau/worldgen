@@ -633,7 +633,7 @@ ally_disaster_aid_intensity   = 0.3   # (reserved for future goal seeding; merch
 max_war_duration_years        = 20    # wars auto-expire after this many years if not renewed by combat
 
 hinterland_drain_factor          = 0.5   # effective fertility multiplier inside same-civ hinterland (0.5 = half claimed)
-base_founding_cooldown_years     = 20    # base cooldown between same-civ settlements (scales down with pop)
+base_founding_cooldown_years     = 12    # base cooldown between same-civ settlements (scales down with pop)
 min_founding_cooldown_years      = 4     # floor — even the largest civ can't expand instantly
 founding_cooldown_pop_scale      = 2000  # civ pop at which cooldown halves (20y→10y, 10y→5y, etc.)
 civ_birth_min_pop            = 30
