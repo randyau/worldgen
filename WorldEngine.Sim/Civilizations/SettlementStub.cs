@@ -22,7 +22,8 @@ public sealed record SettlementStub(
     IReadOnlyDictionary<string, float>? ResourceLedger = null, // extensible supply values per resource type
     float     FertilityMultiplier  = 1f,   // per-settlement founding-time variance; permanent
     int       ConqueredYear        = 0,    // year this settlement was last conquered (0 = never)
-    int       ConqueredFromCivId   = 0)    // CivId of previous owner at time of conquest (0 = never)
+    int       ConqueredFromCivId   = 0,   // CivId of previous owner at time of conquest (0 = never)
+    float     FoodStores           = 0f)  // seasons of food supply in reserve; draws down during shortage, fills during surplus
 {
     /// <summary>
     /// Radius (in tiles) of this settlement's hinterland.

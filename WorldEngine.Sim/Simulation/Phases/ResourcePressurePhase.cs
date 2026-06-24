@@ -36,24 +36,52 @@ public sealed class ResourcePressurePhase
             int reachRadius = stub.ReachRadius();
             var ledger = BuildLedger(coord, stub, reachRadius, world);
 
-            float foodRatio  = ledger.TryGetValue("food",  out var f) ? f : 1f;
-            float waterRatio = ledger.TryGetValue("water", out var w) ? w : 1f;
+            float rawFoodRatio = ledger.TryGetValue("food",  out var f) ? f : 1f;
+            float waterRatio   = ledger.TryGetValue("water", out var w) ? w : 1f;
+
+            // ─── Food stores ─────────────────────────────────────────────────
+            float maxStore = Math.Max(_cfg.StoreMinSeasons,
+                                      stub.Population / 1000f * _cfg.StoreMaxSeasonsPerKPop);
+            float stores   = stub.FoodStores;
+
+            // Spoilage every tick (food degrades even in the granary)
+            stores *= (1f - _cfg.StoreSpoilageRate);
+
+            float effectiveFoodRatio;
+            if (rawFoodRatio >= 1f)
+            {
+                // Surplus — fill stores with a fraction of excess
+                float surplus = (rawFoodRatio - 1f) * _cfg.StoreAccumulateRate;
+                stores = Math.Min(stores + surplus, maxStore);
+                effectiveFoodRatio = rawFoodRatio; // surplus doesn't need store support
+            }
+            else
+            {
+                // Deficit — draw from stores to cover the gap (up to what's available)
+                float needed = 1f - rawFoodRatio;
+                float drawn  = Math.Min(stores, needed);
+                stores -= drawn;
+                effectiveFoodRatio = rawFoodRatio + drawn;
+            }
+
+            stores = Math.Max(0f, stores);
 
             world.Settlements[coord] = stub with
             {
-                FoodPressureRatio  = foodRatio,
+                FoodPressureRatio  = effectiveFoodRatio,
                 WaterPressureRatio = waterRatio,
-                ResourceLedger     = ledger
+                ResourceLedger     = ledger,
+                FoodStores         = stores
             };
 
-            // Shortage response
-            if (foodRatio < _cfg.ShortageThreshold)
+            // Shortage response (based on effective ratio after store draw)
+            if (effectiveFoodRatio < _cfg.ShortageThreshold)
             {
-                SeedResourceGoals(coord, GoalObject.Food, "food", foodRatio, world, tick);
+                SeedResourceGoals(coord, GoalObject.Food, "food", effectiveFoodRatio, world, tick);
 
                 if (tick - stub.LastStrainEventTick > _cfg.StrainEventCooldown)
                 {
-                    pending.Add(MakeStrainEvent(coord, stub, "food", foodRatio));
+                    pending.Add(MakeStrainEvent(coord, stub, "food", effectiveFoodRatio));
                     world.Settlements[coord] = world.Settlements[coord] with
                     {
                         LastStrainEventTick = (int)tick

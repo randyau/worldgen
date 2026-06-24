@@ -268,6 +268,12 @@ public static class CivTracker
                     * (RaidDamageMax - RaidDamageMin));
         int newHealth = settlement.Health - damage;
 
+        // Raids burn granaries — food stores take proportional damage.
+        float storeDestroyed = settlement.FoodStores
+            * damage
+            * world.SimConfig.ResourcePressure.StoreRaidDestructionPerDamage;
+        float newFoodStores = Math.Max(0f, settlement.FoodStores - storeDestroyed);
+
         raider.Skills = raider.Skills with
             { Combat = Math.Min(1f, raider.Skills.Combat + 0.02f) };
         raider.Needs = raider.Needs with
@@ -298,12 +304,13 @@ public static class CivTracker
                 int   conqueredPop  = Math.Max(1, settlement.Population / 2);
                 world.Settlements[cmd.SettlementTile] = settlement with
                 {
-                    CivId             = raider.Identity.CivId,
-                    Health            = SettlementStartHealth / 2,
-                    Population        = conqueredPop,
-                    PopulationF       = 0f,
-                    ConqueredYear     = world.CurrentYear,
+                    CivId              = raider.Identity.CivId,
+                    Health             = SettlementStartHealth / 2,
+                    Population         = conqueredPop,
+                    PopulationF        = 0f,
+                    ConqueredYear      = world.CurrentYear,
                     ConqueredFromCivId = previousCivId.Value,
+                    FoodStores         = newFoodStores, // granaries looted/burned during conquest
                 };
 
                 pending.Add(new PendingEvent(EventType.SettlementConquered, cmd.SettlementTile, null,
@@ -347,7 +354,11 @@ public static class CivTracker
         }
         else
         {
-            world.Settlements[cmd.SettlementTile] = settlement with { Health = newHealth };
+            world.Settlements[cmd.SettlementTile] = settlement with
+            {
+                Health     = newHealth,
+                FoodStores = newFoodStores
+            };
         }
     }
 

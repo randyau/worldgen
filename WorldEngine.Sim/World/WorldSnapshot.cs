@@ -14,7 +14,8 @@ public sealed record SettlementSnapshot(
     int       FoundedYear,
     IReadOnlyDictionary<string, float>? ResourceLedger = null,
     int       ConqueredYear      = 0,
-    int       ConqueredFromCivId = 0);
+    int       ConqueredFromCivId = 0,
+    float     FoodStores         = 0f);
 
 /// <summary>
 /// Immutable projection of world state for the UI. Created after each tick.

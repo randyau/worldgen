@@ -49,6 +49,9 @@ public sealed class TileInspectorPanel
             string healthLabel = settlement.Health >= 70 ? "Good"
                                : settlement.Health >= 40 ? "Struggling" : "Critical";
             AddLine($"Health: {settlement.Health}/100 ({healthLabel})");
+            string storeLabel = settlement.FoodStores >= 2f ? "Well-stocked"
+                              : settlement.FoodStores >= 0.5f ? "Adequate" : "Bare";
+            AddLine($"Food stores: {settlement.FoodStores:F1} seasons ({storeLabel})");
             AddLine($"Founded: Year {settlement.FoundedYear}");
             if (settlement.ConqueredYear > 0)
                 AddLine($"Conquered: Year {settlement.ConqueredYear} (from civ {settlement.ConqueredFromCivId})");
