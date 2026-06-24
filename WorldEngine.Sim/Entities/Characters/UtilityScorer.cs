@@ -336,6 +336,17 @@ public static class UtilityScorer
         int w = world.Config.TileWidth, h = world.Config.TileHeight;
         int[] dx = { -1, 1, 0, 0 };
         int[] dy = { 0, 0, -1, 1 };
+
+        // Count non-ocean adjacent tiles of current position — penalise "dead-end" tiles
+        // (beaches/peninsulas with only 1–2 exits) so characters don't get trapped there.
+        int currentExits = 0;
+        for (int i = 0; i < 4; i++)
+        {
+            int ex = ((c.Location.X + dx[i]) % w + w) % w;
+            int ey = Math.Clamp(c.Location.Y + dy[i], 0, h - 1);
+            if (world.IsLand(new TileCoord(ex, ey))) currentExits++;
+        }
+
         for (int i = 0; i < 4; i++)
         {
             int nx = ((c.Location.X + dx[i]) % w + w) % w;
@@ -343,8 +354,25 @@ public static class UtilityScorer
             var coord = new TileCoord(nx, ny);
             if (!world.IsLand(coord)) continue;
             if ((BiomeType)world.GetTile(coord).BiomeType == BiomeType.HighMountain) continue;
+
             int score = world.GetTile(coord).Fertility;
-            if (world.Settlements.ContainsKey(coord)) score += 50;
+
+            // Dead-end penalty: if the candidate has fewer exits than current tile, subtract
+            // enough to make open terrain more attractive than a coastal cul-de-sac.
+            int candidateExits = 0;
+            for (int j = 0; j < 4; j++)
+            {
+                int ex = ((nx + dx[j]) % w + w) % w;
+                int ey = Math.Clamp(ny + dy[j], 0, h - 1);
+                if (world.IsLand(new TileCoord(ex, ey))) candidateExits++;
+            }
+            if (candidateExits < currentExits) score -= 60;
+
+            // Same-civ settlement pull: characters belong home, not on scenic coastlines.
+            // Foreign settlements still get the generic bonus — trade/diplomacy motivation.
+            if (world.Settlements.TryGetValue(coord, out var s))
+                score += (c.Identity.CivId.IsValid && s.CivId == c.Identity.CivId) ? 150 : 50;
+
             if (score > bestScore) { bestScore = score; best = coord; }
         }
         return best;
