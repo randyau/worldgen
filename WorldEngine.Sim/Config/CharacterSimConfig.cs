@@ -30,6 +30,10 @@ public sealed class CharacterSimConfig
     public int   HealthPerSeasonHeal    { get; set; } = 5;
     public int   CombatDamageBase       { get; set; } = 20;
     public int   MinFertilityToSettle    { get; set; } = 100;
+    // Minimum base moisture (0-255) required to found a settlement.
+    // Prevents founding on tiles that are climatically too dry to sustain a population.
+    // Deposit-rich founding is still allowed below this threshold (miners live there anyway).
+    public byte  MinBaseMoistureToSettle { get; set; } = 15;
     // Characters will also settle low-fertility tiles that have deposits above this threshold
     public float DepositSettleThreshold  { get; set; } = 0.5f;
     // How much deposit value boosts the EstablishSettlement success probability multiplier

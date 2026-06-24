@@ -69,6 +69,18 @@ public sealed class ClimateLayer : IWorldGenLayer<ClimateResult>
             }
         }
 
+        // Enforce a minimum BaseMoisture on all land tiles AFTER noise.
+        // The 5% floor in ComputeBaseMoisture runs before noise, so large negative noise
+        // values can push floor tiles to 0. BaseMoisture=0 is degenerate: the food formula
+        // (fertility × moisture) and the seasonal relative floor both collapse to zero.
+        // A small guaranteed minimum keeps marginal tiles non-degenerate.
+        const byte MinLandBaseMoisture = 10;
+        for (int i = 0; i < n; i++)
+        {
+            if (!ocean.IsOcean[i] && result.BaseMoisture[i] < MinLandBaseMoisture)
+                result.BaseMoisture[i] = MinLandBaseMoisture;
+        }
+
         progress?.Report(0.5f);
         ct.ThrowIfCancellationRequested();
 
@@ -78,7 +90,8 @@ public sealed class ClimateLayer : IWorldGenLayer<ClimateResult>
         ct.ThrowIfCancellationRequested();
 
         // --- Step 4: Per-tile seasonal profiles ---
-        ComputeSeasonalProfiles(ocean, cfg, w, h, ctx, result);
+        // maritime[] passed so coastal vs. continental tiles get different seasonal shapes.
+        ComputeSeasonalProfiles(ocean, cfg, w, h, ctx, result, maritime);
         progress?.Report(1.0f);
 
         return result;
@@ -321,11 +334,14 @@ public sealed class ClimateLayer : IWorldGenLayer<ClimateResult>
 
     private static void ComputeSeasonalProfiles(
         OceanResult ocean, ClimateConfig cfg,
-        int w, int h, WorldGenContext ctx, ClimateResult result)
+        int w, int h, WorldGenContext ctx, ClimateResult result,
+        float[] maritime)
     {
-        float tropHalf  = cfg.TropicalBandHalfWidth;
-        float stormLat  = cfg.StormCorridorNormalizedLat;
-        float stormHalf = cfg.StormCorridorHalfWidth;
+        float tropHalf   = cfg.TropicalBandHalfWidth;
+        float stormLat   = cfg.StormCorridorNormalizedLat;
+        float stormHalf  = cfg.StormCorridorHalfWidth;
+        float contThresh = cfg.ContinentalSeasonalThreshold;    // maritime < this → continental
+        float maritThresh = cfg.MaritimeSeasonalThreshold;      // maritime > this → maritime
 
         for (int y = 0; y < h; y++)
         {
@@ -342,26 +358,73 @@ public sealed class ClimateLayer : IWorldGenLayer<ClimateResult>
                 sbyte tSpring, tSummer, tAutumn, tWinter;
                 sbyte mSpring, mSummer, mAutumn, mWinter;
 
+                float mar = maritime[idx];
+
                 if (inTropical)
                 {
-                    // Tropical: small temperature variance, high moisture in summer
-                    tSpring = 2; tSummer = 4; tAutumn = 2; tWinter = -2;
+                    // Tropical: small temperature variance (~5-10°C annual range);
+                    // distinct wet/dry seasons dominate over temperature swings.
+                    // ±5-10 units ≈ ±1.5-3°C — correct for tropical regions.
+                    tSpring = 5; tSummer = 10; tAutumn = 5; tWinter = -5;
                     mSpring = 10; mSummer = 30; mAutumn = 15; mWinter = 5;
                 }
                 else if (inPolar)
                 {
-                    // Polar: extreme winter cold, cool summer
-                    tSpring = 5; tSummer = 15; tAutumn = -5; tWinter = -30;
-                    mSpring = 3; mSummer = 8; mAutumn = 3; mWinter = -5;
+                    // Polar: brutal winter, brief but warm summer.
+                    // Real annual range: 40-50°C → ~130-160 units, but we cap at
+                    // sbyte range (-128..127) and choose values that keep tile temps
+                    // non-negative in practice (base polar ≈ 10-50, winter clamps at 0).
+                    // Maritime polar (fjords, Iceland): moderated by ocean, less extreme
+                    // Continental polar (Siberia): extreme swings, drier winter
+                    if (mar > maritThresh)
+                    {
+                        tSpring = 8; tSummer = 28; tAutumn = -5; tWinter = -35;
+                        mSpring = 5; mSummer = 8; mAutumn = 5; mWinter = 0;
+                    }
+                    else if (mar < contThresh)
+                    {
+                        tSpring = 10; tSummer = 35; tAutumn = -8; tWinter = -48;
+                        mSpring = 3; mSummer = 12; mAutumn = 0; mWinter = -12;
+                    }
+                    else
+                    {
+                        tSpring = 8; tSummer = 30; tAutumn = -5; tWinter = -42;
+                        mSpring = 4; mSummer = 10; mAutumn = 3; mWinter = -8;
+                    }
                 }
                 else
                 {
-                    // Temperate: warm summer, cold winter
-                    tSpring = 5; tSummer = 15; tAutumn = 0; tWinter = -15;
-                    mSpring = 5; mSummer = -5; mAutumn = 10; mWinter = -5;
+                    // Temperate zone: maritime/continental distinction drives both
+                    // temperature amplitude and moisture seasonality.
+                    // Real annual range: maritime 10-20°C (32-65 units), continental 30-50°C (97-161 units).
+
+                    if (mar > maritThresh)
+                    {
+                        // Maritime temperate (Atlantic coasts, Pacific NW, western Europe):
+                        // moderate temperature swings, dry summers, wet autumns/winters.
+                        // ~15-20°C real range → 48-65 units; split asymmetrically (summer milder than winter).
+                        tSpring = 8; tSummer = 20; tAutumn = 5; tWinter = -18;
+                        mSpring = 5; mSummer = -10; mAutumn = 15; mWinter = 5;
+                    }
+                    else if (mar < contThresh)
+                    {
+                        // Continental interior (Great Plains, Central Asia, eastern Europe):
+                        // large temperature swings, summer convective rains, cold dry winters.
+                        // ~35-45°C real range → 113-145 units; split +38/-38 to stay symmetric.
+                        tSpring = 10; tSummer = 38; tAutumn = -5; tWinter = -38;
+                        mSpring = 10; mSummer = 15; mAutumn = 0; mWinter = -20;
+                    }
+                    else
+                    {
+                        // Semi-maritime transition zone (central France, Midwest US fringes):
+                        // intermediate swings, modest moisture variation.
+                        // ~25-30°C real range → 80-97 units.
+                        tSpring = 8; tSummer = 28; tAutumn = 2; tWinter = -25;
+                        mSpring = 5; mSummer = 0; mAutumn = 10; mWinter = -8;
+                    }
                 }
 
-                // Storm corridor gets autumn moisture bonus
+                // Storm corridor gets autumn moisture bonus regardless of zone
                 if (inStorm)
                 {
                     mAutumn += 20;
@@ -370,10 +433,10 @@ public sealed class ClimateLayer : IWorldGenLayer<ClimateResult>
 
                 result.SeasonalProfiles[idx] = new SeasonalProfile
                 {
-                    TempDeltaSpring   = tSpring,
-                    TempDeltaSummer   = tSummer,
-                    TempDeltaAutumn   = tAutumn,
-                    TempDeltaWinter   = tWinter,
+                    TempDeltaSpring     = tSpring,
+                    TempDeltaSummer     = tSummer,
+                    TempDeltaAutumn     = tAutumn,
+                    TempDeltaWinter     = tWinter,
                     MoistureDeltaSpring = mSpring,
                     MoistureDeltaSummer = mSummer,
                     MoistureDeltaAutumn = mAutumn,

@@ -535,6 +535,10 @@ lake_moisture_recharge            = 0.40  # Moisture carry level that lake tiles
 river_moisture_bonus              = 0.08  # Flat carry bonus added when sweep crosses a river tile. Stacks with existing carry.
                                            # 0 = pure horizontal sweep (bands strongly). 0.15-0.30 = angled, moisture crosses
                                            # latitude lines. Above 0.40 is unphysical. Works alongside moisture_noise_scale.
+continental_seasonal_threshold    = 0.25  # maritime influence below this → continental seasonal profile (wet summer, dry winter)
+maritime_seasonal_threshold       = 0.50  # maritime influence above this → maritime profile (dry summer, wet autumn/winter)
+min_seasonal_moisture_ratio       = 0.20  # seasonal CurrentMoisture floor: max(BaseMoisture + delta, BaseMoisture × this)
+                                          # prevents winter/drought from zeroing moisture on low-BaseMoisture tiles
 
 # =============================================================================
 # DISASTERS (runtime, Phase 5)
@@ -578,9 +582,10 @@ copper_density                = 0.04
 tin_density                   = 0.015
 precious_metal_density        = 0.005
 rare_resource_density         = 0.003
-fertility_recovery_per_year   = 1     # byte units per year
-post_fire_fertility_boost     = 30    # temporary fertility bonus after fire clears
-drought_fertility_penalty_per_season = 5
+fertility_recovery_per_year          = 3  # byte/year; was 1 — recovery must be faster than penalty (ratio was 1:5, now 1:1)
+post_fire_fertility_boost            = 30 # temporary fertility bonus after fire clears
+drought_fertility_penalty_per_season = 3  # byte/year; was 5 — balanced against recovery rate; tile can recover in ~drought-duration years
+drought_fertility_floor              = 5  # minimum fertility during drought; prevents permanent zero on marginal tiles
 
 # =============================================================================
 # BEASTS (lifecycle constants — species stats are in config/beasts.toml)
@@ -614,6 +619,7 @@ perception_radius         = 3
 health_per_season_heal    = 5
 combat_damage_base        = 20
 min_fertility_to_settle      = 100
+min_base_moisture_to_settle  = 15     # minimum BaseMoisture (0-255) required to found a settlement; prevents founding in climatically arid tiles
 deposit_settle_threshold     = 0.5    # min deposit value to settle despite low fertility
 deposit_score_multiplier     = 0.5    # how much deposit value boosts establish score
 route_score_multiplier       = 0.3    # how much route-position bonus boosts establish score

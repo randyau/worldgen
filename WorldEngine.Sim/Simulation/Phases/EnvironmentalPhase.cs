@@ -72,6 +72,12 @@ public sealed class EnvironmentalPhase
                 if (world.CurrentSeason == Season.Summer && IsMonsoonTile(tile, x, y, world, cfg))
                     moisture *= world.MonsoonIntensityMultiplier;
 
+                // Seasonal swings must not zero out tiles that have any base moisture.
+                // Large negative deltas on low-BaseMoisture tiles would collapse food/water
+                // formulas — enforce a relative minimum regardless of season or precipitation mult.
+                float minMoisture = tile.BaseMoisture * cfg.MinSeasonalMoistureRatio;
+                if (moisture < minMoisture) moisture = minMoisture;
+
                 tile.CurrentMoisture = (byte)Math.Clamp((int)moisture, 0, 255);
                 world.TileGrid.SetTile(coord, tile);
             }
@@ -576,8 +582,11 @@ public sealed class EnvironmentalPhase
 
                 if (inDrought)
                 {
-                    // Drought reduces fertility
-                    fertility = Math.Max(0, fertility - cfg.DroughtFertilityPenaltyPerSeason);
+                    // Drought reduces fertility but can't push below the floor.
+                    // Without a floor, long droughts permanently zero marginal tiles;
+                    // recovery at 3/year then takes decades on a tile near 0.
+                    fertility = Math.Max(cfg.DroughtFertilityFloor,
+                                         fertility - cfg.DroughtFertilityPenaltyPerSeason);
                 }
                 else
                 {

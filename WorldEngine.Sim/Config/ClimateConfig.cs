@@ -30,6 +30,27 @@ public class ClimateConfig
     public float SeaLevelEventThreshold { get; set; } = 0.1f;
     public float VolcanicDecayRate { get; set; } = 0.05f;
 
+    // World-gen: seasonal profile tuning
+    /// <summary>
+    /// Tiles with maritime influence below this threshold get a continental seasonal profile:
+    /// wet summers (convective rains), dry winters. Only applies to temperate zone.
+    /// Requires ContinentalRadiusTiles > 0 to produce meaningful maritime variation.
+    /// </summary>
+    public float ContinentalSeasonalThreshold { get; set; } = 0.25f;
+
+    /// <summary>
+    /// Tiles with maritime influence above this threshold get a maritime seasonal profile:
+    /// dry summers, wet autumns/winters. Temperate zone only.
+    /// </summary>
+    public float MaritimeSeasonalThreshold { get; set; } = 0.50f;
+
+    /// <summary>
+    /// In the seasonal climate phase, CurrentMoisture is clamped to at least this fraction
+    /// of BaseMoisture, preventing any season from zeroing out moisture on marginal tiles.
+    /// 0.2 = even in the driest winter, you get ≥ 20% of your base moisture.
+    /// </summary>
+    public float MinSeasonalMoistureRatio { get; set; } = 0.20f;
+
     // World-gen: moisture transport
     /// <summary>
     /// Fraction of moisture retained per tile as wind sweeps inland (0–1).

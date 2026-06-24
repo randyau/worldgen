@@ -90,6 +90,7 @@ public static class UtilityScorer
             // Until food import mechanics exist, block founding on truly barren tiles.
             bool  worthSettle = !inRuinCooldown
                               && tileFert.Fertility > 0
+                              && tileFert.BaseMoisture >= cfg.MinBaseMoistureToSettle
                               && (effectiveFertility >= cfg.MinFertilityToSettle
                                   || depositVal > cfg.DepositSettleThreshold);
             if (worthSettle)

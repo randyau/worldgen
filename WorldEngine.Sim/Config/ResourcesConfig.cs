@@ -9,7 +9,10 @@ public class ResourcesConfig
     public float RareResourceDensity  { get; set; } = 0.003f;
 
     // Phase 5 — resource dynamics
-    public byte FertilityRecoveryPerYear { get; set; } = 1;
-    public byte PostFireFertilityBoost { get; set; } = 30;
-    public byte DroughtFertilityPenaltyPerSeason { get; set; } = 5;
+    public byte FertilityRecoveryPerYear           { get; set; } = 3;   // was 1; faster recovery reduces drought's long tail
+    public byte PostFireFertilityBoost             { get; set; } = 30;
+    public byte DroughtFertilityPenaltyPerSeason   { get; set; } = 3;   // was 5; penalty:recovery ratio was 5:1, now ~1:1
+    // Hard floor: drought cannot reduce tile fertility below this value.
+    // Prevents marginal tiles from reaching 0 (which collapses food even after recovery).
+    public byte DroughtFertilityFloor              { get; set; } = 5;
 }
