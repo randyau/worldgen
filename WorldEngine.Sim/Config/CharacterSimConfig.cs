@@ -41,7 +41,7 @@ public sealed class CharacterSimConfig
     public int   PerceptionRadius       { get; set; } = 3;
     public int   HealthPerSeasonHeal    { get; set; } = 5;
     public int   CombatDamageBase       { get; set; } = 20;
-    public int   MinFertilityToSettle    { get; set; } = 100;
+    public int   MinFertilityToSettle    { get; set; } = 60;
     // Minimum base moisture (0-255) required to found a settlement.
     // Prevents founding on tiles that are climatically too dry to sustain a population.
     // Deposit-rich founding is still allowed below this threshold (miners live there anyway).
@@ -85,9 +85,9 @@ public sealed class CharacterSimConfig
     // 0.5 = "half the resources are claimed" — discourages but doesn't block high-fertility tiles.
     public float HinterlandDrainFactor       { get; set; } = 0.5f;
     // Base cooldown years between same-civ settlements; scales down with civ population
-    public int   BaseFoundingCooldownYears   { get; set; } = 20;
+    public int   BaseFoundingCooldownYears   { get; set; } = 8;
     // Minimum cooldown years regardless of population (a civ can't expand instantly even if huge)
-    public int   MinFoundingCooldownYears    { get; set; } = 4;
+    public int   MinFoundingCooldownYears    { get; set; } = 2;
     // Population scale factor: cooldown halves when civ population reaches this value
     public int   FoundingCooldownPopScale    { get; set; } = 2000;
 
@@ -109,7 +109,7 @@ public sealed class CharacterSimConfig
     public float WanderlustBonus             { get; set; } = 0.4f; // added to travel score at max wanderlust
     // Role dampeners: multiply the wanderlust bonus before applying
     public float WanderlustFounderMultiplier { get; set; } = 0.15f; // settlement founders (rulers/kings) rarely leave
-    public float WanderlustMemberMultiplier  { get; set; } = 0.5f;  // civ members wander occasionally
+    public float WanderlustMemberMultiplier  { get; set; } = 0.7f;  // civ members wander more to encourage expansion
     // Curiosity floor: even Curiosity=0 chars get this fraction of their role's wanderlust
     public float WanderlustCuriosityFloor    { get; set; } = 0.3f;
 

@@ -2,7 +2,7 @@ namespace WorldEngine.Sim.Config;
 
 public sealed class SettlementConfig
 {
-    public float PopGrowthRate            { get; set; } = 2.0f;
+    public float PopGrowthRate            { get; set; } = 0.5f;
     public float PopDecayRate             { get; set; } = 0.05f;
     // Decay multiplier applied per unit of food deficit (foodRatio < 1.0)
     // At full shortage (ratio=0.6) this adds 0.4 × StarvationDecayRate to per-tick decay

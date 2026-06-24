@@ -121,7 +121,8 @@ public sealed class ResourcePressurePhase
             int   idx        = coord.X + coord.Y * w;
             byte  effTemp    = TileTemperature.Effective(tile, idx, world);
             float tempFactor = GrowingSeasonFactor(effTemp, _cfg);
-            float foodContrib = (tile.Fertility / 255f) * effectiveMoisture * tempFactor;
+            float biomeMult  = BiomeFoodMultiplier((BiomeType)tile.BiomeType, _cfg);
+            float foodContrib = (tile.Fertility / 255f) * effectiveMoisture * tempFactor * biomeMult;
             Accumulate(supply, "food", foodContrib);
 
             // Water: moisture alone (wells, streams, rainfall access)
@@ -180,6 +181,41 @@ public sealed class ResourcePressurePhase
         // Linear ramp from 1.0 at OptimalHigh to HeatStressFactor at 255
         float t = (float)(effTemp - cfg.OptimalTemperatureHigh) / (255 - cfg.OptimalTemperatureHigh);
         return 1f - t * (1f - cfg.HeatStressFactor);
+    }
+
+    /// <summary>
+    /// Per-biome food production multiplier. Reflects farming suitability: flat grassland
+    /// and tropical forest are ideal; tundra and desert are hostile to agriculture.
+    /// Scaled by cfg.BiomeFoodBonusScale so the whole system can be dampened in config.
+    /// </summary>
+    private static float BiomeFoodMultiplier(BiomeType biome, ResourcePressureConfig cfg)
+    {
+        float raw = biome switch
+        {
+            // Excellent farmland — flat, fertile, well-watered
+            BiomeType.Grassland          => 2.0f,
+            BiomeType.Plains             => 1.6f,
+            // Tropical: year-round growing season, high rainfall
+            BiomeType.TropicalRainforest => 2.5f,
+            BiomeType.Savanna            => 1.2f,
+            // Temperate forests: cleared land is excellent; foraging supplements
+            BiomeType.TemperateForest    => 1.8f,
+            // Cold biomes: short growing season; meaningful but constrained
+            BiomeType.BorealForest       => 0.9f,
+            BiomeType.Tundra             => 0.5f,
+            // Water-adjacent: fishing compensates for poor tillage
+            BiomeType.Swamp              => 1.1f,
+            BiomeType.Beach              => 0.8f,
+            // Rugged terrain: limited flat land; terracing is expensive
+            BiomeType.Mountain           => 0.7f,
+            BiomeType.HighMountain       => 0.3f,
+            // Hostile: minimal viable agriculture
+            BiomeType.Desert             => 0.3f,
+            BiomeType.Volcanic           => 0.8f, // fertile ash soil when not actively erupting
+            _                            => 1.0f,
+        };
+        // Lerp between 1.0 (no bonus) and raw at the configured scale
+        return 1f + (raw - 1f) * cfg.BiomeFoodBonusScale;
     }
 
     /// <summary>

@@ -627,7 +627,7 @@ softmax_temp_max          = 2.0
 perception_radius         = 3
 health_per_season_heal    = 5
 combat_damage_base        = 20
-min_fertility_to_settle      = 100
+min_fertility_to_settle      = 60   # reduced from 100 — more tiles qualify for expansion
 min_base_moisture_to_settle  = 15     # minimum BaseMoisture (0-255) required to found a settlement; prevents founding in climatically arid tiles
 deposit_settle_threshold     = 0.5    # min deposit value to settle despite low fertility
 deposit_score_multiplier     = 0.5    # how much deposit value boosts establish score
@@ -648,8 +648,8 @@ ally_disaster_aid_intensity   = 0.3   # (reserved for future goal seeding; merch
 max_war_duration_years        = 10    # wars auto-expire after this many years if not renewed by combat; close-proximity wars now end via conquest
 
 hinterland_drain_factor          = 0.5   # effective fertility multiplier inside same-civ hinterland (0.5 = half claimed)
-base_founding_cooldown_years     = 12    # base cooldown between same-civ settlements (scales down with pop)
-min_founding_cooldown_years      = 4     # floor — even the largest civ can't expand instantly
+base_founding_cooldown_years     = 8     # base cooldown between same-civ settlements (scales down with pop)
+min_founding_cooldown_years      = 2     # floor — even the largest civ can't expand instantly
 founding_cooldown_pop_scale      = 2000  # civ pop at which cooldown halves (20y→10y, 10y→5y, etc.)
 civ_birth_min_pop            = 30
 civ_birth_chance_per_season = 0.02
@@ -667,7 +667,7 @@ wanderlust_max_ticks            = 8    # full bonus after 2 seasons (half a year
 wanderlust_bonus                = 0.4  # travel score bonus at max wanderlust; ~0.15 base → ~0.55 for free agents
 # Role dampeners — multiply wanderlust_bonus; rulers barely wander, members occasionally, free agents fully
 wanderlust_founder_multiplier   = 0.15 # settlement founders (kings, rulers) — 15% of base wanderlust
-wanderlust_member_multiplier    = 0.5  # civ members with settled jobs — 50% of base wanderlust
+wanderlust_member_multiplier    = 0.7  # civ members — 70% of base wanderlust (was 0.5; raised to encourage expansion)
 # Curiosity scales from this floor (Curiosity=0) up to 1.0 (Curiosity=1)
 wanderlust_curiosity_floor      = 0.3  # even the least curious chars have 30% of their role's wanderlust
 # Ancestry / cultural passive drains — applied per-tick when different-civ chars share a tile
@@ -699,7 +699,8 @@ tier2_needs_decay_status    = 0.04
 # =============================================================================
 
 [settlement]
-pop_growth_rate             = 2.0   # population added per season per fertility unit (fertility/255 × this)
+pop_growth_rate             = 0.5   # population added per season per fertility unit (fertility/255 × this)
+                                    # Lower is intentional: fast growth causes Malthusian starvation with no surplus for stores
 pop_decay_rate              = 0.05  # population lost per season unconditionally (hunger/disease baseline)
 starvation_decay_rate       = 0.3   # extra decay per unit food deficit when food < shortage_threshold
 famine_decay_rate           = 0.8   # extra decay per unit food deficit when food < crisis_threshold
@@ -729,9 +730,10 @@ heat_stress_factor          = 0.7  # multiplier at extreme heat (255); tropical-
 
 # Resource stores — settlements accumulate persistent reserves for all resources
 # Vital resources (food, water) draw from stores during shortages; wealth/stockpile resources just accumulate.
-store_accumulate_rate              = 0.4     # fraction of per-tick surplus that goes into stores (vital resources)
-store_max_seasons_per_k_pop        = 2.0    # max vital store depth in seasons per 1000 population
-store_min_seasons                  = 0.5    # hard floor on vital store capacity
+biome_food_bonus_scale             = 1.0    # 0=all biomes equal, 1.0=full biome differentiation (grassland 2x, desert 0.3x)
+store_accumulate_rate              = 0.6     # fraction of per-tick surplus that goes into stores (vital resources)
+store_max_seasons_per_k_pop        = 4.0    # max vital store depth in seasons per 1000 population
+store_min_seasons                  = 2.0    # hard floor on vital store capacity; small settlements buffer 2 seasons
 # Per-resource spoilage rates (fraction lost per tick regardless of draws)
 food_spoilage_rate                 = 0.002  # ~500 ticks (35y) to fully spoil if never drawn
 water_spoilage_rate                = 0.010  # cisterns evaporate faster; settlements need continuous rainfall

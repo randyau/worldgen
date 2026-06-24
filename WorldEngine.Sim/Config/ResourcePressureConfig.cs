@@ -22,13 +22,18 @@ public sealed class ResourcePressureConfig
     public byte  OptimalTemperatureHigh      { get; set; } = 200;  // ramp 1→heat_floor between this and 255
     public float HeatStressFactor            { get; set; } = 0.7f; // multiplier at extreme heat (255)
 
+    // ─── Biome farming bonus ─────────────────────────────────────────────────
+    // Global scale applied to all per-biome food multipliers. 1.0 = full effect.
+    // Increase to make biome differences matter more; 0 = all biomes produce equally.
+    public float BiomeFoodBonusScale            { get; set; } = 1.0f;
+
     // ─── Resource stores ─────────────────────────────────────────────────────
     // Fraction of per-tick surplus that goes into stores (rest consumed immediately).
-    public float StoreAccumulateRate            { get; set; } = 0.4f;
+    public float StoreAccumulateRate            { get; set; } = 0.6f;
 
     // Vital resources (food/water): max store depth in "seasons of supply" scaled with population.
-    public float StoreMaxSeasonsPerKPop         { get; set; } = 2.0f;
-    public float StoreMinSeasons                { get; set; } = 0.5f;
+    public float StoreMaxSeasonsPerKPop         { get; set; } = 4.0f;
+    public float StoreMinSeasons                { get; set; } = 2.0f;
 
     // Per-resource spoilage rates (fraction lost per tick regardless of draws).
     public float FoodSpoilageRate               { get; set; } = 0.002f;  // ~500 ticks to fully spoil
