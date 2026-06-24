@@ -52,10 +52,18 @@ public sealed class CharacterSimConfig
     public float AllyDisasterAidIntensity    { get; set; } = 0.3f;
 
     // ─── Ruins ────────────────────────────────────────────────────────────────
-    // Score penalty (0–1) applied to EstablishSettlement when the tile has a ruin
+    // Hard cooldown: a ruined tile cannot be settled at all for this many years after destruction.
+    // Deposits cannot override this — the site is simply too dangerous/cursed to settle immediately.
+    public int   RuinCooldownYears        { get; set; } = 10;
+    // Score penalty (0–1) applied to EstablishSettlement after the hard cooldown expires
     public float RuinFoundingPenalty      { get; set; } = 0.4f;
     // Years for the penalty to halve (exponential decay); 0 = penalty never decays
     public float RuinDecayHalfLifeYears   { get; set; } = 50f;
+
+    // ─── War ──────────────────────────────────────────────────────────────────
+    // Wars auto-expire after this many years if not renewed by a battle/raid.
+    // Prevents permanent inter-civ hostility and the rivalry accumulation it causes.
+    public int MaxWarDurationYears        { get; set; } = 20;
 
     // ─── Effective fertility multiplier for tiles already inside a same-civ settlement's hinterland.
     // 0.5 = "half the resources are claimed" — discourages but doesn't block high-fertility tiles.

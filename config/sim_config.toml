@@ -618,7 +618,8 @@ deposit_settle_threshold     = 0.5    # min deposit value to settle despite low 
 deposit_score_multiplier     = 0.5    # how much deposit value boosts establish score
 route_score_multiplier       = 0.3    # how much route-position bonus boosts establish score
 # Ruins — founding score penalty for building on a destroyed or abandoned settlement site
-ruin_founding_penalty         = 0.4   # max score penalty (0–1); high deposits or fertility can overcome it
+ruin_cooldown_years           = 10    # hard block: cannot settle a ruined tile for this many years (deposit override disabled)
+ruin_founding_penalty         = 0.4   # score penalty after cooldown expires (0–1); high deposits or fertility can still overcome it
 ruin_decay_half_life_years    = 50    # years for the penalty to halve (exponential decay)
 
 # Alliance system
@@ -629,6 +630,7 @@ alliance_war_trust_drain      = 0.4   # trust drained from aggressor to target's
 enemy_of_ally_trust_drain     = 0.15  # trust drain on C when A allies B who is already allied with C's rival
 ally_protect_goal_intensity   = 0.6   # priority of the Protect goal seeded on allies when their ally is attacked
 ally_disaster_aid_intensity   = 0.3   # (reserved for future goal seeding; merchant routing handles aid currently)
+max_war_duration_years        = 20    # wars auto-expire after this many years if not renewed by combat
 
 hinterland_drain_factor          = 0.5   # effective fertility multiplier inside same-civ hinterland (0.5 = half claimed)
 base_founding_cooldown_years     = 20    # base cooldown between same-civ settlements (scales down with pop)

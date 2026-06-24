@@ -80,10 +80,15 @@ public static class UtilityScorer
             float hinterlandFactor = HinterlandFactor(c.Location, c.Identity.CivId, world, cfg);
             float effectiveFertility = tileFert.Fertility * hinterlandFactor;
             float depositVal  = ComputeDepositValue(c.Location, world);
+            // Hard ruin cooldown: a recently destroyed site is too dangerous to settle,
+            // regardless of how valuable the deposits are.
+            bool inRuinCooldown = world.Ruins.TryGetValue(c.Location, out var ruin)
+                && world.CurrentYear - ruin.DestroyedYear < cfg.RuinCooldownYears;
             // Deposit override works regardless of hinterland — a rich mine is worth settling
             // even if an existing settlement already works the surrounding farmland.
-            bool  worthSettle = effectiveFertility >= cfg.MinFertilityToSettle
-                              || depositVal > cfg.DepositSettleThreshold;
+            bool  worthSettle = !inRuinCooldown
+                              && (effectiveFertility >= cfg.MinFertilityToSettle
+                                  || depositVal > cfg.DepositSettleThreshold);
             if (worthSettle)
             {
                 float routeBonus = ComputeRouteBonus(c.Location, world);

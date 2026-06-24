@@ -206,8 +206,9 @@ public static class CivTracker
         bool wasAllied = rel.IsAlly;
         world.Relationships.Upsert(rel with
         {
-            Trust = Math.Min(rel.Trust - 0.3f, -0.3f),
-            Flags = (rel.Flags & ~RelationshipFlags.IsAlly) | RelationshipFlags.IsAtWar | RelationshipFlags.IsRival
+            Trust            = Math.Min(rel.Trust - 0.3f, -0.3f),
+            Flags            = (rel.Flags & ~RelationshipFlags.IsAlly) | RelationshipFlags.IsAtWar | RelationshipFlags.IsRival,
+            WarDeclaredYear  = world.CurrentYear
         });
 
         if (wasAllied)
@@ -357,30 +358,79 @@ public static class CivTracker
     // ─── Annual diplomacy maintenance ─────────────────────────────────────────
 
     /// <summary>
-    /// Called once per year. Dissolves alliances where trust has fallen below the floor.
+    /// Called once per year (Spring).
+    /// 1. Dissolves alliances where trust has fallen below the floor.
+    /// 2. Expires wars that have lasted beyond MaxWarDurationYears.
+    /// 3. Prunes relationship edges where both characters are dead (keeps graph lean).
     /// </summary>
     public static void RunAnnualDiplomacy(WorldState world, List<PendingEvent> pending)
     {
-        var cfg      = world.SimConfig.Character;
-        var toBreak  = world.Relationships.AllEdges
-            .Where(e => e.IsAlly && e.Trust < cfg.AllianceTrustFloor)
-            .ToList();
+        var cfg       = world.SimConfig.Character;
+        var toProcess = world.Relationships.AllEdges.ToList(); // snapshot before mutations
 
-        foreach (var edge in toBreak)
+        foreach (var edge in toProcess)
         {
-            var current = world.Relationships.Get(edge.From, edge.To);
-            if (current is null || !current.IsAlly) continue;
+            bool aAlive = world.GetEntity(edge.From) is Tier1Character;
+            bool bAlive = world.GetEntity(edge.To)   is Tier1Character;
 
-            world.Relationships.Upsert(current with
+            // 1. Prune stale edges where both chars are dead
+            if (!aAlive && !bAlive)
             {
-                Flags = current.Flags & ~RelationshipFlags.IsAlly
-            });
+                world.Relationships.Remove(edge.From, edge.To);
+                continue;
+            }
 
-            // Only fire the event if both characters are still alive (dead chars leave stale edges)
-            if (world.GetEntity(edge.From) is not Tier1Character a) continue;
-            if (world.GetEntity(edge.To)   is not Tier1Character b) continue;
-            FireAllianceBroken(a, b, "trust_decay", world, pending);
+            // 2. Alliance dissolution on trust decay
+            if (edge.IsAlly && edge.Trust < cfg.AllianceTrustFloor)
+            {
+                world.Relationships.Upsert(edge with
+                {
+                    Flags = edge.Flags & ~RelationshipFlags.IsAlly
+                });
+
+                if (aAlive && bAlive &&
+                    world.GetEntity(edge.From) is Tier1Character a &&
+                    world.GetEntity(edge.To)   is Tier1Character b)
+                    FireAllianceBroken(a, b, "trust_decay", world, pending);
+            }
+
+            // 3. War expiry — auto-peace after MaxWarDurationYears
+            if (edge.IsAtWar && edge.WarDeclaredYear > 0
+                && world.CurrentYear - edge.WarDeclaredYear >= cfg.MaxWarDurationYears)
+            {
+                world.Relationships.Upsert(edge with
+                {
+                    Flags = edge.Flags & ~RelationshipFlags.IsAtWar,
+                    // Small trust recovery — tensions ease after peace
+                    Trust = Math.Clamp(edge.Trust + 0.1f, -1f, 1f),
+                    WarDeclaredYear = 0
+                });
+
+                if (aAlive && bAlive &&
+                    world.GetEntity(edge.From) is Tier1Character wa &&
+                    world.GetEntity(edge.To)   is Tier1Character wb)
+                    FireWarEnded(wa, wb, "expired", world, pending);
+            }
         }
+    }
+
+    private static void FireWarEnded(
+        Tier1Character a, Tier1Character b, string reason,
+        WorldState world, List<PendingEvent> pending)
+    {
+        var payload = JsonSerializer.Serialize(new
+        {
+            characterAId   = a.Id.Value,
+            characterAName = a.Identity.Name,
+            characterBId   = b.Id.Value,
+            characterBName = b.Identity.Name,
+            declarerCiv    = a.Identity.CivId.Value,
+            targetCiv      = b.Identity.CivId.Value,
+            reason,
+            year = world.CurrentYear
+        });
+        pending.Add(new PendingEvent(EventType.WarEnded, a.Location, null, payload,
+            new[] { a.Id.Value, b.Id.Value }));
     }
 
     private static void FireAllianceBroken(

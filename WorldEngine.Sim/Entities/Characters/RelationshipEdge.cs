@@ -24,4 +24,7 @@ public sealed record RelationshipEdge(
     public bool IsAlly  => Flags.HasFlag(RelationshipFlags.IsAlly);
     public bool IsRival => Flags.HasFlag(RelationshipFlags.IsRival);
     public bool IsAtWar => Flags.HasFlag(RelationshipFlags.IsAtWar);
+
+    // Year the war was declared — 0 if not currently at war; used for auto-expiry
+    public int WarDeclaredYear { get; init; } = 0;
 }
