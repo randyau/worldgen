@@ -5,6 +5,7 @@ using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities.Characters;
 using WorldEngine.Sim.Tiles;
 using WorldEngine.Sim.World;
+using S = WorldEngine.Sim.Simulation.SimRngSalts;
 
 namespace WorldEngine.Sim.Simulation.Phases;
 
@@ -17,11 +18,6 @@ public sealed class PopulationDynamicsPhase
     private readonly SettlementConfig _cfg;
     private readonly SimConfig _simCfg;
 
-    private const int SaltCrystal          = 950;
-    private const int SaltDiseaseOutbreak  = 810;
-    private const int SaltDiseaseSpread    = 811;
-    private const int SaltDiseaseRecovery  = 812;
-    private const int SaltWildlife         = 820;
     // 4 seasons × 4 ticks per season = 16 ticks per in-game year
     private const int TicksPerYear = 16;
 
@@ -181,7 +177,7 @@ public sealed class PopulationDynamicsPhase
 
             int ageRange = _simCfg.Character.Tier2MaxAgeSeasonsMax - _simCfg.Character.Tier2MaxAgeSeasonsMin;
             int maxAge   = _simCfg.Character.Tier2MaxAgeSeasonsMin
-                         + (int)(WorldRng.FloatAt(world.WorldSeed, world.CurrentYear, threshold, 0, SaltCrystal) * ageRange);
+                         + (int)(WorldRng.FloatAt(world.WorldSeed, world.CurrentYear, threshold, 0, S.PopCrystallise) * ageRange);
             var specialist = new Tier2Character(
                 EntityId.New(), tile, name,
                 personality, livelihood,
@@ -250,7 +246,7 @@ public sealed class PopulationDynamicsPhase
                 bool recover = yearsInfected >= _cfg.DiseaseMaxDurationYears;
                 if (!recover)
                 {
-                    float roll = WorldRng.FloatAt(world.WorldSeed, year, coord.X * 31 + coord.Y, 0, SaltDiseaseRecovery);
+                    float roll = WorldRng.FloatAt(world.WorldSeed, year, coord.X * 31 + coord.Y, 0, S.PopDiseaseRecovery);
                     recover = roll < _cfg.DiseaseRecoveryChance;
                 }
                 if (recover) { toRecover.Add(coord); continue; }
@@ -261,7 +257,7 @@ public sealed class PopulationDynamicsPhase
                     if (nCoord == coord || nStub.IsInfected || toInfect.Contains(nCoord)) continue;
                     int dx = coord.X - nCoord.X, dy = coord.Y - nCoord.Y;
                     if (dx * dx + dy * dy > _cfg.DiseaseSpreadRadius * _cfg.DiseaseSpreadRadius) continue;
-                    float roll = WorldRng.FloatAt(world.WorldSeed, year, nCoord.X * 31 + nCoord.Y, 1, SaltDiseaseSpread);
+                    float roll = WorldRng.FloatAt(world.WorldSeed, year, nCoord.X * 31 + nCoord.Y, 1, S.PopDiseaseSpread);
                     if (roll < _cfg.DiseaseSpreadChance) toInfect.Add(nCoord);
                 }
             }
@@ -271,7 +267,7 @@ public sealed class PopulationDynamicsPhase
                 if (stub.Population < _cfg.DiseaseMinPop) continue;
                 float density        = Math.Min(1f, (float)stub.Population / Math.Max(1, stub.CarryingCapacity));
                 float outbreakChance = _cfg.DiseaseBaseChance * (1f + density * _cfg.DiseaseDensityMult);
-                float roll = WorldRng.FloatAt(world.WorldSeed, year, coord.X * 31 + coord.Y, 0, SaltDiseaseOutbreak);
+                float roll = WorldRng.FloatAt(world.WorldSeed, year, coord.X * 31 + coord.Y, 0, S.PopDiseaseOutbreak);
                 if (roll < outbreakChance) toInfect.Add(coord);
             }
         }
@@ -310,7 +306,7 @@ public sealed class PopulationDynamicsPhase
             float biomeMult   = BiomeWildlifeRisk(biome);
             float sizeDefense = Math.Min(1f, (float)stub.Population / _cfg.WildlifeDefensePopScale);
             float attackChance = _cfg.WildlifeAttackBaseChance * biomeMult * (1f - sizeDefense * 0.8f);
-            float roll = WorldRng.FloatAt(world.WorldSeed, year, coord.X * 31 + coord.Y, 0, SaltWildlife);
+            float roll = WorldRng.FloatAt(world.WorldSeed, year, coord.X * 31 + coord.Y, 0, S.PopWildlife);
             if (roll >= attackChance) continue;
 
             int damage = Math.Max(1, (int)(stub.Population * _cfg.WildlifeAttackDamage * (1f - sizeDefense)));

@@ -5,6 +5,7 @@ using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities;
 using WorldEngine.Sim.Entities.Characters;
 using WorldEngine.Sim.World;
+using S = WorldEngine.Sim.Simulation.SimRngSalts;
 
 namespace WorldEngine.Sim.Simulation.Phases;
 
@@ -16,10 +17,6 @@ public sealed class Tier2BehaviorPhase
 {
     private readonly CharacterSimConfig _cfg;
     private readonly SimConfig _simCfg;
-
-    private const int SaltCrystal    = 900;
-    private const int SaltScholar    = 910;
-    private const int SaltMerchant   = 920;
 
     public Tier2BehaviorPhase(SimConfig cfg)
     {
@@ -128,7 +125,7 @@ public sealed class Tier2BehaviorPhase
     private void RunMerchant(Tier2Character c, WorldState world, List<PendingEvent> pending)
     {
         if (world.Settlements.Count < 2) return;
-        float r = world.GetRandomFloat(c.Id, SaltMerchant);
+        float r = world.GetRandomFloat(c.Id, S.T2Merchant);
         if (r > 0.15f) return;
 
         var homeTile = c.Livelihood.SettlementTile;
@@ -235,14 +232,14 @@ public sealed class Tier2BehaviorPhase
 
     private void RunScholar(Tier2Character c, WorldState world, List<PendingEvent> pending)
     {
-        float r = world.GetRandomFloat(c.Id, SaltScholar);
+        float r = world.GetRandomFloat(c.Id, S.T2Scholar);
         float discoveryChance = _cfg.ScholarDiscoveryChance * c.Personality.Rationality;
         if (r > discoveryChance) return;
 
         // Weighted by personality — rational scholars lean toward hard sciences,
         // spiritual ones toward philosophy, curious ones anywhere.
         int typeCount = Enum.GetValues<DiscoveryType>().Length;
-        int typeIndex = (int)(world.GetRandomFloat(c.Id, SaltScholar + 1) * typeCount) % typeCount;
+        int typeIndex = (int)(world.GetRandomFloat(c.Id, S.T2Scholar + 1) * typeCount) % typeCount;
         var discovery = (DiscoveryType)typeIndex;
         string bonusKey = DiscoveryBonusKey[typeIndex];
 
@@ -326,7 +323,7 @@ public sealed class Tier2BehaviorPhase
         Tier2Character c, WorldState world, List<PendingEvent> pending, long tick)
     {
         if (c.Personality.Ambition < 0.8f || c.Needs.Status < 0.7f) return;
-        float r = world.GetRandomFloat(c.Id, SaltCrystal);
+        float r = world.GetRandomFloat(c.Id, S.T2General);
         if (r > _cfg.Tier2CrystalChance) return;
 
         c.IsAlive = false; // remove from Tier2 list

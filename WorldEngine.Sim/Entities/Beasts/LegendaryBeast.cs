@@ -9,21 +9,16 @@ namespace WorldEngine.Sim.Entities.Beasts;
 /// significant), not necessarily to IsLegendary which marks a legendary specimen.
 /// All beasts — from a common wolf to a Dragon — are instances of this class.
 /// </summary>
-public sealed class LegendaryBeast : IEntity
+public sealed class LegendaryBeast : SimEntity
 {
-    public EntityId Id { get; }
-    public EntityKind Kind => EntityKind.LegendaryBeast;
-    public TileCoord Location { get; internal set; }
+    public override EntityKind Kind => EntityKind.LegendaryBeast;
     public TileCoord HomeTile { get; }
-    public bool IsAlive { get; internal set; } = true;
 
     public string SpeciesId { get; }
     public string Name { get; }
     public bool IsLegendary { get; }
 
     // Combat stats
-    public int MaxHealth { get; }
-    public int Health { get; internal set; }
     public int Strength { get; }
     public int Speed { get; }
     public float Aggression { get; }
@@ -35,8 +30,6 @@ public sealed class LegendaryBeast : IEntity
     public float SafetyNeed { get; internal set; } = 1.0f;
 
     // Lifecycle
-    public int AgeSeason { get; internal set; }
-    public int MaxAgeSeason { get; }
     public float FoodDepletion { get; }
     public float FoodFromHunt { get; }
     public float FoodFromGraze { get; }
@@ -67,21 +60,17 @@ public sealed class LegendaryBeast : IEntity
         float reproductionFoodThreshold,
         bool hibernates,
         bool prefersCompany)
+        : base(id, location, maxHealth, maxAgeSeason)
     {
-        Id                        = id;
         SpeciesId                 = speciesId;
         Name                      = name;
-        Location                  = location;
         HomeTile                  = location;
         IsLegendary               = isLegendary;
-        MaxHealth                 = maxHealth;
-        Health                    = maxHealth;
         Strength                  = strength;
         Speed                     = speed;
         Aggression                = aggression;
         TerritoryRadius           = territoryRadius;
         Abilities                 = abilities;
-        MaxAgeSeason              = maxAgeSeason;
         FoodDepletion             = foodDepletion;
         FoodFromHunt              = foodFromHunt;
         FoodFromGraze             = foodFromGraze;
@@ -92,7 +81,12 @@ public sealed class LegendaryBeast : IEntity
         PrefersCompany            = prefersCompany;
     }
 
-    public IEnumerable<ICommand> EmitCommands(IWorldStateReadOnly world, SimPhase phase)
+    protected override string SnapshotName         => Name;
+    protected override string SnapshotSpeciesId    => SpeciesId;
+    protected override bool   SnapshotIsLegendary  => IsLegendary;
+    protected override float  SnapshotFoodFraction => FoodNeed;
+
+    public override IEnumerable<ICommand> EmitCommands(IWorldStateReadOnly world, SimPhase phase)
     {
         if (!IsAlive || phase != SimPhase.EntityBehavior) yield break;
 
@@ -163,19 +157,6 @@ public sealed class LegendaryBeast : IEntity
 
         yield return new Rest(Id);
     }
-
-    public EntitySnapshot ToSnapshot() => new(
-        Id:            Id,
-        Kind:          Kind,
-        Name:          Name,
-        SpeciesId:     SpeciesId,
-        IsLegendary:   IsLegendary,
-        Location:      Location,
-        HealthFraction: MaxHealth > 0 ? (float)Health / MaxHealth : 0f,
-        FoodFraction:  FoodNeed,
-        AgeSeason:     AgeSeason,
-        IsAlive:       IsAlive
-    );
 
     // ─── Behaviour helpers ─────────────────────────────────────────────────
 

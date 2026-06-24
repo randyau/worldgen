@@ -1,4 +1,5 @@
 using WorldEngine.Sim.Core;
+using WorldEngine.Sim.Entities;
 using WorldEngine.Sim.World;
 
 namespace WorldEngine.Sim.Entities.Characters;
@@ -7,31 +8,22 @@ namespace WorldEngine.Sim.Entities.Characters;
 /// A named Tier 1 character — hero, warlord, or ruler.
 /// Makes utility-scored decisions each season via EmitCommands.
 /// </summary>
-public sealed class Tier1Character : IEntity
+public sealed class Tier1Character : SimEntity
 {
-    public EntityId Id    { get; }
-    public EntityKind Kind => EntityKind.Tier1Character;
-    public TileCoord Location { get; internal set; }
-    public bool IsAlive { get; internal set; } = true;
+    public override EntityKind Kind => EntityKind.Tier1Character;
 
     // Stable traits
     public PersonalityVector Personality { get; }
     public AptitudeVector    Aptitude    { get; }
 
     // Dynamic
-    public SkillVector Skills   { get; internal set; }
-    public NeedsVector Needs    { get; internal set; }
-    public IdentityData Identity { get; internal set; }
-    public List<GoalData> Goals { get; } = [];
-
-    // Health / aging
-    public int Health    { get; internal set; }
-    public int MaxHealth { get; }
-    public int AgeSeason { get; internal set; }
-    public int MaxAgeSeason { get; }
+    public SkillVector   Skills   { get; internal set; }
+    public NeedsVector   Needs    { get; internal set; }
+    public IdentityData  Identity { get; internal set; }
+    public List<GoalData> Goals   { get; } = [];
 
     // Disease state — set by CharacterBehaviorPhase on exposure to infected settlements
-    public bool IsInfected      { get; internal set; }
+    public bool IsInfected       { get; internal set; }
     public int  InfectedSinceYear { get; internal set; }
 
     // Emotional state — continuous wellbeing score: -1 (spiraling) … +1 (flourishing)
@@ -49,59 +41,47 @@ public sealed class Tier1Character : IEntity
         IdentityData identity,
         int maxHealth,
         int maxAgeSeason)
+        : base(id, location, maxHealth, maxAgeSeason)
     {
-        Id           = id;
-        Location     = location;
-        Personality  = personality;
-        Aptitude     = aptitude;
-        Skills       = skills;
-        Needs        = NeedsVector.Default;
-        Identity     = identity;
-        MaxHealth    = maxHealth;
-        Health       = maxHealth;
-        MaxAgeSeason = maxAgeSeason;
+        Personality = personality;
+        Aptitude    = aptitude;
+        Skills      = skills;
+        Needs       = NeedsVector.Default;
+        Identity    = identity;
     }
 
-    public IEnumerable<ICommand> EmitCommands(IWorldStateReadOnly world, SimPhase phase)
+    public override IEnumerable<ICommand> EmitCommands(IWorldStateReadOnly world, SimPhase phase)
     {
         if (!IsAlive || phase != SimPhase.CharacterDecisions) yield break;
-        // Full utility scoring wired in Story 2.2.4 (CharacterBehaviorPhase calls this)
         yield break;
     }
 
-    public EntitySnapshot ToSnapshot() => new(
-        Id:            Id,
-        Kind:          Kind,
-        Name:          $"{Identity.Name} {Identity.Epithet}",
-        SpeciesId:     string.Empty,
-        IsLegendary:   false,
-        Location:      Location,
-        HealthFraction: MaxHealth > 0 ? (float)Health / MaxHealth : 0f,
-        FoodFraction:  Needs.Food,
-        AgeSeason:     AgeSeason,
-        IsAlive:       IsAlive,
-        AncestryId:    Identity.AncestryId,
-        Wellbeing:     Wellbeing);
+    protected override string  SnapshotName         => $"{Identity.Name} {Identity.Epithet}";
+    protected override string  SnapshotSpeciesId    => string.Empty;
+    protected override bool    SnapshotIsLegendary  => false;
+    protected override float   SnapshotFoodFraction => Needs.Food;
+    protected override string  SnapshotAncestryId   => Identity.AncestryId;
+    protected override float   SnapshotWellbeing    => Wellbeing;
 
     public CharacterSnapshot ToCharacterSnapshot() => new(
-        Id:            Id,
-        Kind:          Kind,
-        Name:          Identity.Name,
-        Epithet:       Identity.Epithet,
-        AncestryId:    Identity.AncestryId,
-        Location:      Location,
-        CivId:         Identity.CivId,
-        IsAlive:       IsAlive,
-        Ambition:      Personality.Ambition,
-        Aggression:    Personality.Aggression,
-        Loyalty:       Personality.Loyalty,
-        Safety:        Needs.Safety,
-        Status:        Needs.Status,
-        Purpose:       Needs.Purpose,
-        Combat:        Skills.Combat,
-        Leadership:    Skills.Leadership,
-        Diplomacy:     Skills.Diplomacy,
-        AgeSeason:     AgeSeason,
+        Id:             Id,
+        Kind:           Kind,
+        Name:           Identity.Name,
+        Epithet:        Identity.Epithet,
+        AncestryId:     Identity.AncestryId,
+        Location:       Location,
+        CivId:          Identity.CivId,
+        IsAlive:        IsAlive,
+        Ambition:       Personality.Ambition,
+        Aggression:     Personality.Aggression,
+        Loyalty:        Personality.Loyalty,
+        Safety:         Needs.Safety,
+        Status:         Needs.Status,
+        Purpose:        Needs.Purpose,
+        Combat:         Skills.Combat,
+        Leadership:     Skills.Leadership,
+        Diplomacy:      Skills.Diplomacy,
+        AgeSeason:      AgeSeason,
         HealthFraction: MaxHealth > 0 ? (float)Health / MaxHealth : 0f,
-        Wellbeing:     Wellbeing);
+        Wellbeing:      Wellbeing);
 }

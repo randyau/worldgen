@@ -5,6 +5,7 @@ using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities;
 using WorldEngine.Sim.Entities.Characters;
 using WorldEngine.Sim.World;
+using S = WorldEngine.Sim.Simulation.SimRngSalts;
 
 namespace WorldEngine.Sim.Simulation.Phases;
 
@@ -117,7 +118,6 @@ public sealed class CharacterBehaviorPhase
 
     // ─── Civ-born character generation ───────────────────────────────────────
 
-    private const int SaltCivBirth = 1000;
 
     private void TrySpawnCivBorn(WorldState world, List<PendingEvent> pending, long tick)
     {
@@ -144,7 +144,7 @@ public sealed class CharacterBehaviorPhase
                 chance += _settleCfg.EmigrationBonusChance * pressureFactor;
             }
 
-            float r = WorldRng.FloatAt(world.WorldSeed, (int)tick, (int)(stub.FounderId.Value & 0x7FFFFFFF), 0, SaltCivBirth);
+            float r = WorldRng.FloatAt(world.WorldSeed, (int)tick, (int)(stub.FounderId.Value & 0x7FFFFFFF), 0, S.CharCivBirth);
             if (r > chance) continue;
 
             // Unique entitySeq derived from tick + tile to stay deterministic
@@ -310,8 +310,6 @@ public sealed class CharacterBehaviorPhase
 
     // ─── Disease ─────────────────────────────────────────────────────────────
 
-    private const int SaltDiseaseExposure = 1100;
-    private const int SaltDiseaseRecovery = 1101;
 
     /// <summary>
     /// Annual disease processing for a single character.
@@ -327,7 +325,7 @@ public sealed class CharacterBehaviorPhase
         if (!c.IsInfected && atInfectedSettlement)
         {
             float roll = WorldRng.FloatAt(world.WorldSeed, world.CurrentYear,
-                                          (int)(c.Id.Value & 0x7FFFFFFF), 0, SaltDiseaseExposure);
+                                          (int)(c.Id.Value & 0x7FFFFFFF), 0, S.CharDiseaseExposure);
             if (roll < _cfg.CharacterDiseaseExposureChance)
             {
                 c.IsInfected      = true;
@@ -345,7 +343,7 @@ public sealed class CharacterBehaviorPhase
             }
 
             float recRoll = WorldRng.FloatAt(world.WorldSeed, world.CurrentYear,
-                                              (int)(c.Id.Value & 0x7FFFFFFF), 1, SaltDiseaseRecovery);
+                                              (int)(c.Id.Value & 0x7FFFFFFF), 1, S.CharDiseaseRecovery);
             if (recRoll < _cfg.CharacterDiseaseRecoveryChance)
             {
                 c.IsInfected       = false;
@@ -487,7 +485,6 @@ public sealed class CharacterBehaviorPhase
 
     // ─── Artwork creation ────────────────────────────────────────────────────
 
-    private const int SaltArtType = 3001;
 
     private static void ResolveCreateArtwork(
         Tier1Character c, WorldState world, List<PendingEvent> pending, long tick)
@@ -505,7 +502,7 @@ public sealed class CharacterBehaviorPhase
         // high Compassion → Epic/Song (social/emotional), high Ingenuity → Sculpture/Painting,
         // high Aggression → Monument (assertive permanence)
         int artCount = Enum.GetValues<ArtType>().Length;
-        int artIndex = (int)(world.GetRandomFloat(c.Id, SaltArtType) * artCount) % artCount;
+        int artIndex = (int)(world.GetRandomFloat(c.Id, S.CharArtType) * artCount) % artCount;
         var artType = (ArtType)artIndex;
 
         // Apply a small culture cohesion bonus to the settlement where the artwork is created.
@@ -560,7 +557,6 @@ public sealed class CharacterBehaviorPhase
 
     // ─── Beast encounters ────────────────────────────────────────────────────
 
-    private const int SaltBeastEncounter = 800;
 
     /// <summary>
     /// When a predatory beast and a character share a tile, there is a chance
@@ -578,7 +574,7 @@ public sealed class CharacterBehaviorPhase
             float roll = WorldRng.FloatAt(world.WorldSeed, tick,
                                           (int)(beast.Id.Value & 0x7FFFFFFF),
                                           (int)(c.Id.Value & 0x7FFFFFFF),
-                                          SaltBeastEncounter);
+                                          S.CharBeastEncounter);
             if (roll > _cfg.BeastEncounterChance) continue;
 
             int damage = Math.Max(1, (int)(beast.Strength * _cfg.BeastDamageMultiplier));

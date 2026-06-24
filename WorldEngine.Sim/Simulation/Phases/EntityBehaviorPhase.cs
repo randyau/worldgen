@@ -3,6 +3,7 @@ using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities;
 using WorldEngine.Sim.Entities.Beasts;
 using WorldEngine.Sim.World;
+using S = WorldEngine.Sim.Simulation.SimRngSalts;
 
 namespace WorldEngine.Sim.Simulation.Phases;
 
@@ -15,9 +16,6 @@ public sealed class EntityBehaviorPhase
 {
     private readonly BeastCatalog _catalog;
     private readonly int _starvationHealthLoss;
-
-    private const int SaltReproduction = 300;
-    private const int SaltEmergeTile   = 301;
 
     private readonly float _passiveFoodRecovery;
 
@@ -56,7 +54,7 @@ public sealed class EntityBehaviorPhase
             if (validTiles.Count == 0) continue;
 
             long seq = world.CurrentTick;
-            int tileIdx = world.GetRandomInt(new EntityId(seq), 0, validTiles.Count, SaltEmergeTile);
+            int tileIdx = world.GetRandomInt(new EntityId(seq), 0, validTiles.Count, S.BeastEmergeTile);
             var tile = validTiles[Math.Clamp(tileIdx, 0, validTiles.Count - 1)];
 
             var beast = BeastFactory.Spawn(species, tile, world.WorldSeed, seq, forceLegendary: true);
@@ -122,7 +120,7 @@ public sealed class EntityBehaviorPhase
                 && beast.FoodNeed >= beast.ReproductionFoodThreshold
                 && world.Entities.CountBySpecies(beast.SpeciesId) < GetMaxPerWorld(beast.SpeciesId))
             {
-                float roll = world.GetRandomFloat(beast.Id, SaltReproduction);
+                float roll = world.GetRandomFloat(beast.Id, S.BeastReproduction);
                 if (roll < beast.ReproductionChance)
                     Reproduce(beast, world, pending);
             }
