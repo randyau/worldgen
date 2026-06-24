@@ -630,7 +630,7 @@ alliance_war_trust_drain      = 0.4   # trust drained from aggressor to target's
 enemy_of_ally_trust_drain     = 0.15  # trust drain on C when A allies B who is already allied with C's rival
 ally_protect_goal_intensity   = 0.6   # priority of the Protect goal seeded on allies when their ally is attacked
 ally_disaster_aid_intensity   = 0.3   # (reserved for future goal seeding; merchant routing handles aid currently)
-max_war_duration_years        = 20    # wars auto-expire after this many years if not renewed by combat
+max_war_duration_years        = 10    # wars auto-expire after this many years if not renewed by combat; close-proximity wars now end via conquest
 
 hinterland_drain_factor          = 0.5   # effective fertility multiplier inside same-civ hinterland (0.5 = half claimed)
 base_founding_cooldown_years     = 12    # base cooldown between same-civ settlements (scales down with pop)

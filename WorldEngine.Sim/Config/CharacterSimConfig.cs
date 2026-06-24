@@ -63,7 +63,7 @@ public sealed class CharacterSimConfig
     // ─── War ──────────────────────────────────────────────────────────────────
     // Wars auto-expire after this many years if not renewed by a battle/raid.
     // Prevents permanent inter-civ hostility and the rivalry accumulation it causes.
-    public int MaxWarDurationYears        { get; set; } = 20;
+    public int MaxWarDurationYears        { get; set; } = 10;
 
     // ─── Effective fertility multiplier for tiles already inside a same-civ settlement's hinterland.
     // 0.5 = "half the resources are claimed" — discourages but doesn't block high-fertility tiles.
