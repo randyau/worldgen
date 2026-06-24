@@ -61,11 +61,33 @@ public sealed class CharacterBehaviorPhase
                 ResolveCommand(cmd, c, world, pending, tick);
         }
 
-        // Grief: after all deaths are resolved, notify mourners
+        // Grief: after all deaths are resolved, notify mourners.
+        // Build an index of this tick's CharacterDied events so we can retroactively add
+        // mourner IDs — the death event then links to everyone it affected, enabling
+        // "who was touched by this death" queries without a separate causal edge.
+        var deathEventIndex = new Dictionary<long, int>();
+        for (int i = 0; i < pending.Count; i++)
+        {
+            var pe = pending[i];
+            if (pe.Type == EventType.CharacterDied && pe.EntityIds is { Count: > 0 } ids)
+                deathEventIndex[ids[0]] = i;
+        }
+
         foreach (var (deadId, deadName) in deathsThisTick)
         {
             var mourners = new List<(EntityId, float)>();
             GoalManager.ApplyGriefToMourners(deadId, deadName, world, _cfg, mourners);
+            if (mourners.Count == 0) continue;
+
+            // Amend the CharacterDied event to also reference mourner IDs
+            if (deathEventIndex.TryGetValue(deadId.Value, out int deathIdx))
+            {
+                var deathEv = pending[deathIdx];
+                var ids = deathEv.EntityIds!.ToList();
+                ids.AddRange(mourners.Select(m => m.Item1.Value));
+                pending[deathIdx] = deathEv with { EntityIds = ids };
+            }
+
             foreach (var (mournerId, intensity) in mourners)
             {
                 if (world.GetEntity(mournerId) is Tier1Character mourner && mourner.IsAlive)
@@ -431,8 +453,10 @@ public sealed class CharacterBehaviorPhase
             wellbeing     = mourner.Wellbeing,
             hasAvenge     = mourner.Goals.Any(g => g.Type == GoalType.Avenge)
         });
+        // Link both the mourner and the deceased so either character's history
+        // surfaces this grief event — "who did X grieve?" and "who grieved X?" both resolve.
         pending.Add(new PendingEvent(EventType.CharacterGrieved, mourner.Location, null, payload,
-            new[] { mourner.Id.Value }));
+            new[] { mourner.Id.Value, deadId.Value }));
     }
 
     // ─── Beast encounters ────────────────────────────────────────────────────

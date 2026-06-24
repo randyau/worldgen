@@ -260,8 +260,11 @@ public static class CivTracker
             targetCivName   = targCiv.Name,
             cause,
         });
-        pending.Add(new PendingEvent(EventType.WarDeclared, eventTile, null, payload,
-            new[] { declCiv.FounderId.Value }));
+        // Link both rulers so "all events involving character X" surfaces wars they were targeted by.
+        var warEntityIds = targFounder != null
+            ? new[] { declCiv.FounderId.Value, targCiv.FounderId.Value }
+            : new[] { declCiv.FounderId.Value };
+        pending.Add(new PendingEvent(EventType.WarDeclared, eventTile, null, payload, warEntityIds));
     }
 
     // ─── Raid ─────────────────────────────────────────────────────────────────
@@ -301,8 +304,13 @@ public static class CivTracker
             damage,
             settlementHealth = newHealth
         });
+        // Link the raider and the defending civ's founder — both characters' histories
+        // should surface battles they were party to, even as the defender.
+        var battleEntityIds = world.Civilizations.TryGetValue(settlement.CivId, out var defCiv)
+            ? new[] { raider.Id.Value, defCiv.FounderId.Value }
+            : new[] { raider.Id.Value };
         pending.Add(new PendingEvent(EventType.BattleOccurred, cmd.SettlementTile, null, payload,
-            new[] { raider.Id.Value }));
+            battleEntityIds));
 
         if (newHealth <= 0)
         {
@@ -339,6 +347,9 @@ public static class CivTracker
                     else                     winningCiv.SettlementCount++;
                 }
 
+                var conquestEntityIds = world.Civilizations.TryGetValue(previousCivId, out var losingCivForLink)
+                    ? new[] { raider.Id.Value, losingCivForLink.FounderId.Value }
+                    : new[] { raider.Id.Value };
                 pending.Add(new PendingEvent(EventType.SettlementConquered, cmd.SettlementTile, null,
                     JsonSerializer.Serialize(new
                     {
@@ -349,7 +360,7 @@ public static class CivTracker
                         conquererId      = raider.Id.Value,
                         conquererName    = raider.Identity.Name,
                         survivingPop     = conqueredPop
-                    })));
+                    }), conquestEntityIds));
 
                 // If the losing civ has no settlements left, it collapses.
                 bool anyLeft = losingCiv != null && losingCiv.SettlementCount > 0;
@@ -375,7 +386,7 @@ public static class CivTracker
                         destroyerId    = raider.Id.Value,
                         civId          = settlement.CivId.Value,
                         timesSettled
-                    })));
+                    }), new[] { raider.Id.Value, settlement.FounderId.Value }));
             }
         }
         else
