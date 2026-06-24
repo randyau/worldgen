@@ -647,14 +647,17 @@ alliance_war_trust_drain      = 0.4   # trust drained from aggressor to target's
 enemy_of_ally_trust_drain     = 0.15  # trust drain on C when A allies B who is already allied with C's rival
 ally_protect_goal_intensity   = 0.6   # priority of the Protect goal seeded on allies when their ally is attacked
 ally_disaster_aid_intensity   = 0.3   # (reserved for future goal seeding; merchant routing handles aid currently)
-max_war_duration_years        = 10    # wars auto-expire after this many years if not renewed by combat; close-proximity wars now end via conquest
+max_war_duration_years        = 4     # wars auto-expire after 4 years without battle/raid; shorter = leaner relationship graph
+max_active_wars               = 2     # hard cap: a character cannot be in more than this many active wars simultaneously
+max_active_rivals             = 3     # hard cap: a character cannot have more than this many active rivalries
+rivalry_trust_threshold       = -0.4  # trust must fall below this before DeclareRivalry is available; prevents one-encounter rivals
 
 hinterland_drain_factor          = 0.5   # effective fertility multiplier inside same-civ hinterland (0.5 = half claimed)
 base_founding_cooldown_years     = 8     # base cooldown between same-civ settlements (scales down with pop)
 min_founding_cooldown_years      = 2     # floor — even the largest civ can't expand instantly
 founding_cooldown_pop_scale      = 2000  # civ pop at which cooldown halves (20y→10y, 10y→5y, etc.)
 civ_birth_min_pop            = 20   # lowered from 30; settlements reach this faster with improved farming
-civ_birth_chance_per_season = 0.05  # raised from 0.02; need more ambitious characters to drive expansion
+civ_birth_chance_per_season = 0.03  # reduced from 0.05; fewer chars = leaner relationship graph and less war volume
 # Territorial aggression: aggressive founders drain trust from foreign visitors on their settlement tile
 territorial_aggression_min    = 0.55  # chars below this aggression don't apply pressure
 territorial_trust_drain       = 0.025 # trust lost per tick; ~-0.1 in 1 season → rivalry within a year

@@ -73,6 +73,32 @@ public sealed class RelationshipGraph
         return count;
     }
 
+    /// <summary>Count of active war edges for this entity. O(degree).</summary>
+    public int CountWars(EntityId id)
+    {
+        if (!_neighbors.TryGetValue(id, out var neighbors)) return 0;
+        int count = 0;
+        foreach (var other in neighbors)
+        {
+            var e = Get(id, other);
+            if (e?.IsAtWar == true) count++;
+        }
+        return count;
+    }
+
+    /// <summary>Count of rivalry edges for this entity. O(degree).</summary>
+    public int CountRivals(EntityId id)
+    {
+        if (!_neighbors.TryGetValue(id, out var neighbors)) return 0;
+        int count = 0;
+        foreach (var other in neighbors)
+        {
+            var e = Get(id, other);
+            if (e?.IsRival == true) count++;
+        }
+        return count;
+    }
+
     public IEnumerable<RelationshipEdge> AllEdges => _edges.Values;
 
     public int EdgeCount => _edges.Count;

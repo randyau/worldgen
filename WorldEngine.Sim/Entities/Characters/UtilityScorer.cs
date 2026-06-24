@@ -144,21 +144,27 @@ public static class UtilityScorer
         if (bestSocialCmd != null)
             actions.Add(new(bestSocialCmd, bestSocialScore));
 
-        // DeclareRivalry — nearby character with low trust
-        foreach (var e in world.GetEntitiesInRadius(c.Location, cfg.PerceptionRadius))
+        // DeclareRivalry — nearby character with substantially low trust (not just one bad encounter).
+        // Capped at MaxActiveRivals to prevent the rivalry→war pipeline flooding the relationship graph.
+        if (world.CountRivals(c.Id) < cfg.MaxActiveRivals)
         {
-            if (e is not Tier1Character other || other.Id == c.Id || !other.IsAlive) continue;
-            var rel = world.GetRelationship(c.Id, other.Id);
-            if ((rel?.Trust ?? 0f) < -0.1f && !(rel?.IsRival ?? false) && !(rel?.IsAtWar ?? false))
+            foreach (var e in world.GetEntitiesInRadius(c.Location, cfg.PerceptionRadius))
             {
-                actions.Add(new(new DeclareRivalry(c.Id, other.Id),
-                    Score(c, ActionType.Rivalry, 1.0f, world, cfg)));
-                break; // one rival declaration per tick is enough
+                if (e is not Tier1Character other || other.Id == c.Id || !other.IsAlive) continue;
+                var rel = world.GetRelationship(c.Id, other.Id);
+                if ((rel?.Trust ?? 0f) < cfg.RivalryTrustThreshold
+                    && !(rel?.IsRival ?? false) && !(rel?.IsAtWar ?? false))
+                {
+                    actions.Add(new(new DeclareRivalry(c.Id, other.Id),
+                        Score(c, ActionType.Rivalry, 1.0f, world, cfg)));
+                    break; // one rival declaration per tick is enough
+                }
             }
         }
 
-        // DeclareWar — rival with Aggression
-        if (c.Personality.Aggression > cfg.WarAggressionThreshold)
+        // DeclareWar — rival with Aggression. Capped at MaxActiveWars to bound the relationship graph.
+        if (c.Personality.Aggression > cfg.WarAggressionThreshold
+            && world.CountWars(c.Id) < cfg.MaxActiveWars)
         {
             foreach (var e in world.GetEntitiesInRadius(c.Location, cfg.PerceptionRadius))
             {

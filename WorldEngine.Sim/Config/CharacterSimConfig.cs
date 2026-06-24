@@ -85,7 +85,15 @@ public sealed class CharacterSimConfig
     // ─── War ──────────────────────────────────────────────────────────────────
     // Wars auto-expire after this many years if not renewed by a battle/raid.
     // Prevents permanent inter-civ hostility and the rivalry accumulation it causes.
-    public int MaxWarDurationYears        { get; set; } = 10;
+    public int MaxWarDurationYears        { get; set; } = 4;
+    // Hard cap on simultaneous active wars per character. Prevents aggressive characters
+    // from accumulating hundreds of personal war edges and bloating the relationship graph.
+    public int MaxActiveWars              { get; set; } = 2;
+    // Hard cap on active rivalries per character. Feeds into war declarations so must be capped.
+    public int MaxActiveRivals            { get; set; } = 3;
+    // Trust must fall below this threshold before DeclareRivalry becomes available.
+    // -0.1 was too easy to trigger; sustained hostility is required, not one bad encounter.
+    public float RivalryTrustThreshold    { get; set; } = -0.4f;
 
     // ─── Effective fertility multiplier for tiles already inside a same-civ settlement's hinterland.
     // 0.5 = "half the resources are claimed" — discourages but doesn't block high-fertility tiles.
@@ -99,7 +107,7 @@ public sealed class CharacterSimConfig
 
     // Civilization-born character generation
     public int   CivBirthMinPop         { get; set; } = 20;   // settlement needs this many people
-    public float CivBirthChancePerSeason { get; set; } = 0.05f; // ~1 birth per 20 seasons at min pop
+    public float CivBirthChancePerSeason { get; set; } = 0.03f; // ~1 birth per 33 seasons at min pop
 
     // Territorial aggression — aggressive founders develop negative trust with foreign visitors
     public float TerritorialAggressionMin { get; set; } = 0.55f; // aggression threshold to apply pressure
