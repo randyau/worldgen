@@ -46,8 +46,9 @@ public interface IWorldStateReadOnly
     IEnumerable<IEntity> GetEntitiesInRadius(TileCoord center, int radius);
 
     // === CIVILIZATION / CHARACTER (Phase 2.2+) ===
-    IReadOnlyDictionary<TileCoord, SettlementStub> Settlements { get; }
-    IReadOnlyDictionary<TileCoord, RuinRecord>    Ruins       { get; }
+    IReadOnlyDictionary<TileCoord, SettlementStub> Settlements    { get; }
+    IReadOnlyDictionary<TileCoord, RuinRecord>     Ruins          { get; }
+    IReadOnlySet<EntityId>                         ActiveFounders { get; }
     IReadOnlyDictionary<TileCoord, IReadOnlyList<ResourceDeposit>> ResourceDeposits { get; }
     Civilization? GetCivilization(CivId civId);
     RelationshipEdge? GetRelationship(EntityId a, EntityId b);

@@ -1,8 +1,8 @@
 # World Engine — Interface Contracts
-**Version:** 0.6  
+**Version:** 0.7  
 **Date:** June 2026  
-**Status:** Updated for post-M2 character behavior (wanderlust, ancestry, cultural trust drains).  
-**Changes from v0.5:** `EntitySnapshot` — added `AncestryId`. `WorldSnapshot` — added `Settlements`. New sections: `IdentityData`, `AncestryConfig`, `AncestryRegistry`. `EventType` ranges updated (`BeastAttackedChar = 2007`).
+**Status:** Updated for M2 complete — war/peace system, biome carrying capacity, conquest, ruins, ActiveFounders.  
+**Changes from v0.6:** `IWorldStateReadOnly` — added `Ruins`, `ActiveFounders`, corrected `GetRelationship` return type. `WorldSnapshot` — added `Ruins`. `TileDisplayData` — added `HasRuin`. `SettlementStub` — added `FertilityMultiplier`, `ConqueredYear`, `ConqueredFromCivId`, `ResourceStores`, `CarryingCapacity`. `SettlementSnapshot` — added `ConqueredYear`, `ConqueredFromCivId`, `ResourceStores`. New sections: `Civilization`, `RuinRecord`. `EventType` ranges corrected to match `Enumerations.cs` (prior doc had stale numbers).
 
 **Rule:** Do not add methods to these interfaces without updating this document first. Interface changes are breaking changes.
 
@@ -267,12 +267,11 @@ public interface ICommand { }
 
 ## IWorldStateReadOnly
 
-The read-only view passed to entity decision-making in M2+. In M1, tile-level randomness uses `WorldRng` directly (no EntityId available). The entity-focused methods are stubs until M2.
+The read-only view passed to entity decision-making. All phases that read but don't need to mutate receive this interface.
 
 ```csharp
 /// <summary>
-/// Read-only view of world state for entity decision-making (M2+).
-/// In M1, the Environmental phase reads WorldState directly as a mutator.
+/// Read-only view of world state for entity decision-making.
 /// </summary>
 public interface IWorldStateReadOnly
 {
@@ -289,8 +288,9 @@ public interface IWorldStateReadOnly
 
     // === WORLD CONFIG ===
     WorldConfig Config { get; }
+    SimConfig SimConfig { get; }
 
-    // === DETERMINISTIC RNG (for entity decisions in M2+) ===
+    // === DETERMINISTIC RNG ===
     /// <summary>
     /// Deterministic random value for a specific entity this tick.
     /// Internally uses WorldRng.FloatAt(worldSeed, tick, entityId.Value, 0, salt).
@@ -299,27 +299,33 @@ public interface IWorldStateReadOnly
     float GetRandomFloat(EntityId entityId, int salt = 0);
     int GetRandomInt(EntityId entityId, int min, int max, int salt = 0);
 
-    // === DRIFT PARAMETERS (readable by entity decision logic) ===
+    // === DRIFT PARAMETERS ===
     float GlobalTemperatureAnomaly { get; }
     float CurrentSeaLevel { get; }
 
-    // === ENTITY ACCESS (M2+) ===
+    // === ENTITY ACCESS ===
     IEntity? GetEntity(EntityId id);
     IEnumerable<IEntity> GetEntitiesAt(TileCoord coord);
     IEnumerable<IEntity> GetEntitiesInRadius(TileCoord center, int radius);
 
-    // === HISTORY / RELATIONSHIPS (M2+) ===
-    RelationshipData? GetRelationship(EntityId a, EntityId b);
+    // === RELATIONSHIPS ===
+    RelationshipEdge? GetRelationship(EntityId a, EntityId b);   // null if no edge exists yet
+    int CountAlliances(EntityId id);
+    int CountRivals(EntityId id);
 
-    // === CIVILIZATION ACCESS (M2+) ===
-    IReadOnlyDictionary<TileCoord, SettlementStub> Settlements { get; }
-    IReadOnlyDictionary<CivId, Civilization> Civilizations { get; }
+    // === CIVILIZATION / SETTLEMENT ===
+    IReadOnlyDictionary<TileCoord, SettlementStub>  Settlements    { get; }
+    IReadOnlyDictionary<TileCoord, RuinRecord>      Ruins          { get; }
+    IReadOnlyDictionary<CivId, Civilization>        Civilizations  { get; }
+    IReadOnlySet<EntityId>                          ActiveFounders { get; }  // O(1) isFounder lookup
+    Civilization? GetCivilization(CivId civId);
 
-    // === FUTURE (M3+) ===
-    // IEnumerable<SimEvent> GetEventsByEntity(EntityId id);
-    // float GetAuthorityAt(TileCoord coord, CivId civId);
+    // === RESOURCE DEPOSITS ===
+    IReadOnlyDictionary<TileCoord, IReadOnlyList<ResourceDeposit>> ResourceDeposits { get; }
 }
 ```
+
+**`ActiveFounders`** is a `HashSet<EntityId>` of characters who currently have a live settlement they founded. It is maintained by `CivTracker`: added on `EstablishSettlement`, removed on `RegisterRuin` (destroy/abandon). Use `world.ActiveFounders.Contains(c.Id)` instead of scanning `world.Settlements.Values` — O(1) vs O(n).
 
 ---
 
@@ -366,12 +372,14 @@ public sealed class StateCache
 
 **Updated from v0.2:** No longer created per-viewport. `SnapshotBuilder` builds all tiles unconditionally; the renderer filters by visible range using camera coordinates.
 
+**Updated from v0.6 (current):** Added `HasRuin` — computed from `WorldState.Ruins.ContainsKey(coord)`.
+
 ```csharp
 /// <summary>
 /// Per-tile rendering data in WorldSnapshot.AllTiles.
 /// Contains effective (current) values, not genesis base values.
 /// Created by the sim thread for the full world grid each tick.
-/// HasActiveDisaster is computed from ActiveTileDisasters registry.
+/// HasActiveDisaster/HasRuin are computed from registry lookups.
 /// </summary>
 public sealed record TileDisplayData(
     BiomeType Biome,
@@ -383,6 +391,7 @@ public sealed record TileDisplayData(
     TileStaticFlags StaticFlags,
     TileDynFlags DynFlags,
     bool HasActiveDisaster,      // computed: ActiveTileDisasters.ContainsKey(coord)
+    bool HasRuin,                // computed: Ruins.ContainsKey(coord)
     EntityId[] EntitiesPresent   // empty array if none — never null
 );
 ```
@@ -576,26 +585,50 @@ Query all events for a character: `SELECT * FROM Events WHERE Id IN (SELECT Even
 
 ## EventType Ranges
 
+Values from `WorldEngine.Sim/Core/Enumerations.cs`. The 3100-range covers both character-to-character and civ-level social/military actions.
+
 ```
-Environmental / M1:  1001–1099  (VolcanicEruption, EarthquakeOccurred, WildfireOccurred, FloodOccurred,
-                                  DroughtBegan, DroughtEnded, SeaLevelChanged, BiomeChanged,
-                                  ClimateShifted, ResourceRecovered)
-Beast:              2001–2099   (BeastSpawned=2001, BeastAwakened=2002, BeastDied=2003, BeastSlain=2004,
-                                  BeastReproduced=2005, BeastEncountered=2006, BeastAttackedChar=2007)
-Character lifecycle:3001–3099   (CharacterBorn=3001, CharacterDied=3002, CharacterCrystallized=3003)
-Character actions:  3101–3199   (CharacterMoved=3101, CharacterRested=3102, CharacterExplored=3103,
-                                  CharacterTrained=3104, CharacterForaged=3105, CharacterHealed=3106,
-                                  CharacterCrafted=3107)
-Civ/settlement:     3201–3299   (CivilizationFounded=3201, CivilizationCollapsed=3202,
-                                  SettlementFounded=3203, RaidOccurred=3204, NegotiationCompleted=3205,
-                                  RivalryDeclared=3206, AllianceFormed=3207, WarDeclared=3208)
-Tier2 events:       3301–3399   (AppointedToRole=3301, MerchantTradeCompleted=3302,
-                                  ScholarDiscovery=3303, PhysicianHealed=3304,
-                                  DiplomacyCompleted=3305, ArtisanCrafted=3306)
-Population:         3401–3499   (SettlementGrew=3401, SettlementShrank=3402, SettlementAbandoned=3403)
+Environmental:   1001–1099
+    VolcanicEruption=1001, EarthquakeOccurred=1002, WildfireOccurred=1003, FloodOccurred=1004,
+    DroughtBegan=1005, DroughtEnded=1006, SeaLevelChanged=1007, BiomeChanged=1008,
+    ClimateShifted=1009, ResourceRecovered=1010
+
+Beast:           2001–2099
+    BeastSpawned=2001, BeastAwakened=2002, BeastDied=2003, BeastSlain=2004,
+    BeastReproduced=2005, BeastEncountered=2006, BeastAttackedChar=2007
+
+Character lifecycle: 3001–3099
+    CharacterBorn=3001, CharacterDied=3002, CharacterMarried=3003, CharacterExiled=3004,
+    CharacterGrieved=3005, CharacterFlourishing=3006, CharacterSpiraling=3007
+
+Character/civ actions: 3101–3199
+    AllianceFormed=3101, AllianceBroken=3102, WarDeclared=3103, WarEnded=3104,
+    BattleOccurred=3105, RivalryFormed=3106, Negotiated=3107,
+    ArtworkCreated=3108, GoalFormed=3109, GoalResolved=3110
+
+Civilization/settlement: 3201–3299
+    CivilizationFounded=3201, CivilizationCollapsed=3202, SettlementFounded=3203,
+    SettlementDestroyed=3204, SuccessionOccurred=3205,
+    SettlementStraining=3206, SettlementConquered=3207
+
+Tier2 specialist: 3301–3399
+    AppointedToRole=3301, DismissedFromRole=3302, MerchantTradeCompleted=3303,
+    ScholarDiscovery=3304, PhysicianHealed=3305, CharacterCrystallized=3306
+
+Population: 3401–3499
+    SettlementGrew=3401, SettlementShrank=3402, SettlementAbandoned=3403
+
+Religion:   4001–4099   (reserved; ReligionFounded=4003, ReligionExtinct=4004)
+Artifacts:  6001–6099   (ArtifactCreated=6001, ArtifactDestroyed=6002)
+God Mode:   9001–9099   (GodModeDisasterTriggered=9001, GodModeEntitySpawned=9002,
+                         GodModeCharacterCreated=9003, GodModeArtifactPlaced=9004,
+                         GodModeCivilizationForced=9005)
 ```
 
-**Note:** `BeastAttackedChar = 2007` was added post-M2 when beast-character combat was implemented.
+**Key events added in M2 (were missing or misassigned in v0.6):**  
+- `CharacterGrieved/Flourishing/Spiraling` — wellbeing state transitions  
+- `AllianceBroken`, `WarEnded`, `BattleOccurred`, `RivalryFormed`, `Negotiated`, `ArtworkCreated`, `GoalFormed`, `GoalResolved` — all 3100-range  
+- `SettlementStraining`, `SettlementConquered` — 3206, 3207
 
 ---
 
@@ -604,6 +637,8 @@ Population:         3401–3499   (SettlementGrew=3401, SettlementShrank=3402, S
 **Updated from v0.1:** Added `InspectedTile`, `GlobalTemperatureAnomaly`, `GlobalPrecipitationMultiplier`, `StormCorridorNormalizedLat`.
 
 **Updated from v0.2:** `VisibleTiles` (viewport-filtered dict) replaced by `AllTiles` (flat array, full world). The sim no longer tracks the camera viewport — `TileMapRenderer` computes the visible range from `Camera2D` each frame. Index as `AllTiles[y * WorldTileWidth + x]`.
+
+**Updated from v0.6 (current):** Added `Ruins` dict and `EntitySnapshots` dict. `SettlementSnapshot` expanded with conquest and store fields.
 
 ```csharp
 /// <summary>
@@ -636,42 +671,124 @@ public sealed record WorldSnapshot(
     // Settlements — keyed by tile coord; used by map renderer and inspector
     IReadOnlyDictionary<TileCoord, SettlementSnapshot> Settlements,
 
+    // Ruins — keyed by tile coord; displayed in inspector and map renderer
+    IReadOnlyDictionary<TileCoord, RuinRecord> Ruins,
+
     // World-level drift parameters for UI status display
     float GlobalTemperatureAnomaly,
     float GlobalPrecipitationMultiplier,
     float StormCorridorNormalizedLat
 );
+```
 
-// SettlementStub — live sim-thread settlement state
-// Lives in WorldState.Settlements; updated each tick by ResourcePressurePhase.
+---
+
+## SettlementStub
+
+Live sim-thread settlement state. Lives in `WorldState.Settlements`; updated each tick by `ResourcePressurePhase` and `PopulationDynamicsPhase`. Never mutated directly — always replaced via record `with`.
+
+```csharp
 public sealed record SettlementStub(
     EntityId  FounderId,
     CivId     CivId,
     TileCoord Tile,
     int       FoundedYear,
-    int       Population,
-    int       Health,              // 0–100; raids reduce it; 0 = destroyed
-    string    Name = "Unknown",    // deterministic from world seed + tile coord
-    float     PopulationF = 0f,
-    int       LastCrystalThresh = 0,
-    float     FoodPressureRatio = 1f,  // convenience; mirrors ResourceLedger["food"]
-    float     WaterPressureRatio = 1f,
-    int       LastStrainEventTick = 0,
-    IReadOnlyDictionary<string, float>? ResourceLedger = null);  // supply values per resource type
-// ResourceLedger keys: "food", "water", "timber", and any deposit type (lowercase, e.g. "iron")
-// Food/water: supply/demand ratio (1.0 = exactly met, >1 = surplus, <1 = shortage)
-// Minerals/timber: absolute supply units (not per-capita)
+    int       Population,             // integer head count
+    int       Health,                 // 0–100; raids reduce it; 0 = destroyed
+    string    Name                = "Unknown",  // deterministic from world seed + tile coord
+    float     PopulationF         = 0f,         // fractional accumulator for growth
+    int       LastCrystalThresh   = 0,          // highest population threshold already crystallized
+    float     FoodPressureRatio   = 1f,         // mirrors ResourceLedger["food"] ratio
+    float     WaterPressureRatio  = 1f,
+    int       LastStrainEventTick = 0,          // tick of last SettlementStraining event (rate-limiter)
+    IReadOnlyDictionary<string, float>? ResourceLedger   = null,  // supply values per resource type
+    float     FertilityMultiplier = 1f,         // founding-time variance; permanent to this settlement
+    int       ConqueredYear       = 0,          // 0 = never conquered; set on annexation
+    int       ConqueredFromCivId  = 0,          // CivId.Value of previous owner (0 = never)
+    IReadOnlyDictionary<string, float>? ResourceStores   = null,  // persistent reserves (food/water in season-units; wealth in raw units)
+    int       CarryingCapacity    = 50_000);    // biome-based population ceiling; recomputed by ResourcePressurePhase each tick
+```
 
-// SettlementSnapshot — companion record for WorldSnapshot.Settlements
+**ResourceLedger keys:** `"food"`, `"water"`, `"timber"`, and lowercase deposit type names (`"iron"`, `"gold"`, etc.)  
+**Food/water values:** supply/demand ratio (1.0 = exactly met, >1 = surplus, <1 = shortage)  
+**Mineral/timber values:** absolute accumulated units (not per-capita)
+
+**CarryingCapacity:** sum of per-biome capacity values across the settlement's reach tiles (r=2..5, scales with population). `ResourcePressurePhase.BuildLedger` computes it as a by-product of the existing tile walk at zero extra cost.
+
+**ReachRadius():** `Math.Clamp(2 + Population / 2000, 2, 5)` — shared by `ResourcePressurePhase` and `UtilityScorer`.
+
+---
+
+## SettlementSnapshot
+
+UI-facing companion to `SettlementStub`. Lives in `WorldSnapshot.Settlements`.
+
+```csharp
 public sealed record SettlementSnapshot(
     TileCoord Coord,
-    string    Name,       // unique settlement name, e.g. "Ironford"
+    string    Name,                // unique settlement name, e.g. "Ironford"
     string    CivName,
     int       Population,
-    int       Health,     // 0–100
+    int       Health,              // 0–100
     int       FoundedYear,
-    IReadOnlyDictionary<string, float>? ResourceLedger = null);
+    IReadOnlyDictionary<string, float>? ResourceLedger   = null,
+    int       ConqueredYear      = 0,
+    int       ConqueredFromCivId = 0,
+    IReadOnlyDictionary<string, float>? ResourceStores   = null);
 ```
+
+---
+
+## RuinRecord
+
+Persists when a settlement is destroyed or abandoned. One entry per tile; `TimesSettled` increments if the same tile is later re-settled and destroyed again.
+
+```csharp
+public sealed record RuinRecord(
+    TileCoord Tile,
+    string    SettlementName,
+    CivId     OriginalCivId,
+    int       DestroyedYear,
+    string    Cause,          // "destroyed" | "abandoned"
+    int       TimesSettled    // 1 = first time this tile has been ruined
+);
+```
+
+---
+
+## Civilization
+
+Mutable class; only `CivTracker` mutates it. Read via `IWorldStateReadOnly.GetCivilization(civId)`.
+
+```csharp
+public sealed class Civilization
+{
+    public CivId     Id              { get; }
+    public string    Name            { get; }
+    public EntityId  FounderId       { get; }    // character who declared the civ
+    public TileCoord CapitalTile     { get; }    // tile of the first settlement founded
+    public int       FoundedYear     { get; }
+    public HashSet<EntityId> Members { get; }    // all living members of this civ
+
+    // Diplomacy state — war and peace at civ level, not character level
+    public Dictionary<CivId, int> WarsAgainst  { get; }   // enemyCivId → year declared
+    public Dictionary<CivId, int> PeaceTreaties { get; }  // enemyCivId → year peace made
+
+    public int  LastSettlementFoundedYear { get; set; }
+    public bool IsCollapsed { get; set; }   // true when no members remain
+
+    // Convenience helpers
+    public bool IsAtWarWith(CivId other) => WarsAgainst.ContainsKey(other);
+    public bool InPeaceCooldownWith(CivId other, int currentYear, int cooldownYears);
+}
+```
+
+**War/peace lifecycle:**
+1. Character emits `DeclareWar` command
+2. `CivTracker.ResolveDeclareWar` records in `WarsAgainst` on both sides
+3. `CivTracker.RunAnnualDiplomacy` (Spring tick) expires wars via truce (> `MaxWarDurationYears`), surrender (total pop < `WarSurrenderPopThreshold`), or destruction (civ collapsed)
+4. `EndWarBetween` removes from `WarsAgainst`, writes `PeaceTreaties[enemy] = currentYear`
+5. `InPeaceCooldownWith` blocks re-declaration for `PeaceCooldownYears` after a treaty
 
 ---
 
@@ -807,5 +924,5 @@ public readonly record struct ArtifactId(long Value)
 
 ---
 
-*Document Version: 0.3*  
-*Last Updated: June 2026 (Milestone 1 complete)*
+*Document Version: 0.7*  
+*Last Updated: June 2026 (Milestone 2 complete — war/peace, conquest, ruins, carrying capacity, ActiveFounders)*

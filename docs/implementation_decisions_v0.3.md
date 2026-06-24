@@ -1041,3 +1041,39 @@ Six playable ancestries defined in `config/ancestries.toml`, loaded by `Ancestry
 *Document Version: 0.3*  
 *Last Updated: June 23, 2026*  
 *Status: All Tier A and Tier B decisions complete. Post-M2 ancestry, trust, wellbeing, and settlement economics added.*
+
+### War and Peace at Civilization Level (M2 Extension, 2026-06-24)
+
+**War is a civ-level state, not a character relationship flag.** Characters can have personal rivalries (relational), but war is declared by a character emitting a `DeclareWar` command which records the conflict on both `Civilization.WarsAgainst` dictionaries. This separates "these two rulers hate each other" (character level) from "these two peoples are at war" (civ level), which is correct because: (a) rulers die but wars persist; (b) it avoids O(relationships) scans to determine war state; (c) a single lookup `civ.IsAtWarWith(targetCivId)` determines war at O(1).
+
+**War resolution** happens in `CivTracker.RunAnnualDiplomacy` (Spring tick only — annual, not per-tick). Three termination conditions: time expiry (`MaxWarDurationYears`), surrender (either side's total pop < `WarSurrenderPopThreshold`), and destruction (civ collapsed). On resolution, `EndWarBetween` removes from `WarsAgainst` and writes `PeaceTreaties[enemy] = year` to enforce a cooldown before re-declaration (`PeaceCooldownYears`).
+
+**Battle/conquest during war:** Raiding is available outside of war too (raiders are aggressive characters regardless of civ war state). When a raid reduces settlement health to 0: if the raider has a valid CivId different from the settlement's, the settlement is *annexed* (survives under the raider's CivId, population halved, health halved, `ConqueredYear`/`ConqueredFromCivId` set). If the raider has no civ, the settlement is *destroyed* and becomes a `RuinRecord`. A `SettlementConquered` event fires; if the losing civ loses all settlements, `CivilizationCollapsed` fires immediately.
+
+### Biome Carrying Capacity and Logistic Population Growth (M2 Extension, 2026-06-24)
+
+**Without a carrying capacity, population grows without bound** — grassland tiles have unlimited fertility, so large settlements never stopped growing. The fix: each biome tile contributes a per-tile population ceiling value (configurable in `[settlement]` TOML section as `carry_cap_*`). `ResourcePressurePhase.BuildLedger` accumulates the sum across the settlement's reach tiles *within its existing tile walk* (zero extra cost). The sum is cached on `SettlementStub.CarryingCapacity` and read by `PopulationDynamicsPhase`.
+
+**Logistic suppression:** `PopulationDynamicsPhase` applies `logisticFactor = clamp(1 - pop/capacity, 0, 1)` to the growth rate, so growth decelerates smoothly as population approaches the biome ceiling rather than hitting a hard wall. At half capacity, growth is ~50% of maximum; near the ceiling, growth asymptotes toward zero.
+
+**Capacity at typical radius:** At reach=3 (population ~2000), a pure grassland settlement caps around 5,400. Mixed grassland/forest/plains caps around 3,360. Harsh biomes (desert, tundra) cap at 300-600 — realistically preventing Merchants (crystallization threshold 1000) in those environments. This is intentional: specialists crystallize when the ecology supports a large enough population to justify specialization.
+
+**Tier2 crystallization thresholds** are validated against carrying capacity: Artisan=200, Scholar=300, Physician=500, Merchant=1000. All are reachable in productive biomes at reasonable reach radii.
+
+### Settlement Expansion Shape (M2 Extension, 2026-06-24)
+
+**Problem:** Characters with `GoalType.Expansion` scored unclaimed land identically regardless of where existing settlements were, producing linear tendrils rather than rounded blobs. The `ExpansionEmptyTileBonus` rewarded any unclaimed tile equally.
+
+**Fix: compactness bonus.** Tiles adjacent to (or within `ExpansionCompactnessRadius` tiles of) any existing same-civ settlement get an additional `ExpansionCompactnessBonus` score. This creates gravitational pull toward existing clusters — expansion characters prefer to fill the gaps near existing settlements before striking out into open land. The two bonuses together produce blob-like growth with modest tendrils along fertile corridors. Values: `expansion_compactness_radius = 8`, `expansion_compactness_bonus = 60`.
+
+### ActiveFounders Cache (M2 Extension, 2026-06-24)
+
+**Problem:** `GoalManager.UpdateGoals` and `UtilityScorer.GetCandidateActions` both needed to know "does this character currently have a live settlement they founded?" The original implementation was `world.Settlements.Values.Any(s => s.FounderId == c.Id)` — O(settlements) per character per tick. With 100 characters and 300 settlements this is 30,000 comparisons per tick.
+
+**Fix:** `WorldState.ActiveFounders` is a `HashSet<EntityId>` maintained by `CivTracker`: `AddActiveFounder()` on `EstablishSettlement`, `RemoveActiveFounder()` on `RegisterRuin` (both destroy and abandon). The check becomes `world.ActiveFounders.Contains(c.Id)` — O(1). Exposed as `IReadOnlySet<EntityId>` on `IWorldStateReadOnly`.
+
+### ComputeRouteBonus Cap (M2 Extension, 2026-06-24)
+
+**Problem:** `UtilityScorer.ComputeRouteBonus` scored how central a candidate tile is to trade routes by summing `1/(dist_a × dist_b)` across all pairs of settlements — O(n²) in settlement count. As settlement count grows into the hundreds, this becomes expensive and is called per-character per-tick when evaluating `EstablishSettlement`.
+
+**Fix:** Cap the settlement list to the K=8 nearest settlements by distance before forming pairs. Worst case becomes 8×7/2 = 28 pair evaluations. This is a reasonable approximation: the route-position bonus is already capped at 1.0, so distant settlements contribute negligibly to the sum anyway.

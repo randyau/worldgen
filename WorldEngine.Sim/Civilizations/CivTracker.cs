@@ -82,6 +82,7 @@ public static class CivTracker
             Name:                settlementName,
             FertilityMultiplier: fertilityVariance);
         world.Settlements[cmd.Tile] = stub;
+        world.AddActiveFounder(founder.Id);
         world.Civilizations[civId].LastSettlementFoundedYear = world.CurrentYear;
 
         // Mark goal as progressed
@@ -396,6 +397,8 @@ public static class CivTracker
             DestroyedYear:  world.CurrentYear,
             Cause:          cause,
             TimesSettled:   timesSettled);
+
+        world.RemoveActiveFounder(stub.FounderId);
 
         return timesSettled;
     }

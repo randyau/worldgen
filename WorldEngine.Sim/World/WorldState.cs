@@ -48,6 +48,16 @@ public sealed class WorldState : IWorldStateReadOnly
     public RelationshipGraph                       Relationships   { get; } = new();
     public int NextCivId { get; set; } = 1;
 
+    /// <summary>
+    /// EntityIds of characters who founded a currently-live settlement.
+    /// Updated by CivTracker on establish/abandon/destroy — allows O(1) isFounder checks
+    /// without scanning all Settlements per character per tick.
+    /// </summary>
+    private readonly HashSet<EntityId> _activeFounders = new();
+    public IReadOnlySet<EntityId> ActiveFounders => _activeFounders;
+    public void AddActiveFounder(EntityId id)    => _activeFounders.Add(id);
+    public void RemoveActiveFounder(EntityId id) => _activeFounders.Remove(id);
+
     // === TIME ===
     public int CurrentYear { get; internal set; } = 1;
     public Season CurrentSeason { get; internal set; } = Season.Spring;

@@ -287,3 +287,38 @@ For full rationale and detail, see `docs/implementation_decisions_v0.3.md`.
 
 *Document Version: 0.2*  
 *Last Updated: June 23, 2026 (Milestone 2 complete)*
+
+---
+
+## ADR-030: War as Civ-Level State (Not Character Relationship)
+
+**Decision:** War is tracked in `Civilization.WarsAgainst : Dictionary<CivId, int>` (value = year declared), not as a flag on character relationships or a separate War entity.
+
+**Rejected:** War as a character relationship flag (dies with the character, can't outlive rulers), War as a separate aggregate entity (more indirection, more code to maintain).
+
+**Rationale:** Wars outlive the characters who declared them. A civ-level dictionary is O(1) lookup (`civ.IsAtWarWith(targetCivId)`), trivially serialized, and naturally enforces uniqueness (one war entry per pair). Annual cleanup in `CivTracker.RunAnnualDiplomacy` handles expiry, surrender, and destruction in one place.
+
+---
+
+## ADR-031: Biome Carrying Capacity Computed in Existing Tile Walk
+
+**Decision:** `ResourcePressurePhase.BuildLedger` accumulates `carryTotal += BiomeCarryingCapacity(biome)` inside its existing reach-tile loop and caches the result on `SettlementStub.CarryingCapacity`. `PopulationDynamicsPhase` reads the cached value at zero cost.
+
+**Rejected:** Separate `ComputeCarryingCapacity()` method in `PopulationDynamicsPhase` calling `GetTilesInRadius` again (duplicate O(r²) tile scan per settlement per tick — measured as the primary cause of a perf regression), storing capacity in a separate dictionary (extra lookup, extra memory).
+
+**Rationale:** The carrying capacity and the resource ledger are both sums over the same tile set with the same radius. Computing them together is O(1) extra work per tile. Caching on `SettlementStub` keeps the per-tick cost to a single dictionary read. The default `CarryingCapacity = 50_000` ensures tests that skip `ResourcePressurePhase` still have a valid value.
+
+---
+
+## ADR-032: ActiveFounders HashSet for O(1) isFounder Checks
+
+**Decision:** `WorldState._activeFounders : HashSet<EntityId>` (exposed as `IReadOnlySet<EntityId> ActiveFounders`) tracks which characters currently have a live settlement they founded. Maintained by `CivTracker` via `AddActiveFounder`/`RemoveActiveFounder`.
+
+**Rejected:** Scanning `world.Settlements.Values.Any(s => s.FounderId == c.Id)` per character per tick (O(settlements) × O(characters) × TPS ≈ millions of comparisons/second at moderate scale), caching on the character entity (requires character to be mutated from settlement events — layering violation).
+
+**Rationale:** The `isFounder` check is on the hot path: called in both `GoalManager.UpdateGoals` and `UtilityScorer.GetCandidateActions` every tick for every character. The HashSet collapses this to O(1). Maintenance is bounded: settlements are created/destroyed rarely compared to how often the check runs.
+
+---
+
+*Document Version: 0.3*  
+*Last Updated: June 24, 2026 (M2 perf and doc cleanup)*

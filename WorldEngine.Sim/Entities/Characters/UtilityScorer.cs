@@ -58,8 +58,7 @@ public static class UtilityScorer
         // Travel — pick best adjacent tile; wanderlust bonus grows with time stationary,
         // dampened by settled role (founder > civ member > free agent) and Curiosity
         var travelDest = BestAdjacentTile(c, world, cfg);
-        bool isFounder = c.Identity.CivId.IsValid
-            && world.Settlements.Values.Any(s => s.FounderId == c.Id);
+        bool isFounder = c.Identity.CivId.IsValid && world.ActiveFounders.Contains(c.Id);
         if (travelDest.HasValue)
         {
             float wanderlust = Math.Min(1f, (float)c.TicksInCurrentTile / cfg.WanderlustMaxTicks)
@@ -537,23 +536,30 @@ public static class UtilityScorer
 
     /// <summary>
     /// Bonus for being positioned on a trade route between existing settlements.
-    /// For each pair of settlements, score = 1/(dist_a × dist_b); sum across all pairs.
+    /// For each pair of the K nearest settlements, score = 1/(dist_a × dist_b); sum across pairs.
+    /// Capped at the nearest 8 settlements to avoid O(n²) cost as settlement count grows.
     /// Returns 0 when there are fewer than two settlements.
     /// </summary>
+    private const int RouteMaxSettlements = 8;
     private static float ComputeRouteBonus(TileCoord coord, IWorldStateReadOnly world)
     {
-        var settlementsAsList = world.Settlements.Keys.ToList();
-        if (settlementsAsList.Count < 2) return 0f;
+        if (world.Settlements.Count < 2) return 0f;
+
+        // Collect distances to all settlements, then take the K nearest
+        var nearest = world.Settlements.Keys
+            .Select(s => (Coord: s, Dist: TileDistance(coord, s)))
+            .Where(x => x.Dist > 0f)
+            .OrderBy(x => x.Dist)
+            .Take(RouteMaxSettlements)
+            .ToList();
+
+        if (nearest.Count < 2) return 0f;
 
         float bonus = 0f;
-        for (int i = 0; i < settlementsAsList.Count; i++)
-        for (int j = i + 1; j < settlementsAsList.Count; j++)
-        {
-            float dA = TileDistance(coord, settlementsAsList[i]);
-            float dB = TileDistance(coord, settlementsAsList[j]);
-            if (dA > 0f && dB > 0f)
-                bonus += 1f / (dA * dB);
-        }
+        for (int i = 0; i < nearest.Count; i++)
+        for (int j = i + 1; j < nearest.Count; j++)
+            bonus += 1f / (nearest[i].Dist * nearest[j].Dist);
+
         return Math.Min(bonus, 1f);  // cap so a perfectly central tile doesn't dominate the score
     }
 

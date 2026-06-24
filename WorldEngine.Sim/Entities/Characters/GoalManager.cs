@@ -41,8 +41,7 @@ public static class GoalManager
         // Expansion goal: ambitious non-founders want to build a new settlement.
         // Allowed while inside a home settlement — wanderlust will push them toward open land;
         // EstablishSettlement scoring gates on the actual tile being worthwhile.
-        bool isFounder = c.Identity.CivId.IsValid
-            && world.Settlements.Values.Any(s => s.FounderId == c.Id);
+        bool isFounder = c.Identity.CivId.IsValid && world.ActiveFounders.Contains(c.Id);
         if (!hasExpansion && !isFounder && c.Personality.Ambition > cfg.GoalAmbitionThreshold)
         {
             c.Goals.Add(new GoalData
