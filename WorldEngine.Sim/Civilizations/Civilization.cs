@@ -28,6 +28,14 @@ public sealed class Civilization
     public int TotalPopulation { get; set; } = 0;
 
     /// <summary>
+    /// Accumulated territorial tension toward each other civ.
+    /// Increases annually when their settlements are within WarProximityRadius tiles;
+    /// decays when they're not. Crossing TensionWarThreshold triggers war if the ruler
+    /// is aggressive enough. Cleared on peace. Maintained by CivTracker.RunBorderTension.
+    /// </summary>
+    public Dictionary<CivId, float> BorderTension { get; } = new();
+
+    /// <summary>
     /// Active wars: maps the enemy CivId to the year war was declared.
     /// War is a civ-level state — individual character relationships carry personal
     /// rivalries only; actual military conflict is tracked here.

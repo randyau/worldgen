@@ -179,6 +179,18 @@ public sealed class CharacterSimConfig
     // Minimum aggression score required to consider War action against a rival
     public float WarAggressionThreshold     { get; set; } = 0.5f;
 
+    // ─── Border tension (civ-level war trigger) ───────────────────────────────
+    // Settlements within this tile radius accumulate tension toward their neighbour civ each year.
+    public int   WarProximityRadius         { get; set; } = 15;
+    // Base tension accrued per close settlement pair per year; multiplied by proximity (0–1)
+    // and the ruler's Aggression, so aggressive civs with many border settlements escalate fast.
+    public float TensionAccrualPerPair      { get; set; } = 0.12f;
+    // Fraction of tension lost each year when a civ pair has no proximate settlements.
+    public float TensionDecayRate           { get; set; } = 0.15f;
+    // When a civ's accumulated tension toward an enemy crosses this value AND the ruler is
+    // aggressive enough (WarAggressionThreshold), war is declared without personal contact.
+    public float TensionWarThreshold        { get; set; } = 1.0f;
+
     // ─── Wanderlust — travel urge that builds the longer a character stays in one place
     public int   WanderlustMaxTicks          { get; set; } = 8;   // full bonus after 2 seasons stationary
     public float WanderlustBonus             { get; set; } = 0.4f; // added to travel score at max wanderlust

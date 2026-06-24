@@ -711,6 +711,12 @@ alliance_search_radius       = 4     # tile radius when scanning for nearby neut
 bond_search_radius           = 3     # tile radius when scanning for Bond companions
 war_aggression_threshold     = 0.5   # minimum Aggression to consider DeclareWar action
 
+# Border tension — civ-level territorial pressure that triggers war without ruler proximity
+war_proximity_radius        = 15    # tile radius within which settlements build tension toward each other
+tension_accrual_per_pair    = 0.12  # tension added per close settlement pair per year (× proximity factor × ruler Aggression)
+tension_decay_rate          = 0.15  # fraction of tension lost each year when no proximate settlements exist
+tension_war_threshold       = 1.0   # accumulated tension at which war is declared (if ruler Aggression ≥ war_aggression_threshold)
+
 # Wellbeing — emotional state dynamics (-1 spiraling … +1 flourishing)
 wellbeing_goal_gain_rate        = 0.01    # per tick when a goal is progressing
 wellbeing_companion_boost       = 0.005   # per tick co-located with Bond target

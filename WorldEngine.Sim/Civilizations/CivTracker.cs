@@ -212,45 +212,56 @@ public static class CivTracker
     {
         if (world.GetEntity(cmd.CharacterId) is not Tier1Character c) return;
         if (!c.Identity.CivId.IsValid) return;
-
-        var cfg = world.SimConfig.Character;
         var declCiv = world.GetCivilization(c.Identity.CivId);
         var targCiv = world.GetCivilization(cmd.TargetCivId);
-        if (declCiv == null || targCiv == null) return;
-        if (declCiv.IsCollapsed || targCiv.IsCollapsed) return;
-        if (declCiv.IsAtWarWith(cmd.TargetCivId)) return; // already at war at civ level
-        // Enforce post-war peace cooldown — can't re-declare immediately after a truce
-        if (declCiv.InPeaceCooldownWith(cmd.TargetCivId, world.CurrentYear, cfg.PeaceCooldownYears)) return;
+        if (declCiv == null || targCiv == null || declCiv.IsCollapsed || targCiv.IsCollapsed) return;
+        StartWarBetween(declCiv, targCiv, "character_encounter", world, pending);
+    }
 
-        // Record war on both sides
-        declCiv.WarsAgainst[cmd.TargetCivId]  = world.CurrentYear;
-        targCiv.WarsAgainst[c.Identity.CivId] = world.CurrentYear;
+    /// <summary>
+    /// Records war on both sides, applies trust damage between rulers, and fires WarDeclared.
+    /// Called from both character-command resolution and the annual border-tension check, so
+    /// the logic lives here rather than being duplicated in ResolveWar.
+    /// </summary>
+    private static void StartWarBetween(
+        Civilization declCiv, Civilization targCiv, string cause,
+        WorldState world, List<PendingEvent> pending)
+    {
+        var cfg = world.SimConfig.Character;
+        if (declCiv.IsAtWarWith(targCiv.Id)) return;
+        if (declCiv.InPeaceCooldownWith(targCiv.Id, world.CurrentYear, cfg.PeaceCooldownYears)) return;
 
-        // Personal trust hit between the two rulers (ruler-level animosity)
+        declCiv.WarsAgainst[targCiv.Id] = world.CurrentYear;
+        targCiv.WarsAgainst[declCiv.Id] = world.CurrentYear;
+
+        // Trust hit between rulers even if they've never met — reputation travels
+        var declFounder = world.GetEntity(declCiv.FounderId) as Tier1Character;
         var targFounder = world.GetEntity(targCiv.FounderId) as Tier1Character;
-        if (targFounder != null)
+        if (declFounder != null && targFounder != null)
         {
-            var rel = world.Relationships.GetOrCreate(c.Id, targFounder.Id);
+            var rel = world.Relationships.GetOrCreate(declFounder.Id, targFounder.Id);
             bool wasAllied = rel.IsAlly;
             world.Relationships.Upsert(rel with
             {
                 Trust = Math.Min(rel.Trust - 0.3f, -0.3f),
                 Flags = (rel.Flags & ~RelationshipFlags.IsAlly) | RelationshipFlags.IsRival,
             });
-            if (wasAllied) FireAllianceBroken(c, targFounder, "war_declared", world, pending);
+            if (wasAllied) FireAllianceBroken(declFounder, targFounder, "war_declared", world, pending);
         }
 
+        var eventTile = declFounder?.Location ?? declCiv.CapitalTile;
         var payload = JsonSerializer.Serialize(new
         {
-            declarerId   = c.Id.Value,
-            declarerName = c.Identity.Name,
-            declarerCiv  = c.Identity.CivId.Value,
+            declarerId      = declCiv.FounderId.Value,
+            declarerName    = declFounder?.Identity.Name ?? declCiv.Name,
+            declarerCiv     = declCiv.Id.Value,
             declarerCivName = declCiv.Name,
-            targetCiv    = cmd.TargetCivId.Value,
-            targetCivName = targCiv.Name,
+            targetCiv       = targCiv.Id.Value,
+            targetCivName   = targCiv.Name,
+            cause,
         });
-        pending.Add(new PendingEvent(EventType.WarDeclared, c.Location, null, payload,
-            new[] { c.Id.Value }));
+        pending.Add(new PendingEvent(EventType.WarDeclared, eventTile, null, payload,
+            new[] { declCiv.FounderId.Value }));
     }
 
     // ─── Raid ─────────────────────────────────────────────────────────────────
@@ -475,7 +486,10 @@ public static class CivTracker
             // War expiry is handled at civ level below; no character-level war state here.
         }
 
-        // 3. Civ-level war resolution: expiry, surrender, and collapse
+        // 3. Border tension: accumulate territorial pressure; declare war if threshold crossed
+        RunBorderTension(world, pending);
+
+        // 4. Civ-level war resolution: expiry, surrender, and collapse
         //    Iterate all civs; EndWarBetween handles symmetry so process each pair once.
         var processed = new HashSet<(CivId, CivId)>();
         foreach (var civ in world.Civilizations.Values)
@@ -532,6 +546,10 @@ public static class CivTracker
         ca.PeaceTreaties[civB] = world.CurrentYear;
         cb.PeaceTreaties[civA] = world.CurrentYear;
 
+        // Peace resolves territorial tension — reset so the clock restarts after the cooldown
+        ca.BorderTension.Remove(civB);
+        cb.BorderTension.Remove(civA);
+
         var payload = JsonSerializer.Serialize(new
         {
             civAId   = civA.Value,
@@ -559,6 +577,100 @@ public static class CivTracker
         });
         pending.Add(new PendingEvent(EventType.AllianceBroken, a.Location, null, payload,
             new[] { a.Id.Value, b.Id.Value }));
+    }
+
+    // ─── Border tension ───────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Annual civ-level territorial pressure scan. For each pair of non-enemy civs whose
+    /// settlements are within WarProximityRadius, tension accrues proportional to how many
+    /// settlement pairs are close and how aggressive the declaring civ's ruler is.
+    /// Tension decays when civs are no longer proximate. Crossing TensionWarThreshold
+    /// triggers war if the ruler's Aggression meets the threshold — no physical contact needed.
+    /// </summary>
+    private static void RunBorderTension(WorldState world, List<PendingEvent> pending)
+    {
+        var cfg = world.SimConfig.Character;
+        int r   = cfg.WarProximityRadius;
+
+        // Index settlements by CivId once — reused for all pair checks
+        var byCiv = new Dictionary<CivId, List<TileCoord>>();
+        foreach (var (coord, stub) in world.Settlements)
+        {
+            if (!byCiv.TryGetValue(stub.CivId, out var list))
+                byCiv[stub.CivId] = list = new();
+            list.Add(coord);
+        }
+
+        var activeCivs = world.Civilizations.Values
+            .Where(c => !c.IsCollapsed && byCiv.ContainsKey(c.Id))
+            .ToList();
+
+        for (int i = 0; i < activeCivs.Count; i++)
+        for (int j = i + 1; j < activeCivs.Count; j++)
+        {
+            var a = activeCivs[i];
+            var b = activeCivs[j];
+
+            if (a.IsAtWarWith(b.Id)) continue;
+            if (a.InPeaceCooldownWith(b.Id, world.CurrentYear, cfg.PeaceCooldownYears)) continue;
+
+            // Measure proximity: sum (1 - dist/r) over all close settlement pairs
+            float proximity = 0f;
+            foreach (var ca in byCiv[a.Id])
+            foreach (var cb in byCiv[b.Id])
+            {
+                int dx = ca.X - cb.X, dy = ca.Y - cb.Y;
+                float dist = MathF.Sqrt(dx * dx + dy * dy);
+                if (dist <= r) proximity += 1f - dist / r;
+            }
+
+            if (proximity <= 0f)
+            {
+                // No proximity this year — decay tension on both sides
+                Decay(a.BorderTension, b.Id, cfg.TensionDecayRate);
+                Decay(b.BorderTension, a.Id, cfg.TensionDecayRate);
+                continue;
+            }
+
+            // Accumulate tension scaled by each ruler's Aggression (dead founders → neutral 0.5)
+            float aggrA = (world.GetEntity(a.FounderId) as Tier1Character)?.Personality.Aggression ?? 0.5f;
+            float aggrB = (world.GetEntity(b.FounderId) as Tier1Character)?.Personality.Aggression ?? 0.5f;
+
+            a.BorderTension[b.Id] = a.BorderTension.GetValueOrDefault(b.Id, 0f) + proximity * aggrA * cfg.TensionAccrualPerPair;
+            b.BorderTension[a.Id] = b.BorderTension.GetValueOrDefault(a.Id, 0f) + proximity * aggrB * cfg.TensionAccrualPerPair;
+        }
+
+        // Check threshold and declare war — one declaration per civ per annual tick
+        foreach (var civ in activeCivs)
+        {
+            if (civ.WarsAgainst.Count >= cfg.MaxActiveWars) continue;
+            float founderAggr = (world.GetEntity(civ.FounderId) as Tier1Character)?.Personality.Aggression ?? 0f;
+            if (founderAggr < cfg.WarAggressionThreshold) continue;
+
+            foreach (var (enemyCivId, tension) in civ.BorderTension.ToList())
+            {
+                if (tension < cfg.TensionWarThreshold) continue;
+                if (civ.IsAtWarWith(enemyCivId)) continue;
+                if (civ.InPeaceCooldownWith(enemyCivId, world.CurrentYear, cfg.PeaceCooldownYears)) continue;
+                if (!world.Civilizations.TryGetValue(enemyCivId, out var enemy) || enemy.IsCollapsed) continue;
+
+                StartWarBetween(civ, enemy, "border_tension", world, pending);
+                // StartWarBetween is guarded internally, but clear tension regardless so the
+                // pair resets whether or not the declaration succeeded
+                civ.BorderTension.Remove(enemyCivId);
+                enemy.BorderTension.Remove(civ.Id);
+                break; // one war per civ per annual tick; re-evaluate next year if still hostile
+            }
+        }
+    }
+
+    private static void Decay(Dictionary<CivId, float> tension, CivId key, float rate)
+    {
+        if (!tension.TryGetValue(key, out float t)) return;
+        t *= (1f - rate);
+        if (t < 0.01f) tension.Remove(key);
+        else tension[key] = t;
     }
 
     // ─── War helpers ──────────────────────────────────────────────────────────
