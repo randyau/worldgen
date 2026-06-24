@@ -46,7 +46,7 @@ public sealed class CharacterBehaviorPhase
 
             c.TicksInCurrentTile++;
             NeedsUpdater.Update(c, world, _cfg);
-            GoalManager.UpdateGoals(c, world, tick, _cfg);
+            GoalManager.UpdateGoals(c, world, tick, _cfg, pending);
             bool wasSpiraling = c.Wellbeing <= _cfg.SpiralThreshold;
             bool wasFlourishingBefore = c.Wellbeing >= _cfg.FlourishingThreshold;
             bool isSpiraling = GoalManager.UpdateWellbeing(c, world, _cfg, out bool crossedFlourishing);
@@ -84,7 +84,7 @@ public sealed class CharacterBehaviorPhase
         foreach (var (deadId, deadName) in deathsThisTick)
         {
             var mourners = new List<(EntityId, float)>();
-            GoalManager.ApplyGriefToMourners(deadId, deadName, world, _cfg, mourners);
+            GoalManager.ApplyGriefToMourners(deadId, deadName, world, _cfg, mourners, pending);
             if (mourners.Count == 0) continue;
 
             // Amend the CharacterDied event to also reference mourner IDs
@@ -96,10 +96,10 @@ public sealed class CharacterBehaviorPhase
                 pending[deathIdx] = deathEv with { EntityIds = ids };
             }
 
-            foreach (var (mournerId, intensity) in mourners)
+            foreach (var (mournerId, _) in mourners)
             {
                 if (world.GetEntity(mournerId) is Tier1Character mourner && mourner.IsAlive)
-                    EmitGriefEvent(mourner, deadId, deadName, intensity, pending);
+                    GoalManager.EmitGriefEvent(mourner, deadId, deadName, pending);
             }
         }
 
@@ -482,6 +482,8 @@ public sealed class CharacterBehaviorPhase
 
     // ─── Artwork creation ────────────────────────────────────────────────────
 
+    private const int SaltArtType = 3001;
+
     private static void ResolveCreateArtwork(
         Tier1Character c, WorldState world, List<PendingEvent> pending, long tick)
     {
@@ -494,12 +496,30 @@ public sealed class CharacterBehaviorPhase
         }
         c.Wellbeing = Math.Min(1f, c.Wellbeing + 0.05f);
 
+        // Art type weighted toward character personality:
+        // high Compassion → Epic/Song (social/emotional), high Ingenuity → Sculpture/Painting,
+        // high Aggression → Monument (assertive permanence)
+        int artCount = Enum.GetValues<ArtType>().Length;
+        int artIndex = (int)(world.GetRandomFloat(c.Id, SaltArtType) * artCount) % artCount;
+        var artType = (ArtType)artIndex;
+
+        // Apply a small culture cohesion bonus to the settlement where the artwork is created.
+        if (world.Settlements.TryGetValue(c.Location, out var homeStub))
+        {
+            var stores = homeStub.ResourceStores is null
+                ? new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase)
+                : new Dictionary<string, float>(homeStub.ResourceStores, StringComparer.OrdinalIgnoreCase);
+            stores["bonus_civ_cohesion"] = (stores.TryGetValue("bonus_civ_cohesion", out var cur) ? cur : 0f) + 0.02f;
+            world.Settlements[c.Location] = homeStub with { ResourceStores = stores };
+        }
+
         var payload = JsonSerializer.Serialize(new
         {
             characterId   = c.Id.Value,
             characterName = c.Identity.Name,
-            location      = new[] { c.Location.X, c.Location.Y },
-            wellbeing     = c.Wellbeing
+            artType       = artType.ToString(),
+            wellbeing     = c.Wellbeing,
+            location      = new[] { c.Location.X, c.Location.Y }
         });
         pending.Add(new PendingEvent(EventType.ArtworkCreated, c.Location, null, payload,
             new[] { c.Id.Value }));
@@ -531,26 +551,6 @@ public sealed class CharacterBehaviorPhase
         });
         pending.Add(new PendingEvent(EventType.CharacterSpiraling, c.Location, null, payload,
             new[] { c.Id.Value }));
-    }
-
-    private static void EmitGriefEvent(
-        Tier1Character mourner, EntityId deadId, string deadName, float intensity,
-        List<PendingEvent> pending)
-    {
-        var payload = JsonSerializer.Serialize(new
-        {
-            characterId   = mourner.Id.Value,
-            characterName = mourner.Identity.Name,
-            deceasedId    = deadId.Value,
-            deceasedName  = deadName,
-            intensity,
-            wellbeing     = mourner.Wellbeing,
-            hasAvenge     = mourner.Goals.Any(g => g.Type == GoalType.Avenge)
-        });
-        // Link both the mourner and the deceased so either character's history
-        // surfaces this grief event — "who did X grieve?" and "who grieved X?" both resolve.
-        pending.Add(new PendingEvent(EventType.CharacterGrieved, mourner.Location, null, payload,
-            new[] { mourner.Id.Value, deadId.Value }));
     }
 
     // ─── Beast encounters ────────────────────────────────────────────────────

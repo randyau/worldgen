@@ -1,5 +1,27 @@
 namespace WorldEngine.Sim.Core;
 
+public enum DiscoveryType
+{
+    Agriculture    = 0,
+    Medicine       = 1,
+    Astronomy      = 2,
+    Mathematics    = 3,
+    Engineering    = 4,
+    Philosophy     = 5,
+    Navigation     = 6,
+    Metallurgy     = 7,
+}
+
+public enum ArtType
+{
+    Monument   = 0,
+    Epic       = 1,
+    Song       = 2,
+    Tapestry   = 3,
+    Sculpture  = 4,
+    Painting   = 5,
+}
+
 public enum Season { Spring = 0, Summer = 1, Autumn = 2, Winter = 3 }
 
 public enum SimSpeed { Paused, Slow, Normal, Fast, Ultrafast }

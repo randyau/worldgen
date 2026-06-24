@@ -257,11 +257,21 @@ public sealed class CharacterSimConfig
 
     // Tier 2 tuning
     public int   Tier2PerPopulation     { get; set; } = 10;  // one Tier2 per this many pop
-    public int   Tier2MaxAgeSeasonsMin  { get; set; } = 60;
-    public int   Tier2MaxAgeSeasonsMax  { get; set; } = 120;
+    public int   Tier2MaxAgeSeasonsMin  { get; set; } = 600;   // ~38 years at 16 ticks/year
+    public int   Tier2MaxAgeSeasonsMax  { get; set; } = 1200;  // ~75 years
     public float Tier2CrystalChance     { get; set; } = 0.001f;  // per season
     public float Tier2NeedsDecayFood    { get; set; } = 0.06f;
     public float Tier2NeedsDecaySafety  { get; set; } = 0.04f;
     public float Tier2NeedsDecayBelonging { get; set; } = 0.03f;
     public float Tier2NeedsDecayStatus   { get; set; } = 0.04f;
+
+    // ─── Scholar discoveries ──────────────────────────────────────────────────
+    // Per-tick discovery probability = this × Rationality
+    public float ScholarDiscoveryChance       { get; set; } = 0.04f;
+    // Amount added to the relevant ResourceStores bonus key on each discovery
+    public float ScholarDiscoveryBonusAmount  { get; set; } = 0.05f;
+
+    // ─── Physician settlement healing ─────────────────────────────────────────
+    // Per-tick settlement health recovery (applied while settlement IsInfected) = this × Rationality
+    public float PhysicianSettlementHealRate  { get; set; } = 0.5f;
 }

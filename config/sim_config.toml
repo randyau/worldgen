@@ -769,13 +769,20 @@ wellbeing_flee_multiplier       = 0.4     # Flee: flight-or-fight stress
 
 # Tier 2 sub-tuning (appended to [character] section — Tomlyn merges same-section keys)
 tier2_per_population        = 10
-tier2_max_age_seasons_min   = 60
-tier2_max_age_seasons_max   = 120
+tier2_max_age_seasons_min   = 600   # ~38 years at 16 ticks/year (was 60 — 4 years, broken)
+tier2_max_age_seasons_max   = 1200  # ~75 years (was 120 — also broken)
 tier2_crystal_chance        = 0.001
 tier2_needs_decay_food      = 0.06
 tier2_needs_decay_safety    = 0.04
 tier2_needs_decay_belonging = 0.03
 tier2_needs_decay_status    = 0.04
+
+# Scholar discovery settings
+scholar_discovery_chance       = 0.04  # per-tick chance = this × Rationality
+scholar_discovery_bonus_amount = 0.05  # bonus added to settlement ResourceStore key per discovery
+
+# Physician settlement healing
+physician_settlement_heal_rate = 0.5   # health restored per tick to infected settlement = this × Rationality
 
 # =============================================================================
 # SETTLEMENT (Phase 2.4 — Population Dynamics)

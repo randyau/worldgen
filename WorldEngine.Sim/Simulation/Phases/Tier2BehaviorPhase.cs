@@ -42,8 +42,19 @@ public sealed class Tier2BehaviorPhase
             TryCrystallize(c, world, pending, tick);
         }
 
-        foreach (var c in chars.Where(ch => !ch.IsAlive))
-            world.Entities.Remove(c.Id);
+        // Grief: notify any Tier1 ruler who had a Bond goal targeting a Tier2 that died.
+        var deadTier2 = chars.Where(ch => !ch.IsAlive).ToList();
+        foreach (var dead in deadTier2)
+        {
+            var mourners = new List<(EntityId, float)>();
+            GoalManager.ApplyGriefToMourners(dead.Id, dead.Name, world, _cfg, mourners, pending);
+            foreach (var (mournerId, _) in mourners)
+            {
+                if (world.GetEntity(mournerId) is Tier1Character mourner && mourner.IsAlive)
+                    GoalManager.EmitGriefEvent(mourner, dead.Id, dead.Name, pending);
+            }
+            world.Entities.Remove(dead.Id);
+        }
 
         return pending;
     }
@@ -211,17 +222,49 @@ public sealed class Tier2BehaviorPhase
         return false;
     }
 
+    private static readonly string[] DiscoveryBonusKey = [
+        "bonus_food_yield",          // Agriculture
+        "bonus_disease_resistance",  // Medicine
+        "bonus_navigation",          // Astronomy
+        "bonus_trade_income",        // Mathematics
+        "bonus_construction_speed",  // Engineering
+        "bonus_civ_cohesion",        // Philosophy
+        "bonus_exploration_range",   // Navigation
+        "bonus_military_strength",   // Metallurgy
+    ];
+
     private void RunScholar(Tier2Character c, WorldState world, List<PendingEvent> pending)
     {
         float r = world.GetRandomFloat(c.Id, SaltScholar);
-        float discoveryChance = 0.04f * c.Personality.Rationality;
+        float discoveryChance = _cfg.ScholarDiscoveryChance * c.Personality.Rationality;
         if (r > discoveryChance) return;
+
+        // Weighted by personality — rational scholars lean toward hard sciences,
+        // spiritual ones toward philosophy, curious ones anywhere.
+        int typeCount = Enum.GetValues<DiscoveryType>().Length;
+        int typeIndex = (int)(world.GetRandomFloat(c.Id, SaltScholar + 1) * typeCount) % typeCount;
+        var discovery = (DiscoveryType)typeIndex;
+        string bonusKey = DiscoveryBonusKey[typeIndex];
+
+        // Apply discovery bonus to the scholar's home settlement ResourceStores
+        if (c.Livelihood.SettlementTile != default
+            && world.Settlements.TryGetValue(c.Livelihood.SettlementTile, out var homeStub))
+        {
+            var stores = homeStub.ResourceStores is null
+                ? new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase)
+                : new Dictionary<string, float>(homeStub.ResourceStores, StringComparer.OrdinalIgnoreCase);
+            stores[bonusKey] = (stores.TryGetValue(bonusKey, out var cur) ? cur : 0f) + _cfg.ScholarDiscoveryBonusAmount;
+            world.Settlements[c.Livelihood.SettlementTile] = homeStub with { ResourceStores = stores };
+        }
 
         var payload = JsonSerializer.Serialize(new
         {
-            scholarId   = c.Id.Value,
-            scholarName = c.Name,
-            location    = new[] { c.Location.X, c.Location.Y }
+            scholarId     = c.Id.Value,
+            scholarName   = c.Name,
+            discoveryType = discovery.ToString(),
+            bonusKey,
+            bonusAmount   = _cfg.ScholarDiscoveryBonusAmount,
+            location      = new[] { c.Location.X, c.Location.Y }
         });
         pending.Add(new PendingEvent(EventType.ScholarDiscovery, c.Location, null, payload,
             new[] { c.Id.Value }));
@@ -243,7 +286,7 @@ public sealed class Tier2BehaviorPhase
 
     private void RunPhysician(Tier2Character c, WorldState world, List<PendingEvent> pending)
     {
-        // Heal the nearest injured Tier1 character in the same tile
+        // 1. Heal the nearest injured Tier1 character in the same tile
         foreach (var e in world.GetEntitiesAt(c.Location))
         {
             if (e is not Entities.Characters.Tier1Character t1) continue;
@@ -254,14 +297,27 @@ public sealed class Tier2BehaviorPhase
 
             var payload = JsonSerializer.Serialize(new
             {
-                physicianId = c.Id.Value,
-                patientId   = t1.Id.Value,
-                healed
+                physicianId  = c.Id.Value,
+                physicianName = c.Name,
+                patientId    = t1.Id.Value,
+                patientName  = t1.Identity.Name,
+                healed,
+                location     = new[] { c.Location.X, c.Location.Y }
             });
             pending.Add(new PendingEvent(EventType.PhysicianHealed, c.Location, null, payload,
                 new[] { c.Id.Value, t1.Id.Value }));
             break; // one patient per tick
         }
+
+        // 2. Reduce disease burden on the physician's home settlement each tick.
+        // Physicians slow the spread and improve recovery odds — modeled as a
+        // direct health recovery bonus on infected settlements.
+        if (c.Livelihood.SettlementTile == default) return;
+        if (!world.Settlements.TryGetValue(c.Livelihood.SettlementTile, out var stub)) return;
+        if (!stub.IsInfected) return;
+        float healRate = _cfg.PhysicianSettlementHealRate * c.Personality.Rationality;
+        world.Settlements[c.Livelihood.SettlementTile] = stub with
+            { Health = (int)Math.Min(100f, stub.Health + healRate) };
     }
 
     // ─── Crystallization ──────────────────────────────────────────────────────
