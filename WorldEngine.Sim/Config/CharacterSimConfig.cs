@@ -50,6 +50,14 @@ public sealed class CharacterSimConfig
     public float NeedsDecayPurpose      { get; set; } = 0.04f;
     public float NeedsDecaySpiritual    { get; set; } = 0.02f;
 
+    // Settlement presence passively restores social/identity needs — community provides recognition and belonging.
+    // "Own civ" = same CivId as character; "foreign" = at any other settlement.
+    public float BelongingOwnSettlementRecovery     { get; set; } = 0.03f;  // full community belonging
+    public float BelongingForeignSettlementRecovery { get; set; } = 0.01f;  // partial: stranger in a crowd
+    public float StatusOwnSettlementRecovery        { get; set; } = 0.03f;  // recognized by community peers
+    public float PurposeOwnSettlementRecovery       { get; set; } = 0.02f;  // shared goals and work
+    public float SpiritualSettlementRecovery        { get; set; } = 0.01f;  // any settlement: ritual, culture
+
     // Utility weights
     public float NeedsWeight            { get; set; } = 0.5f;
     public float GoalsWeight            { get; set; } = 0.3f;

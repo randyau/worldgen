@@ -27,9 +27,9 @@ public static class NeedsUpdater
         n.Purpose   = Math.Max(0f, n.Purpose   - cfg.NeedsDecayPurpose);
         n.Spiritual = Math.Max(0f, n.Spiritual - cfg.NeedsDecaySpiritual);
 
-        // Situational recovery (stub — Phase 2.3 will use real territory/settlement data)
-        n.Safety += 0.05f;  // stub: ambient safety recovery
-        n.Food   += 0.07f;  // stub: lower food web (same rationale as beasts)
+        // Ambient recovery stubs (food web, ambient safety)
+        n.Safety += 0.05f;
+        n.Food   += 0.07f;
 
         // Shelter recovery from environment. Settlements provide the best shelter;
         // forests and mountains provide meaningful natural shelter so explorers can
@@ -44,6 +44,22 @@ public static class NeedsUpdater
             .Any(e => e is Tier1Character other && other.Id != c.Id
                    && (world.GetRelationship(c.Id, other.Id)?.IsAlly ?? false)))
             n.Belonging = Math.Min(1f, n.Belonging + 0.05f);
+
+        // Settlement presence restores social/identity needs — community provides recognition,
+        // shared purpose, and ritual that solitary wandering cannot supply.
+        if (world.Settlements.TryGetValue(c.Location, out var stub))
+        {
+            bool atOwnCiv = c.Identity.CivId.IsValid && stub.CivId == c.Identity.CivId;
+            n.Belonging = Math.Min(1f, n.Belonging + (atOwnCiv
+                ? cfg.BelongingOwnSettlementRecovery
+                : cfg.BelongingForeignSettlementRecovery));
+            if (atOwnCiv)
+            {
+                n.Status  = Math.Min(1f, n.Status  + cfg.StatusOwnSettlementRecovery);
+                n.Purpose = Math.Min(1f, n.Purpose + cfg.PurposeOwnSettlementRecovery);
+            }
+            n.Spiritual = Math.Min(1f, n.Spiritual + cfg.SpiritualSettlementRecovery);
+        }
 
         // Clamp all
         n.Safety    = Math.Min(1f, n.Safety);

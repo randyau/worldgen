@@ -276,12 +276,16 @@ public sealed class CharacterBehaviorPhase
 
     private static void ResolveRest(Tier1Character c)
     {
-        // Resting restores needs slightly above stub ambient recovery
+        // Resting restores physical needs plus identity/spiritual needs —
+        // stillness enables reflection, contemplation, and sense of self.
         c.Needs = c.Needs with
         {
-            Safety  = Math.Min(1f, c.Needs.Safety  + 0.05f),
-            Food    = Math.Min(1f, c.Needs.Food    + 0.05f),
-            Shelter = Math.Min(1f, c.Needs.Shelter + 0.03f)
+            Safety    = Math.Min(1f, c.Needs.Safety    + 0.05f),
+            Food      = Math.Min(1f, c.Needs.Food      + 0.05f),
+            Shelter   = Math.Min(1f, c.Needs.Shelter   + 0.03f),
+            Status    = Math.Min(1f, c.Needs.Status    + 0.01f),
+            Purpose   = Math.Min(1f, c.Needs.Purpose   + 0.02f),
+            Spiritual = Math.Min(1f, c.Needs.Spiritual + 0.03f),
         };
     }
 

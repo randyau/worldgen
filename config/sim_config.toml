@@ -630,6 +630,12 @@ needs_decay_belonging     = 0.03
 needs_decay_status        = 0.03
 needs_decay_purpose       = 0.04
 needs_decay_spiritual     = 0.02
+# Settlement presence passively restores social/identity needs (per tick while on settlement tile)
+belonging_own_settlement_recovery      = 0.03   # own-civ settlement: full community belonging (balances decay)
+belonging_foreign_settlement_recovery  = 0.01   # foreign settlement: partial benefit as a stranger
+status_own_settlement_recovery         = 0.03   # recognized by civ peers (balances decay)
+purpose_own_settlement_recovery        = 0.02   # shared work and goals (rest makes up the rest)
+spiritual_settlement_recovery          = 0.01   # any settlement: shared ritual, culture
 needs_weight              = 0.5
 goals_weight              = 0.3
 personality_weight        = 0.2
@@ -734,12 +740,12 @@ wellbeing_goal_gain_rate        = 0.01    # per tick when a goal is progressing
 wellbeing_companion_boost       = 0.005   # per tick co-located with Bond target
 wellbeing_hunger_drain          = 0.02    # max drain at zero food
 wellbeing_hunger_threshold      = 0.3     # food need below this triggers hunger wellbeing drain
-wellbeing_mean_reversion_rate   = 0.005   # pull toward 0 each tick
+wellbeing_mean_reversion_rate   = 0.008   # pull toward 0 each tick (raised from 0.005 — prevents permanent distress equilibrium)
 flourishing_threshold           = 0.7     # Wellbeing ≥ this → Flourishing event fires once
 spiral_threshold                = -0.7    # Wellbeing ≤ this → Spiraling
 distressed_social_suppression   = 0.4     # social action score multiplier when Wellbeing < -0.3
 grief_drain_rate                = 0.015   # Wellbeing drain per tick per Grieve goal
-grief_decay_rate                = 0.002   # grief intensity decay per tick
+grief_decay_rate                = 0.004   # grief intensity decay per tick (raised from 0.002 — was ~31yr grief period, now ~15yr)
 grief_wellbeing_shock           = 0.4     # fraction of grief intensity applied as immediate Wellbeing shock on mourning
 grief_completion_threshold      = 0.05    # grief Intensity below this → grief goal auto-completes (grief resolved)
 # Wellbeing drain multipliers for specific goal types (fraction of wellbeing_goal_gain_rate)
