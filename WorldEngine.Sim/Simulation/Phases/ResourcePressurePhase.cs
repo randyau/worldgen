@@ -21,8 +21,13 @@ namespace WorldEngine.Sim.Simulation.Phases;
 public sealed class ResourcePressurePhase
 {
     private readonly ResourcePressureConfig _cfg;
+    private readonly SettlementConfig       _settleCfg;
 
-    public ResourcePressurePhase(SimConfig cfg) => _cfg = cfg.ResourcePressure;
+    public ResourcePressurePhase(SimConfig cfg)
+    {
+        _cfg       = cfg.ResourcePressure;
+        _settleCfg = cfg.Settlement;
+    }
 
     // Timber contribution per forest reach tile (normalized supply unit)
     private const float TimberPerForestTile = 0.5f;
@@ -34,7 +39,7 @@ public sealed class ResourcePressurePhase
         foreach (var (coord, stub) in world.Settlements.ToList())
         {
             int reachRadius = stub.ReachRadius();
-            var ledger = BuildLedger(coord, stub, reachRadius, world);
+            var (ledger, carryingCapacity) = BuildLedger(coord, stub, reachRadius, world);
 
             // ─── Update resource stores ──────────────────────────────────────
             // Build new stores dict from existing stores, applying spoilage and accumulating
@@ -71,7 +76,8 @@ public sealed class ResourcePressurePhase
                 FoodPressureRatio  = effectiveFoodRatio,
                 WaterPressureRatio = effectiveWaterRatio,
                 ResourceLedger     = ledger,
-                ResourceStores     = newStores
+                ResourceStores     = newStores,
+                CarryingCapacity   = carryingCapacity
             };
 
             // Shortage response (based on effective ratios after store draw)
@@ -98,11 +104,12 @@ public sealed class ResourcePressurePhase
 
     // ─── Ledger construction ──────────────────────────────────────────────────
 
-    private Dictionary<string, float> BuildLedger(
+    private (Dictionary<string, float> Ledger, int CarryingCapacity) BuildLedger(
         TileCoord center, SettlementStub stub, int radius, WorldState world)
     {
         var supply = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);
         int tileCount = 0;
+        int carryTotal = 0;
 
         int w = world.TileGrid.TileWidth;
 
@@ -121,7 +128,8 @@ public sealed class ResourcePressurePhase
             int   idx        = coord.X + coord.Y * w;
             byte  effTemp    = TileTemperature.Effective(tile, idx, world);
             float tempFactor = GrowingSeasonFactor(effTemp, _cfg);
-            float biomeMult  = BiomeFoodMultiplier((BiomeType)tile.BiomeType, _cfg);
+            var   biome      = (BiomeType)tile.BiomeType;
+            float biomeMult  = BiomeFoodMultiplier(biome, _cfg);
             float foodContrib = (tile.Fertility / 255f) * effectiveMoisture * tempFactor * biomeMult;
             Accumulate(supply, "food", foodContrib);
 
@@ -129,10 +137,12 @@ public sealed class ResourcePressurePhase
             Accumulate(supply, "water", tile.CurrentMoisture / 255f);
 
             // Timber: forested biomes
-            var biome = (BiomeType)tile.BiomeType;
             if (biome is BiomeType.TemperateForest or BiomeType.BorealForest
                       or BiomeType.TropicalRainforest or BiomeType.Swamp)
                 Accumulate(supply, "timber", TimberPerForestTile);
+
+            // Carrying capacity — accumulated alongside food/water in the same tile walk
+            carryTotal += BiomeCarryingCapacity(biome);
 
             // Mineral deposits — extensible: any new deposit type flows through automatically
             if (world.ResourceRegistry.TryGetValue(coord, out var deposits))
@@ -147,7 +157,8 @@ public sealed class ResourcePressurePhase
             }
         }
 
-        if (tileCount == 0) return supply;
+        int capacity = Math.Max(_settleCfg.CarryCapMinimum, carryTotal);
+        if (tileCount == 0) return (supply, capacity);
 
         // Convert absolute supply to supply/demand ratios.
         // Demand scales with population; PopulationCapPerTile is the full-demand baseline per tile.
@@ -158,8 +169,25 @@ public sealed class ResourcePressurePhase
         if (supply.TryGetValue("water", out float ws)) supply["water"] = ws / demand;
         // Minerals: leave as absolute supply (surplus if > 0, demand is driven by artisans later)
 
-        return supply;
+        return (supply, capacity);
     }
+
+    private int BiomeCarryingCapacity(BiomeType biome) => biome switch
+    {
+        BiomeType.Grassland          => _settleCfg.CarryCapGrassland,
+        BiomeType.Plains             => _settleCfg.CarryCapPlains,
+        BiomeType.TropicalRainforest => _settleCfg.CarryCapTropicalRainforest,
+        BiomeType.Savanna            => _settleCfg.CarryCapSavanna,
+        BiomeType.TemperateForest    => _settleCfg.CarryCapTemperateForest,
+        BiomeType.BorealForest       => _settleCfg.CarryCapBorealForest,
+        BiomeType.Swamp              => _settleCfg.CarryCapSwamp,
+        BiomeType.Beach              => _settleCfg.CarryCapBeach,
+        BiomeType.Mountain           => _settleCfg.CarryCapMountain,
+        BiomeType.HighMountain       => _settleCfg.CarryCapHighMountain,
+        BiomeType.Desert             => _settleCfg.CarryCapDesert,
+        BiomeType.Volcanic           => _settleCfg.CarryCapVolcanic,
+        _                            => _settleCfg.CarryCapDefault,
+    };
 
     private static void Accumulate(Dictionary<string, float> dict, string key, float value)
     {

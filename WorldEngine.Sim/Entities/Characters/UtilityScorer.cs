@@ -384,6 +384,8 @@ public static class UtilityScorer
             if (world.IsLand(new TileCoord(ex, ey))) currentExits++;
         }
 
+        bool isExpandingChar = c.Goals.Any(g => g.Type == GoalType.Expansion);
+
         for (int i = 0; i < 4; i++)
         {
             int nx = ((c.Location.X + dx[i]) % w + w) % w;
@@ -410,7 +412,6 @@ public static class UtilityScorer
             // trying to get away from home, not orbit it). They still approach foreign settlements
             // for trade/diplomacy. Empty tiles beyond any settlement's hinterland get a bonus
             // so expansion characters actively navigate toward unclaimed land.
-            bool isExpandingChar = c.Goals.Any(g => g.Type == GoalType.Expansion);
             if (world.Settlements.TryGetValue(coord, out var s))
             {
                 bool isSameCiv = c.Identity.CivId.IsValid && s.CivId == c.Identity.CivId;
@@ -430,7 +431,7 @@ public static class UtilityScorer
                 {
                     float dist = TileDistance(coord, st);
                     if (dist <= stub.ReachRadius()) { inAnyHinterland = true; break; }
-                    if (stub.CivId == c.Identity.CivId && dist <= cfg.ExpansionCompactnessRadius)
+                    if (!nearSameCiv && stub.CivId == c.Identity.CivId && dist <= cfg.ExpansionCompactnessRadius)
                         nearSameCiv = true;
                 }
                 if (!inAnyHinterland)

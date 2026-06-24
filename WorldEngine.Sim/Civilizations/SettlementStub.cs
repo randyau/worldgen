@@ -23,7 +23,8 @@ public sealed record SettlementStub(
     float     FertilityMultiplier  = 1f,   // per-settlement founding-time variance; permanent
     int       ConqueredYear        = 0,    // year this settlement was last conquered (0 = never)
     int       ConqueredFromCivId   = 0,   // CivId of previous owner at time of conquest (0 = never)
-    IReadOnlyDictionary<string, float>? ResourceStores = null)  // persistent resource reserves keyed by resource name
+    IReadOnlyDictionary<string, float>? ResourceStores = null,  // persistent resource reserves keyed by resource name
+    int CarryingCapacity = 50_000)                               // biome-based population ceiling; computed by ResourcePressurePhase each tick
                                            // vital (food, water): measured in seasons of supply; draws during deficit
                                            // wealth (gold, minerals, timber): raw accumulated units; no demand draw
 {

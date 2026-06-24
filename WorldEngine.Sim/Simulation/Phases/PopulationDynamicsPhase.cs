@@ -62,9 +62,9 @@ public sealed class PopulationDynamicsPhase
             .Count(e => e is Tier1Character or Tier2Character);
         float safetyScore = Math.Clamp(0.3f + nearby * 0.1f, 0f, 1f);
 
-        // Biome-based carrying capacity: sum capacity contributions across all reach tiles.
-        // Creates a soft ceiling determined by the land quality around the settlement.
-        int carryingCapacity = ComputeCarryingCapacity(tile, stub.ReachRadius(), world);
+        // Biome-based carrying capacity: computed by ResourcePressurePhase during its tile walk
+        // and cached on the stub — reading it here adds zero per-tick cost.
+        int carryingCapacity = stub.CarryingCapacity;
 
         // Decay responds to food pressure from the resource ledger
         float foodRatio = stub.FoodPressureRatio;
@@ -153,37 +153,6 @@ public sealed class PopulationDynamicsPhase
         }
         return currentThresh;
     }
-
-    // ─── Carrying capacity ────────────────────────────────────────────────────
-
-    private int ComputeCarryingCapacity(TileCoord center, int radius, WorldState world)
-    {
-        int total = 0;
-        foreach (var coord in world.GetTilesInRadius(center, radius))
-        {
-            if (!world.IsLand(coord)) continue;
-            var tile = world.TileGrid.GetTile(coord);
-            total += BiomeCarryingCapacity((BiomeType)tile.BiomeType);
-        }
-        return Math.Max(_cfg.CarryCapMinimum, total);
-    }
-
-    private int BiomeCarryingCapacity(BiomeType biome) => biome switch
-    {
-        BiomeType.Grassland          => _cfg.CarryCapGrassland,
-        BiomeType.Plains             => _cfg.CarryCapPlains,
-        BiomeType.TropicalRainforest => _cfg.CarryCapTropicalRainforest,
-        BiomeType.Savanna            => _cfg.CarryCapSavanna,
-        BiomeType.TemperateForest    => _cfg.CarryCapTemperateForest,
-        BiomeType.BorealForest       => _cfg.CarryCapBorealForest,
-        BiomeType.Swamp              => _cfg.CarryCapSwamp,
-        BiomeType.Beach              => _cfg.CarryCapBeach,
-        BiomeType.Mountain           => _cfg.CarryCapMountain,
-        BiomeType.HighMountain       => _cfg.CarryCapHighMountain,
-        BiomeType.Desert             => _cfg.CarryCapDesert,
-        BiomeType.Volcanic           => _cfg.CarryCapVolcanic,
-        _                            => _cfg.CarryCapDefault,
-    };
 
     // ─── Abandonment ──────────────────────────────────────────────────────────
 
