@@ -7,6 +7,8 @@ public sealed class Civilization
     public CivId      Id          { get; }
     public string     Name        { get; }
     public EntityId   FounderId   { get; }
+    /// <summary>Current ruling character. Starts as FounderId; updated by succession when the ruler dies.</summary>
+    public EntityId   RulerId     { get; set; }
     public TileCoord  CapitalTile { get; set; }
     public int        FoundedYear { get; }
     public bool       IsCollapsed { get; set; }
@@ -66,6 +68,7 @@ public sealed class Civilization
         Id          = id;
         Name        = name;
         FounderId   = founderId;
+        RulerId     = founderId;
         CapitalTile = capitalTile;
         FoundedYear = foundedYear;
     }

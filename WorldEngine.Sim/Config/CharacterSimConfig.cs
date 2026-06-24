@@ -153,6 +153,19 @@ public sealed class CharacterSimConfig
     public float BeastDamageMultiplier       { get; set; } = 0.3f;  // beast.Strength × this = damage to char
     public float CharCounterDamageMultiplier { get; set; } = 0.4f;  // c.Skills.Combat × MaxHealth × this = counter-damage to beast
 
+    // Character disease — named characters can contract disease from infected settlements
+    public float CharacterDiseaseExposureChance  { get; set; } = 0.10f; // annual chance of catching disease at infected settlement
+    public int   CharacterDiseaseHealthDrain     { get; set; } = 15;    // HP lost per year while infected (suppresses healing)
+    public float CharacterDiseaseRecoveryChance  { get; set; } = 0.30f; // annual natural recovery chance
+
+    // Battle wounds — defenders fight back during settlement raids
+    public float DefenderCounterDamageMultiplier { get; set; } = 0.25f; // defender.Combat × MaxHealth × this = damage to raider
+    public float RaiderCharDamageMultiplier      { get; set; } = 0.20f; // raider.Combat × MaxHealth × this = damage to defender char
+
+    // Wildlife defense — characters at raided tiles defend and can be wounded
+    public float WildlifeCharInjuryFraction  { get; set; } = 0.12f; // fraction of MaxHealth lost when present at wildlife raid
+    public float WildlifeCharDefenseReduction { get; set; } = 0.40f; // defender.Combat scales this reduction in pop damage (0=none, max=this)
+
     // ─── Civilisation floor ───────────────────────────────────────────────────
     // When active (non-collapsed) civ count falls below this value, the annual pass
     // rolls to spawn a new free-agent founder character on suitable unclaimed land.

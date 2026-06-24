@@ -307,9 +307,38 @@ public sealed class PopulationDynamicsPhase
             if (roll >= attackChance) continue;
 
             int damage = Math.Max(1, (int)(stub.Population * _cfg.WildlifeAttackDamage * (1f - sizeDefense)));
+
+            // Named characters at the settlement can defend, reducing casualties and taking wounds
+            long defenderId = 0;
+            string? defenderName = null;
+            foreach (var e in world.GetEntitiesAt(coord))
+            {
+                if (e is not Tier1Character defender || !defender.IsAlive) continue;
+                if (defender.Identity.CivId != stub.CivId) continue;
+
+                var charCfg = _simCfg.Character;
+                float defenseReduction = defender.Skills.Combat * charCfg.WildlifeCharDefenseReduction;
+                damage = Math.Max(1, (int)(damage * (1f - defenseReduction)));
+                int injury = Math.Max(1, (int)(charCfg.MaxHealth * charCfg.WildlifeCharInjuryFraction));
+                defender.Health -= injury;
+                defender.Skills  = defender.Skills with
+                    { Combat = Math.Min(1f, defender.Skills.Combat + 0.01f) };
+                defenderId   = defender.Id.Value;
+                defenderName = defender.Identity.Name;
+                break;
+            }
+
             world.Settlements[coord] = stub with { Population = Math.Max(0, stub.Population - damage) };
             pending.Add(new PendingEvent(EventType.WildlifeRaid, coord, null,
-                JsonSerializer.Serialize(new { settlementName = stub.Name, civId = stub.CivId.Value, populationLost = damage, year })));
+                JsonSerializer.Serialize(new
+                {
+                    settlementName = stub.Name,
+                    civId          = stub.CivId.Value,
+                    populationLost = damage,
+                    defenderId,
+                    defenderName,
+                    year
+                })));
         }
     }
 

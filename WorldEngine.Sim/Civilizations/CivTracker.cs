@@ -234,26 +234,26 @@ public static class CivTracker
         declCiv.WarsAgainst[targCiv.Id] = world.CurrentYear;
         targCiv.WarsAgainst[declCiv.Id] = world.CurrentYear;
 
-        // Trust hit between rulers even if they've never met — reputation travels
-        var declFounder = world.GetEntity(declCiv.FounderId) as Tier1Character;
-        var targFounder = world.GetEntity(targCiv.FounderId) as Tier1Character;
-        if (declFounder != null && targFounder != null)
+        // Trust hit between current rulers even if they've never met — reputation travels
+        var declRuler = world.GetEntity(declCiv.RulerId) as Tier1Character;
+        var targRuler = world.GetEntity(targCiv.RulerId) as Tier1Character;
+        if (declRuler != null && targRuler != null)
         {
-            var rel = world.Relationships.GetOrCreate(declFounder.Id, targFounder.Id);
+            var rel = world.Relationships.GetOrCreate(declRuler.Id, targRuler.Id);
             bool wasAllied = rel.IsAlly;
             world.Relationships.Upsert(rel with
             {
                 Trust = Math.Min(rel.Trust - 0.3f, -0.3f),
                 Flags = (rel.Flags & ~RelationshipFlags.IsAlly) | RelationshipFlags.IsRival,
             });
-            if (wasAllied) FireAllianceBroken(declFounder, targFounder, "war_declared", world, pending);
+            if (wasAllied) FireAllianceBroken(declRuler, targRuler, "war_declared", world, pending);
         }
 
-        var eventTile = declFounder?.Location ?? declCiv.CapitalTile;
+        var eventTile = declRuler?.Location ?? declCiv.CapitalTile;
         var payload = JsonSerializer.Serialize(new
         {
-            declarerId      = declCiv.FounderId.Value,
-            declarerName    = declFounder?.Identity.Name ?? declCiv.Name,
+            declarerId      = declCiv.RulerId.Value,
+            declarerName    = declRuler?.Identity.Name ?? declCiv.Name,
             declarerCiv     = declCiv.Id.Value,
             declarerCivName = declCiv.Name,
             targetCiv       = targCiv.Id.Value,
@@ -261,9 +261,9 @@ public static class CivTracker
             cause,
         });
         // Link both rulers so "all events involving character X" surfaces wars they were targeted by.
-        var warEntityIds = targFounder != null
-            ? new[] { declCiv.FounderId.Value, targCiv.FounderId.Value }
-            : new[] { declCiv.FounderId.Value };
+        var warEntityIds = targRuler != null
+            ? new[] { declCiv.RulerId.Value, targCiv.RulerId.Value }
+            : new[] { declCiv.RulerId.Value };
         pending.Add(new PendingEvent(EventType.WarDeclared, eventTile, null, payload, warEntityIds));
     }
 
@@ -295,6 +295,27 @@ public static class CivTracker
             { Combat = Math.Min(1f, raider.Skills.Combat + 0.02f) };
         raider.Needs = raider.Needs with
             { Status = Math.Min(1f, raider.Needs.Status + 0.1f) };
+
+        // Named defenders fight back: any living character of the defending civ at this tile
+        // wounds the raider and may be wounded in return. Health damage carries to next tick.
+        var cfg = world.SimConfig.Character;
+        foreach (var e in world.GetEntitiesAt(cmd.SettlementTile))
+        {
+            if (e is not Tier1Character defender || !defender.IsAlive) continue;
+            if (defender.Identity.CivId != settlement.CivId) continue;
+            if (defender.Id == raider.Id) continue;
+
+            int counterDamage = Math.Max(1,
+                (int)(defender.Skills.Combat * cfg.MaxHealth * cfg.DefenderCounterDamageMultiplier));
+            int raidDamageToChar = Math.Max(1,
+                (int)(raider.Skills.Combat * cfg.MaxHealth * cfg.RaiderCharDamageMultiplier));
+
+            raider.Health   -= counterDamage;
+            defender.Health -= raidDamageToChar;
+            defender.Skills  = defender.Skills with
+                { Combat = Math.Min(1f, defender.Skills.Combat + 0.01f) };
+            break; // one named defender per raid
+        }
 
         var payload = JsonSerializer.Serialize(new
         {
@@ -500,12 +521,16 @@ public static class CivTracker
         // 3. Border tension: accumulate territorial pressure; declare war if threshold crossed
         RunBorderTension(world, pending);
 
-        // 4. Succession crisis: detect founding ruler death and flag distant settlements
+        // 4. Succession crisis: if no living ruler exists AND no succession occurred this year,
+        //    flag distant settlements. (Normal succession is handled immediately in KillCharacter.)
         foreach (var civ in world.Civilizations.Values)
         {
             if (civ.IsCollapsed || civ.SuccessionCrisisEndYear != int.MinValue) continue;
-            bool founderAlive = world.GetEntity(civ.FounderId) is Tier1Character fc && fc.IsAlive;
-            if (founderAlive) continue;
+            bool rulerAlive = world.GetEntity(civ.RulerId) is Tier1Character rc && rc.IsAlive;
+            if (rulerAlive) continue;
+            // Ruler is dead with no successor found yet (KillCharacter would have set RulerId if a member existed)
+            bool anyLivingMember = civ.Members.Any(m => world.GetEntity(m) is Tier1Character mc && mc.IsAlive);
+            if (anyLivingMember) continue; // succession will happen; don't double-fire crisis
 
             civ.SuccessionCrisisEndYear = world.CurrentYear + cfg.SuccessionCrisisYears;
             var payload = JsonSerializer.Serialize(new
@@ -684,8 +709,8 @@ public static class CivTracker
             reason,
             year = world.CurrentYear
         });
-        var peaceEntityIds = new List<long> { ca.FounderId.Value };
-        if (cb.FounderId.Value != ca.FounderId.Value) peaceEntityIds.Add(cb.FounderId.Value);
+        var peaceEntityIds = new List<long> { ca.RulerId.Value };
+        if (cb.RulerId.Value != ca.RulerId.Value) peaceEntityIds.Add(cb.RulerId.Value);
         pending.Add(new PendingEvent(EventType.WarEnded, ca.CapitalTile, null, payload, peaceEntityIds));
     }
 
@@ -760,9 +785,9 @@ public static class CivTracker
                 continue;
             }
 
-            // Accumulate tension scaled by each ruler's Aggression (dead founders → neutral 0.5)
-            float aggrA = (world.GetEntity(a.FounderId) as Tier1Character)?.Personality.Aggression ?? 0.5f;
-            float aggrB = (world.GetEntity(b.FounderId) as Tier1Character)?.Personality.Aggression ?? 0.5f;
+            // Accumulate tension scaled by each ruler's Aggression (dead/missing ruler → neutral 0.5)
+            float aggrA = (world.GetEntity(a.RulerId) as Tier1Character)?.Personality.Aggression ?? 0.5f;
+            float aggrB = (world.GetEntity(b.RulerId) as Tier1Character)?.Personality.Aggression ?? 0.5f;
 
             a.BorderTension[b.Id] = a.BorderTension.GetValueOrDefault(b.Id, 0f) + proximity * aggrA * cfg.TensionAccrualPerPair;
             b.BorderTension[a.Id] = b.BorderTension.GetValueOrDefault(a.Id, 0f) + proximity * aggrB * cfg.TensionAccrualPerPair;
@@ -772,8 +797,8 @@ public static class CivTracker
         foreach (var civ in activeCivs)
         {
             if (civ.WarsAgainst.Count >= cfg.MaxActiveWars) continue;
-            float founderAggr = (world.GetEntity(civ.FounderId) as Tier1Character)?.Personality.Aggression ?? 0f;
-            if (founderAggr < cfg.WarAggressionThreshold) continue;
+            float rulerAggr = (world.GetEntity(civ.RulerId) as Tier1Character)?.Personality.Aggression ?? 0f;
+            if (rulerAggr < cfg.WarAggressionThreshold) continue;
 
             foreach (var (enemyCivId, tension) in civ.BorderTension.ToList())
             {

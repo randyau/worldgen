@@ -30,6 +30,10 @@ public sealed class Tier1Character : IEntity
     public int AgeSeason { get; internal set; }
     public int MaxAgeSeason { get; }
 
+    // Disease state — set by CharacterBehaviorPhase on exposure to infected settlements
+    public bool IsInfected      { get; internal set; }
+    public int  InfectedSinceYear { get; internal set; }
+
     // Emotional state — continuous wellbeing score: -1 (spiraling) … +1 (flourishing)
     public float Wellbeing { get; internal set; }
 

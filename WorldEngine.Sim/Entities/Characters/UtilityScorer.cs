@@ -189,15 +189,15 @@ public static class UtilityScorer
             }
         }
 
-        // DeclareWar — civ-level: only the civ's ruler (founder) can start a war.
-        // Targets an entire enemy civilization, not an individual character.
-        // Triggers on: seeing a nearby enemy settlement when ruler has personal rivalry with
-        // that civ's founder, OR when trust with the enemy ruler is very negative.
-        if (isFounder && c.Personality.Aggression > cfg.WarAggressionThreshold
-            && c.Identity.CivId.IsValid)
+        // DeclareWar — civ-level: only the current ruler can start a war.
+        // Primary trigger is border tension (rulers know about territorial disputes without needing
+        // to meet enemy rulers personally). Personal animosity with any visible enemy is a secondary trigger.
+        if (c.Identity.CivId.IsValid)
         {
             var myCiv = world.GetCivilization(c.Identity.CivId);
-            if (myCiv != null && myCiv.WarsAgainst.Count < cfg.MaxActiveWars)
+            bool isRuler = myCiv?.RulerId == c.Id;
+            if (isRuler && c.Personality.Aggression > cfg.WarAggressionThreshold
+                && myCiv!.WarsAgainst.Count < cfg.MaxActiveWars)
             {
                 foreach (var coord in world.GetTilesInRadius(c.Location, cfg.PerceptionRadius))
                 {
@@ -207,10 +207,25 @@ public static class UtilityScorer
                     if (myCiv.InPeaceCooldownWith(nearSettle.CivId, world.CurrentYear, cfg.PeaceCooldownYears)) continue;
                     var targetCiv = world.GetCivilization(nearSettle.CivId);
                     if (targetCiv == null) continue;
-                    // Require personal animosity with the enemy ruler OR existing rivalry
-                    var enemyRulerRel = world.GetRelationship(c.Id, targetCiv.FounderId);
-                    bool hostileEnough = (enemyRulerRel?.IsRival ?? false)
-                                     || (enemyRulerRel?.Trust ?? 0f) < cfg.RivalryTrustThreshold;
+
+                    // War justified by: personal animosity with any visible enemy character,
+                    // OR border tension already elevated (ruler is aware of the territorial dispute)
+                    bool hostileEnough = false;
+                    foreach (var e2 in world.GetEntitiesInRadius(c.Location, cfg.PerceptionRadius))
+                    {
+                        if (e2 is not Tier1Character enemy || !enemy.IsAlive || enemy.Id == c.Id) continue;
+                        if (enemy.Identity.CivId != nearSettle.CivId) continue;
+                        var rel = world.GetRelationship(c.Id, enemy.Id);
+                        if ((rel?.IsRival ?? false) || (rel?.Trust ?? 0f) < cfg.RivalryTrustThreshold)
+                        {
+                            hostileEnough = true;
+                            break;
+                        }
+                    }
+                    if (!hostileEnough)
+                        hostileEnough = myCiv.BorderTension.GetValueOrDefault(nearSettle.CivId, 0f)
+                                      >= cfg.TensionWarThreshold * 0.6f;
+
                     if (hostileEnough)
                     {
                         actions.Add(new(new DeclareWar(c.Id, nearSettle.CivId),

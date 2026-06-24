@@ -692,6 +692,19 @@ beast_encounter_chance         = 0.15 # probability of attack per shared tick (~
 beast_damage_multiplier        = 0.3  # beast.Strength × this = damage dealt to character
 char_counter_damage_multiplier = 0.4  # c.Skills.Combat × MaxHealth × this = counter-damage dealt to beast per exchange
 
+# Character disease — named characters can catch disease from infected settlements
+character_disease_exposure_chance  = 0.10  # annual probability of contracting disease while at an infected settlement
+character_disease_health_drain     = 15    # HP drained per year while infected (suppresses natural healing)
+character_disease_recovery_chance  = 0.30  # annual natural recovery probability (physician healing can supplement)
+
+# Battle wounds — characters at a raided settlement fight back, and the raider can be wounded
+defender_counter_damage_multiplier = 0.25  # defender.Combat × MaxHealth × this = damage dealt to raider
+raider_char_damage_multiplier      = 0.20  # raider.Combat × MaxHealth × this = damage dealt to defending character
+
+# Wildlife defense — characters present at a settlement during a wildlife raid are wounded and defend
+wildlife_char_injury_fraction   = 0.12  # fraction of MaxHealth lost when a character is present at a wildlife raid
+wildlife_char_defense_reduction = 0.40  # defender.Combat scales this; reduces population damage fraction (max reduction = this value)
+
 # Wanderlust: travel urgency that builds the longer a character stays in one place
 wanderlust_max_ticks            = 8    # full bonus after 2 seasons (half a year) stationary
 wanderlust_bonus                = 0.4  # travel score bonus at max wanderlust; ~0.15 base → ~0.55 for free agents

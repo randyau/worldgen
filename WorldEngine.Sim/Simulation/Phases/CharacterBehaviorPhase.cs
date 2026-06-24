@@ -38,11 +38,12 @@ public sealed class CharacterBehaviorPhase
         {
             if (!c.IsAlive) continue;
             UpdateLifecycle(c, world, tick, pending);
-            if (!c.IsAlive)
-            {
-                deathsThisTick.Add((c.Id, c.Identity.Name));
-                continue;
-            }
+            if (!c.IsAlive) { deathsThisTick.Add((c.Id, c.Identity.Name)); continue; }
+
+            // Annual disease: exposure at infected settlements, health drain, natural recovery
+            if (isAnnualTick) ProcessAnnualDisease(c, world, pending);
+            if (!c.IsAlive) { deathsThisTick.Add((c.Id, c.Identity.Name)); continue; }
+
             c.TicksInCurrentTile++;
             NeedsUpdater.Update(c, world, _cfg);
             GoalManager.UpdateGoals(c, world, tick, _cfg);
@@ -56,6 +57,13 @@ public sealed class CharacterBehaviorPhase
             ApplyTerritorialPressure(c, world, tick);
             ApplyPassiveDrains(c, world);
             CheckBeastEncounters(c, world, pending, tick);
+            // Catch wound death from beast/battle damage accumulated this tick
+            if (c.IsAlive && c.Health <= 0)
+            {
+                KillCharacter(c, world, "wounds", pending);
+                deathsThisTick.Add((c.Id, c.Identity.Name));
+            }
+            if (!c.IsAlive) continue;
             var cmd = UtilityScorer.SelectAction(c, world, _cfg);
             if (cmd != null)
                 ResolveCommand(cmd, c, world, pending, tick);
@@ -185,8 +193,15 @@ public sealed class CharacterBehaviorPhase
     {
         c.AgeSeason++;
 
-        // Health regeneration
-        if (c.Health < _cfg.MaxHealth)
+        // Death from wounds carried over from last tick (battle damage, wildlife injury)
+        if (c.Health <= 0)
+        {
+            KillCharacter(c, world, c.IsInfected ? "disease" : "wounds", pending);
+            return;
+        }
+
+        // Health regeneration (only while not diseased — disease suppresses healing)
+        if (!c.IsInfected && c.Health < _cfg.MaxHealth)
             c.Health = Math.Min(_cfg.MaxHealth, c.Health + _cfg.HealthPerSeasonHeal);
 
         // Death by old age
@@ -235,11 +250,44 @@ public sealed class CharacterBehaviorPhase
         pending.Add(new PendingEvent(EventType.CharacterDied, c.Location, null, payload,
             new[] { c.Id.Value }));
 
-        // Handle succession if they founded a civilization
+        // Handle succession when a civ member dies
         if (c.Identity.CivId.IsValid
             && world.Civilizations.TryGetValue(c.Identity.CivId, out var civ))
         {
+            bool wasRuler = civ.RulerId == c.Id;
             civ.Members.Remove(c.Id);
+
+            // Succession: promote the highest-scoring living member to ruler
+            if (wasRuler && !civ.IsCollapsed)
+            {
+                EntityId? successorId = null;
+                float bestScore = float.MinValue;
+                foreach (var memberId in civ.Members)
+                {
+                    if (world.GetEntity(memberId) is not Tier1Character member || !member.IsAlive) continue;
+                    float score = (member.Personality.Aggression + member.Skills.Leadership) * 0.5f;
+                    if (score > bestScore) { bestScore = score; successorId = memberId; }
+                }
+                if (successorId.HasValue)
+                {
+                    civ.RulerId = successorId.Value;
+                    var successor = (Tier1Character)world.GetEntity(successorId.Value)!;
+                    var succPayload = JsonSerializer.Serialize(new
+                    {
+                        civId           = civ.Id.Value,
+                        civName         = civ.Name,
+                        predecessorId   = c.Id.Value,
+                        predecessorName = c.Identity.Name,
+                        successorId     = successorId.Value.Value,
+                        successorName   = successor.Identity.Name,
+                        year            = world.CurrentYear
+                    });
+                    pending.Add(new PendingEvent(EventType.SuccessionOccurred, civ.CapitalTile, null,
+                        succPayload, new[] { c.Id.Value, successorId.Value.Value }));
+                }
+                // No successor found → succession crisis fires in RunAnnualDiplomacy
+            }
+
             if (civ.Members.Count == 0 && !civ.IsCollapsed)
             {
                 civ.IsCollapsed = true;
@@ -251,6 +299,52 @@ public sealed class CharacterBehaviorPhase
                 });
                 pending.Add(new PendingEvent(
                     EventType.CivilizationCollapsed, civ.CapitalTile, null, civPayload));
+            }
+        }
+    }
+
+    // ─── Disease ─────────────────────────────────────────────────────────────
+
+    private const int SaltDiseaseExposure = 1100;
+    private const int SaltDiseaseRecovery = 1101;
+
+    /// <summary>
+    /// Annual disease processing for a single character.
+    /// Uninfected characters at infected settlements may contract disease.
+    /// Infected characters lose health each year and have a chance to recover.
+    /// </summary>
+    private void ProcessAnnualDisease(
+        Tier1Character c, WorldState world, List<PendingEvent> pending)
+    {
+        bool atInfectedSettlement = world.Settlements.TryGetValue(c.Location, out var stub)
+                                 && stub.IsInfected;
+
+        if (!c.IsInfected && atInfectedSettlement)
+        {
+            float roll = WorldRng.FloatAt(world.WorldSeed, world.CurrentYear,
+                                          (int)(c.Id.Value & 0x7FFFFFFF), 0, SaltDiseaseExposure);
+            if (roll < _cfg.CharacterDiseaseExposureChance)
+            {
+                c.IsInfected      = true;
+                c.InfectedSinceYear = world.CurrentYear;
+            }
+        }
+
+        if (c.IsInfected)
+        {
+            c.Health = Math.Max(0, c.Health - _cfg.CharacterDiseaseHealthDrain);
+            if (c.Health <= 0)
+            {
+                KillCharacter(c, world, "disease", pending);
+                return;
+            }
+
+            float recRoll = WorldRng.FloatAt(world.WorldSeed, world.CurrentYear,
+                                              (int)(c.Id.Value & 0x7FFFFFFF), 1, SaltDiseaseRecovery);
+            if (recRoll < _cfg.CharacterDiseaseRecoveryChance)
+            {
+                c.IsInfected       = false;
+                c.InfectedSinceYear = 0;
             }
         }
     }
