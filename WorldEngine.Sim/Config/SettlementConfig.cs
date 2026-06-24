@@ -53,6 +53,15 @@ public sealed class SettlementConfig
     // Annual probability of spontaneous recovery before max duration.
     public float DiseaseRecoveryChance   { get; set; } = 0.30f;
 
+    // ─── Settlement health recovery ───────────────────────────────────────────
+    // Health drains to 0 under sustained raids and then the settlement is destroyed.
+    // Between raids, settlements passively repair at this rate per tick.
+    // At 1 HP/tick and 16 ticks/year, a fully razed settlement (0 HP) takes ~6 years to
+    // recover to 100 if left unraided — which feels right for rebuilding after a war.
+    public int HealthRecoveryPerTick { get; set; } = 1;
+    // Maximum health a settlement can reach via passive recovery (always 100 absent modifiers).
+    public int MaxHealth { get; set; } = 100;
+
     // ─── Wildlife raids ───────────────────────────────────────────────────────
     // Annual probability of a wildlife attack on any settlement (before biome modifier).
     public float WildlifeAttackBaseChance { get; set; } = 0.04f;

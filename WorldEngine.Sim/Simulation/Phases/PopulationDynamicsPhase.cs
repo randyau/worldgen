@@ -142,11 +142,15 @@ public sealed class PopulationDynamicsPhase
         int newThresh = stub.LastCrystalThresh;
         newThresh = TryCrystallize(stub, tile, newPop, newThresh, world, pending);
 
+        // Passive health recovery: settlements repair between raids
+        int newHealth = Math.Min(_cfg.MaxHealth, stub.Health + _cfg.HealthRecoveryPerTick);
+
         return stub with
         {
             Population        = newPop,
             PopulationF       = remainder,
-            LastCrystalThresh = newThresh
+            LastCrystalThresh = newThresh,
+            Health            = newHealth
         };
     }
 

@@ -820,6 +820,11 @@ disease_spread_chance        = 0.20   # reduced from 0.25 — slightly slower in
 disease_max_duration_years   = 6      # infection auto-clears after this many years
 disease_recovery_chance      = 0.30   # raised from 0.25 — slightly faster natural recovery
 
+# Settlement health recovery — passive repair between raids
+# At 1 HP/tick and 16 ticks/year, a fully destroyed settlement (0 HP) recovers to 100 in ~6 years.
+health_recovery_per_tick = 1    # HP regained per tick; raids deal 10–30 HP so recovery takes weeks to months
+max_health               = 100  # maximum settlement health
+
 # Wildlife raids — annual attacks scaled by biome danger and settlement size
 # Open biomes (plains, savanna, desert) have lower risk; dense cover (forest, jungle, swamp) is higher.
 # See BiomeWildlifeRisk() in PopulationDynamicsPhase.cs for per-biome multipliers.
