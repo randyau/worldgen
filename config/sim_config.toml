@@ -649,8 +649,15 @@ ally_protect_goal_intensity   = 0.6   # priority of the Protect goal seeded on a
 ally_disaster_aid_intensity   = 0.3   # (reserved for future goal seeding; merchant routing handles aid currently)
 max_war_duration_years        = 4     # wars auto-expire after 4 years without battle/raid; shorter = leaner relationship graph
 max_active_wars               = 2     # hard cap: a character cannot be in more than this many active wars simultaneously
-max_active_rivals             = 3     # hard cap: a character cannot have more than this many active rivalries
+# Rivalry cap scales with Aggression: max = floor(base + Aggression × per_aggression)
+# Aggression=0 → 1 rival max; Aggression=1.0 → 4 rivals max
+rivalry_max_base              = 1
+rivalry_max_per_aggression    = 3
 rivalry_trust_threshold       = -0.4  # trust must fall below this before DeclareRivalry is available; prevents one-encounter rivals
+# Bond cap scales with Compassion: max = floor(base + Compassion × per_compassion)
+# Compassion=0 → 1 bond max; Compassion=1.0 → 3 bonds max
+bond_max_base                 = 1
+bond_max_per_compassion       = 2
 
 hinterland_drain_factor          = 0.5   # effective fertility multiplier inside same-civ hinterland (0.5 = half claimed)
 base_founding_cooldown_years     = 8     # base cooldown between same-civ settlements (scales down with pop)

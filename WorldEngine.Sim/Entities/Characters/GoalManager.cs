@@ -32,8 +32,11 @@ public static class GoalManager
         bool hasExpansion = c.Goals.Any(g => g.Type == GoalType.Expansion);
         bool hasDominance = c.Goals.Any(g => g.Type == GoalType.Dominance);
         bool hasAlliance  = c.Goals.Any(g => g.Type == GoalType.Alliance);
-        bool hasBond      = c.Goals.Any(g => g.Type == GoalType.Bond);
         bool hasCreate    = c.Goals.Any(g => g.Type == GoalType.Create);
+        // Bond cap scales with Compassion — empathetic characters can hold several deep attachments
+        int  bondMax      = cfg.BondMaxBase + (int)(c.Personality.Compassion * cfg.BondMaxPerCompassion);
+        int  activeBonds  = c.Goals.Count(g => g.Type == GoalType.Bond);
+        bool hasBondRoom  = activeBonds < bondMax;
 
         // Expansion goal: ambitious non-founders want to build a new settlement.
         // Allowed while inside a home settlement — wanderlust will push them toward open land;
@@ -76,10 +79,15 @@ public static class GoalManager
                 });
         }
 
-        // Bond goal: compassionate characters form attachments to high-trust co-located chars
-        if (!hasBond && c.Personality.Compassion > cfg.GoalCompassionThreshold)
+        // Bond goal: compassionate characters form attachments to high-trust co-located chars.
+        // Each bond must target a different person — check existing bonds don't already cover this companion.
+        if (hasBondRoom && c.Personality.Compassion > cfg.GoalCompassionThreshold)
         {
-            var companion = FindHighTrustCompanion(c, world, cfg.BondSearchRadius, cfg.BondTrustThreshold);
+            var alreadyBonded = c.Goals
+                .Where(g => g.Type == GoalType.Bond && g.TargetEntityId.HasValue)
+                .Select(g => g.TargetEntityId!.Value)
+                .ToHashSet();
+            var companion = FindHighTrustCompanion(c, world, cfg.BondSearchRadius, cfg.BondTrustThreshold, alreadyBonded);
             if (companion.HasValue)
                 c.Goals.Add(new GoalData
                 {
@@ -243,11 +251,14 @@ public static class GoalManager
         return null;
     }
 
-    private static EntityId? FindHighTrustCompanion(Tier1Character c, IWorldStateReadOnly world, int radius, float trustThreshold)
+    private static EntityId? FindHighTrustCompanion(
+        Tier1Character c, IWorldStateReadOnly world,
+        int radius, float trustThreshold, HashSet<EntityId>? exclude = null)
     {
         foreach (var e in world.GetEntitiesInRadius(c.Location, radius))
         {
             if (e is not Tier1Character other || other.Id == c.Id || !other.IsAlive) continue;
+            if (exclude != null && exclude.Contains(other.Id)) continue;
             var rel = world.GetRelationship(c.Id, other.Id);
             if ((rel?.Trust ?? 0f) >= trustThreshold) return other.Id;
         }

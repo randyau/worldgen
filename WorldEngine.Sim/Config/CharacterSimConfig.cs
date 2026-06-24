@@ -89,11 +89,17 @@ public sealed class CharacterSimConfig
     // Hard cap on simultaneous active wars per character. Prevents aggressive characters
     // from accumulating hundreds of personal war edges and bloating the relationship graph.
     public int MaxActiveWars              { get; set; } = 2;
-    // Hard cap on active rivalries per character. Feeds into war declarations so must be capped.
-    public int MaxActiveRivals            { get; set; } = 3;
+    // Rivalry cap scales with Aggression: floor(base + Aggression × perAggression).
+    // A war-hungry character can sustain more rivalries; a peaceful one almost none.
+    public int   RivalryMaxBase           { get; set; } = 1;
+    public int   RivalryMaxPerAggression  { get; set; } = 3;  // Aggression=1.0 → 1+3=4 rivals max
     // Trust must fall below this threshold before DeclareRivalry becomes available.
     // -0.1 was too easy to trigger; sustained hostility is required, not one bad encounter.
     public float RivalryTrustThreshold    { get; set; } = -0.4f;
+    // Bond cap scales with Compassion: floor(base + Compassion × perCompassion).
+    // A cold character bonds with at most 1 person; highly empathetic can hold 2-3.
+    public int   BondMaxBase              { get; set; } = 1;
+    public int   BondMaxPerCompassion     { get; set; } = 2;  // Compassion=1.0 → 1+2=3 bonds max
 
     // ─── Effective fertility multiplier for tiles already inside a same-civ settlement's hinterland.
     // 0.5 = "half the resources are claimed" — discourages but doesn't block high-fertility tiles.

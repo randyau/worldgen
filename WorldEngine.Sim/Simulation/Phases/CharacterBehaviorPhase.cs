@@ -155,6 +155,22 @@ public sealed class CharacterBehaviorPhase
     {
         c.IsAlive = false;
 
+        // Wars and rivalries end when a participant dies — you can't fight a corpse.
+        // Dissolve these edges immediately so the relationship graph stays lean.
+        // Alliances and bond edges are left in place: they feed grief/mourning logic
+        // (ApplyGriefToMourners runs after this) and are pruned by the annual cleanup.
+        foreach (var edge in world.Relationships.GetAll(c.Id).ToList())
+        {
+            if (edge.IsAtWar || edge.IsRival)
+            {
+                world.Relationships.Upsert(edge with
+                {
+                    Flags           = edge.Flags & ~(RelationshipFlags.IsAtWar | RelationshipFlags.IsRival),
+                    WarDeclaredYear = 0
+                });
+            }
+        }
+
         var payload = JsonSerializer.Serialize(new
         {
             characterId   = c.Id.Value,

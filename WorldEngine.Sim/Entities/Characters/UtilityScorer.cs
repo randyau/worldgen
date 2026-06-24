@@ -145,8 +145,9 @@ public static class UtilityScorer
             actions.Add(new(bestSocialCmd, bestSocialScore));
 
         // DeclareRivalry — nearby character with substantially low trust (not just one bad encounter).
-        // Capped at MaxActiveRivals to prevent the rivalry→war pipeline flooding the relationship graph.
-        if (world.CountRivals(c.Id) < cfg.MaxActiveRivals)
+        // Cap scales with Aggression: aggressive characters sustain more rivalries; peaceful ones almost none.
+        int rivalMax = cfg.RivalryMaxBase + (int)(c.Personality.Aggression * cfg.RivalryMaxPerAggression);
+        if (world.CountRivals(c.Id) < rivalMax)
         {
             foreach (var e in world.GetEntitiesInRadius(c.Location, cfg.PerceptionRadius))
             {
