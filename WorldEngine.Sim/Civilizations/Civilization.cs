@@ -18,8 +18,11 @@ public sealed class Civilization
     /// <summary>Year the most recent settlement was founded. Guards against paired-founding.</summary>
     public int LastSettlementFoundedYear { get; set; } = -999;
 
-    /// <summary>Count of currently-live settlements belonging to this civ. Maintained by CivTracker.</summary>
+    /// <summary>Count of currently-live local settlements (within ColonyMinDistance of an existing settlement at founding). Maintained by CivTracker.</summary>
     public int SettlementCount { get; set; } = 0;
+
+    /// <summary>Count of currently-live colony settlements (founded beyond ColonyMinDistance from all same-civ settlements). Maintained by CivTracker.</summary>
+    public int ColonyCount { get; set; } = 0;
 
     /// <summary>
     /// Active wars: maps the enemy CivId to the year war was declared.

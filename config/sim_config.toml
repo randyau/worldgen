@@ -616,7 +616,13 @@ expansion_home_penalty    = 120   # tile score penalty applied to own-civ settle
 expansion_empty_tile_bonus = 80   # tile score bonus for tiles outside every settlement's hinterland when Expansion goal is active
 expansion_compactness_radius = 8  # max tile distance from a same-civ settlement that earns the compactness bonus
 expansion_compactness_bonus  = 60 # bonus added when an unclaimed tile is near an existing same-civ settlement (encourages blob growth)
-max_settlements_per_civ      = 20 # hard cap on live settlements per civ; expansion goals stop forming once reached
+max_settlements_per_civ      = 20 # hard cap on local settlements per civ; expansion goals stop forming once reached
+
+# Colonization — separate long-range founding goal
+colony_min_distance         = 25   # tiles from nearest same-civ settlement for a tile to be "frontier"
+colony_frontier_bonus       = 120  # tile score bonus for candidate tiles in frontier territory
+colonize_ambition_threshold = 0.72 # min Ambition to form a Colonize goal (higher than expansion)
+max_colonies_per_civ        = 3    # hard cap on live colonies; Colonize goals stop forming once reached
 shelter_seek_threshold    = 0.35  # below this shelter level, characters prefer terrain with natural cover when choosing where to move
 shelter_seek_tile_bonus   = 80    # max tile-score bonus for a perfect-shelter biome (forest/mountain) when shelter-seeking
                                    # scales by desperation: bonus × BiomeShelterScore × (1 - shelter)

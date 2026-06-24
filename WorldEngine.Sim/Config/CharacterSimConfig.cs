@@ -27,8 +27,18 @@ public sealed class CharacterSimConfig
     // encourages blob-shaped growth rather than linear tendrils
     public int   ExpansionCompactnessRadius { get; set; } = 8;
     public int   ExpansionCompactnessBonus  { get; set; } = 60;
-    // Hard cap on live settlements per civilization; expansion goals stop forming beyond this
+    // Hard cap on live local settlements per civilization; expansion goals stop forming beyond this
     public int   MaxSettlementsPerCiv      { get; set; } = 20;
+
+    // Colonization: separate goal type for long-range settlement founding
+    // Minimum tile distance from any same-civ settlement for a tile to count as "frontier"
+    public int   ColonyMinDistance         { get; set; } = 25;
+    // Score bonus when a tile is beyond ColonyMinDistance from all same-civ settlements
+    public int   ColonyFrontierBonus       { get; set; } = 120;
+    // Ambition threshold to form a Colonize goal (higher than regular expansion)
+    public float ColonizeAmbitionThreshold { get; set; } = 0.72f;
+    // Hard cap on live colonies per civ; Colonize goals stop forming beyond this
+    public int   MaxColoniesPerCiv         { get; set; } = 3;
 
     // When shelter drops below this threshold, characters actively prefer tiles with natural cover
     public float ShelterSeekThreshold   { get; set; } = 0.35f;

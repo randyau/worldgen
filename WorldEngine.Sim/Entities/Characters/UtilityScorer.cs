@@ -383,7 +383,8 @@ public static class UtilityScorer
             if (world.IsLand(new TileCoord(ex, ey))) currentExits++;
         }
 
-        bool isExpandingChar = c.Goals.Any(g => g.Type == GoalType.Expansion);
+        bool isExpandingChar  = c.Goals.Any(g => g.Type == GoalType.Expansion);
+        bool isColonizingChar = c.Goals.Any(g => g.Type == GoalType.Colonize);
 
         for (int i = 0; i < 4; i++)
         {
@@ -455,6 +456,26 @@ public static class UtilityScorer
                     if (nearSameCiv)
                         score += cfg.ExpansionCompactnessBonus;
                 }
+            }
+            else if (isColonizingChar)
+            {
+                // Frontier bonus: colonizers want tiles FAR from all same-civ settlements.
+                // Check if any same-civ settlement is within ColonyMinDistance — if none found,
+                // the tile is frontier territory and earns a large bonus that overcomes the
+                // compactness incentive and admin-distance penalty.
+                // Uses O(r²) tile-coord lookups rather than scanning all settlements.
+                int fd = cfg.ColonyMinDistance;
+                bool nearHome = false;
+                for (int fy = -fd; fy <= fd && !nearHome; fy++)
+                for (int fx = -fd; fx <= fd && !nearHome; fx++)
+                {
+                    if (fx * fx + fy * fy > fd * fd) continue;
+                    if (world.Settlements.TryGetValue(new TileCoord(coord.X + fx, coord.Y + fy), out var fs)
+                        && fs.CivId == c.Identity.CivId)
+                        nearHome = true;
+                }
+                if (!nearHome)
+                    score += cfg.ColonyFrontierBonus;
             }
 
             // When shelter is critically low, prefer terrain that provides natural cover.

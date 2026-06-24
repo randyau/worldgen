@@ -30,6 +30,7 @@ public static class GoalManager
 
         // 3. Personality-driven goal generation
         bool hasExpansion = c.Goals.Any(g => g.Type == GoalType.Expansion);
+        bool hasColonize  = c.Goals.Any(g => g.Type == GoalType.Colonize);
         bool hasDominance = c.Goals.Any(g => g.Type == GoalType.Dominance);
         bool hasAlliance  = c.Goals.Any(g => g.Type == GoalType.Alliance);
         bool hasCreate    = c.Goals.Any(g => g.Type == GoalType.Create);
@@ -42,15 +43,29 @@ public static class GoalManager
         // Allowed while inside a home settlement — wanderlust will push them toward open land;
         // EstablishSettlement scoring gates on the actual tile being worthwhile.
         bool isFounder = c.Identity.CivId.IsValid && world.ActiveFounders.Contains(c.Id);
-        bool civAtSettlementCap = c.Identity.CivId.IsValid
-            && world.GetCivilization(c.Identity.CivId) is { } myCiv
-            && myCiv.SettlementCount >= cfg.MaxSettlementsPerCiv;
+        var myCiv = c.Identity.CivId.IsValid ? world.GetCivilization(c.Identity.CivId) : null;
+
+        // Local expansion: fill the civ's existing territory; capped at MaxSettlementsPerCiv
+        bool civAtSettlementCap = myCiv != null && myCiv.SettlementCount >= cfg.MaxSettlementsPerCiv;
         if (!hasExpansion && !isFounder && !civAtSettlementCap && c.Personality.Ambition > cfg.GoalAmbitionThreshold)
         {
             c.Goals.Add(new GoalData
             {
                 Type      = GoalType.Expansion,
                 Priority  = c.Personality.Ambition * 0.8f,
+                StaleSince = (int)currentTick, FormedTick = (int)currentTick
+            });
+        }
+
+        // Colonization: found a distant outpost; requires higher Ambition; separate cap
+        bool civAtColonyCap = myCiv != null && myCiv.ColonyCount >= cfg.MaxColoniesPerCiv;
+        if (!hasColonize && !isFounder && !civAtColonyCap
+            && c.Personality.Ambition > cfg.ColonizeAmbitionThreshold)
+        {
+            c.Goals.Add(new GoalData
+            {
+                Type      = GoalType.Colonize,
+                Priority  = c.Personality.Ambition * 0.9f,
                 StaleSince = (int)currentTick, FormedTick = (int)currentTick
             });
         }
@@ -136,8 +151,9 @@ public static class GoalManager
             delta += g.Type switch
             {
                 GoalType.Grieve  => -cfg.GriefDrainRate * g.Intensity,
-                GoalType.Create  => g.Progress > 0f ? cfg.WellbeingGoalGainRate * g.Intensity : 0f,
-                GoalType.Bond    => g.Progress > 0f ? cfg.WellbeingGoalGainRate * g.Intensity : 0f,
+                GoalType.Create   => g.Progress > 0f ? cfg.WellbeingGoalGainRate * g.Intensity : 0f,
+                GoalType.Bond     => g.Progress > 0f ? cfg.WellbeingGoalGainRate * g.Intensity : 0f,
+                GoalType.Colonize => g.Progress > 0f ? cfg.WellbeingGoalGainRate * g.Intensity : 0f,
                 GoalType.Endure  => -cfg.WellbeingGoalGainRate * cfg.WellbeingEndureMultiplier,
                 GoalType.Survive => -cfg.WellbeingGoalGainRate * cfg.WellbeingSurviveMultiplier,
                 GoalType.Flee    => -cfg.WellbeingGoalGainRate * cfg.WellbeingFleeMultiplier,

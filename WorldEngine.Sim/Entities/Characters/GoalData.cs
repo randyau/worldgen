@@ -12,7 +12,8 @@ public enum GoalType
     Endure,         // just survive — trauma/crisis response
 
     // Civic ambition
-    Expansion,      // establish a settlement
+    Expansion,      // establish a settlement near the civ's existing territory
+    Colonize,       // found a settlement far from the civ's existing territory
     Dominance,      // defeat a rival
     Alliance,       // form an ally
     Unify,          // absorb rival civ into own (Phase 2.3+)

@@ -72,6 +72,13 @@ public static class CivTracker
 
         string settlementName    = GenerateSettlementName(cmd.Tile, world, namesConfig);
         float  fertilityVariance = GenerateFertilityMultiplier(cmd.Tile, world);
+
+        // Classify: colony if no same-civ settlement is within ColonyMinDistance tiles
+        int colonyMinDist = world.SimConfig.Character.ColonyMinDistance;
+        bool isColony = !newCiv && !world.Settlements.Values
+            .Any(s => s.CivId == civId
+                   && Math.Sqrt(Math.Pow(s.Tile.X - cmd.Tile.X, 2) + Math.Pow(s.Tile.Y - cmd.Tile.Y, 2)) < colonyMinDist);
+
         var stub = new SettlementStub(
             FounderId:           founder.Id,
             CivId:               civId,
@@ -80,15 +87,19 @@ public static class CivTracker
             Population:          SettlementStartPop,
             Health:              SettlementStartHealth,
             Name:                settlementName,
-            FertilityMultiplier: fertilityVariance);
+            FertilityMultiplier: fertilityVariance,
+            IsColony:            isColony);
         world.Settlements[cmd.Tile] = stub;
         world.AddActiveFounder(founder.Id);
-        world.Civilizations[civId].SettlementCount++;
-        world.Civilizations[civId].LastSettlementFoundedYear = world.CurrentYear;
+        var civRecord = world.Civilizations[civId];
+        if (isColony) civRecord.ColonyCount++;
+        else          civRecord.SettlementCount++;
+        civRecord.LastSettlementFoundedYear = world.CurrentYear;
 
-        // Mark goal as progressed
+        // Mark goal as progressed (works for both Expansion and Colonize)
         foreach (var g in founder.Goals)
-            if (g.Type == GoalType.Expansion) g.Progress = Math.Min(1f, g.Progress + 0.5f);
+            if (g.Type == GoalType.Expansion || g.Type == GoalType.Colonize)
+                g.Progress = Math.Min(1f, g.Progress + 0.5f);
 
         FireSettlementFounded(stub, founder, world, pending);
 
@@ -305,11 +316,17 @@ public static class CivTracker
                     ResourceStores     = newStores, // granaries looted/burned during conquest
                 };
 
-                // Transfer settlement count from losing civ to winning civ
+                // Transfer settlement/colony count from losing civ to winning civ
                 if (world.Civilizations.TryGetValue(previousCivId, out var losingCiv))
-                    losingCiv.SettlementCount = Math.Max(0, losingCiv.SettlementCount - 1);
+                {
+                    if (settlement.IsColony) losingCiv.ColonyCount    = Math.Max(0, losingCiv.ColonyCount    - 1);
+                    else                     losingCiv.SettlementCount = Math.Max(0, losingCiv.SettlementCount - 1);
+                }
                 if (world.Civilizations.TryGetValue(raider.Identity.CivId, out var winningCiv))
-                    winningCiv.SettlementCount++;
+                {
+                    if (settlement.IsColony) winningCiv.ColonyCount++;
+                    else                     winningCiv.SettlementCount++;
+                }
 
                 pending.Add(new PendingEvent(EventType.SettlementConquered, cmd.SettlementTile, null,
                     JsonSerializer.Serialize(new
@@ -408,7 +425,10 @@ public static class CivTracker
         world.RemoveActiveFounder(stub.FounderId);
 
         if (world.Civilizations.TryGetValue(stub.CivId, out var civ))
-            civ.SettlementCount = Math.Max(0, civ.SettlementCount - 1);
+        {
+            if (stub.IsColony) civ.ColonyCount    = Math.Max(0, civ.ColonyCount    - 1);
+            else               civ.SettlementCount = Math.Max(0, civ.SettlementCount - 1);
+        }
 
         return timesSettled;
     }
