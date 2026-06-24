@@ -151,6 +151,7 @@ public sealed class CharacterSimConfig
     public float BeastEncounterAggressionMin { get; set; } = 0.4f;  // beasts below this are passive
     public float BeastEncounterChance        { get; set; } = 0.15f; // probability of attack per shared tick
     public float BeastDamageMultiplier       { get; set; } = 0.3f;  // beast.Strength × this = damage to char
+    public float CharCounterDamageMultiplier { get; set; } = 0.4f;  // c.Skills.Combat × MaxHealth × this = counter-damage to beast
 
     // ─── Civilisation floor ───────────────────────────────────────────────────
     // When active (non-collapsed) civ count falls below this value, the annual pass

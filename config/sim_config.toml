@@ -690,6 +690,7 @@ territorial_trust_drain       = 0.025 # trust lost per tick; ~-0.1 in 1 season �
 beast_encounter_aggression_min = 0.4  # beasts below this aggression are passive toward characters
 beast_encounter_chance         = 0.15 # probability of attack per shared tick (~every 7 ticks)
 beast_damage_multiplier        = 0.3  # beast.Strength × this = damage dealt to character
+char_counter_damage_multiplier = 0.4  # c.Skills.Combat × MaxHealth × this = counter-damage dealt to beast per exchange
 
 # Wanderlust: travel urgency that builds the longer a character stays in one place
 wanderlust_max_ticks            = 8    # full bonus after 2 seasons (half a year) stationary

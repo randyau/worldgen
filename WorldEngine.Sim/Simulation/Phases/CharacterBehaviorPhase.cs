@@ -485,18 +485,42 @@ public sealed class CharacterBehaviorPhase
             int damage = Math.Max(1, (int)(beast.Strength * _cfg.BeastDamageMultiplier));
             c.Health -= damage;
 
+            // Counter-attack: character fights back; Combat skill scales how hard they hit.
+            int counterDamage = Math.Max(1, (int)(c.Skills.Combat * _cfg.MaxHealth * _cfg.CharCounterDamageMultiplier));
+            beast.Health -= counterDamage;
+
             var payload = JsonSerializer.Serialize(new
             {
-                characterId   = c.Id.Value,
-                characterName = c.Identity.Name,
-                beastId       = beast.Id.Value,
-                beastName     = beast.Name,
+                characterId     = c.Id.Value,
+                characterName   = c.Identity.Name,
+                beastId         = beast.Id.Value,
+                beastName       = beast.Name,
                 damage,
-                charHealthAfter = c.Health,
+                counterDamage,
+                charHealthAfter  = c.Health,
+                beastHealthAfter = beast.Health,
                 tile = new[] { c.Location.X, c.Location.Y }
             });
             pending.Add(new PendingEvent(EventType.BeastAttackedChar, c.Location, null, payload,
                 new[] { c.Id.Value, beast.Id.Value }));
+
+            if (beast.Health <= 0)
+            {
+                beast.IsAlive = false;
+                var slainPayload = JsonSerializer.Serialize(new
+                {
+                    beastId    = beast.Id.Value,
+                    name       = beast.Name,
+                    speciesId  = beast.SpeciesId,
+                    isLegendary = beast.IsLegendary,
+                    ageSeason  = beast.AgeSeason,
+                    cause      = $"slain by {c.Identity.Name}",
+                    killerId   = c.Id.Value,
+                    killerName = c.Identity.Name,
+                });
+                pending.Add(new PendingEvent(EventType.BeastSlain, c.Location, null, slainPayload,
+                    new[] { c.Id.Value, beast.Id.Value }));
+            }
 
             if (c.Health <= 0)
                 KillCharacter(c, world, $"killed by {beast.Name}", pending);
