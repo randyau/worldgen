@@ -200,10 +200,14 @@ public static class CivTracker
         if (world.GetEntity(cmd.CharacterId) is not Tier1Character c) return;
         if (!c.Identity.CivId.IsValid) return;
 
+        var cfg = world.SimConfig.Character;
         var declCiv = world.GetCivilization(c.Identity.CivId);
         var targCiv = world.GetCivilization(cmd.TargetCivId);
         if (declCiv == null || targCiv == null) return;
+        if (declCiv.IsCollapsed || targCiv.IsCollapsed) return;
         if (declCiv.IsAtWarWith(cmd.TargetCivId)) return; // already at war at civ level
+        // Enforce post-war peace cooldown — can't re-declare immediately after a truce
+        if (declCiv.InPeaceCooldownWith(cmd.TargetCivId, world.CurrentYear, cfg.PeaceCooldownYears)) return;
 
         // Record war on both sides
         declCiv.WarsAgainst[cmd.TargetCivId]  = world.CurrentYear;
@@ -438,55 +442,73 @@ public static class CivTracker
             // War expiry is handled at civ level below; no character-level war state here.
         }
 
-        // 3. Civ-level war expiry — end wars that have lasted beyond MaxWarDurationYears
+        // 3. Civ-level war resolution: expiry, surrender, and collapse
+        //    Iterate all civs; EndWarBetween handles symmetry so process each pair once.
+        var processed = new HashSet<(CivId, CivId)>();
         foreach (var civ in world.Civilizations.Values)
         {
-            var expiredEnemies = civ.WarsAgainst
-                .Where(kv => world.CurrentYear - kv.Value >= cfg.MaxWarDurationYears)
-                .Select(kv => kv.Key)
-                .ToList();
-
-            foreach (var enemyCivId in expiredEnemies)
+            foreach (var (enemyCivId, yearDeclared) in civ.WarsAgainst.ToList())
             {
-                civ.WarsAgainst.Remove(enemyCivId);
-                // Remove from the other side too (avoid asymmetric state)
-                if (world.Civilizations.TryGetValue(enemyCivId, out var enemyCiv))
-                    enemyCiv.WarsAgainst.Remove(civ.Id);
+                var key = (Min(civ.Id, enemyCivId), Max(civ.Id, enemyCivId));
+                if (!processed.Add(key)) continue; // already handled this pair
 
-                FireWarEndedCiv(civ.Id, enemyCivId, "expired", world, pending);
-            }
-        }
+                string? reason = null;
 
-        // 4. End wars when one civ collapses
-        foreach (var civ in world.Civilizations.Values.Where(c => c.IsCollapsed))
-        {
-            foreach (var enemyCivId in civ.WarsAgainst.Keys.ToList())
-            {
-                civ.WarsAgainst.Remove(enemyCivId);
-                if (world.Civilizations.TryGetValue(enemyCivId, out var enemyCiv))
-                    enemyCiv.WarsAgainst.Remove(civ.Id);
+                // Truce by expiry
+                if (world.CurrentYear - yearDeclared >= cfg.MaxWarDurationYears)
+                    reason = "truce";
+
+                // Surrender: either side's total population collapsed below the threshold
+                if (reason == null)
+                {
+                    int popA = CivTotalPop(civ.Id, world);
+                    int popB = CivTotalPop(enemyCivId, world);
+                    if (popA < cfg.WarSurrenderPopThreshold || popB < cfg.WarSurrenderPopThreshold)
+                        reason = "surrender";
+                }
+
+                // Destruction: either civ collapsed entirely
+                if (reason == null)
+                {
+                    bool aGone = civ.IsCollapsed;
+                    bool bGone = world.Civilizations.TryGetValue(enemyCivId, out var ec) && ec.IsCollapsed;
+                    if (aGone || bGone)
+                        reason = "destruction";
+                }
+
+                if (reason != null)
+                    EndWarBetween(civ.Id, enemyCivId, reason, world, pending);
             }
         }
     }
 
-    private static void FireWarEndedCiv(
-        CivId civA, CivId civB, string reason,
-        WorldState world, List<PendingEvent> pending)
+    /// <summary>
+    /// Ends a war between two civs, records a peace treaty on both sides, and fires the event.
+    /// Safe to call regardless of which side initiated; handles asymmetric state gracefully.
+    /// </summary>
+    private static void EndWarBetween(
+        CivId civA, CivId civB, string reason, WorldState world, List<PendingEvent> pending)
     {
-        var nameA = world.Civilizations.TryGetValue(civA, out var ca) ? ca.Name : civA.Value.ToString();
-        var nameB = world.Civilizations.TryGetValue(civB, out var cb) ? cb.Name : civB.Value.ToString();
+        if (!world.Civilizations.TryGetValue(civA, out var ca)) return;
+        if (!world.Civilizations.TryGetValue(civB, out var cb)) return;
+
+        ca.WarsAgainst.Remove(civB);
+        cb.WarsAgainst.Remove(civA);
+
+        // Record peace so neither side can re-declare immediately
+        ca.PeaceTreaties[civB] = world.CurrentYear;
+        cb.PeaceTreaties[civA] = world.CurrentYear;
+
         var payload = JsonSerializer.Serialize(new
         {
             civAId   = civA.Value,
-            civAName = nameA,
+            civAName = ca.Name,
             civBId   = civB.Value,
-            civBName = nameB,
+            civBName = cb.Name,
             reason,
             year = world.CurrentYear
         });
-        // Use capital tile for location if available
-        var loc = ca?.CapitalTile ?? new TileCoord(0, 0);
-        pending.Add(new PendingEvent(EventType.WarEnded, loc, null, payload, null));
+        pending.Add(new PendingEvent(EventType.WarEnded, ca.CapitalTile, null, payload, null));
     }
 
     private static void FireAllianceBroken(
@@ -505,6 +527,20 @@ public static class CivTracker
         pending.Add(new PendingEvent(EventType.AllianceBroken, a.Location, null, payload,
             new[] { a.Id.Value, b.Id.Value }));
     }
+
+    // ─── War helpers ──────────────────────────────────────────────────────────
+
+    private static int CivTotalPop(CivId civId, WorldState world)
+    {
+        int total = 0;
+        foreach (var s in world.Settlements.Values)
+            if (s.CivId == civId) total += s.Population;
+        return total;
+    }
+
+    // Canonical ordering for de-duplicating civ pairs in the annual war loop
+    private static CivId Min(CivId a, CivId b) => a.Value < b.Value ? a : b;
+    private static CivId Max(CivId a, CivId b) => a.Value > b.Value ? a : b;
 
     // ─── Event helpers ────────────────────────────────────────────────────────
 

@@ -647,8 +647,10 @@ alliance_war_trust_drain      = 0.4   # trust drained from aggressor to target's
 enemy_of_ally_trust_drain     = 0.15  # trust drain on C when A allies B who is already allied with C's rival
 ally_protect_goal_intensity   = 0.6   # priority of the Protect goal seeded on allies when their ally is attacked
 ally_disaster_aid_intensity   = 0.3   # (reserved for future goal seeding; merchant routing handles aid currently)
-max_war_duration_years        = 4     # wars auto-expire after 4 years without battle/raid; shorter = leaner relationship graph
-max_active_wars               = 2     # hard cap: a character cannot be in more than this many active wars simultaneously
+max_war_duration_years        = 4     # wars end by truce after this many years if not ended sooner by surrender/destruction
+max_active_wars               = 2     # hard cap: a civ cannot fight more than this many simultaneous wars
+peace_cooldown_years          = 10    # years after a war ends before the same two civs can declare war again
+war_surrender_pop_threshold   = 5     # a civ with total population below this sues for peace (surrender)
 # Rivalry cap scales with Aggression: max = floor(base + Aggression × per_aggression)
 # Aggression=0 → 1 rival max; Aggression=1.0 → 4 rivals max
 rivalry_max_base              = 1

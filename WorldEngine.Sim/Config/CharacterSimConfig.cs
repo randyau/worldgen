@@ -83,12 +83,16 @@ public sealed class CharacterSimConfig
     public float RuinDecayHalfLifeYears   { get; set; } = 50f;
 
     // ─── War ──────────────────────────────────────────────────────────────────
-    // Wars auto-expire after this many years if not renewed by a battle/raid.
-    // Prevents permanent inter-civ hostility and the rivalry accumulation it causes.
+    // Wars auto-expire after this many years if not resolved by surrender or truce.
     public int MaxWarDurationYears        { get; set; } = 4;
-    // Hard cap on simultaneous active wars per character. Prevents aggressive characters
-    // from accumulating hundreds of personal war edges and bloating the relationship graph.
+    // Hard cap on simultaneous active wars per civilization.
     public int MaxActiveWars              { get; set; } = 2;
+    // After any war ends (expiry, surrender, or truce), neither side can declare war
+    // on the other for this many years. Prevents immediate re-declaration.
+    public int PeaceCooldownYears         { get; set; } = 10;
+    // A civ whose total population falls below this threshold during a war sues for peace
+    // (surrender). The war ends immediately regardless of duration.
+    public int WarSurrenderPopThreshold   { get; set; } = 5;
     // Rivalry cap scales with Aggression: floor(base + Aggression × perAggression).
     // A war-hungry character can sustain more rivalries; a peaceful one almost none.
     public int   RivalryMaxBase           { get; set; } = 1;

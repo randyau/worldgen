@@ -183,6 +183,7 @@ public static class UtilityScorer
                     if (!world.Settlements.TryGetValue(coord, out var nearSettle)) continue;
                     if (!nearSettle.CivId.IsValid || nearSettle.CivId == c.Identity.CivId) continue;
                     if (myCiv.IsAtWarWith(nearSettle.CivId)) continue;
+                    if (myCiv.InPeaceCooldownWith(nearSettle.CivId, world.CurrentYear, cfg.PeaceCooldownYears)) continue;
                     var targetCiv = world.GetCivilization(nearSettle.CivId);
                     if (targetCiv == null) continue;
                     // Require personal animosity with the enemy ruler OR existing rivalry

@@ -27,6 +27,17 @@ public sealed class Civilization
 
     public bool IsAtWarWith(CivId other) => WarsAgainst.ContainsKey(other);
 
+    /// <summary>
+    /// Peace treaties: maps a former enemy CivId to the year peace was made.
+    /// DeclareWar checks this to enforce a post-war cooldown — neither side can
+    /// restart the war for PeaceCooldownYears after it ended.
+    /// </summary>
+    public Dictionary<CivId, int> PeaceTreaties { get; } = [];
+
+    public bool InPeaceCooldownWith(CivId other, int currentYear, int cooldownYears)
+        => PeaceTreaties.TryGetValue(other, out int peaceYear)
+           && currentYear - peaceYear < cooldownYears;
+
     public Civilization(CivId id, string name, EntityId founderId, TileCoord capitalTile, int foundedYear)
     {
         Id          = id;
