@@ -74,7 +74,7 @@ public sealed class PhaseRunner
         RunPopulationDynamicsPhase(world, pending);
         pending.AddRange(_pressurePhase.Execute(world, world.CurrentTick));
         RunEntityBehaviorPhase(world, pending, isAnnualTick);
-        RunCharacterBehaviorPhase(world, pending);
+        RunCharacterBehaviorPhase(world, pending, isAnnualTick);
         if (isAnnualTick)
             CivTracker.RunAnnualDiplomacy(world, pending);
         RunPhaseStub(world, SimPhase.ConflictResolution);
@@ -103,10 +103,10 @@ public sealed class PhaseRunner
         _entityPhase.RunTick(world, pending, isAnnualTick);
     }
 
-    private void RunCharacterBehaviorPhase(WorldState world, List<PendingEvent> pending)
+    private void RunCharacterBehaviorPhase(WorldState world, List<PendingEvent> pending, bool isAnnualTick)
     {
         _phaseObserver?.Invoke(SimPhase.CharacterDecisions);
-        pending.AddRange(_charPhase.Execute(world, world.CurrentTick));
+        pending.AddRange(_charPhase.Execute(world, world.CurrentTick, isAnnualTick));
         pending.AddRange(_tier2Phase.Execute(world, world.CurrentTick));
     }
 

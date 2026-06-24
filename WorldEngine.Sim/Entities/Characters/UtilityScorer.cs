@@ -424,18 +424,34 @@ public static class UtilityScorer
                 // Bonus for tiles outside any settlement's hinterland — this is where they want to be.
                 // Compactness bonus: if the tile is also near an existing same-civ settlement, reward it
                 // extra — this pulls expansion toward the civ's existing blob rather than forming tendrils.
+                //
+                // Use tile-keyed dictionary lookups (O(r²)) instead of scanning all settlements (O(n)):
+                // check whether any tile within MaxReachRadius has a settlement, and whether any
+                // within compactnessRadius belongs to the same civ.
+                const int MaxHinterlandRadius = 5; // matches max ReachRadius()
                 bool inAnyHinterland = false;
-                bool nearSameCiv = false;
-                foreach (var (st, stub) in world.Settlements)
+                for (int hy = -MaxHinterlandRadius; hy <= MaxHinterlandRadius && !inAnyHinterland; hy++)
+                for (int hx = -MaxHinterlandRadius; hx <= MaxHinterlandRadius && !inAnyHinterland; hx++)
                 {
-                    float dist = TileDistance(coord, st);
-                    if (dist <= stub.ReachRadius()) { inAnyHinterland = true; break; }
-                    if (!nearSameCiv && stub.CivId == c.Identity.CivId && dist <= cfg.ExpansionCompactnessRadius)
-                        nearSameCiv = true;
+                    if (hx * hx + hy * hy > MaxHinterlandRadius * MaxHinterlandRadius) continue;
+                    if (world.Settlements.ContainsKey(new TileCoord(coord.X + hx, coord.Y + hy)))
+                        inAnyHinterland = true;
                 }
+
                 if (!inAnyHinterland)
                 {
                     score += cfg.ExpansionEmptyTileBonus;
+
+                    int cr = cfg.ExpansionCompactnessRadius;
+                    bool nearSameCiv = false;
+                    for (int cy = -cr; cy <= cr && !nearSameCiv; cy++)
+                    for (int cx = -cr; cx <= cr && !nearSameCiv; cx++)
+                    {
+                        if (cx * cx + cy * cy > cr * cr) continue;
+                        if (world.Settlements.TryGetValue(new TileCoord(coord.X + cx, coord.Y + cy), out var ns)
+                            && ns.CivId == c.Identity.CivId)
+                            nearSameCiv = true;
+                    }
                     if (nearSameCiv)
                         score += cfg.ExpansionCompactnessBonus;
                 }

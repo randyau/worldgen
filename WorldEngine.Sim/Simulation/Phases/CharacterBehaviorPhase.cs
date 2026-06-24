@@ -24,7 +24,7 @@ public sealed class CharacterBehaviorPhase
         _cfg    = cfg.Character;
     }
 
-    public List<PendingEvent> Execute(WorldState world, long tick)
+    public List<PendingEvent> Execute(WorldState world, long tick, bool isAnnualTick = false)
     {
         var pending = new List<PendingEvent>();
 
@@ -75,8 +75,10 @@ public sealed class CharacterBehaviorPhase
         foreach (var c in characters.Where(ch => !ch.IsAlive))
             world.Entities.Remove(c.Id);
 
-        // Spawn next-generation heroes from stable settlements
-        TrySpawnCivBorn(world, pending, tick);
+        // Spawn next-generation heroes once per year (Spring tick only) — runs per-tick otherwise
+        // iterates all settlements for no additional output and burns O(settlements) per tick.
+        if (isAnnualTick)
+            TrySpawnCivBorn(world, pending, tick);
 
         return pending;
     }

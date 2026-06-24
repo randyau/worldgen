@@ -83,6 +83,7 @@ public static class CivTracker
             FertilityMultiplier: fertilityVariance);
         world.Settlements[cmd.Tile] = stub;
         world.AddActiveFounder(founder.Id);
+        world.Civilizations[civId].SettlementCount++;
         world.Civilizations[civId].LastSettlementFoundedYear = world.CurrentYear;
 
         // Mark goal as progressed
@@ -304,6 +305,12 @@ public static class CivTracker
                     ResourceStores     = newStores, // granaries looted/burned during conquest
                 };
 
+                // Transfer settlement count from losing civ to winning civ
+                if (world.Civilizations.TryGetValue(previousCivId, out var losingCiv))
+                    losingCiv.SettlementCount = Math.Max(0, losingCiv.SettlementCount - 1);
+                if (world.Civilizations.TryGetValue(raider.Identity.CivId, out var winningCiv))
+                    winningCiv.SettlementCount++;
+
                 pending.Add(new PendingEvent(EventType.SettlementConquered, cmd.SettlementTile, null,
                     JsonSerializer.Serialize(new
                     {
@@ -317,7 +324,7 @@ public static class CivTracker
                     })));
 
                 // If the losing civ has no settlements left, it collapses.
-                bool anyLeft = world.Settlements.Values.Any(s => s.CivId == previousCivId);
+                bool anyLeft = losingCiv != null && losingCiv.SettlementCount > 0;
                 if (!anyLeft)
                     pending.Add(new PendingEvent(EventType.CivilizationCollapsed, cmd.SettlementTile, null,
                         JsonSerializer.Serialize(new
@@ -399,6 +406,9 @@ public static class CivTracker
             TimesSettled:   timesSettled);
 
         world.RemoveActiveFounder(stub.FounderId);
+
+        if (world.Civilizations.TryGetValue(stub.CivId, out var civ))
+            civ.SettlementCount = Math.Max(0, civ.SettlementCount - 1);
 
         return timesSettled;
     }

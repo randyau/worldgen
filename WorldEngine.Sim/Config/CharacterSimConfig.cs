@@ -27,6 +27,8 @@ public sealed class CharacterSimConfig
     // encourages blob-shaped growth rather than linear tendrils
     public int   ExpansionCompactnessRadius { get; set; } = 8;
     public int   ExpansionCompactnessBonus  { get; set; } = 60;
+    // Hard cap on live settlements per civilization; expansion goals stop forming beyond this
+    public int   MaxSettlementsPerCiv      { get; set; } = 20;
 
     // When shelter drops below this threshold, characters actively prefer tiles with natural cover
     public float ShelterSeekThreshold   { get; set; } = 0.35f;

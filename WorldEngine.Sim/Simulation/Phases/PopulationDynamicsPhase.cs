@@ -57,10 +57,19 @@ public sealed class PopulationDynamicsPhase
         // Per-settlement founding-time variance permanently differentiates otherwise similar tiles
         float fertility = tileData.Fertility / 255f * stub.FertilityMultiplier;
 
-        // Safety score: number of Tier1+Tier2 entities in 3-tile radius, clamped
-        int nearby = world.GetEntitiesInRadius(tile, 3)
-            .Count(e => e is Tier1Character or Tier2Character);
-        float safetyScore = Math.Clamp(0.3f + nearby * 0.1f, 0f, 1f);
+        // Safety score: entities nearby provide protection. Saturates at 7+ characters → 1.0.
+        // Skip the spatial scan for established settlements (pop > 200) — they're inherently safe.
+        float safetyScore;
+        if (stub.Population > 200)
+        {
+            safetyScore = 1.0f;
+        }
+        else
+        {
+            int nearby = world.GetEntitiesInRadius(tile, 3)
+                .Count(e => e is Tier1Character or Tier2Character);
+            safetyScore = Math.Clamp(0.3f + nearby * 0.1f, 0f, 1f);
+        }
 
         // Biome-based carrying capacity: computed by ResourcePressurePhase during its tile walk
         // and cached on the stub — reading it here adds zero per-tick cost.
@@ -87,11 +96,8 @@ public sealed class PopulationDynamicsPhase
         int   newPop   = Math.Clamp(stub.Population + (int)Math.Floor(newPopF), 0, Math.Min(carryingCapacity, _cfg.PopMax));
         float remainder = newPopF - (int)Math.Floor(newPopF);
 
-        // Fire SettlementGrew/Shrank events (suppressed by gate normally, but fire anyway)
-        if (newPop > stub.Population)
-            pending.Add(MakePopEvent(EventType.SettlementGrew, stub, tile, newPop));
-        else if (newPop < stub.Population && newPop > 0)
-            pending.Add(MakePopEvent(EventType.SettlementShrank, stub, tile, newPop));
+        // SettlementGrew/Shrank are suppressed in config — don't generate them to avoid
+        // O(settlements) pending event allocations per tick.
 
         // Specialist crystallization
         int newThresh = stub.LastCrystalThresh;

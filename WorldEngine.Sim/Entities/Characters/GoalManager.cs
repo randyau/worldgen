@@ -42,7 +42,10 @@ public static class GoalManager
         // Allowed while inside a home settlement — wanderlust will push them toward open land;
         // EstablishSettlement scoring gates on the actual tile being worthwhile.
         bool isFounder = c.Identity.CivId.IsValid && world.ActiveFounders.Contains(c.Id);
-        if (!hasExpansion && !isFounder && c.Personality.Ambition > cfg.GoalAmbitionThreshold)
+        bool civAtSettlementCap = c.Identity.CivId.IsValid
+            && world.GetCivilization(c.Identity.CivId) is { } myCiv
+            && myCiv.SettlementCount >= cfg.MaxSettlementsPerCiv;
+        if (!hasExpansion && !isFounder && !civAtSettlementCap && c.Personality.Ambition > cfg.GoalAmbitionThreshold)
         {
             c.Goals.Add(new GoalData
             {

@@ -18,6 +18,9 @@ public sealed class Civilization
     /// <summary>Year the most recent settlement was founded. Guards against paired-founding.</summary>
     public int LastSettlementFoundedYear { get; set; } = -999;
 
+    /// <summary>Count of currently-live settlements belonging to this civ. Maintained by CivTracker.</summary>
+    public int SettlementCount { get; set; } = 0;
+
     /// <summary>
     /// Active wars: maps the enemy CivId to the year war was declared.
     /// War is a civ-level state — individual character relationships carry personal
