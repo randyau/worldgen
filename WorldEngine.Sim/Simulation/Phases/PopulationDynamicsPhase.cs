@@ -45,6 +45,14 @@ public sealed class PopulationDynamicsPhase
         foreach (var tile in toAbandon)
             AbandonSettlement(tile, world, pending);
 
+        // Refresh TotalPopulation on each civ so InCivFoundingCooldown can read it without
+        // scanning all settlements. Cost: O(settlements), paid once here vs. per-character.
+        foreach (var civ in world.Civilizations.Values)
+            civ.TotalPopulation = 0;
+        foreach (var stub in world.Settlements.Values)
+            if (world.Civilizations.TryGetValue(stub.CivId, out var civ))
+                civ.TotalPopulation += stub.Population;
+
         return pending;
     }
 

@@ -24,6 +24,9 @@ public sealed class Civilization
     /// <summary>Count of currently-live colony settlements (founded beyond ColonyMinDistance from all same-civ settlements). Maintained by CivTracker.</summary>
     public int ColonyCount { get; set; } = 0;
 
+    /// <summary>Sum of all settlement populations for this civ. Refreshed by PopulationDynamicsPhase each tick — read-only outside that phase.</summary>
+    public int TotalPopulation { get; set; } = 0;
+
     /// <summary>
     /// Active wars: maps the enemy CivId to the year war was declared.
     /// War is a civ-level state — individual character relationships carry personal

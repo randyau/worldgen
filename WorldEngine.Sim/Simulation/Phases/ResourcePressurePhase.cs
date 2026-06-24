@@ -23,10 +23,40 @@ public sealed class ResourcePressurePhase
     private readonly ResourcePressureConfig _cfg;
     private readonly SettlementConfig       _settleCfg;
 
+    // Pre-baked lookup tables to avoid switch/piecewise computation on every reach tile.
+    // Built once at construction from config; indexed by (byte)effTemp and (int)BiomeType.
+    private readonly float[] _gsTable;    // GrowingSeasonFactor: 256 entries indexed by effective temperature byte
+    private readonly float[] _foodTable;  // BiomeFoodMultiplier: 16 entries indexed by (int)BiomeType
+    private readonly int[]   _carryTable; // BiomeCarryingCapacity: 16 entries indexed by (int)BiomeType
+
     public ResourcePressurePhase(SimConfig cfg)
     {
         _cfg       = cfg.ResourcePressure;
         _settleCfg = cfg.Settlement;
+        _gsTable    = BuildGrowingSeasonTable(_cfg);
+        _foodTable  = BuildFoodTable(_cfg);
+        _carryTable = BuildCarryTable(_settleCfg);
+    }
+
+    private static float[] BuildGrowingSeasonTable(ResourcePressureConfig cfg)
+    {
+        var t = new float[256];
+        for (int i = 0; i < 256; i++) t[i] = GrowingSeasonFactor((byte)i, cfg);
+        return t;
+    }
+
+    private static float[] BuildFoodTable(ResourcePressureConfig cfg)
+    {
+        var t = new float[16];
+        for (int i = 0; i < 16; i++) t[i] = BiomeFoodMultiplier((BiomeType)i, cfg);
+        return t;
+    }
+
+    private static int[] BuildCarryTable(SettlementConfig settleCfg)
+    {
+        var t = new int[16];
+        for (int i = 0; i < 16; i++) t[i] = BiomeCarryingCapacity((BiomeType)i, settleCfg);
+        return t;
     }
 
     // Timber contribution per forest reach tile (normalized supply unit)
@@ -113,9 +143,10 @@ public sealed class ResourcePressurePhase
 
         int w = world.TileGrid.TileWidth;
 
-        foreach (var coord in world.GetTilesInRadius(center, radius))
+        // GetCachedLandTilesInRadius avoids re-computing circle geometry + IsLand filter every tick;
+        // world geometry is immutable after worldgen so results are cached permanently on WorldState.
+        foreach (var coord in world.GetCachedLandTilesInRadius(center, radius))
         {
-            if (!world.IsLand(coord)) continue;
             var tile = world.TileGrid.GetTile(coord);
             tileCount++;
 
@@ -127,10 +158,9 @@ public sealed class ResourcePressurePhase
                 tile.BaseMoisture / 255f * _cfg.FoodMoistureFloor);
             int   idx        = coord.X + coord.Y * w;
             byte  effTemp    = TileTemperature.Effective(tile, idx, world);
-            float tempFactor = GrowingSeasonFactor(effTemp, _cfg);
             var   biome      = (BiomeType)tile.BiomeType;
-            float biomeMult  = BiomeFoodMultiplier(biome, _cfg);
-            float foodContrib = (tile.Fertility / 255f) * effectiveMoisture * tempFactor * biomeMult;
+            int   biomeIdx   = (int)biome;
+            float foodContrib = (tile.Fertility / 255f) * effectiveMoisture * _gsTable[effTemp] * _foodTable[biomeIdx];
             Accumulate(supply, "food", foodContrib);
 
             // Water: moisture alone (wells, streams, rainfall access)
@@ -142,7 +172,7 @@ public sealed class ResourcePressurePhase
                 Accumulate(supply, "timber", TimberPerForestTile);
 
             // Carrying capacity — accumulated alongside food/water in the same tile walk
-            carryTotal += BiomeCarryingCapacity(biome);
+            carryTotal += _carryTable[biomeIdx];
 
             // Mineral deposits — extensible: any new deposit type flows through automatically
             if (world.ResourceRegistry.TryGetValue(coord, out var deposits))
@@ -172,21 +202,21 @@ public sealed class ResourcePressurePhase
         return (supply, capacity);
     }
 
-    private int BiomeCarryingCapacity(BiomeType biome) => biome switch
+    private static int BiomeCarryingCapacity(BiomeType biome, SettlementConfig cfg) => biome switch
     {
-        BiomeType.Grassland          => _settleCfg.CarryCapGrassland,
-        BiomeType.Plains             => _settleCfg.CarryCapPlains,
-        BiomeType.TropicalRainforest => _settleCfg.CarryCapTropicalRainforest,
-        BiomeType.Savanna            => _settleCfg.CarryCapSavanna,
-        BiomeType.TemperateForest    => _settleCfg.CarryCapTemperateForest,
-        BiomeType.BorealForest       => _settleCfg.CarryCapBorealForest,
-        BiomeType.Swamp              => _settleCfg.CarryCapSwamp,
-        BiomeType.Beach              => _settleCfg.CarryCapBeach,
-        BiomeType.Mountain           => _settleCfg.CarryCapMountain,
-        BiomeType.HighMountain       => _settleCfg.CarryCapHighMountain,
-        BiomeType.Desert             => _settleCfg.CarryCapDesert,
-        BiomeType.Volcanic           => _settleCfg.CarryCapVolcanic,
-        _                            => _settleCfg.CarryCapDefault,
+        BiomeType.Grassland          => cfg.CarryCapGrassland,
+        BiomeType.Plains             => cfg.CarryCapPlains,
+        BiomeType.TropicalRainforest => cfg.CarryCapTropicalRainforest,
+        BiomeType.Savanna            => cfg.CarryCapSavanna,
+        BiomeType.TemperateForest    => cfg.CarryCapTemperateForest,
+        BiomeType.BorealForest       => cfg.CarryCapBorealForest,
+        BiomeType.Swamp              => cfg.CarryCapSwamp,
+        BiomeType.Beach              => cfg.CarryCapBeach,
+        BiomeType.Mountain           => cfg.CarryCapMountain,
+        BiomeType.HighMountain       => cfg.CarryCapHighMountain,
+        BiomeType.Desert             => cfg.CarryCapDesert,
+        BiomeType.Volcanic           => cfg.CarryCapVolcanic,
+        _                            => cfg.CarryCapDefault,
     };
 
     private static void Accumulate(Dictionary<string, float> dict, string key, float value)

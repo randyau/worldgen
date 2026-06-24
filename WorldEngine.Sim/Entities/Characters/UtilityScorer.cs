@@ -13,6 +13,27 @@ public static class UtilityScorer
     // Salt for softmax random selection
     private const int SaltSoftmax = 600;
 
+    // ─── Settlement-invalidated caches ────────────────────────────────────────
+    // These caches are keyed on tile coords and/or civ identity. All are cleared whenever
+    // the settlement count changes (founding or abandonment), since proximity results depend
+    // entirely on settlement positions. The sim is single-threaded, so static fields are safe.
+    private static int _cacheVersion = -1;
+    private static readonly Dictionary<TileCoord, float>         _routeCache      = new();
+    private static readonly Dictionary<TileCoord, bool>          _hinterlandCache = new(); // any settlement within MaxHinterlandRadius
+    private static readonly Dictionary<(TileCoord, CivId), bool> _compactCache    = new(); // same-civ within compactnessRadius
+    private static readonly Dictionary<(TileCoord, CivId), bool> _frontierCache   = new(); // same-civ within ColonyMinDistance
+
+    private static void SyncCaches(IWorldStateReadOnly world)
+    {
+        int count = world.Settlements.Count;
+        if (count == _cacheVersion) return;
+        _cacheVersion = count;
+        _routeCache.Clear();
+        _hinterlandCache.Clear();
+        _compactCache.Clear();
+        _frontierCache.Clear();
+    }
+
     public sealed record ScoredAction(ICommand Command, float Score);
 
     /// <summary>Score all available actions and return a softmax-weighted selection.</summary>
@@ -50,6 +71,7 @@ public static class UtilityScorer
         IWorldStateReadOnly world,
         CharacterSimConfig cfg)
     {
+        SyncCaches(world);
         var actions = new List<ScoredAction>();
 
         // Rest — always available
@@ -426,32 +448,39 @@ public static class UtilityScorer
                 // Compactness bonus: if the tile is also near an existing same-civ settlement, reward it
                 // extra — this pulls expansion toward the civ's existing blob rather than forming tendrils.
                 //
-                // Use tile-keyed dictionary lookups (O(r²)) instead of scanning all settlements (O(n)):
-                // check whether any tile within MaxReachRadius has a settlement, and whether any
-                // within compactnessRadius belongs to the same civ.
-                const int MaxHinterlandRadius = 5; // matches max ReachRadius()
-                bool inAnyHinterland = false;
-                for (int hy = -MaxHinterlandRadius; hy <= MaxHinterlandRadius && !inAnyHinterland; hy++)
-                for (int hx = -MaxHinterlandRadius; hx <= MaxHinterlandRadius && !inAnyHinterland; hx++)
+                // Cache proximity results keyed by coord/civId — invalidated on settlement change.
+                // inAnyHinterland: any settlement within MaxReachRadius (civ-independent).
+                // nearSameCiv: same-civ settlement within compactnessRadius.
+                const int MaxHinterlandRadius = 5;
+                if (!_hinterlandCache.TryGetValue(coord, out bool inAnyHinterland))
                 {
-                    if (hx * hx + hy * hy > MaxHinterlandRadius * MaxHinterlandRadius) continue;
-                    if (world.Settlements.ContainsKey(new TileCoord(coord.X + hx, coord.Y + hy)))
-                        inAnyHinterland = true;
+                    for (int hy = -MaxHinterlandRadius; hy <= MaxHinterlandRadius && !inAnyHinterland; hy++)
+                    for (int hx = -MaxHinterlandRadius; hx <= MaxHinterlandRadius && !inAnyHinterland; hx++)
+                    {
+                        if (hx * hx + hy * hy > MaxHinterlandRadius * MaxHinterlandRadius) continue;
+                        if (world.Settlements.ContainsKey(new TileCoord(coord.X + hx, coord.Y + hy)))
+                            inAnyHinterland = true;
+                    }
+                    _hinterlandCache[coord] = inAnyHinterland;
                 }
 
                 if (!inAnyHinterland)
                 {
                     score += cfg.ExpansionEmptyTileBonus;
 
-                    int cr = cfg.ExpansionCompactnessRadius;
-                    bool nearSameCiv = false;
-                    for (int cy = -cr; cy <= cr && !nearSameCiv; cy++)
-                    for (int cx = -cr; cx <= cr && !nearSameCiv; cx++)
+                    var compactKey = (coord, c.Identity.CivId);
+                    if (!_compactCache.TryGetValue(compactKey, out bool nearSameCiv))
                     {
-                        if (cx * cx + cy * cy > cr * cr) continue;
-                        if (world.Settlements.TryGetValue(new TileCoord(coord.X + cx, coord.Y + cy), out var ns)
-                            && ns.CivId == c.Identity.CivId)
-                            nearSameCiv = true;
+                        int cr = cfg.ExpansionCompactnessRadius;
+                        for (int cy = -cr; cy <= cr && !nearSameCiv; cy++)
+                        for (int cx = -cr; cx <= cr && !nearSameCiv; cx++)
+                        {
+                            if (cx * cx + cy * cy > cr * cr) continue;
+                            if (world.Settlements.TryGetValue(new TileCoord(coord.X + cx, coord.Y + cy), out var ns)
+                                && ns.CivId == c.Identity.CivId)
+                                nearSameCiv = true;
+                        }
+                        _compactCache[compactKey] = nearSameCiv;
                     }
                     if (nearSameCiv)
                         score += cfg.ExpansionCompactnessBonus;
@@ -460,19 +489,20 @@ public static class UtilityScorer
             else if (isColonizingChar)
             {
                 // Frontier bonus: colonizers want tiles FAR from all same-civ settlements.
-                // Check if any same-civ settlement is within ColonyMinDistance — if none found,
-                // the tile is frontier territory and earns a large bonus that overcomes the
-                // compactness incentive and admin-distance penalty.
-                // Uses O(r²) tile-coord lookups rather than scanning all settlements.
-                int fd = cfg.ColonyMinDistance;
-                bool nearHome = false;
-                for (int fy = -fd; fy <= fd && !nearHome; fy++)
-                for (int fx = -fd; fx <= fd && !nearHome; fx++)
+                // r=25 → ~1963 checks per tile — cache by (coord, civId), invalidated on settlement change.
+                var frontierKey = (coord, c.Identity.CivId);
+                if (!_frontierCache.TryGetValue(frontierKey, out bool nearHome))
                 {
-                    if (fx * fx + fy * fy > fd * fd) continue;
-                    if (world.Settlements.TryGetValue(new TileCoord(coord.X + fx, coord.Y + fy), out var fs)
-                        && fs.CivId == c.Identity.CivId)
-                        nearHome = true;
+                    int fd = cfg.ColonyMinDistance;
+                    for (int fy = -fd; fy <= fd && !nearHome; fy++)
+                    for (int fx = -fd; fx <= fd && !nearHome; fx++)
+                    {
+                        if (fx * fx + fy * fy > fd * fd) continue;
+                        if (world.Settlements.TryGetValue(new TileCoord(coord.X + fx, coord.Y + fy), out var fs)
+                            && fs.CivId == c.Identity.CivId)
+                            nearHome = true;
+                    }
+                    _frontierCache[frontierKey] = nearHome;
                 }
                 if (!nearHome)
                     score += cfg.ColonyFrontierBonus;
@@ -507,10 +537,15 @@ public static class UtilityScorer
         TileCoord candidate, CivId civId, IWorldStateReadOnly world, CharacterSimConfig cfg)
     {
         if (!civId.IsValid) return 1f;
-        foreach (var (settleTile, stub) in world.Settlements)
+        // O(r²) tile-coord lookup: scan tiles within MaxReachRadius (conservative upper bound on
+        // ReachRadius()) and check if any same-civ settlement occupies one. Avoids O(settlements) scan.
+        const int MaxReachRadius = 5;
+        for (int hy = -MaxReachRadius; hy <= MaxReachRadius; hy++)
+        for (int hx = -MaxReachRadius; hx <= MaxReachRadius; hx++)
         {
-            if (stub.CivId != civId) continue;
-            if (TileDistance(candidate, settleTile) <= stub.ReachRadius())
+            if (hx * hx + hy * hy > MaxReachRadius * MaxReachRadius) continue;
+            if (world.Settlements.TryGetValue(new TileCoord(candidate.X + hx, candidate.Y + hy), out var s)
+                && s.CivId == civId)
                 return cfg.HinterlandDrainFactor;
         }
         return 1f;
@@ -529,13 +564,9 @@ public static class UtilityScorer
         var civ = world.GetCivilization(c.Identity.CivId);
         if (civ is null) return false;
 
-        // Sum population across all settlements belonging to this civ
-        int civPop = 0;
-        foreach (var stub in world.Settlements.Values)
-            if (stub.CivId == c.Identity.CivId) civPop += stub.Population;
-
+        // TotalPopulation is maintained by PopulationDynamicsPhase — O(1) read instead of O(settlements) scan
         float effective = cfg.BaseFoundingCooldownYears
-                        / (1f + civPop / (float)cfg.FoundingCooldownPopScale);
+                        / (1f + civ.TotalPopulation / (float)cfg.FoundingCooldownPopScale);
         int cooldown = Math.Max(cfg.MinFoundingCooldownYears, (int)effective);
         return world.CurrentYear - civ.LastSettlementFoundedYear < cooldown;
     }
@@ -580,9 +611,9 @@ public static class UtilityScorer
     private const int RouteMaxSettlements = 8;
     private static float ComputeRouteBonus(TileCoord coord, IWorldStateReadOnly world)
     {
-        if (world.Settlements.Count < 2) return 0f;
+        if (_routeCache.TryGetValue(coord, out float cached)) return cached;
+        if (world.Settlements.Count < 2) { _routeCache[coord] = 0f; return 0f; }
 
-        // Collect distances to all settlements, then take the K nearest
         var nearest = world.Settlements.Keys
             .Select(s => (Coord: s, Dist: TileDistance(coord, s)))
             .Where(x => x.Dist > 0f)
@@ -590,14 +621,16 @@ public static class UtilityScorer
             .Take(RouteMaxSettlements)
             .ToList();
 
-        if (nearest.Count < 2) return 0f;
+        if (nearest.Count < 2) { _routeCache[coord] = 0f; return 0f; }
 
         float bonus = 0f;
         for (int i = 0; i < nearest.Count; i++)
         for (int j = i + 1; j < nearest.Count; j++)
             bonus += 1f / (nearest[i].Dist * nearest[j].Dist);
 
-        return Math.Min(bonus, 1f);  // cap so a perfectly central tile doesn't dominate the score
+        float result = Math.Min(bonus, 1f);
+        _routeCache[coord] = result;
+        return result;
     }
 
     private static float TileDistance(TileCoord a, TileCoord b)

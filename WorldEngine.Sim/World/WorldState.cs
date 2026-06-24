@@ -131,6 +131,21 @@ public sealed class WorldState : IWorldStateReadOnly
         }
     }
 
+    // Permanent geometry cache: tile coords + IsLand filter for a given (center, radius).
+    // World grid and biome assignments never change after worldgen, so these results are immutable.
+    private readonly Dictionary<(int X, int Y, int R), TileCoord[]> _landTileCache = new();
+
+    public TileCoord[] GetCachedLandTilesInRadius(TileCoord center, int radius)
+    {
+        var key = (center.X, center.Y, radius);
+        if (!_landTileCache.TryGetValue(key, out var tiles))
+        {
+            tiles = [.. GetTilesInRadius(center, radius).Where(IsLand)];
+            _landTileCache[key] = tiles;
+        }
+        return tiles;
+    }
+
     public float GetRandomFloat(EntityId entityId, int salt = 0) =>
         WorldRng.FloatAt(WorldSeed, CurrentTick, (int)(entityId.Value & 0xFFFF), (int)(entityId.Value >> 32), salt);
 
