@@ -43,10 +43,13 @@ public sealed class EntityRegistry
 
     public IEntity? Get(EntityId id) => _all.GetValueOrDefault(id);
 
-    public IEnumerable<IEntity> GetAt(TileCoord coord) =>
-        _spatial.TryGetValue(coord, out var ids)
-            ? ids.Select(id => _all[id])
-            : Enumerable.Empty<IEntity>();
+    public IEnumerable<IEntity> GetAt(TileCoord coord)
+    {
+        if (!_spatial.TryGetValue(coord, out var ids)) yield break;
+        foreach (var id in ids)
+            if (_all.TryGetValue(id, out var entity))
+                yield return entity;
+    }
 
     public EntityId[] GetIdsAt(TileCoord coord) =>
         _spatial.TryGetValue(coord, out var ids)

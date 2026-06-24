@@ -148,29 +148,13 @@ public sealed class PhaseRunner
 
         if (batch.Count == 0) return;
 
-        // Step 2: DB insert (disk = system of record, MUST come before cache)
-        var inserted = _eventStore.BatchInsert(batch.Select(b => b.ev));
+        // Step 2: DB — single transaction writes events + causal edges + entity refs
+        var inserted = _eventStore.BatchWriteAll(batch);
 
-        // Step 3: Update OriginEventId on matching ActiveDisasters
+        // Step 3: Update OriginEventId on matching ActiveDisasters (WorldState mutation, no DB)
         UpdateActiveDisasterOrigins(world, batch, inserted);
 
-        // Step 4: Causal edges + EventEntities cross-references
-        var edges       = new List<(long, long)>();
-        var entPairs    = new List<(long, long)>();
-        for (int i = 0; i < batch.Count && i < inserted.Count; i++)
-        {
-            var pe    = batch[i].pe;
-            long evId = inserted[i].Id.Value;
-            if (pe.CauseEventId.HasValue && pe.CauseEventId.Value.Value != 0)
-                edges.Add((pe.CauseEventId.Value.Value, evId));
-            if (pe.EntityIds is { Count: > 0 })
-                foreach (long eid in pe.EntityIds)
-                    entPairs.Add((evId, eid));
-        }
-        if (edges.Count    > 0) _eventStore.InsertCausalEdges(edges);
-        if (entPairs.Count > 0) _eventStore.InsertEventEntities(entPairs);
-
-        // Step 5: Cache (ALWAYS after DB)
+        // Step 4: Cache (ALWAYS after DB)
         foreach (var ev in inserted)
             _eventCache.Add(ev);
     }

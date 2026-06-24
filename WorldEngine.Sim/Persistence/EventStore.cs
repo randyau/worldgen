@@ -36,6 +36,10 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
         _conn.Execute("PRAGMA journal_mode=WAL;");
         _conn.Execute("PRAGMA synchronous=NORMAL;");
         _conn.Execute("PRAGMA foreign_keys=ON;");
+        _conn.Execute("PRAGMA cache_size=-65536;");       // 64 MB page cache
+        _conn.Execute("PRAGMA mmap_size=67108864;");      // 64 MB memory-mapped I/O
+        _conn.Execute("PRAGMA temp_store=memory;");        // temp tables in RAM
+        _conn.Execute("PRAGMA wal_autocheckpoint=1000;"); // checkpoint every 1000 pages (default)
 
         _conn.Execute(DatabaseSchema.CreateEvents);
         _conn.Execute(DatabaseSchema.CreateIndexYear);
@@ -48,26 +52,21 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
     }
 
     /// <summary>
-    /// Inserts events in a single transaction. Returns copies with DB-assigned Ids.
+    /// Writes the entire classified event batch (events + causal edges + entity cross-refs)
+    /// in a single SQLite transaction. One commit per tick instead of three.
+    /// Returns copies of the events with DB-assigned Ids.
     /// </summary>
-    public IReadOnlyList<SimEvent> BatchInsert(IEnumerable<SimEvent> events)
+    public IReadOnlyList<SimEvent> BatchWriteAll(IReadOnlyList<(PendingEvent Pe, SimEvent Ev)> batch)
     {
-        var result = new List<SimEvent>();
+        if (batch.Count == 0) return Array.Empty<SimEvent>();
+
+        var result = new List<SimEvent>(batch.Count);
         using var tx = _conn.BeginTransaction();
 
-        const string insertSql = """
-            INSERT INTO Events
-                (Type, Year, Season, Tick, LocationX, LocationY,
-                 TierInvolvement, VerbClass, PopulationImpact, IsFirstOfKind, IsGodMode, PayloadJson)
-            VALUES
-                (@Type, @Year, @Season, @Tick, @LocationX, @LocationY,
-                 @TierInvolvement, @VerbClass, @PopulationImpact, @IsFirstOfKind, @IsGodMode, @PayloadJson);
-            SELECT last_insert_rowid();
-            """;
-
-        foreach (var ev in events)
+        // 1. Insert events, collect assigned IDs
+        foreach (var (_, ev) in batch)
         {
-            long id = _conn.ExecuteScalar<long>(insertSql, new
+            long id = _conn.ExecuteScalar<long>(_insertEventSql, new
             {
                 Type             = (int)ev.Type,
                 ev.Year,
@@ -82,7 +81,60 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
                 IsGodMode        = ev.IsGodMode ? 1 : 0,
                 ev.PayloadJson
             }, tx);
+            result.Add(ev with { Id = new EventId(id) });
+        }
 
+        // 2. Causal edges — uses assigned IDs from step 1
+        for (int i = 0; i < batch.Count; i++)
+        {
+            var pe   = batch[i].Pe;
+            long evId = result[i].Id.Value;
+            if (pe.CauseEventId is { } causeId && causeId.Value > 0)
+                _conn.Execute(_insertEdgeSql,
+                    new { PredecessorId = causeId.Value, SuccessorId = evId }, tx);
+        }
+
+        // 3. Entity cross-references
+        for (int i = 0; i < batch.Count; i++)
+        {
+            var pe   = batch[i].Pe;
+            long evId = result[i].Id.Value;
+            if (pe.EntityIds is { Count: > 0 } ids)
+                foreach (long eid in ids)
+                    _conn.Execute(_insertEntitySql,
+                        new { EventId = evId, EntityId = eid }, tx);
+        }
+
+        tx.Commit();
+        return result;
+    }
+
+    /// <summary>
+    /// Inserts events in a single transaction. Returns copies with DB-assigned Ids.
+    /// Prefer <see cref="BatchWriteAll"/> when causal edges and entity refs are also needed.
+    /// </summary>
+    public IReadOnlyList<SimEvent> BatchInsert(IEnumerable<SimEvent> events)
+    {
+        var result = new List<SimEvent>();
+        using var tx = _conn.BeginTransaction();
+
+        foreach (var ev in events)
+        {
+            long id = _conn.ExecuteScalar<long>(_insertEventSql, new
+            {
+                Type             = (int)ev.Type,
+                ev.Year,
+                Season           = (int)ev.Season,
+                ev.Tick,
+                LocationX        = ev.Location?.X,
+                LocationY        = ev.Location?.Y,
+                TierInvolvement  = (int)ev.TierInvolvement,
+                VerbClass        = (int)ev.VerbClass,
+                PopulationImpact = (int)ev.PopulationImpact,
+                IsFirstOfKind    = ev.IsFirstOfKind ? 1 : 0,
+                IsGodMode        = ev.IsGodMode ? 1 : 0,
+                ev.PayloadJson
+            }, tx);
             result.Add(ev with { Id = new EventId(id) });
         }
 
@@ -90,27 +142,39 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
         return result;
     }
 
+    private const string _insertEventSql = """
+        INSERT INTO Events
+            (Type, Year, Season, Tick, LocationX, LocationY,
+             TierInvolvement, VerbClass, PopulationImpact, IsFirstOfKind, IsGodMode, PayloadJson)
+        VALUES
+            (@Type, @Year, @Season, @Tick, @LocationX, @LocationY,
+             @TierInvolvement, @VerbClass, @PopulationImpact, @IsFirstOfKind, @IsGodMode, @PayloadJson);
+        SELECT last_insert_rowid();
+        """;
+
+    private const string _insertEdgeSql = """
+        INSERT OR IGNORE INTO CausalEdges (PredecessorId, SuccessorId)
+        VALUES (@PredecessorId, @SuccessorId);
+        """;
+
+    private const string _insertEntitySql = """
+        INSERT OR IGNORE INTO EventEntities (EventId, EntityId)
+        VALUES (@EventId, @EntityId);
+        """;
+
     public void InsertCausalEdges(IEnumerable<(long PredecessorId, long SuccessorId)> edges)
     {
         using var tx = _conn.BeginTransaction();
-        const string sql = """
-            INSERT OR IGNORE INTO CausalEdges (PredecessorId, SuccessorId)
-            VALUES (@PredecessorId, @SuccessorId);
-            """;
         foreach (var (pred, succ) in edges)
-            _conn.Execute(sql, new { PredecessorId = pred, SuccessorId = succ }, tx);
+            _conn.Execute(_insertEdgeSql, new { PredecessorId = pred, SuccessorId = succ }, tx);
         tx.Commit();
     }
 
     public void InsertEventEntities(IEnumerable<(long EventId, long EntityId)> pairs)
     {
         using var tx = _conn.BeginTransaction();
-        const string sql = """
-            INSERT OR IGNORE INTO EventEntities (EventId, EntityId)
-            VALUES (@EventId, @EntityId);
-            """;
         foreach (var (evId, entId) in pairs)
-            _conn.Execute(sql, new { EventId = evId, EntityId = entId }, tx);
+            _conn.Execute(_insertEntitySql, new { EventId = evId, EntityId = entId }, tx);
         tx.Commit();
     }
 
