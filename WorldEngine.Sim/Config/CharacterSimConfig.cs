@@ -144,6 +144,16 @@ public sealed class CharacterSimConfig
     public float BeastEncounterChance        { get; set; } = 0.15f; // probability of attack per shared tick
     public float BeastDamageMultiplier       { get; set; } = 0.3f;  // beast.Strength × this = damage to char
 
+    // ─── Civilisation floor ───────────────────────────────────────────────────
+    // When active (non-collapsed) civ count falls below this value, the annual pass
+    // rolls to spawn a new free-agent founder character on suitable unclaimed land.
+    public int   CivFloorCount       { get; set; } = 5;
+    // Annual probability per missing civ slot of spawning a replacement founder.
+    // e.g. at 0.3 and 2 slots missing: each slot has a 30% chance → ~51% at least one spawns.
+    public float CivFloorSpawnChance { get; set; } = 0.3f;
+    // Minimum tile distance from any existing settlement for a floor-spawn tile.
+    public int   CivFloorMinDist     { get; set; } = 20;
+
     // ─── Succession crisis ────────────────────────────────────────────────────
     // How many years distant settlements suffer increased decay after the founding ruler dies.
     public int   SuccessionCrisisYears     { get; set; } = 10;

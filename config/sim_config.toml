@@ -711,6 +711,13 @@ alliance_search_radius       = 4     # tile radius when scanning for nearby neut
 bond_search_radius           = 3     # tile radius when scanning for Bond companions
 war_aggression_threshold     = 0.5   # minimum Aggression to consider DeclareWar action
 
+# Civilisation floor — prevents the world from converging to one or zero civs
+# If active (non-collapsed) civ count drops below civ_floor_count, the annual pass
+# rolls to spawn a new free-agent founder on unclaimed fertile land.
+civ_floor_count        = 5     # minimum active civs; floor kicks in below this
+civ_floor_spawn_chance = 0.3   # annual probability per missing civ slot to spawn a founder
+civ_floor_min_dist     = 20    # minimum tile distance from existing settlements for the spawn tile
+
 # Succession crisis — when the founding ruler dies, distant settlements enter instability
 succession_crisis_years      = 10    # how long the crisis lasts after founder death
 succession_crisis_decay_mult = 2.5   # decay rate multiplier for settlements beyond stable radius during crisis

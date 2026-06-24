@@ -507,7 +507,10 @@ public static class CivTracker
             pending.Add(new PendingEvent(EventType.SuccessionCrisis, civ.CapitalTile, null, payload));
         }
 
-        // 5. Civ-level war resolution: expiry, surrender, and collapse
+        // 5. Civilisation floor: spawn new founders if active civ count falls below threshold
+        RunCivFloorSpawns(world, pending, world.SimConfig);
+
+        // 6. Civ-level war resolution: expiry, surrender, and collapse
         //    Iterate all civs; EndWarBetween handles symmetry so process each pair once.
         var processed = new HashSet<(CivId, CivId)>();
         foreach (var civ in world.Civilizations.Values)
@@ -545,6 +548,99 @@ public static class CivTracker
                     EndWarBetween(civ.Id, enemyCivId, reason, world, pending);
             }
         }
+    }
+
+    // ─── Civilisation floor ───────────────────────────────────────────────────
+
+    private const int SaltCivFloor = 760;
+
+    /// <summary>
+    /// If active civs drop below the configured floor, probabilistically spawn new free-agent
+    /// founders on unclaimed fertile land. They arrive with an Expansion goal so they will
+    /// attempt to settle and start a new civilisation.
+    /// </summary>
+    private static void RunCivFloorSpawns(WorldState world, List<PendingEvent> pending, SimConfig cfg)
+    {
+        int activeCivs = 0;
+        foreach (var c in world.Civilizations.Values)
+            if (!c.IsCollapsed) activeCivs++;
+
+        int deficit = cfg.Character.CivFloorCount - activeCivs;
+        if (deficit <= 0) return;
+
+        var charCfg = cfg.Character;
+        for (int slot = 0; slot < deficit; slot++)
+        {
+            float roll = WorldRng.FloatAt(world.WorldSeed, world.CurrentYear, slot, 0, SaltCivFloor);
+            if (roll >= charCfg.CivFloorSpawnChance) continue;
+
+            var tile = FindCivFloorSpawnTile(world, cfg);
+            if (tile is null) continue;
+
+            long seq     = (200_000L + world.CurrentYear * 997L + slot * 31L) & 0x7FFFFFFF;
+            var  biome   = (BiomeType)world.TileGrid.GetTile(tile.Value).BiomeType;
+            var  founder = CharacterFactory.Spawn(tile.Value, biome, world.WorldSeed, seq, cfg, world.CurrentYear);
+
+            // Seed an Expansion goal so they actively seek to settle rather than waiting for
+            // the normal goal-formation roll.
+            founder.Goals.Add(new GoalData
+            {
+                Type       = GoalType.Expansion,
+                Priority   = 1.0f,
+                StaleSince = (int)world.CurrentTick,
+                FormedTick = (int)world.CurrentTick
+            });
+
+            world.Entities.Add(founder);
+            pending.Add(new PendingEvent(EventType.CharacterBorn, tile.Value, null,
+                JsonSerializer.Serialize(new
+                {
+                    characterId = founder.Id.Value,
+                    name        = founder.Identity.Name,
+                    epithet     = founder.Identity.Epithet,
+                    location    = new[] { tile.Value.X, tile.Value.Y },
+                    ambition    = founder.Personality.Ambition,
+                    source      = "civ_floor"
+                }),
+                new[] { founder.Id.Value }));
+        }
+    }
+
+    private static TileCoord? FindCivFloorSpawnTile(WorldState world, SimConfig cfg)
+    {
+        int minFertility = cfg.Character.MinFertilityToSettle;
+        int minDist      = cfg.Character.CivFloorMinDist;
+        int minDistSq    = minDist * minDist;
+        int w = world.TileGrid.TileWidth;
+        int h = world.TileGrid.TileHeight;
+
+        var candidates = new List<TileCoord>();
+        // Sample every 4th tile — this runs rarely (only when civs are few) so a full scan
+        // is fine, but sampling keeps it snappy for large worlds.
+        for (int y = 1; y < h - 1; y += 4)
+        for (int x = 0; x < w; x += 4)
+        {
+            var coord = new TileCoord(x, y);
+            if (!world.IsLand(coord)) continue;
+            var tile = world.TileGrid.GetTile(coord);
+            if ((BiomeType)tile.BiomeType == BiomeType.HighMountain) continue;
+            if (tile.Fertility < minFertility) continue;
+
+            bool tooClose = false;
+            foreach (var s in world.Settlements.Keys)
+            {
+                int dx = coord.X - s.X, dy = coord.Y - s.Y;
+                if (dx * dx + dy * dy < minDistSq) { tooClose = true; break; }
+            }
+            if (tooClose) continue;
+
+            candidates.Add(coord);
+        }
+
+        if (candidates.Count == 0) return null;
+
+        int idx = (int)(WorldRng.FloatAt(world.WorldSeed, world.CurrentYear, 0, 1, SaltCivFloor) * candidates.Count);
+        return candidates[Math.Clamp(idx, 0, candidates.Count - 1)];
     }
 
     /// <summary>
