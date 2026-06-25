@@ -158,7 +158,7 @@ wildfire_spread_prob    = 0.3      # Probability wildfire spreads to adjacent fo
 flood_spread_radius     = 3        # Maximum tiles a flood event spreads from origin
 
 # Climate drift
-climate_drift_rate      = 0.001    # How fast regional temperature/moisture drifts per year
+climate_drift_rate      = 0.01    # How fast regional temperature/moisture drifts per year
 biome_change_threshold  = 0.15     # How much climate must drift before biome reclassifies
 
 # Resource regeneration rates (fraction of max per year)
@@ -501,7 +501,7 @@ storm_corridor_half_width         = 0.08   # Fraction of world height defining s
 storm_corridor_moisture_bonus_genesis = 0.3  # Moisture bonus multiplier during storm season
 
 # Phase 5 additions — climate drift and sea level
-annual_temp_drift_rate            = 0.0    # degrees per year; 0 = stable climate
+annual_temp_drift_rate            = 0.05    # degrees per year; 0 = stable climate
 max_warming_anomaly               = 5.0    # max GlobalTemperatureAnomaly (positive)
 max_cooling_anomaly               = 3.0    # max GlobalTemperatureAnomaly magnitude (negative)
 storm_corridor_shift_per_degree   = 0.005  # fractional lat shift per degree of anomaly
@@ -662,7 +662,7 @@ alliance_war_trust_drain      = 0.4   # trust drained from aggressor to target's
 enemy_of_ally_trust_drain     = 0.15  # trust drain on C when A allies B who is already allied with C's rival
 ally_protect_goal_intensity   = 0.6   # priority of the Protect goal seeded on allies when their ally is attacked
 ally_disaster_aid_intensity   = 0.3   # (reserved for future goal seeding; merchant routing handles aid currently)
-max_war_duration_years        = 4     # wars end by truce after this many years if not ended sooner by surrender/destruction
+max_war_duration_years        = 15     # wars end by truce after this many years if not ended sooner by surrender/destruction
 max_active_wars               = 2     # hard cap: a civ cannot fight more than this many simultaneous wars
 peace_cooldown_years          = 10    # years after a war ends before the same two civs can declare war again
 war_exhaustion_years_per_war  = 5     # extra cooldown years per prior war between the same pair (1st=10yr, 2nd=15yr, 3rd=20yr...)
@@ -691,14 +691,14 @@ territorial_aggression_min    = 0.55  # chars below this aggression don't apply 
 territorial_trust_drain       = 0.025 # trust lost per tick; ~-0.1 in 1 season → rivalry within a year
 
 # Beast encounters: predatory beasts on the same tile can attack wandering characters
-beast_encounter_aggression_min = 0.4  # beasts below this aggression are passive toward characters
+beast_encounter_aggression_min = 0.3  # beasts below this aggression are passive toward characters
 beast_encounter_chance         = 0.15 # probability of attack per shared tick (~every 7 ticks)
 beast_damage_multiplier        = 0.3  # beast.Strength × this = damage dealt to character
 char_counter_damage_multiplier = 0.4  # c.Skills.Combat × MaxHealth × this = counter-damage dealt to beast per exchange
 
 # Character disease — named characters can catch disease from infected settlements
 character_disease_exposure_chance  = 0.10  # annual probability of contracting disease while at an infected settlement
-character_disease_health_drain     = 15    # HP drained per year while infected (suppresses natural healing)
+character_disease_health_drain     = 20    # HP drained per year while infected (suppresses natural healing)
 character_disease_recovery_chance  = 0.30  # annual natural recovery probability (physician healing can supplement)
 
 # Battle wounds — characters at a raided settlement fight back, and the raider can be wounded
@@ -714,7 +714,7 @@ wanderlust_max_ticks            = 8    # full bonus after 2 seasons (half a year
 wanderlust_bonus                = 0.4  # travel score bonus at max wanderlust; ~0.15 base → ~0.55 for free agents
 # Role dampeners — multiply wanderlust_bonus; rulers barely wander, members occasionally, free agents fully
 wanderlust_founder_multiplier   = 0.15 # settlement founders (kings, rulers) — 15% of base wanderlust
-wanderlust_member_multiplier    = 0.7  # civ members — 70% of base wanderlust (was 0.5; raised to encourage expansion)
+wanderlust_member_multiplier    = 0.8  # civ members — 70% of base wanderlust (was 0.5; raised to encourage expansion)
 # Curiosity scales from this floor (Curiosity=0) up to 1.0 (Curiosity=1)
 wanderlust_curiosity_floor      = 0.3  # even the least curious chars have 30% of their role's wanderlust
 # Ancestry / cultural passive drains — applied per-tick when different-civ chars share a tile
@@ -825,18 +825,18 @@ carry_cap_mountain            = 30
 carry_cap_high_mountain       = 10
 carry_cap_desert              = 15
 carry_cap_volcanic            = 50
-carry_cap_default             = 40
+carry_cap_default             = 60
 carry_cap_minimum             = 50  # floor: even the poorest biome supports a small community
 
 # Disease outbreaks — annual probability; spreads between nearby settlements; drains population while active
 # Risk concentrates in dense cities; small remote settlements are largely immune.
-disease_base_chance          = 0.004  # ~1 outbreak per 250 years per average settlement (was 0.02 — too frequent)
+disease_base_chance          = 0.01   # ~1 outbreak per 150 years per average settlement (was 0.02 — too frequent)
 disease_density_mult         = 3.0    # large dense cities still vulnerable: ~1.2% at pop cap
 disease_mortality_per_year   = 0.05   # meaningful but not instantly lethal
-disease_min_pop              = 40     # outbreaks cannot start below this population
+disease_min_pop              = 30     # outbreaks cannot start below this population
 disease_spread_radius        = 12     # tile radius within which disease can spread annually
-disease_spread_chance        = 0.06   # reduced from 0.20 — disease is regional, not instantly global
-disease_max_duration_years   = 6      # infection auto-clears after this many years
+disease_spread_chance        = 0.08   # reduced from 0.20 — disease is regional, not instantly global
+disease_max_duration_years   = 8      # infection auto-clears after this many years
 disease_recovery_chance      = 0.30   # natural recovery probability per year
 
 # Settlement health recovery — passive repair between raids
@@ -847,9 +847,9 @@ max_health               = 100  # maximum settlement health
 # Wildlife raids — annual attacks scaled by biome danger and settlement size
 # Open biomes (plains, savanna, desert) have lower risk; dense cover (forest, jungle, swamp) is higher.
 # See BiomeWildlifeRisk() in PopulationDynamicsPhase.cs for per-biome multipliers.
-wildlife_attack_base_chance  = 0.04   # reduced from 0.08; biome multiplier then adjusts (0.3x–2.0x)
+wildlife_attack_base_chance  = 0.05   # reduced from 0.08; biome multiplier then adjusts (0.3x–2.0x)
 wildlife_attack_damage       = 0.08   # reduced from 0.10
-wildlife_defense_pop_scale   = 150    # settlements at this population have 80% reduced vulnerability
+wildlife_defense_pop_scale   = 300    # settlements at this population have 80% reduced vulnerability
 
 # Emigration — pressure-driven colonization triggered when settlements exceed carrying capacity
 emigration_threshold         = 0.75   # fraction of carrying cap above which emigration activates
