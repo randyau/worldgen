@@ -3,6 +3,7 @@ using WorldEngine.Sim.Civilizations;
 using WorldEngine.Sim.Config;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities.Characters;
+using WorldEngine.Sim.Events;
 using WorldEngine.Sim.Tiles;
 using WorldEngine.Sim.World;
 using S = WorldEngine.Sim.Simulation.SimRngSalts;
@@ -185,17 +186,11 @@ public sealed class PopulationDynamicsPhase
                 maxAgeSeason: maxAge);
             world.Entities.Add(specialist);
 
-            var payload = JsonSerializer.Serialize(new
-            {
-                specialistId  = specialist.Id.Value,
-                specialistName = name,
-                role          = role.ToString(),
-                tile          = new[] { tile.X, tile.Y },
-                population    = pop,
-                threshold
-            });
+            var payload = JsonSerializer.Serialize(new SpecialistAppointedPayload(
+                specialist.Id.Value, name, role.ToString(), pop, threshold));
             pending.Add(new PendingEvent(EventType.AppointedToRole, tile, null, payload,
-                new[] { specialist.Id.Value }));
+                new[] { specialist.Id.Value },
+                ActorId: specialist.Id.Value, ActorName: name));
 
             currentThresh = threshold;
         }
@@ -211,18 +206,12 @@ public sealed class PopulationDynamicsPhase
 
         int timesSettled = CivTracker.RegisterRuin(tile, stub, "abandoned", world);
 
-        var payload = JsonSerializer.Serialize(new
-        {
-            tile           = new[] { tile.X, tile.Y },
-            settlementName = stub.Name,
-            founderId      = stub.FounderId.Value,
-            civId          = stub.CivId.Value,
-            foundedYear    = stub.FoundedYear,
-            year           = world.CurrentYear,
-            timesSettled
-        });
+        var payload = JsonSerializer.Serialize(new SettlementAbandonedPayload(
+            stub.FounderId.Value, stub.FoundedYear, timesSettled, stub.Population));
         pending.Add(new PendingEvent(EventType.SettlementAbandoned, tile, null, payload,
-            new[] { stub.FounderId.Value }));
+            new[] { stub.FounderId.Value },
+            ActorId: stub.FounderId.Value,
+            CivId: stub.CivId.Value, SettlementName: stub.Name));
     }
 
     // ─── Annual disease checks ────────────────────────────────────────────────
@@ -277,7 +266,8 @@ public sealed class PopulationDynamicsPhase
             if (!world.Settlements.TryGetValue(coord, out var stub) || stub.IsInfected) continue;
             world.Settlements[coord] = stub with { IsInfected = true, InfectedSinceYear = year };
             pending.Add(new PendingEvent(EventType.DiseaseOutbreak, coord, null,
-                JsonSerializer.Serialize(new { settlementName = stub.Name, civId = stub.CivId.Value, year })));
+                JsonSerializer.Serialize(new DiseaseOutbreakPayload(stub.Population)),
+                CivId: stub.CivId.Value, SettlementName: stub.Name));
         }
 
         foreach (var coord in toRecover)
@@ -285,7 +275,9 @@ public sealed class PopulationDynamicsPhase
             if (!world.Settlements.TryGetValue(coord, out var stub)) continue;
             world.Settlements[coord] = stub with { IsInfected = false, InfectedSinceYear = 0 };
             pending.Add(new PendingEvent(EventType.DiseaseRecovered, coord, null,
-                JsonSerializer.Serialize(new { settlementName = stub.Name, civId = stub.CivId.Value, year })));
+                JsonSerializer.Serialize(new DiseaseRecoveredPayload(
+                    stub.Population, year - stub.InfectedSinceYear)),
+                CivId: stub.CivId.Value, SettlementName: stub.Name));
         }
     }
 
@@ -333,15 +325,9 @@ public sealed class PopulationDynamicsPhase
 
             world.Settlements[coord] = stub with { Population = Math.Max(0, stub.Population - damage) };
             pending.Add(new PendingEvent(EventType.WildlifeRaid, coord, null,
-                JsonSerializer.Serialize(new
-                {
-                    settlementName = stub.Name,
-                    civId          = stub.CivId.Value,
-                    populationLost = damage,
-                    defenderId,
-                    defenderName,
-                    year
-                })));
+                JsonSerializer.Serialize(new WildlifeRaidPayload(
+                    stub.Population, damage, defenderId, defenderName)),
+                CivId: stub.CivId.Value, SettlementName: stub.Name));
         }
     }
 
@@ -369,12 +355,8 @@ public sealed class PopulationDynamicsPhase
 
     private static PendingEvent MakePopEvent(EventType type, SettlementStub stub, TileCoord tile, int newPop)
     {
-        var payload = JsonSerializer.Serialize(new
-        {
-            tile     = new[] { tile.X, tile.Y },
-            oldPop   = stub.Population,
-            newPop
-        });
-        return new PendingEvent(type, tile, null, payload);
+        var payload = JsonSerializer.Serialize(new { oldPop = stub.Population, newPop });
+        return new PendingEvent(type, tile, null, payload,
+            CivId: stub.CivId.Value, SettlementName: stub.Name);
     }
 }

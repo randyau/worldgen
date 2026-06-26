@@ -12,6 +12,8 @@ public class EventCacheTests
     {
         Id = new EventId(year),
         Type = type,
+        TypeName = "TestEvent",
+        Domain = "Test",
         Year = year,
         Season = Season.Spring,
         Tick = year,

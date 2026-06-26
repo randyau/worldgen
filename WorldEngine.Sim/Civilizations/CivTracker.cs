@@ -3,6 +3,7 @@ using WorldEngine.Sim.Config;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities;
 using WorldEngine.Sim.Entities.Characters;
+using WorldEngine.Sim.Events;
 using WorldEngine.Sim.Tiles;
 using WorldEngine.Sim.World;
 
@@ -161,18 +162,13 @@ public static class CivTracker
             if (g.Type == GoalType.Alliance && g.TargetEntityId == target.Id)
                 g.Progress = 1f;
 
-        var payload = JsonSerializer.Serialize(new
-        {
-            declarerId   = c.Id.Value,
-            declarerName = c.Identity.Name,
-            targetId     = target.Id.Value,
-            targetName   = target.Identity.Name,
-            declarerCiv  = c.Identity.CivId.Value,
-            targetCiv    = target.Identity.CivId.Value,
-            location     = new[] { c.Location.X, c.Location.Y }
-        });
+        var payload = JsonSerializer.Serialize(new AllianceFormedPayload(
+            c.Id.Value, c.Identity.Name,
+            target.Id.Value, target.Identity.Name,
+            c.Identity.CivId.Value, target.Identity.CivId.Value));
         pending.Add(new PendingEvent(EventType.AllianceFormed, c.Location, null, payload,
-            new[] { c.Id.Value, target.Id.Value }));
+            new[] { c.Id.Value }, new[] { target.Id.Value },
+            ActorId: c.Id.Value, ActorName: c.Identity.Name, CivId: c.Identity.CivId.Value));
     }
 
     // ─── Rivalry ──────────────────────────────────────────────────────────────
@@ -193,15 +189,11 @@ public static class CivTracker
             Flags = rel.Flags | RelationshipFlags.IsRival
         });
 
-        var payload = JsonSerializer.Serialize(new
-        {
-            characterId = c.Id.Value,
-            targetId    = target.Id.Value,
-            charName    = c.Identity.Name,
-            targetName  = target.Identity.Name
-        });
+        var payload = JsonSerializer.Serialize(new RivalryFormedPayload(
+            c.Id.Value, c.Identity.Name, target.Id.Value, target.Identity.Name));
         pending.Add(new PendingEvent(EventType.RivalryFormed, c.Location, null, payload,
-            new[] { c.Id.Value, target.Id.Value }));
+            new[] { c.Id.Value }, new[] { target.Id.Value },
+            ActorId: c.Id.Value, ActorName: c.Identity.Name));
     }
 
     // ─── War ──────────────────────────────────────────────────────────────────
@@ -259,23 +251,17 @@ public static class CivTracker
             _                     => cause
         };
         var eventTile = declRuler?.Location ?? declCiv.CapitalTile;
-        var payload = JsonSerializer.Serialize(new
-        {
-            declarerId        = declCiv.RulerId.Value,
-            declarerName      = declRuler?.Identity.Name ?? declCiv.Name,
-            declarerCiv       = declCiv.Id.Value,
-            declarerCivName   = declCiv.Name,
-            targetCiv         = targCiv.Id.Value,
-            targetCivName     = targCiv.Name,
-            cause,
-            causeDescription,
-            warNumber,
-        });
-        // Link both rulers so "all events involving character X" surfaces wars they were targeted by.
-        var warEntityIds = targRuler != null
-            ? new[] { declCiv.RulerId.Value, targCiv.RulerId.Value }
-            : new[] { declCiv.RulerId.Value };
-        pending.Add(new PendingEvent(EventType.WarDeclared, eventTile, null, payload, warEntityIds));
+        var payload = JsonSerializer.Serialize(new WarDeclaredPayload(
+            declCiv.RulerId.Value, declRuler?.Identity.Name ?? declCiv.Name,
+            declCiv.Id.Value, declCiv.Name,
+            targCiv.Id.Value, targCiv.Name,
+            cause, causeDescription, warNumber));
+        var warEntityIds = new[] { declCiv.RulerId.Value };
+        var warSecondaryIds = targRuler != null ? new[] { targCiv.RulerId.Value } : null;
+        pending.Add(new PendingEvent(EventType.WarDeclared, eventTile, null, payload,
+            warEntityIds, warSecondaryIds,
+            ActorId: declCiv.RulerId.Value, ActorName: declRuler?.Identity.Name ?? declCiv.Name,
+            CivId: declCiv.Id.Value));
     }
 
     // ─── Raid ─────────────────────────────────────────────────────────────────
@@ -331,25 +317,18 @@ public static class CivTracker
 
         bool raiderWounded = raider.Health < raider.MaxHealth / 2;
         string raidOutcome = newHealth <= 0 ? "conquest" : newHealth < raidCfg.WarConquestHealthThreshold ? "critical_damage" : "damaged";
-        var payload = JsonSerializer.Serialize(new
-        {
-            raiderId         = raider.Id.Value,
-            raiderName       = raider.Identity.Name,
-            tile             = new[] { cmd.SettlementTile.X, cmd.SettlementTile.Y },
-            damage,
-            settlementHealth = newHealth,
-            raidOutcome,
-            raiderWounded,
-            raiderHealthPct  = (int)(raider.Health * 100f / raider.MaxHealth)
-        });
-        // Link the raider and the defending civ's current ruler — both characters' histories
-        // should surface battles they were party to, even as the defender.
+        var payload = JsonSerializer.Serialize(new BattlePayload(
+            raider.Id.Value, raider.Identity.Name, damage, newHealth,
+            raidOutcome, raiderWounded, (int)(raider.Health * 100f / raider.MaxHealth)));
         bool hasDefender = world.Civilizations.TryGetValue(settlement.CivId, out var defCiv2);
-        var battleEntityIds = hasDefender && defCiv2!.RulerId.Value != 0
-            ? new[] { raider.Id.Value, defCiv2.RulerId.Value }
-            : new[] { raider.Id.Value };
+        var primaryIds = new[] { raider.Id.Value };
+        long[]? secondaryIds = hasDefender && defCiv2!.RulerId.Value != 0
+            ? new[] { defCiv2.RulerId.Value } : null;
         pending.Add(new PendingEvent(EventType.BattleOccurred, cmd.SettlementTile, null, payload,
-            battleEntityIds));
+            primaryIds, secondaryIds,
+            ActorId: raider.Id.Value, ActorName: raider.Identity.Name,
+            CivId: raider.Identity.CivId.IsValid ? raider.Identity.CivId.Value : 0,
+            SettlementName: settlement.Name));
 
         if (newHealth <= 0)
         {
@@ -390,42 +369,30 @@ public static class CivTracker
                     ? new[] { raider.Id.Value, losingCivForLink.FounderId.Value }
                     : new[] { raider.Id.Value };
                 pending.Add(new PendingEvent(EventType.SettlementConquered, cmd.SettlementTile, null,
-                    JsonSerializer.Serialize(new
-                    {
-                        tile             = new[] { cmd.SettlementTile.X, cmd.SettlementTile.Y },
-                        settlementName   = settlement.Name,
-                        conqueredByCivId = raider.Identity.CivId.Value,
-                        previousCivId    = previousCivId.Value,
-                        conquererId      = raider.Id.Value,
-                        conquererName    = raider.Identity.Name,
-                        survivingPop     = conqueredPop
-                    }), conquestEntityIds));
+                    JsonSerializer.Serialize(new SettlementConqueredPayload(
+                        raider.Id.Value, raider.Identity.Name,
+                        raider.Identity.CivId.Value, previousCivId.Value, conqueredPop)),
+                    conquestEntityIds,
+                    ActorId: raider.Id.Value, ActorName: raider.Identity.Name,
+                    CivId: raider.Identity.CivId.Value, SettlementName: settlement.Name));
 
                 // If the losing civ has no settlements left, it collapses.
                 bool anyLeft = losingCiv != null && losingCiv.SettlementCount > 0;
                 if (!anyLeft)
                     pending.Add(new PendingEvent(EventType.CivilizationCollapsed, cmd.SettlementTile, null,
-                        JsonSerializer.Serialize(new
-                        {
-                            civId  = previousCivId.Value,
-                            reason = "conquered",
-                            year   = world.CurrentYear
-                        })));
+                        JsonSerializer.Serialize(new CivCollapsedPayload(previousCivId.Value, "conquered")),
+                        CivId: previousCivId.Value));
             }
             else
             {
                 world.Settlements.Remove(cmd.SettlementTile);
                 int timesSettled = RegisterRuin(cmd.SettlementTile, settlement, "destroyed", world);
                 pending.Add(new PendingEvent(EventType.SettlementDestroyed, cmd.SettlementTile, null,
-                    JsonSerializer.Serialize(new
-                    {
-                        tile           = new[] { cmd.SettlementTile.X, cmd.SettlementTile.Y },
-                        settlementName = settlement.Name,
-                        founderId      = settlement.FounderId.Value,
-                        destroyerId    = raider.Id.Value,
-                        civId          = settlement.CivId.Value,
-                        timesSettled
-                    }), new[] { raider.Id.Value, settlement.FounderId.Value }));
+                    JsonSerializer.Serialize(new SettlementDestroyedPayload(
+                        settlement.FounderId.Value, raider.Id.Value, raider.Identity.Name, timesSettled)),
+                    new[] { raider.Id.Value }, new[] { settlement.FounderId.Value },
+                    ActorId: raider.Id.Value, ActorName: raider.Identity.Name,
+                    CivId: settlement.CivId.Value, SettlementName: settlement.Name));
             }
         }
         else
@@ -452,14 +419,11 @@ public static class CivTracker
 
         c.Skills = c.Skills with { Diplomacy = Math.Min(1f, c.Skills.Diplomacy + 0.01f) };
 
-        var payload = JsonSerializer.Serialize(new
-        {
-            characterId = c.Id.Value,
-            targetId    = target.Id.Value,
-            trustGain
-        });
+        var payload = JsonSerializer.Serialize(new NegotiatedPayload(
+            c.Id.Value, c.Identity.Name, target.Id.Value, trustGain));
         pending.Add(new PendingEvent(EventType.Negotiated, c.Location, null, payload,
-            new[] { c.Id.Value, target.Id.Value }));
+            new[] { c.Id.Value }, new[] { target.Id.Value },
+            ActorId: c.Id.Value, ActorName: c.Identity.Name));
     }
 
     // ─── Ruin registration ────────────────────────────────────────────────────
@@ -551,14 +515,10 @@ public static class CivTracker
             if (anyLivingMember) continue; // succession will happen; don't double-fire crisis
 
             civ.SuccessionCrisisEndYear = world.CurrentYear + cfg.SuccessionCrisisYears;
-            var payload = JsonSerializer.Serialize(new
-            {
-                civId           = civ.Id.Value,
-                civName         = civ.Name,
-                crisisEndYear   = civ.SuccessionCrisisEndYear,
-                year            = world.CurrentYear
-            });
-            pending.Add(new PendingEvent(EventType.SuccessionCrisis, civ.CapitalTile, null, payload));
+            pending.Add(new PendingEvent(EventType.SuccessionCrisis, civ.CapitalTile, null,
+                JsonSerializer.Serialize(new SuccessionCrisisPayload(
+                    civ.Id.Value, civ.Name, civ.SuccessionCrisisEndYear)),
+                CivId: civ.Id.Value));
         }
 
         // 5. Civilisation floor: spawn new founders if active civ count falls below threshold
@@ -670,16 +630,11 @@ public static class CivTracker
 
             world.Entities.Add(founder);
             pending.Add(new PendingEvent(EventType.CharacterBorn, tile.Value, null,
-                JsonSerializer.Serialize(new
-                {
-                    characterId = founder.Id.Value,
-                    name        = founder.Identity.Name,
-                    epithet     = founder.Identity.Epithet,
-                    location    = new[] { tile.Value.X, tile.Value.Y },
-                    ambition    = founder.Personality.Ambition,
-                    source      = "civ_floor"
-                }),
-                new[] { founder.Id.Value }));
+                JsonSerializer.Serialize(new CharacterBornPayload(
+                    founder.Id.Value, founder.Identity.Name, founder.Identity.Epithet,
+                    founder.Personality.Ambition, founder.Personality.Aggression, Source: "civ_floor")),
+                new[] { founder.Id.Value },
+                ActorId: founder.Id.Value, ActorName: founder.Identity.Name));
         }
     }
 
@@ -742,36 +697,23 @@ public static class CivTracker
         cb.BorderTension.Remove(civA);
 
         int warCount = ca.WarHistory.GetValueOrDefault(civB, 0);
-        var payload = JsonSerializer.Serialize(new
-        {
-            civAId    = civA.Value,
-            civAName  = ca.Name,
-            civBId    = civB.Value,
-            civBName  = cb.Name,
-            outcome   = reason,
-            warNumber = warCount,
-            year      = world.CurrentYear
-        });
-        var peaceEntityIds = new List<long> { ca.RulerId.Value };
-        if (cb.RulerId.Value != ca.RulerId.Value) peaceEntityIds.Add(cb.RulerId.Value);
-        pending.Add(new PendingEvent(EventType.WarEnded, ca.CapitalTile, null, payload, peaceEntityIds));
+        var payload = JsonSerializer.Serialize(new WarEndedPayload(
+            civA.Value, ca.Name, civB.Value, cb.Name, reason, warCount));
+        long[]? warEndSecondary = cb.RulerId.Value != ca.RulerId.Value ? new[] { cb.RulerId.Value } : null;
+        pending.Add(new PendingEvent(EventType.WarEnded, ca.CapitalTile, null, payload,
+            new[] { ca.RulerId.Value }, warEndSecondary,
+            CivId: civA.Value));
     }
 
     private static void FireAllianceBroken(
         Tier1Character a, Tier1Character b, string reason,
         WorldState world, List<PendingEvent> pending)
     {
-        var payload = JsonSerializer.Serialize(new
-        {
-            characterAId   = a.Id.Value,
-            characterAName = a.Identity.Name,
-            characterBId   = b.Id.Value,
-            characterBName = b.Identity.Name,
-            reason,
-            year = world.CurrentYear
-        });
+        var payload = JsonSerializer.Serialize(new AllianceBrokenPayload(
+            a.Id.Value, a.Identity.Name, b.Id.Value, b.Identity.Name, reason));
         pending.Add(new PendingEvent(EventType.AllianceBroken, a.Location, null, payload,
-            new[] { a.Id.Value, b.Id.Value }));
+            new[] { a.Id.Value }, new[] { b.Id.Value },
+            ActorId: a.Id.Value, ActorName: a.Identity.Name));
     }
 
     // ─── Border tension ───────────────────────────────────────────────────────
@@ -887,33 +829,24 @@ public static class CivTracker
     private static void FireCivFounded(
         Civilization civ, Tier1Character founder, WorldState world, List<PendingEvent> pending)
     {
-        var payload = JsonSerializer.Serialize(new
-        {
-            civId      = civ.Id.Value,
-            civName    = civ.Name,
-            founderId  = founder.Id.Value,
-            founderName = founder.Identity.Name,
-            capital    = new[] { civ.CapitalTile.X, civ.CapitalTile.Y },
-            year       = world.CurrentYear
-        });
+        var payload = JsonSerializer.Serialize(new CivFoundedPayload(
+            civ.Id.Value, civ.Name, founder.Id.Value, founder.Identity.Name));
         pending.Add(new PendingEvent(EventType.CivilizationFounded, civ.CapitalTile, null, payload,
-            new[] { founder.Id.Value }));
+            new[] { founder.Id.Value },
+            ActorId: founder.Id.Value, ActorName: founder.Identity.Name, CivId: civ.Id.Value));
     }
 
     private static void FireSettlementFounded(
         SettlementStub stub, Tier1Character founder, WorldState world, List<PendingEvent> pending)
     {
-        var payload = JsonSerializer.Serialize(new
-        {
-            founderId      = founder.Id.Value,
-            founderName    = founder.Identity.Name,
-            settlementName = stub.Name,
-            civId          = stub.CivId.Value,
-            tile           = new[] { stub.Tile.X, stub.Tile.Y },
-            year           = world.CurrentYear
-        });
+        var payload = JsonSerializer.Serialize(new SettlementFoundedPayload(
+            founder.Id.Value, founder.Identity.Name,
+            stub.CivId.Value, world.Civilizations.TryGetValue(stub.CivId, out var c) ? c.Name : "",
+            50)); // SettlementStartPop
         pending.Add(new PendingEvent(EventType.SettlementFounded, stub.Tile, null, payload,
-            new[] { founder.Id.Value }));
+            new[] { founder.Id.Value },
+            ActorId: founder.Id.Value, ActorName: founder.Identity.Name,
+            CivId: stub.CivId.Value, SettlementName: stub.Name));
     }
 
     // ─── Name generation ─────────────────────────────────────────────────────

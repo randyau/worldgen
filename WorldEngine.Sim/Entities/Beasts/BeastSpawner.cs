@@ -1,5 +1,6 @@
 using System.Text.Json;
 using WorldEngine.Sim.Core;
+using WorldEngine.Sim.Events;
 using WorldEngine.Sim.Tiles;
 using WorldEngine.Sim.World;
 
@@ -165,14 +166,10 @@ public static class BeastSpawner
 
     private static PendingEvent MakeSpawnedEvent(LegendaryBeast beast, WorldState world)
     {
-        var payload = JsonSerializer.Serialize(new
-        {
-            beastId    = beast.Id.Value,
-            name       = beast.Name,
-            speciesId  = beast.SpeciesId,
-            isLegendary = beast.IsLegendary,
-            location   = new[] { beast.Location.X, beast.Location.Y }
-        });
-        return new PendingEvent(EventType.BeastSpawned, beast.Location, null, payload);
+        var payload = JsonSerializer.Serialize(new BeastSpawnedPayload(
+            beast.Id.Value, beast.Name, beast.SpeciesId, beast.IsLegendary));
+        return new PendingEvent(EventType.BeastSpawned, beast.Location, null, payload,
+            new[] { beast.Id.Value },
+            ActorId: beast.Id.Value, ActorName: beast.Name);
     }
 }

@@ -1,9 +1,11 @@
+using System.Linq;
+using System.Text.Json;
 using WorldEngine.Sim.Config;
 using WorldEngine.Sim.Core;
+using WorldEngine.Sim.Events;
 using WorldEngine.Sim.Tiles;
 using WorldEngine.Sim.World;
 using WorldEngine.Sim.WorldGen;
-using System.Linq;
 
 namespace WorldEngine.Sim.Simulation.Phases;
 
@@ -178,12 +180,9 @@ public sealed class EnvironmentalPhase
                         EventType.BiomeChanged,
                         coord,
                         CauseEventId: null,
-                        System.Text.Json.JsonSerializer.Serialize(new
-                        {
-                            From = (BiomeType)oldBiome,
-                            To   = newBiome,
-                            GlobalTemperatureAnomaly = world.GlobalTemperatureAnomaly
-                        })));
+                        JsonSerializer.Serialize(new BiomeChangedPayload(
+                            ((BiomeType)oldBiome).ToString(), newBiome.ToString(),
+                            world.GlobalTemperatureAnomaly))));
                 }
             }
         }
@@ -221,12 +220,8 @@ public sealed class EnvironmentalPhase
                 EventType.SeaLevelChanged,
                 Location: null,
                 CauseEventId: null,
-                System.Text.Json.JsonSerializer.Serialize(new
-                {
-                    PreviousLevel = previousLevel,
-                    NewLevel      = world.CurrentSeaLevel,
-                    Delta         = delta
-                })));
+                JsonSerializer.Serialize(new SeaLevelChangedPayload(
+                    previousLevel, world.CurrentSeaLevel, delta))));
         }
     }
 
@@ -336,7 +331,7 @@ public sealed class EnvironmentalPhase
                     world.VolcanicActivityMultiplier + dcfg.VolcanicActivityBoost,
                     dcfg.VolcanicActivityMultiplierCap);
                 pending.Add(new PendingEvent(EventType.VolcanicEruption, coord, null,
-                    System.Text.Json.JsonSerializer.Serialize(new { Intensity = dcfg.VolcanicAshIntensity })));
+                    JsonSerializer.Serialize(new DisasterPayload(dcfg.VolcanicAshIntensity))));
             }
         }
     }
@@ -355,7 +350,7 @@ public sealed class EnvironmentalPhase
                 if (roll >= dcfg.EarthquakeProbabilityPerTick) continue;
                 AddDisaster(world, coord, new ActiveDisaster(DisasterType.SeismicDamage, dcfg.EarthquakeIntensity, dcfg.EarthquakeDecayTicks, new EventId(0)));
                 pending.Add(new PendingEvent(EventType.EarthquakeOccurred, coord, null,
-                    System.Text.Json.JsonSerializer.Serialize(new { Intensity = dcfg.EarthquakeIntensity })));
+                    JsonSerializer.Serialize(new DisasterPayload(dcfg.EarthquakeIntensity))));
             }
         }
     }
@@ -385,7 +380,7 @@ public sealed class EnvironmentalPhase
                 if (roll >= prob) continue;
                 AddDisaster(world, coord, new ActiveDisaster(DisasterType.Wildfire, dcfg.WildfireIntensity, dcfg.WildfireMaxTicks, new EventId(0)));
                 pending.Add(new PendingEvent(EventType.WildfireOccurred, coord, null,
-                    System.Text.Json.JsonSerializer.Serialize(new { Intensity = dcfg.WildfireIntensity })));
+                    JsonSerializer.Serialize(new DisasterPayload(dcfg.WildfireIntensity))));
             }
         }
 
@@ -439,7 +434,7 @@ public sealed class EnvironmentalPhase
 
                 AddDisaster(world, coord, new ActiveDisaster(DisasterType.Flood, dcfg.FloodOriginIntensity, dcfg.FloodOriginTicks, new EventId(0)));
                 pending.Add(new PendingEvent(EventType.FloodOccurred, coord, null,
-                    System.Text.Json.JsonSerializer.Serialize(new { Intensity = dcfg.FloodOriginIntensity })));
+                    JsonSerializer.Serialize(new DisasterPayload(dcfg.FloodOriginIntensity))));
 
                 foreach (var nb in world.GetTilesInRadius(coord, dcfg.FloodSpreadRadius))
                 {

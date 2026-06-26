@@ -2,6 +2,7 @@ using System.Text.Json;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities;
 using WorldEngine.Sim.Entities.Beasts;
+using WorldEngine.Sim.Events;
 using WorldEngine.Sim.World;
 using S = WorldEngine.Sim.Simulation.SimRngSalts;
 
@@ -60,14 +61,11 @@ public sealed class EntityBehaviorPhase
             var beast = BeastFactory.Spawn(species, tile, world.WorldSeed, seq, forceLegendary: true);
             world.Entities.Add(beast);
 
-            var payload = JsonSerializer.Serialize(new
-            {
-                beastId   = beast.Id.Value,
-                name      = beast.Name,
-                speciesId = beast.SpeciesId,
-                location  = new[] { tile.X, tile.Y }
-            });
-            pending.Add(new PendingEvent(EventType.BeastAwakened, tile, null, payload));
+            var payload = JsonSerializer.Serialize(new BeastSpawnedPayload(
+                beast.Id.Value, beast.Name, beast.SpeciesId, true));
+            pending.Add(new PendingEvent(EventType.BeastAwakened, tile, null, payload,
+                new[] { beast.Id.Value },
+                ActorId: beast.Id.Value, ActorName: beast.Name));
         }
 
         foreach (var e in toRemove)
@@ -139,14 +137,11 @@ public sealed class EntityBehaviorPhase
         var child = BeastFactory.Spawn(species, parent.HomeTile, world.WorldSeed, seq);
         world.Entities.Add(child);
 
-        var payload = JsonSerializer.Serialize(new
-        {
-            parentId  = parent.Id.Value,
-            childId   = child.Id.Value,
-            childName = child.Name,
-            speciesId = child.SpeciesId
-        });
-        pending.Add(new PendingEvent(EventType.BeastReproduced, parent.HomeTile, null, payload));
+        var payload = JsonSerializer.Serialize(new BeastReproducedPayload(
+            parent.Id.Value, parent.Name, child.Id.Value, child.Name, child.SpeciesId));
+        pending.Add(new PendingEvent(EventType.BeastReproduced, parent.HomeTile, null, payload,
+            new[] { child.Id.Value }, new[] { parent.Id.Value },
+            ActorId: child.Id.Value, ActorName: child.Name));
     }
 
     // ─── Command emit + resolve ───────────────────────────────────────────────
@@ -320,15 +315,11 @@ public sealed class EntityBehaviorPhase
     private static void FireEncounterEvent(
         LegendaryBeast attacker, LegendaryBeast target, List<PendingEvent> pending)
     {
-        var payload = JsonSerializer.Serialize(new
-        {
-            attackerId   = attacker.Id.Value,
-            attackerName = attacker.Name,
-            targetId     = target.Id.Value,
-            targetName   = target.Name,
-            location     = new[] { attacker.Location.X, attacker.Location.Y }
-        });
-        pending.Add(new PendingEvent(EventType.BeastEncountered, attacker.Location, null, payload));
+        var payload = JsonSerializer.Serialize(new BeastEncounterPayload(
+            attacker.Id.Value, attacker.Name, target.Id.Value, target.Name));
+        pending.Add(new PendingEvent(EventType.BeastEncountered, attacker.Location, null, payload,
+            new[] { attacker.Id.Value }, new[] { target.Id.Value },
+            ActorId: attacker.Id.Value, ActorName: attacker.Name));
     }
 
     // ─── Death ───────────────────────────────────────────────────────────────
@@ -344,17 +335,12 @@ public sealed class EntityBehaviorPhase
         beast.Health  = 0;
 
         var eventType = killer != null ? EventType.BeastSlain : EventType.BeastDied;
-        var payload = JsonSerializer.Serialize(new
-        {
-            beastId    = beast.Id.Value,
-            name       = beast.Name,
-            speciesId  = beast.SpeciesId,
-            isLegendary = beast.IsLegendary,
-            ageSeason  = beast.AgeSeason,
-            cause      = cause,
-            killerName = killer?.Name
-        });
-        pending.Add(new PendingEvent(eventType, beast.Location, null, payload));
+        var payload = JsonSerializer.Serialize(new BeastDeathPayload(
+            beast.Id.Value, beast.Name, beast.SpeciesId, beast.IsLegendary,
+            beast.AgeSeason, cause, killer?.Id.Value ?? 0, killer?.Name));
+        pending.Add(new PendingEvent(eventType, beast.Location, null, payload,
+            new[] { beast.Id.Value }, killer != null ? new[] { killer.Id.Value } : null,
+            ActorId: beast.Id.Value, ActorName: beast.Name));
     }
 
     private static void RemoveDeadEntities(WorldState world)

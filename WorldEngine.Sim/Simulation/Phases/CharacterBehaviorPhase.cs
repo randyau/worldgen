@@ -4,6 +4,7 @@ using WorldEngine.Sim.Config;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities;
 using WorldEngine.Sim.Entities.Characters;
+using WorldEngine.Sim.Events;
 using WorldEngine.Sim.World;
 using S = WorldEngine.Sim.Simulation.SimRngSalts;
 
@@ -78,7 +79,7 @@ public sealed class CharacterBehaviorPhase
         for (int i = 0; i < pending.Count; i++)
         {
             var pe = pending[i];
-            if (pe.Type == EventType.CharacterDied && pe.EntityIds is { Count: > 0 } ids)
+            if (pe.Type == EventType.CharacterDied && pe.PrimaryEntityIds is { Count: > 0 } ids)
                 deathEventIndex[ids[0]] = i;
         }
 
@@ -92,9 +93,9 @@ public sealed class CharacterBehaviorPhase
             if (deathEventIndex.TryGetValue(deadId.Value, out int deathIdx))
             {
                 var deathEv = pending[deathIdx];
-                var ids = deathEv.EntityIds!.ToList();
+                var ids = (deathEv.PrimaryEntityIds ?? Array.Empty<long>()).ToList();
                 ids.AddRange(mourners.Select(m => m.Item1.Value));
-                pending[deathIdx] = deathEv with { EntityIds = ids };
+                pending[deathIdx] = deathEv with { PrimaryEntityIds = ids };
             }
 
             foreach (var (mournerId, _) in mourners)
@@ -172,18 +173,12 @@ public sealed class CharacterBehaviorPhase
                         { Population = Math.Max(0, freshStub.Population - _settleCfg.EmigrantPopCost) };
             }
 
-            var payload = System.Text.Json.JsonSerializer.Serialize(new
-            {
-                characterId = born.Id.Value,
-                name        = born.Identity.Name,
-                epithet     = born.Identity.Epithet,
-                civId       = stub.CivId.Value,
-                location    = new[] { born.Location.X, born.Location.Y },
-                ambition    = born.Personality.Ambition,
-                aggression  = born.Personality.Aggression
-            });
+            var payload = JsonSerializer.Serialize(new CharacterBornPayload(
+                born.Id.Value, born.Identity.Name, born.Identity.Epithet,
+                born.Personality.Ambition, born.Personality.Aggression));
             pending.Add(new PendingEvent(EventType.CharacterBorn, born.Location, null, payload,
-                new[] { born.Id.Value }));
+                new[] { born.Id.Value },
+                ActorId: born.Id.Value, ActorName: born.Identity.Name, CivId: stub.CivId.Value));
         }
     }
 
@@ -240,16 +235,11 @@ public sealed class CharacterBehaviorPhase
             }
         }
 
-        var payload = JsonSerializer.Serialize(new
-        {
-            characterId   = c.Id.Value,
-            characterName = c.Identity.Name,
-            cause,
-            ageSeason     = c.AgeSeason,
-            tile          = new[] { c.Location.X, c.Location.Y }
-        });
+        var payload = JsonSerializer.Serialize(new CharacterDeathPayload(
+            c.Id.Value, c.Identity.Name, cause, c.AgeSeason));
         pending.Add(new PendingEvent(EventType.CharacterDied, c.Location, null, payload,
-            new[] { c.Id.Value }));
+            new[] { c.Id.Value },
+            ActorId: c.Id.Value, ActorName: c.Identity.Name));
 
         // Handle succession when a civ member dies
         if (c.Identity.CivId.IsValid
@@ -275,20 +265,12 @@ public sealed class CharacterBehaviorPhase
                     civ.RulerCount++;
                     var successor = (Tier1Character)world.GetEntity(successorId.Value)!;
                     successor.Identity = successor.Identity with { RulerOrdinal = civ.RulerCount };
-                    var succPayload = JsonSerializer.Serialize(new
-                    {
-                        civId           = civ.Id.Value,
-                        civName         = civ.Name,
-                        predecessorId   = c.Id.Value,
-                        predecessorName = c.Identity.Name,
-                        predecessorRulerOrdinal = c.Identity.RulerOrdinal,
-                        successorId     = successorId.Value.Value,
-                        successorName   = successor.Identity.Name,
-                        successorRulerOrdinal   = civ.RulerCount,
-                        year            = world.CurrentYear
-                    });
+                    var succPayload = JsonSerializer.Serialize(new SuccessionPayload(
+                        c.Id.Value, c.Identity.Name, c.Identity.RulerOrdinal,
+                        successorId.Value.Value, successor.Identity.Name, civ.RulerCount));
                     pending.Add(new PendingEvent(EventType.SuccessionOccurred, civ.CapitalTile, null,
-                        succPayload, new[] { c.Id.Value, successorId.Value.Value }));
+                        succPayload, new[] { c.Id.Value, successorId.Value.Value },
+                        ActorId: successorId.Value.Value, ActorName: successor.Identity.Name, CivId: civ.Id.Value));
                 }
                 // No successor found → succession crisis fires in RunAnnualDiplomacy
             }
@@ -296,14 +278,10 @@ public sealed class CharacterBehaviorPhase
             if (civ.Members.Count == 0 && !civ.IsCollapsed)
             {
                 civ.IsCollapsed = true;
-                var civPayload = JsonSerializer.Serialize(new
-                {
-                    civId   = civ.Id.Value,
-                    civName = civ.Name,
-                    year    = world.CurrentYear
-                });
+                var civPayload = JsonSerializer.Serialize(new CivCollapsedPayload(civ.Id.Value));
                 pending.Add(new PendingEvent(
-                    EventType.CivilizationCollapsed, civ.CapitalTile, null, civPayload));
+                    EventType.CivilizationCollapsed, civ.CapitalTile, null, civPayload,
+                    CivId: civ.Id.Value));
             }
         }
     }
@@ -521,44 +499,31 @@ public sealed class CharacterBehaviorPhase
             world.Settlements[c.Location] = homeStub with { ResourceStores = stores };
         }
 
-        var payload = JsonSerializer.Serialize(new
-        {
-            characterId   = c.Id.Value,
-            characterName = c.Identity.Name,
-            artType       = artType.ToString(),
-            wellbeing     = c.Wellbeing,
-            location      = new[] { c.Location.X, c.Location.Y }
-        });
+        var payload = JsonSerializer.Serialize(new ArtworkCreatedPayload(
+            c.Id.Value, c.Identity.Name, artType.ToString(), c.Wellbeing));
         pending.Add(new PendingEvent(EventType.ArtworkCreated, c.Location, null, payload,
-            new[] { c.Id.Value }));
+            new[] { c.Id.Value },
+            ActorId: c.Id.Value, ActorName: c.Identity.Name));
     }
 
     // ─── Emotional state events ──────────────────────────────────────────────
 
     private static void EmitFlourishingEvent(Tier1Character c, List<PendingEvent> pending)
     {
-        var payload = JsonSerializer.Serialize(new
-        {
-            characterId   = c.Id.Value,
-            characterName = c.Identity.Name,
-            wellbeing     = c.Wellbeing,
-            location      = new[] { c.Location.X, c.Location.Y }
-        });
+        var payload = JsonSerializer.Serialize(new CharacterWellbeingPayload(
+            c.Id.Value, c.Identity.Name, c.Wellbeing));
         pending.Add(new PendingEvent(EventType.CharacterFlourishing, c.Location, null, payload,
-            new[] { c.Id.Value }));
+            new[] { c.Id.Value },
+            ActorId: c.Id.Value, ActorName: c.Identity.Name));
     }
 
     private static void EmitSpiralEvent(Tier1Character c, List<PendingEvent> pending)
     {
-        var payload = JsonSerializer.Serialize(new
-        {
-            characterId   = c.Id.Value,
-            characterName = c.Identity.Name,
-            wellbeing     = c.Wellbeing,
-            location      = new[] { c.Location.X, c.Location.Y }
-        });
+        var payload = JsonSerializer.Serialize(new CharacterWellbeingPayload(
+            c.Id.Value, c.Identity.Name, c.Wellbeing));
         pending.Add(new PendingEvent(EventType.CharacterSpiraling, c.Location, null, payload,
-            new[] { c.Id.Value }));
+            new[] { c.Id.Value },
+            ActorId: c.Id.Value, ActorName: c.Identity.Name));
     }
 
     // ─── Beast encounters ────────────────────────────────────────────────────
@@ -590,37 +555,22 @@ public sealed class CharacterBehaviorPhase
             int counterDamage = Math.Max(1, (int)(c.Skills.Combat * _cfg.MaxHealth * _cfg.CharCounterDamageMultiplier));
             beast.Health -= counterDamage;
 
-            var payload = JsonSerializer.Serialize(new
-            {
-                characterId     = c.Id.Value,
-                characterName   = c.Identity.Name,
-                beastId         = beast.Id.Value,
-                beastName       = beast.Name,
-                damage,
-                counterDamage,
-                charHealthAfter  = c.Health,
-                beastHealthAfter = beast.Health,
-                tile = new[] { c.Location.X, c.Location.Y }
-            });
+            var payload = JsonSerializer.Serialize(new BeastCharEncounterPayload(
+                c.Id.Value, c.Identity.Name, beast.Id.Value, beast.Name,
+                damage, counterDamage, c.Health, beast.Health));
             pending.Add(new PendingEvent(EventType.BeastAttackedChar, c.Location, null, payload,
-                new[] { c.Id.Value, beast.Id.Value }));
+                new[] { c.Id.Value }, new[] { beast.Id.Value },
+                ActorId: c.Id.Value, ActorName: c.Identity.Name));
 
             if (beast.Health <= 0)
             {
                 beast.IsAlive = false;
-                var slainPayload = JsonSerializer.Serialize(new
-                {
-                    beastId    = beast.Id.Value,
-                    name       = beast.Name,
-                    speciesId  = beast.SpeciesId,
-                    isLegendary = beast.IsLegendary,
-                    ageSeason  = beast.AgeSeason,
-                    cause      = $"slain by {c.Identity.Name}",
-                    killerId   = c.Id.Value,
-                    killerName = c.Identity.Name,
-                });
+                var slainPayload = JsonSerializer.Serialize(new BeastDeathPayload(
+                    beast.Id.Value, beast.Name, beast.SpeciesId, beast.IsLegendary, beast.AgeSeason,
+                    $"slain by {c.Identity.Name}", c.Id.Value, c.Identity.Name));
                 pending.Add(new PendingEvent(EventType.BeastSlain, c.Location, null, slainPayload,
-                    new[] { c.Id.Value, beast.Id.Value }));
+                    new[] { beast.Id.Value }, new[] { c.Id.Value },
+                    ActorId: c.Id.Value, ActorName: c.Identity.Name));
             }
 
             if (c.Health <= 0)

@@ -2,6 +2,7 @@ using System.Text.Json;
 using WorldEngine.Sim.Config;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities;
+using WorldEngine.Sim.Events;
 using WorldEngine.Sim.World;
 
 namespace WorldEngine.Sim.Entities.Characters;
@@ -312,33 +313,25 @@ public static class GoalManager
     {
         var bond = mourner.Goals.FirstOrDefault(g => g.Type == GoalType.Bond && g.TargetEntityId == deadId);
         float intensity = bond?.Intensity ?? 0.3f;
-        var payload = JsonSerializer.Serialize(new
-        {
-            characterId   = mourner.Id.Value,
-            characterName = mourner.Identity.Name,
-            deceasedId    = deadId.Value,
-            deceasedName  = deadName,
-            intensity,
-            wellbeing     = mourner.Wellbeing,
-            hasAvenge     = mourner.Goals.Any(g => g.Type == GoalType.Avenge)
-        });
+        var payload = JsonSerializer.Serialize(new CharacterGriefPayload(
+            mourner.Id.Value, mourner.Identity.Name,
+            deadId.Value, deadName,
+            intensity, mourner.Wellbeing,
+            mourner.Goals.Any(g => g.Type == GoalType.Avenge)));
         pending.Add(new PendingEvent(EventType.CharacterGrieved, mourner.Location, null, payload,
-            new[] { mourner.Id.Value, deadId.Value }));
+            new[] { mourner.Id.Value }, new[] { deadId.Value },
+            ActorId: mourner.Id.Value, ActorName: mourner.Identity.Name));
     }
 
     private static PendingEvent MakeGoalEvent(EventType type, Tier1Character c, GoalData g)
     {
-        var payload = JsonSerializer.Serialize(new
-        {
-            characterId   = c.Id.Value,
-            characterName = c.Identity.Name,
-            goalType      = g.Type.ToString(),
-            goalObject    = g.Object.ToString(),
-            targetId      = g.TargetEntityId?.Value,
-            intensity     = g.Intensity,
-            location      = new[] { c.Location.X, c.Location.Y }
-        });
-        return new PendingEvent(type, c.Location, null, payload, new[] { c.Id.Value });
+        var payload = JsonSerializer.Serialize(new GoalEventPayload(
+            c.Id.Value, c.Identity.Name,
+            g.Type.ToString(), g.Object.ToString(),
+            g.TargetEntityId?.Value, g.Intensity));
+        return new PendingEvent(type, c.Location, null, payload,
+            new[] { c.Id.Value },
+            ActorId: c.Id.Value, ActorName: c.Identity.Name);
     }
 
     private static EntityId? FindHighTrustCompanion(

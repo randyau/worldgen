@@ -4,6 +4,7 @@ using WorldEngine.Sim.Config;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities;
 using WorldEngine.Sim.Entities.Characters;
+using WorldEngine.Sim.Events;
 using WorldEngine.Sim.World;
 using S = WorldEngine.Sim.Simulation.SimRngSalts;
 
@@ -66,15 +67,13 @@ public sealed class Tier2BehaviorPhase
         if (c.AgeSeason >= c.MaxAgeSeason || c.Needs.Food <= 0f || c.Needs.Safety <= 0f)
         {
             c.IsAlive = false;
-            var payload = JsonSerializer.Serialize(new
-            {
-                characterId   = c.Id.Value,
-                characterName = c.Name,
-                role          = c.Livelihood.Role.ToString(),
-                ageSeason     = c.AgeSeason
-            });
+            var payload = JsonSerializer.Serialize(new CharacterDeathPayload(
+                c.Id.Value, c.Name,
+                c.AgeSeason >= c.MaxAgeSeason ? "old age" : "needs",
+                c.AgeSeason));
             pending.Add(new PendingEvent(EventType.CharacterDied, c.Location, null, payload,
-                new[] { c.Id.Value }));
+                new[] { c.Id.Value },
+                ActorId: c.Id.Value, ActorName: c.Name));
         }
     }
 
@@ -126,13 +125,15 @@ public sealed class Tier2BehaviorPhase
     // then rolls the exceptional (masterwork) check.
     private bool TryEmitNotableWork(
         Tier2Character c, WorldState world, long tick,
-        EventType eventType, string payload, long[] entityIds,
+        EventType eventType, string payload, long[]? primaryIds, long[]? secondaryIds,
         List<PendingEvent> pending)
     {
         if (tick - c.LastNotableWorkTick <= _cfg.Tier2NotableCooldownTicks) return false;
 
         c.LastNotableWorkTick = (int)tick;
-        pending.Add(new PendingEvent(eventType, c.Location, null, payload, entityIds));
+        pending.Add(new PendingEvent(eventType, c.Location, null, payload,
+            primaryIds, secondaryIds,
+            ActorId: c.Id.Value, ActorName: c.Name));
 
         // Exceptional (masterwork) check — once per lifetime
         if (!c.HasMasterwork)
@@ -230,16 +231,11 @@ public sealed class Tier2BehaviorPhase
         c.Needs = c.Needs with { Status = Math.Min(1f, c.Needs.Status + 0.05f) };
 
         // Notable event: only when cooldown has cleared (most trades are silent)
-        var payload = JsonSerializer.Serialize(new
-        {
-            merchantId     = c.Id.Value,
-            name           = c.Name,
-            fromTile       = new[] { homeTile.X, homeTile.Y },
-            toTile         = new[] { bestDest.Value.X, bestDest.Value.Y },
-            tradedResource = bestResource ?? "general"
-        });
+        var payload = JsonSerializer.Serialize(new MerchantTradePayload(
+            c.Id.Value, c.Name, bestResource ?? "general",
+            bestDest.Value.X, bestDest.Value.Y));
         TryEmitNotableWork(c, world, tick, EventType.MerchantTradeCompleted,
-            payload, [c.Id.Value], pending);
+            payload, [c.Id.Value], null, pending);
     }
 
     // Checks if home founder has an ally whose CivId matches the destination settlement's civ.
@@ -291,17 +287,10 @@ public sealed class Tier2BehaviorPhase
         }
 
         // Notable event: only when cooldown has cleared (most scholarly work is routine)
-        var payload = JsonSerializer.Serialize(new
-        {
-            scholarId     = c.Id.Value,
-            scholarName   = c.Name,
-            discoveryType = discovery.ToString(),
-            bonusKey,
-            bonusAmount   = _cfg.ScholarDiscoveryBonusAmount,
-            location      = new[] { c.Location.X, c.Location.Y }
-        });
+        var payload = JsonSerializer.Serialize(new ScholarDiscoveryPayload(
+            c.Id.Value, c.Name, discovery.ToString(), bonusKey, _cfg.ScholarDiscoveryBonusAmount));
         TryEmitNotableWork(c, world, tick, EventType.ScholarDiscovery,
-            payload, [c.Id.Value], pending);
+            payload, [c.Id.Value], null, pending);
     }
 
     private static void RunGeneral(Tier2Character c, WorldState world)
@@ -330,18 +319,11 @@ public sealed class Tier2BehaviorPhase
             int healed = (int)(t1.MaxHealth * 0.1f);
             t1.Health = Math.Min(t1.MaxHealth, t1.Health + healed);
 
-            var payload = JsonSerializer.Serialize(new
-            {
-                physicianId   = c.Id.Value,
-                physicianName = c.Name,
-                patientId     = t1.Id.Value,
-                patientName   = t1.Identity.Name,
-                healed,
-                critical      = t1.Health <= t1.MaxHealth / 4,  // true = pulled from near-death
-                location      = new[] { c.Location.X, c.Location.Y }
-            });
+            var payload = JsonSerializer.Serialize(new PhysicianHealedPayload(
+                c.Id.Value, c.Name, t1.Id.Value, t1.Identity.Name,
+                healed, t1.Health <= t1.MaxHealth / 4));
             TryEmitNotableWork(c, world, tick, EventType.PhysicianHealed,
-                payload, [c.Id.Value, t1.Id.Value], pending);
+                payload, [c.Id.Value], [t1.Id.Value], pending);
             break; // one patient per tick
         }
 
@@ -379,15 +361,10 @@ public sealed class Tier2BehaviorPhase
             world.Settlements[c.Location] = homeStub with { ResourceStores = stores };
         }
 
-        var payload = JsonSerializer.Serialize(new
-        {
-            artisanId   = c.Id.Value,
-            artisanName = c.Name,
-            goodType,
-            location    = new[] { c.Location.X, c.Location.Y }
-        });
+        var payload = JsonSerializer.Serialize(new ArtisanCraftedPayload(
+            c.Id.Value, c.Name, goodType));
         TryEmitNotableWork(c, world, tick, EventType.ArtisanCrafted,
-            payload, [c.Id.Value], pending);
+            payload, [c.Id.Value], null, pending);
     }
 
     // ─── Crystallization ──────────────────────────────────────────────────────
@@ -416,24 +393,17 @@ public sealed class Tier2BehaviorPhase
 
         world.Entities.Add(promoted);
 
-        var payload = JsonSerializer.Serialize(new
-        {
-            oldCharacterId  = c.Id.Value,
-            oldName         = c.Name,
-            newCharacterId  = promoted.Id.Value,
-            newName         = promoted.Identity.Name,
-            location        = new[] { c.Location.X, c.Location.Y }
-        });
-        pending.Add(new PendingEvent(EventType.CharacterCrystallized, c.Location, null, payload,
-            new[] { c.Id.Value, promoted.Id.Value }));
+        pending.Add(new PendingEvent(EventType.CharacterCrystallized, c.Location, null,
+            JsonSerializer.Serialize(new CharacterCrystallizedPayload(
+                c.Id.Value, c.Name, promoted.Id.Value, promoted.Identity.Name)),
+            new[] { promoted.Id.Value }, new[] { c.Id.Value },
+            ActorId: promoted.Id.Value, ActorName: promoted.Identity.Name));
         pending.Add(new PendingEvent(EventType.CharacterBorn, c.Location, null,
-            JsonSerializer.Serialize(new
-            {
-                characterId = promoted.Id.Value,
-                name        = promoted.Identity.Name,
-                epithet     = promoted.Identity.Epithet,
-                location    = new[] { c.Location.X, c.Location.Y }
-            }),
-            new[] { promoted.Id.Value }));
+            JsonSerializer.Serialize(new CharacterBornPayload(
+                promoted.Id.Value, promoted.Identity.Name, promoted.Identity.Epithet,
+                promoted.Personality.Ambition, promoted.Personality.Aggression,
+                Source: "crystallized")),
+            new[] { promoted.Id.Value },
+            ActorId: promoted.Id.Value, ActorName: promoted.Identity.Name));
     }
 }
