@@ -115,6 +115,7 @@ One-line description of every non-trivial source file. Check here before running
 - `SimEvent.cs` — history log event record (immutable once written)
 - `PendingEvent.cs` — pre-commit event emitted by phases; enriched by Phase 7
 - `TileDisplayData.cs / TileInspectorData.cs` — UI tile rendering data
+- `TileImprovement.cs` — M3.0: ImprovementType enum + TileImprovement record (Farm/Mine/etc.)
 - `ActiveDisaster.cs / ActiveDrought.cs / BorderManifest.cs / BorderManifestStore.cs / BorderManifestSample.cs`
 - `RuinRecord.cs / ResourceDeposit.cs`
 
