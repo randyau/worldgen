@@ -626,6 +626,8 @@ colony_min_distance         = 25   # tiles from nearest same-civ settlement for 
 colony_frontier_bonus       = 120  # tile score bonus for candidate tiles in frontier territory
 colonize_ambition_threshold = 0.72 # min Ambition to form a Colonize goal (higher than expansion)
 max_colonies_per_civ        = 3    # hard cap on live colonies; Colonize goals stop forming once reached
+max_cities_per_civ          = 8    # M3: total city cap per civ (settlements + colonies combined); ruler stops delegating once reached
+city_founding_ambition_threshold = 0.5  # M3: minimum Ambition for a civ member to be selected as city-founding delegate
 shelter_seek_threshold    = 0.35  # below this shelter level, characters prefer terrain with natural cover when choosing where to move
 shelter_seek_tile_bonus   = 80    # max tile-score bonus for a perfect-shelter biome (forest/mountain) when shelter-seeking
                                    # scales by desperation: bonus × BiomeShelterScore × (1 - shelter)
@@ -729,6 +731,7 @@ goal_aggression_threshold    = 0.6   # minimum Aggression to generate Dominance 
 goal_sociability_threshold   = 0.5   # minimum Sociability to generate Alliance goal
 goal_compassion_threshold    = 0.5   # minimum Compassion to generate Bond goal
 goal_ingenuity_threshold     = 0.55  # minimum Ingenuity to generate Create goal
+goal_diligence_threshold     = 0.45  # minimum Diligence to generate BuildImprovement goal
 avenge_aggression_threshold  = 0.6   # minimum Aggression to form Avenge goal on mourning
 avenge_intensity_threshold   = 0.5   # minimum grief intensity required to form Avenge goal
 bond_trust_threshold         = 0.5   # minimum relationship Trust before a character qualifies as Bond companion
@@ -892,6 +895,29 @@ wealth_spoilage_rate               = 0.0001 # gold/gems essentially permanent
 stockpile_spoilage_rate            = 0.0005 # iron/copper/timber decay slowly
 wealth_accumulate_rate             = 0.2    # fraction of non-vital ledger supply that banks into stores per tick
 store_raid_destruction_per_damage  = 0.008  # fraction of ALL stores destroyed per point of raid damage
+
+# =============================================================================
+# TERRITORY (Phase 3.0 — City-State Territory Model)
+# =============================================================================
+
+[territory]
+claim_tiles_per_person    = 8    # 1 tile per N people; city of 800 → 100 tiles (~radius 5)
+min_city_tiles            = 7    # radius-1 circle, always retained
+max_city_tiles            = 120  # ~radius-6; absolute upper bound
+territory_growth_per_year = 2    # max tiles claimed per city per year (prevents instant snowball)
+initial_city_claim_radius = 2    # tiles claimed at founding (~13 tiles)
+
+# =============================================================================
+# IMPROVEMENTS (Phase 3.0 — Tile Improvements)
+# =============================================================================
+
+[improvements]
+farm_food_multiplier      = 2.0  # Farm on tile: food contribution × this
+mine_yield_multiplier     = 3.0  # Mine on tile: mineral yield × this
+logging_yield_multiplier  = 2.5  # LoggingCamp: timber × this
+pasture_multiplier        = 1.5  # Pasture (grassland/savanna only): food × this
+fishery_multiplier        = 2.0  # Fishery (coastal/river only): food × this
+improvement_build_ticks   = 8    # ticks character must remain on tile to build (= half a year)
 
 [settlement_names]
 prefixes = [

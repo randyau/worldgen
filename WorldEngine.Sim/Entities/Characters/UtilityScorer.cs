@@ -2,6 +2,7 @@ using WorldEngine.Sim.Civilizations;
 using WorldEngine.Sim.Config;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.World;
+using ImpType = WorldEngine.Sim.World.ImprovementType;
 
 namespace WorldEngine.Sim.Entities.Characters;
 
@@ -14,14 +15,10 @@ public static class UtilityScorer
     private const int SaltSoftmax = 600;
 
     // ─── Settlement-invalidated caches ────────────────────────────────────────
-    // These caches are keyed on tile coords and/or civ identity. All are cleared whenever
-    // the settlement count changes (founding or abandonment), since proximity results depend
-    // entirely on settlement positions. The sim is single-threaded, so static fields are safe.
+    // _routeCache keyed by tile coord. Cleared whenever settlement count changes.
+    // The sim is single-threaded so static fields are safe.
     private static int _cacheVersion = -1;
-    private static readonly Dictionary<TileCoord, float>         _routeCache      = new();
-    private static readonly Dictionary<TileCoord, bool>          _hinterlandCache = new(); // any settlement within MaxHinterlandRadius
-    private static readonly Dictionary<(TileCoord, CivId), bool> _compactCache    = new(); // same-civ within compactnessRadius
-    private static readonly Dictionary<(TileCoord, CivId), bool> _frontierCache   = new(); // same-civ within ColonyMinDistance
+    private static readonly Dictionary<TileCoord, float> _routeCache = new();
 
     private static void SyncCaches(IWorldStateReadOnly world)
     {
@@ -29,9 +26,6 @@ public static class UtilityScorer
         if (count == _cacheVersion) return;
         _cacheVersion = count;
         _routeCache.Clear();
-        _hinterlandCache.Clear();
-        _compactCache.Clear();
-        _frontierCache.Clear();
     }
 
     public sealed record ScoredAction(ICommand Command, float Score);
@@ -88,43 +82,6 @@ public static class UtilityScorer
                              * WanderlustMultiplier(c, isFounder, cfg);
             actions.Add(new(new MoveToTile(c.Id, travelDest.Value),
                 Score(c, ActionType.Travel, 0.5f, world, cfg) + wanderlust));
-        }
-
-        // EstablishSettlement — fertility OR valuable deposits required; route position is a bonus.
-        // Same-civ hinterland overlap reduces effective fertility so the tile looks unattractive.
-        // Per-civ founding cooldown prevents two settlements crystallising in the same year.
-        bool alreadyHasSettlement = isFounder;
-        if (!alreadyHasSettlement && !world.Settlements.ContainsKey(c.Location)
-            && !InCivFoundingCooldown(c, world, cfg))
-        {
-            var tileFert = world.GetTile(c.Location);
-            float hinterlandFactor = HinterlandFactor(c.Location, c.Identity.CivId, world, cfg);
-            float effectiveFertility = tileFert.Fertility * hinterlandFactor;
-            float depositVal  = ComputeDepositValue(c.Location, world);
-            // Hard ruin cooldown: a recently destroyed site is too dangerous to settle,
-            // regardless of how valuable the deposits are.
-            bool inRuinCooldown = world.Ruins.TryGetValue(c.Location, out var ruin)
-                && world.CurrentYear - ruin.DestroyedYear < cfg.RuinCooldownYears;
-            // Deposit override: a rich deposit is worth settling even if hinterland drains fertility.
-            // BUT: tiles with zero base fertility cannot sustain a population at all — no food
-            // production means growthF=0 and the settlement bleeds to death over decades.
-            // Until food import mechanics exist, block founding on truly barren tiles.
-            bool  worthSettle = !inRuinCooldown
-                              && tileFert.Fertility > 0
-                              && tileFert.BaseMoisture >= cfg.MinBaseMoistureToSettle
-                              && (effectiveFertility >= cfg.MinFertilityToSettle
-                                  || depositVal > cfg.DepositSettleThreshold);
-            if (worthSettle)
-            {
-                float routeBonus = ComputeRouteBonus(c.Location, world);
-                float ruinPenalty = RuinFoundingPenalty(c.Location, world, cfg);
-                float successProb = (c.Skills.Leadership + c.Aptitude.Diligence) * 0.5f
-                                  * (1f + depositVal * cfg.DepositScoreMultiplier
-                                       + routeBonus  * cfg.RouteScoreMultiplier
-                                       - ruinPenalty);
-                actions.Add(new(new EstablishSettlement(c.Id, c.Location),
-                    Score(c, ActionType.Establish, successProb, world, cfg)));
-            }
         }
 
         // AllyWith / Negotiate — pick the single best social target per tick.
@@ -270,6 +227,50 @@ public static class UtilityScorer
                 Score(c, ActionType.Create, artisticProb, world, cfg)));
         }
 
+        // BuildImprovement — character with BuildImprovement goal on an unimproved territory tile they own.
+        // ImprovementType is stored in goal ResourceTag; we advance progress each tick they stay.
+        var buildGoal = c.Goals.FirstOrDefault(g => g.Type == GoalType.BuildImprovement
+                                                  && g.TargetTile.HasValue);
+        if (buildGoal != null && c.Identity.CivId.IsValid)
+        {
+            var targetTile = buildGoal.TargetTile!.Value;
+            // Character must be on the target tile, tile must be owned by their civ, no existing improvement
+            if (c.Location == targetTile
+                && world.TerritoryMap.TryGetValue(targetTile, out var cityTile)
+                && !world.ImprovementMap.ContainsKey(targetTile))
+            {
+                var myCivForBuild = world.GetCivilization(c.Identity.CivId);
+                if (myCivForBuild?.CityTerritories.ContainsKey(cityTile) == true)
+                {
+                    if (Enum.TryParse<ImpType>(buildGoal.ResourceTag, out var impType))
+                    {
+                        float buildProb = c.Aptitude.Diligence * (0.5f + c.Skills.Administration * 0.5f);
+                        actions.Add(new(new BuildImprovement(c.Id, targetTile, impType),
+                            Score(c, ActionType.BuildImprovement, buildProb, world, cfg)));
+                    }
+                }
+            }
+        }
+
+        // FoundCity — delegated by ruler (see Epic 3.0.5); character travels to frontier, then founds.
+        // The EstablishSettlement action already handles the actual founding; this goal type just
+        // makes travel to good founding sites score higher.
+        var foundCityGoal = c.Goals.FirstOrDefault(g => g.Type == GoalType.FoundCity);
+        if (foundCityGoal != null && !isFounder && !world.Settlements.ContainsKey(c.Location))
+        {
+            var tileFert = world.GetTile(c.Location);
+            bool hasTerritory = world.TerritoryMap.ContainsKey(c.Location);
+            // Score is highest on unowned high-fertility tiles (prime city-founding candidates)
+            float foundProb = (tileFert.Fertility / 255f) * c.Aptitude.Diligence
+                            * (hasTerritory ? 0.3f : 1.0f); // penalty for already-claimed land
+            if (!InCivFoundingCooldown(c, world, cfg) && tileFert.Fertility > 0
+                && tileFert.BaseMoisture >= cfg.MinBaseMoistureToSettle)
+            {
+                actions.Add(new(new EstablishSettlement(c.Id, c.Location),
+                    Score(c, ActionType.FoundCity, foundProb, world, cfg)));
+            }
+        }
+
         // FleeRegion — available when character has a Flee goal and Wellbeing < 0
         var fleeGoal = c.Goals.FirstOrDefault(g => g.Type == GoalType.Flee);
         if (fleeGoal != null && c.Wellbeing < 0f)
@@ -283,7 +284,7 @@ public static class UtilityScorer
         return actions;
     }
 
-    private enum ActionType { Rest, Travel, Establish, Ally, Negotiate, Rivalry, War, Raid, Create, Flee }
+    private enum ActionType { Rest, Travel, Establish, Ally, Negotiate, Rivalry, War, Raid, Create, Flee, BuildImprovement, FoundCity }
 
     private static float Score(
         Tier1Character c,
@@ -323,15 +324,17 @@ public static class UtilityScorer
     private static float NeedsSatisfaction(Tier1Character c, ActionType a) => a switch
     {
         // Rest scores higher when safety, food, OR shelter is depleted — camping is a valid shelter strategy
-        ActionType.Rest      => (2f - c.Needs.Safety - c.Needs.Food) * 0.2f + (1f - c.Needs.Shelter) * 0.15f,
-        ActionType.Establish => (1f - c.Needs.Shelter) * 0.7f + (1f - c.Needs.Status) * 0.3f,
-        ActionType.Ally      => (1f - c.Needs.Belonging) * 0.6f + (1f - c.Needs.Safety) * 0.4f,
-        ActionType.Negotiate => (1f - c.Needs.Belonging) * 0.5f,
-        ActionType.War       => (1f - c.Needs.Status) * 0.7f,
-        ActionType.Raid      => (1f - c.Needs.Status) * 0.5f,
-        ActionType.Travel    => (1f - c.Needs.Safety) * 0.3f,
-        ActionType.Rivalry   => (1f - c.Needs.Status) * 0.4f,
-        _                    => 0.1f
+        ActionType.Rest             => (2f - c.Needs.Safety - c.Needs.Food) * 0.2f + (1f - c.Needs.Shelter) * 0.15f,
+        ActionType.Establish        => (1f - c.Needs.Shelter) * 0.7f + (1f - c.Needs.Status) * 0.3f,
+        ActionType.Ally             => (1f - c.Needs.Belonging) * 0.6f + (1f - c.Needs.Safety) * 0.4f,
+        ActionType.Negotiate        => (1f - c.Needs.Belonging) * 0.5f,
+        ActionType.War              => (1f - c.Needs.Status) * 0.7f,
+        ActionType.Raid             => (1f - c.Needs.Status) * 0.5f,
+        ActionType.Travel           => (1f - c.Needs.Safety) * 0.3f,
+        ActionType.Rivalry          => (1f - c.Needs.Status) * 0.4f,
+        ActionType.BuildImprovement => (1f - c.Needs.Purpose) * 0.5f + (1f - c.Needs.Status) * 0.2f,
+        ActionType.FoundCity        => (1f - c.Needs.Shelter) * 0.5f + (1f - c.Needs.Status) * 0.5f,
+        _                           => 0.1f
     };
 
     private static float GoalAdvancement(Tier1Character c, ActionType a)
@@ -344,10 +347,6 @@ public static class UtilityScorer
             {
                 (GoalType.Survive,   ActionType.Rest)      => 0.8f,
                 (GoalType.Survive,   ActionType.Travel)    => 0.4f,
-                (GoalType.Expansion, ActionType.Establish) => 1.0f,
-                (GoalType.Expansion, ActionType.Travel)    => 0.7f,  // strong travel drive — expansion chars must physically leave home
-                (GoalType.Colonize,  ActionType.Establish) => 1.0f,
-                (GoalType.Colonize,  ActionType.Travel)    => 0.8f,  // stronger than expansion — must reach distant frontier
                 (GoalType.Dominance, ActionType.War)       => 1.0f,
                 (GoalType.Dominance, ActionType.Raid)      => 0.8f,
                 (GoalType.Alliance,  ActionType.Ally)      => 1.0f,
@@ -365,6 +364,11 @@ public static class UtilityScorer
                 (GoalType.Grieve,    ActionType.Rest)      => 0.7f,  // withdrawn, stays put
                 (GoalType.Endure,    ActionType.Rest)      => 0.9f,
                 (GoalType.Protect,   ActionType.Travel)    => 0.4f,  // move toward protected
+                // M3 city-state goals
+                (GoalType.BuildImprovement, ActionType.BuildImprovement) => 1.0f,
+                (GoalType.BuildImprovement, ActionType.Rest)             => 0.3f, // stay put = progress
+                (GoalType.FoundCity,        ActionType.FoundCity)        => 1.0f,
+                (GoalType.FoundCity,        ActionType.Travel)           => 0.8f, // travel to find good site
                 _                                          => 0f
             };
             best = Math.Max(best, match * g.Priority);
@@ -374,17 +378,19 @@ public static class UtilityScorer
 
     private static float PersonalityFit(Tier1Character c, ActionType a) => a switch
     {
-        ActionType.Establish => c.Personality.Ambition,
-        ActionType.War       => c.Personality.Aggression,
-        ActionType.Raid      => c.Personality.Aggression * 0.8f,
-        ActionType.Rivalry   => c.Personality.Aggression * 0.7f,
-        ActionType.Ally      => c.Personality.Sociability,
-        ActionType.Negotiate => c.Personality.Sociability * 0.7f + c.Personality.Honesty * 0.3f,
-        ActionType.Rest      => c.Personality.Stability,
-        ActionType.Travel    => c.Personality.Curiosity,
-        ActionType.Create    => c.Aptitude.Ingenuity,
-        ActionType.Flee      => (1f - c.Personality.Stability) * 0.8f,
-        _                    => 0.2f
+        ActionType.Establish        => c.Personality.Ambition,
+        ActionType.War              => c.Personality.Aggression,
+        ActionType.Raid             => c.Personality.Aggression * 0.8f,
+        ActionType.Rivalry          => c.Personality.Aggression * 0.7f,
+        ActionType.Ally             => c.Personality.Sociability,
+        ActionType.Negotiate        => c.Personality.Sociability * 0.7f + c.Personality.Honesty * 0.3f,
+        ActionType.Rest             => c.Personality.Stability,
+        ActionType.Travel           => c.Personality.Curiosity,
+        ActionType.Create           => c.Aptitude.Ingenuity,
+        ActionType.Flee             => (1f - c.Personality.Stability) * 0.8f,
+        ActionType.BuildImprovement => c.Aptitude.Diligence,
+        ActionType.FoundCity        => c.Personality.Ambition * 0.9f,
+        _                           => 0.2f
     };
 
     /// <summary>
@@ -424,8 +430,7 @@ public static class UtilityScorer
             if (world.IsLand(new TileCoord(ex, ey))) currentExits++;
         }
 
-        bool isExpandingChar  = c.Goals.Any(g => g.Type == GoalType.Expansion);
-        bool isColonizingChar = c.Goals.Any(g => g.Type == GoalType.Colonize);
+        bool isFoundCityChar = c.Goals.Any(g => g.Type == GoalType.FoundCity);
 
         for (int i = 0; i < 4; i++)
         {
@@ -448,84 +453,30 @@ public static class UtilityScorer
             }
             if (candidateExits < currentExits) score -= 60;
 
-            // Settlement pull — home is attractive, but expansion-goal characters need to leave.
-            // An Expansion character sees their own civ's settlements as unattractive (they're
-            // trying to get away from home, not orbit it). They still approach foreign settlements
-            // for trade/diplomacy. Empty tiles beyond any settlement's hinterland get a bonus
-            // so expansion characters actively navigate toward unclaimed land.
+            // Settlement pull — home is attractive, but FoundCity-goal characters need to leave.
             if (world.Settlements.TryGetValue(coord, out var s))
             {
                 bool isSameCiv = c.Identity.CivId.IsValid && s.CivId == c.Identity.CivId;
-                if (isSameCiv && (isExpandingChar || isColonizingChar))
-                    score -= cfg.ExpansionHomePenalty; // actively push away from home
+                if (isSameCiv && isFoundCityChar)
+                    score -= cfg.ExpansionHomePenalty; // push away to find a founding site
                 else
                     score += isSameCiv ? 150 : 50;
             }
-            else if (isColonizingChar)
+            else if (isFoundCityChar)
             {
-                // Frontier bonus: colonizers want tiles FAR from all same-civ settlements.
-                // Check colonize before expansion so colonizers don't blob-fill instead.
-                // r=25 → ~1963 checks per tile — cache by (coord, civId), invalidated on settlement change.
-                var frontierKey = (coord, c.Identity.CivId);
-                if (!_frontierCache.TryGetValue(frontierKey, out bool nearHome))
+                // FoundCity delegates seek unowned high-fertility land.
+                // Bonus for tiles outside any existing settlement's radius (ColonyMinDistance).
+                bool nearAnySettlement = false;
+                int fd = cfg.ColonyMinDistance;
+                for (int fy = -fd; fy <= fd && !nearAnySettlement; fy++)
+                for (int fx = -fd; fx <= fd && !nearAnySettlement; fx++)
                 {
-                    int fd = cfg.ColonyMinDistance;
-                    for (int fy = -fd; fy <= fd && !nearHome; fy++)
-                    for (int fx = -fd; fx <= fd && !nearHome; fx++)
-                    {
-                        if (fx * fx + fy * fy > fd * fd) continue;
-                        if (world.Settlements.TryGetValue(new TileCoord(coord.X + fx, coord.Y + fy), out var fs)
-                            && fs.CivId == c.Identity.CivId)
-                            nearHome = true;
-                    }
-                    _frontierCache[frontierKey] = nearHome;
+                    if (fx * fx + fy * fy > fd * fd) continue;
+                    if (world.Settlements.ContainsKey(new TileCoord(coord.X + fx, coord.Y + fy)))
+                        nearAnySettlement = true;
                 }
-                if (!nearHome)
+                if (!nearAnySettlement)
                     score += cfg.ColonyFrontierBonus;
-            }
-            else if (isExpandingChar)
-            {
-                // Bonus for tiles outside any settlement's hinterland — this is where they want to be.
-                // Compactness bonus: if the tile is also near an existing same-civ settlement, reward it
-                // extra — this pulls expansion toward the civ's existing blob rather than forming tendrils.
-                //
-                // Cache proximity results keyed by coord/civId — invalidated on settlement change.
-                // inAnyHinterland: any settlement within MaxReachRadius (civ-independent).
-                // nearSameCiv: same-civ settlement within compactnessRadius.
-                const int MaxHinterlandRadius = 5;
-                if (!_hinterlandCache.TryGetValue(coord, out bool inAnyHinterland))
-                {
-                    for (int hy = -MaxHinterlandRadius; hy <= MaxHinterlandRadius && !inAnyHinterland; hy++)
-                    for (int hx = -MaxHinterlandRadius; hx <= MaxHinterlandRadius && !inAnyHinterland; hx++)
-                    {
-                        if (hx * hx + hy * hy > MaxHinterlandRadius * MaxHinterlandRadius) continue;
-                        if (world.Settlements.ContainsKey(new TileCoord(coord.X + hx, coord.Y + hy)))
-                            inAnyHinterland = true;
-                    }
-                    _hinterlandCache[coord] = inAnyHinterland;
-                }
-
-                if (!inAnyHinterland)
-                {
-                    score += cfg.ExpansionEmptyTileBonus;
-
-                    var compactKey = (coord, c.Identity.CivId);
-                    if (!_compactCache.TryGetValue(compactKey, out bool nearSameCiv))
-                    {
-                        int cr = cfg.ExpansionCompactnessRadius;
-                        for (int cy = -cr; cy <= cr && !nearSameCiv; cy++)
-                        for (int cx = -cr; cx <= cr && !nearSameCiv; cx++)
-                        {
-                            if (cx * cx + cy * cy > cr * cr) continue;
-                            if (world.Settlements.TryGetValue(new TileCoord(coord.X + cx, coord.Y + cy), out var ns)
-                                && ns.CivId == c.Identity.CivId)
-                                nearSameCiv = true;
-                        }
-                        _compactCache[compactKey] = nearSameCiv;
-                    }
-                    if (nearSameCiv)
-                        score += cfg.ExpansionCompactnessBonus;
-                }
             }
 
             // When shelter is critically low, prefer terrain that provides natural cover.
@@ -543,33 +494,7 @@ public static class UtilityScorer
         return best;
     }
 
-    // ─── Hinterland and founding cooldown ─────────────────────────────────────
-
-    /// <summary>
-    /// Returns a factor ∈ [HinterlandDrainFactor, 1.0].
-    /// When the candidate tile falls inside an existing same-civ settlement's reach,
-    /// the factor is HinterlandDrainFactor — the owning settlement is already extracting
-    /// those resources, so the tile looks nearly worthless to a new founder.
-    /// Foreign-civ overlaps are intentionally ignored: competing for the same resources
-    /// is a conflict driver, not something to suppress.
-    /// </summary>
-    private static float HinterlandFactor(
-        TileCoord candidate, CivId civId, IWorldStateReadOnly world, CharacterSimConfig cfg)
-    {
-        if (!civId.IsValid) return 1f;
-        // O(r²) tile-coord lookup: scan tiles within MaxReachRadius (conservative upper bound on
-        // ReachRadius()) and check if any same-civ settlement occupies one. Avoids O(settlements) scan.
-        const int MaxReachRadius = 5;
-        for (int hy = -MaxReachRadius; hy <= MaxReachRadius; hy++)
-        for (int hx = -MaxReachRadius; hx <= MaxReachRadius; hx++)
-        {
-            if (hx * hx + hy * hy > MaxReachRadius * MaxReachRadius) continue;
-            if (world.Settlements.TryGetValue(new TileCoord(candidate.X + hx, candidate.Y + hy), out var s)
-                && s.CivId == civId)
-                return cfg.HinterlandDrainFactor;
-        }
-        return 1f;
-    }
+    // ─── Founding cooldown ────────────────────────────────────────────────────
 
     /// <summary>
     /// Returns true when the character's civ is still in its founding cooldown.

@@ -40,6 +40,12 @@ public sealed class CharacterSimConfig
     // Hard cap on live colonies per civ; Colonize goals stop forming beyond this
     public int   MaxColoniesPerCiv         { get; set; } = 3;
 
+    // City-State model (M3 Phase 3.0): ruler-delegated city founding
+    // Total city cap per civ (settlements + colonies combined)
+    public int   MaxCitiesPerCiv               { get; set; } = 8;
+    // Minimum Ambition for a civ member to be selected as a city delegate
+    public float CityFoundingAmbitionThreshold { get; set; } = 0.5f;
+
     // When shelter drops below this threshold, characters actively prefer tiles with natural cover
     public float ShelterSeekThreshold   { get; set; } = 0.35f;
     // Max tile-score bonus added per unit of BiomeShelterScore when shelter-seeking
@@ -201,6 +207,7 @@ public sealed class CharacterSimConfig
     public float GoalSociabilityThreshold   { get; set; } = 0.5f;  // Alliance goal
     public float GoalCompassionThreshold    { get; set; } = 0.5f;  // Bond goal
     public float GoalIngenuityThreshold     { get; set; } = 0.55f; // Create goal
+    public float GoalDiligenceThreshold     { get; set; } = 0.45f; // BuildImprovement goal
     // Avenge goal: triggered on ally death if aggression exceeds threshold and grief intensity is strong enough
     public float AvengeAggressionThreshold  { get; set; } = 0.6f;
     public float AvengeIntensityThreshold   { get; set; } = 0.5f;

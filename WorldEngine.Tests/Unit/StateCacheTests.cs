@@ -17,6 +17,8 @@ public class StateCacheTests
         EntitySnapshots: new Dictionary<EntityId, EntitySnapshot>(),
         Settlements: new Dictionary<TileCoord, SettlementSnapshot>(),
         Ruins: new Dictionary<TileCoord, RuinRecord>(),
+        TerritoryMap: new Dictionary<TileCoord, TerritorySnapshot>(),
+        ImprovementMap: new Dictionary<TileCoord, ImprovementSnapshot>(),
         GlobalTemperatureAnomaly: 0f,
         GlobalPrecipitationMultiplier: 1f,
         StormCorridorNormalizedLat: 0.35f

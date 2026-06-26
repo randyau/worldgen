@@ -12,8 +12,6 @@ public enum GoalType
     Endure,         // just survive — trauma/crisis response
 
     // Civic ambition
-    Expansion,      // establish a settlement near the civ's existing territory
-    Colonize,       // found a settlement far from the civ's existing territory
     Dominance,      // defeat a rival
     Alliance,       // form an ally
     Unify,          // absorb rival civ into own (Phase 2.3+)
@@ -26,6 +24,10 @@ public enum GoalType
 
     // Flourishing
     Create,         // make art, craft, or knowledge (Ingenuity-driven)
+
+    // M3+ city-state
+    FoundCity,         // ruler-delegated: travel to frontier and found a new city
+    BuildImprovement,  // build a Farm/Mine/etc. on a territory tile
 }
 
 public enum GoalObject

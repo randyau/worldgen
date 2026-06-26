@@ -26,6 +26,7 @@ public sealed class PhaseRunner
     private readonly Tier2BehaviorPhase      _tier2Phase;
     private readonly PopulationDynamicsPhase _popPhase;
     private readonly ResourcePressurePhase   _pressurePhase;
+    private readonly TerritoryPhase          _territoryPhase;
     private readonly Action<SimPhase>? _phaseObserver;
     private readonly List<PendingEvent> _injectedEvents = new();
     private int _lastAnnualTickYear;
@@ -52,9 +53,10 @@ public sealed class PhaseRunner
             config.Beasts.StarvationHealthLoss);
         _charPhase     = new CharacterBehaviorPhase(config);
         _tier2Phase    = new Tier2BehaviorPhase(config);
-        _popPhase      = new PopulationDynamicsPhase(config);
-        _pressurePhase = new ResourcePressurePhase(config);
-        _phaseObserver = phaseObserver;
+        _popPhase       = new PopulationDynamicsPhase(config);
+        _pressurePhase  = new ResourcePressurePhase(config);
+        _territoryPhase = new TerritoryPhase(config);
+        _phaseObserver  = phaseObserver;
     }
 
     /// <summary>
@@ -80,7 +82,10 @@ public sealed class PhaseRunner
         RunEntityBehaviorPhase(world, pending, isAnnualTick);
         RunCharacterBehaviorPhase(world, pending, isAnnualTick);
         if (isAnnualTick)
+        {
             CivTracker.RunAnnualDiplomacy(world, pending);
+            pending.AddRange(_territoryPhase.Execute(world));
+        }
         RunPhaseStub(world, SimPhase.ConflictResolution);
         RunEventGeneration(world, pending);
 

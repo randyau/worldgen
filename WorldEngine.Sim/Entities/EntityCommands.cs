@@ -1,4 +1,5 @@
 using WorldEngine.Sim.Core;
+using WorldEngine.Sim.World;
 
 namespace WorldEngine.Sim.Entities;
 
@@ -23,3 +24,9 @@ public sealed record RaidSettlement(EntityId CharacterId, TileCoord SettlementTi
 public sealed record Negotiate(EntityId CharacterId, EntityId TargetId) : ICommand;
 public sealed record CreateArtwork(EntityId CharacterId) : ICommand;
 public sealed record FleeRegion(EntityId CharacterId, TileCoord Destination) : ICommand;
+
+// Phase 3.0 — city-state territory commands
+public sealed record BuildImprovement(
+    EntityId        CharacterId,
+    TileCoord       TargetTile,
+    ImprovementType ImprovementType) : ICommand;

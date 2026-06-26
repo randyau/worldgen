@@ -157,12 +157,12 @@ public sealed class CharacterBehaviorPhase
             civ.Members.Add(born.Id);
             world.Entities.Add(born);
 
-            // Emigrant: seed Colonize goal immediately and deduct population from parent
+            // Emigrant: seed FoundCity goal immediately and deduct population from parent
             if (overCapacity)
             {
                 born.Goals.Add(new GoalData
                 {
-                    Type       = GoalType.Colonize,
+                    Type       = GoalType.FoundCity,
                     Priority   = 0.9f,
                     StaleSince = (int)tick,
                     FormedTick = (int)tick

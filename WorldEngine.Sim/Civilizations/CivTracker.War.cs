@@ -179,6 +179,9 @@ public static partial class CivTracker
                     else                     winningCiv.SettlementCount++;
                 }
 
+                // Transfer territory: reassign all tiles of the conquered city to the winning civ's nearest city
+                TransferTerritory(cmd.SettlementTile, previousCivId, raider.Identity.CivId, world);
+
                 var conquestEntityIds = world.Civilizations.TryGetValue(previousCivId, out var losingCivForLink)
                     ? new[] { raider.Id.Value, losingCivForLink.FounderId.Value }
                     : new[] { raider.Id.Value };
@@ -200,7 +203,7 @@ public static partial class CivTracker
             else
             {
                 world.Settlements.Remove(cmd.SettlementTile);
-                int timesSettled = RegisterRuin(cmd.SettlementTile, settlement, "destroyed", world);
+                int timesSettled = RegisterRuin(cmd.SettlementTile, settlement, "destroyed", world, pending);
                 pending.Add(new PendingEvent(EventType.SettlementDestroyed, cmd.SettlementTile, null,
                     JsonSerializer.Serialize(new SettlementDestroyedPayload(
                         settlement.FounderId.Value, raider.Id.Value, raider.Identity.Name, timesSettled)),

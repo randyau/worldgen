@@ -13,6 +13,8 @@ public class SimConfig
     public SettlementConfig Settlement { get; set; } = new();
     public ResourcePressureConfig ResourcePressure { get; set; } = new();
     public SettlementNamesConfig SettlementNames { get; set; } = new();
+    public TerritoryConfig       Territory       { get; set; } = new();
+    public ImprovementsConfig    Improvements    { get; set; } = new();
 
     // Loaded separately by AncestryLoader — not from sim_config.toml
     public AncestryRegistry AncestryRegistry { get; set; } = AncestryRegistry.Empty;

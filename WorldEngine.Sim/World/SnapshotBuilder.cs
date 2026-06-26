@@ -19,12 +19,14 @@ public sealed class SnapshotBuilder
         long ticksPerSecond,
         IReadOnlyList<SimEvent> recentEvents)
     {
-        var entitySnapshots = BuildEntitySnapshots(world);
-        var tiles           = BuildAllTiles(world, entitySnapshots);
-        var inspected       = world.InspectedTile.HasValue
+        var entitySnapshots  = BuildEntitySnapshots(world);
+        var tiles            = BuildAllTiles(world, entitySnapshots);
+        var inspected        = world.InspectedTile.HasValue
             ? BuildInspectorData(world, world.InspectedTile.Value)
             : null;
-        var settlements     = BuildSettlementSnapshots(world);
+        var settlements      = BuildSettlementSnapshots(world);
+        var territoryMap     = BuildTerritorySnapshot(world);
+        var improvementMap   = BuildImprovementSnapshot(world);
 
         return new WorldSnapshot(
             CurrentYear:                 world.CurrentYear,
@@ -41,10 +43,40 @@ public sealed class SnapshotBuilder
             EntitySnapshots:             entitySnapshots,
             Settlements:                 settlements,
             Ruins:                       world.Ruins,
+            TerritoryMap:                territoryMap,
+            ImprovementMap:              improvementMap,
             GlobalTemperatureAnomaly:    world.GlobalTemperatureAnomaly,
             GlobalPrecipitationMultiplier: world.GlobalPrecipitationMultiplier,
             StormCorridorNormalizedLat:  world.StormCorridorNormalizedLat
         );
+    }
+
+    private static IReadOnlyDictionary<TileCoord, TerritorySnapshot> BuildTerritorySnapshot(WorldState world)
+    {
+        var dict = new Dictionary<TileCoord, TerritorySnapshot>(world.TerritoryMap.Count);
+        foreach (var (tile, cityTile) in world.TerritoryMap)
+        {
+            // Resolve civ from the city tile's settlement
+            long civId = world.Settlements.TryGetValue(cityTile, out var stub)
+                ? stub.CivId.Value
+                : 0;
+            dict[tile] = new TerritorySnapshot(cityTile, civId);
+        }
+        return dict;
+    }
+
+    private static IReadOnlyDictionary<TileCoord, ImprovementSnapshot> BuildImprovementSnapshot(WorldState world)
+    {
+        var dict = new Dictionary<TileCoord, ImprovementSnapshot>(world.ImprovementMap.Count);
+        foreach (var (tile, imp) in world.ImprovementMap)
+        {
+            dict[tile] = new ImprovementSnapshot(
+                ImprovementType: imp.Type.ToString(),
+                CityTile:        imp.CityTile,
+                BuiltYear:       imp.BuiltYear,
+                BuilderId:       imp.BuilderId.Value);
+        }
+        return dict;
     }
 
     private static IReadOnlyDictionary<TileCoord, SettlementSnapshot> BuildSettlementSnapshots(

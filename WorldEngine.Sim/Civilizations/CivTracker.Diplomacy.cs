@@ -75,6 +75,9 @@ public static partial class CivTracker
         // 5. Civilisation floor: spawn new founders if active civ count falls below threshold
         RunCivFloorSpawns(world, pending, world.SimConfig);
 
+        // 5b. City expansion decisions: rulers delegate FoundCity goals to ambitious members.
+        RunCityExpansionDecisions(world, pending);
+
         // 6. Civ-level war resolution: expiry, surrender, and collapse
         var processed = new HashSet<(CivId, CivId)>();
         foreach (var civ in world.Civilizations.Values)
@@ -130,6 +133,81 @@ public static partial class CivTracker
         }
     }
 
+    // ─── City expansion decisions ─────────────────────────────────────────────
+
+    /// <summary>
+    /// Annual: rulers with room to grow delegate FoundCity goals to ambitious non-founder civ members.
+    /// Only one delegation per civ per year; won't delegate if any member already has a FoundCity goal.
+    /// </summary>
+    private static void RunCityExpansionDecisions(WorldState world, List<PendingEvent> pending)
+    {
+        var cfg = world.SimConfig.Character;
+
+        foreach (var civ in world.Civilizations.Values)
+        {
+            if (civ.IsCollapsed) continue;
+            int totalCities = civ.SettlementCount + civ.ColonyCount;
+            if (totalCities >= cfg.MaxCitiesPerCiv) continue;
+
+            // Skip if any member already has a FoundCity goal (avoid duplicate delegates)
+            bool alreadyDelegated = false;
+            foreach (var memberId in civ.Members)
+            {
+                if (world.GetEntity(memberId) is Tier1Character mc && mc.IsAlive
+                    && mc.Goals.Any(g => g.Type == GoalType.FoundCity))
+                {
+                    alreadyDelegated = true;
+                    break;
+                }
+            }
+            if (alreadyDelegated) continue;
+
+            // Pick the most ambitious non-ruler, non-founder living member
+            Tier1Character? best = null;
+            float bestAmbition = cfg.CityFoundingAmbitionThreshold;
+            bool isFoundingCooldown = world.CurrentYear - civ.LastSettlementFoundedYear
+                                     < cfg.MinFoundingCooldownYears;
+            if (isFoundingCooldown) continue;
+
+            foreach (var memberId in civ.Members)
+            {
+                if (world.GetEntity(memberId) is not Tier1Character m || !m.IsAlive) continue;
+                if (m.Id == civ.RulerId) continue;     // ruler doesn't self-delegate
+                if (world.ActiveFounders.Contains(m.Id)) continue; // already a founder
+                if (m.Personality.Ambition > bestAmbition)
+                {
+                    bestAmbition = m.Personality.Ambition;
+                    best = m;
+                }
+            }
+
+            if (best == null) continue;
+
+            best.Goals.Add(new GoalData
+            {
+                Type       = GoalType.FoundCity,
+                Priority   = bestAmbition * 0.9f,
+                Intensity  = bestAmbition,
+                StaleSince = (int)world.CurrentTick,
+                FormedTick = (int)world.CurrentTick,
+            });
+
+            // Log as a GoalFormed event so it appears in the history graph
+            var payload = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                CharacterId = best.Id.Value,
+                CharacterName = best.Identity.Name,
+                GoalType = GoalType.FoundCity.ToString(),
+                Priority = bestAmbition,
+                Outcome = "delegated_by_ruler"
+            });
+            pending.Add(new PendingEvent(EventType.GoalFormed, best.Location, null, payload,
+                new[] { best.Id.Value },
+                ActorId: best.Id.Value, ActorName: best.Identity.Name,
+                CivId: civ.Id.Value));
+        }
+    }
+
     // ─── Civilisation floor ───────────────────────────────────────────────────
 
     /// <summary>
@@ -163,7 +241,7 @@ public static partial class CivTracker
 
             founder.Goals.Add(new GoalData
             {
-                Type       = GoalType.Expansion,
+                Type       = GoalType.FoundCity,
                 Priority   = 1.0f,
                 StaleSince = (int)world.CurrentTick,
                 FormedTick = (int)world.CurrentTick

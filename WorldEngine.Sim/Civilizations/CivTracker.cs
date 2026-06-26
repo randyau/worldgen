@@ -38,6 +38,8 @@ public static partial class CivTracker
                 ResolveRaid(rs, world, pending); break;
             case Negotiate ng:
                 ResolveNegotiate(ng, world, pending); break;
+            case BuildImprovement bi:
+                ResolveBuildImprovement(bi, world, pending); break;
         }
     }
 
@@ -95,9 +97,12 @@ public static partial class CivTracker
         else          civRecord.SettlementCount++;
         civRecord.LastSettlementFoundedYear = world.CurrentYear;
 
-        // Mark goal as progressed (works for both Expansion and Colonize)
+        // Claim initial territory around the new city
+        ClaimInitialTerritory(cmd.Tile, civId, world, pending);
+
+        // Mark goal as progressed for FoundCity delegated founders
         foreach (var g in founder.Goals)
-            if (g.Type == GoalType.Expansion || g.Type == GoalType.Colonize)
+            if (g.Type == GoalType.FoundCity)
                 g.Progress = Math.Min(1f, g.Progress + 0.5f);
 
         FireSettlementFounded(stub, founder, world, pending);
@@ -200,10 +205,11 @@ public static partial class CivTracker
 
     /// <summary>
     /// Records a settlement tile as a ruin. Increments TimesSettled if the tile has been ruined before.
-    /// Returns the new TimesSettled count.
+    /// Returns the new TimesSettled count. Releases all territory tiles claimed by this city.
     /// </summary>
     public static int RegisterRuin(
-        TileCoord tile, SettlementStub stub, string cause, WorldState world)
+        TileCoord tile, SettlementStub stub, string cause, WorldState world,
+        List<PendingEvent>? pending = null)
     {
         int timesSettled = world.Ruins.TryGetValue(tile, out var existing)
             ? existing.TimesSettled + 1
@@ -223,8 +229,182 @@ public static partial class CivTracker
         {
             if (stub.IsColony) civ.ColonyCount    = Math.Max(0, civ.ColonyCount    - 1);
             else               civ.SettlementCount = Math.Max(0, civ.SettlementCount - 1);
+
+            // Release territory tiles
+            ReleaseTerritory(tile, stub.CivId, civ.Name, cause, world, pending);
         }
 
         return timesSettled;
+    }
+
+    // ─── Build improvement ────────────────────────────────────────────────────
+
+    private static void ResolveBuildImprovement(
+        BuildImprovement cmd, WorldState world, List<PendingEvent> pending)
+    {
+        if (world.GetEntity(cmd.CharacterId) is not Tier1Character builder) return;
+        if (!builder.Identity.CivId.IsValid) return;
+
+        var targetTile = cmd.TargetTile;
+
+        // Validate: tile must still be in this civ's territory with no existing improvement
+        if (!world.TerritoryMap.TryGetValue(targetTile, out var cityTile)) return;
+        if (world.ImprovementMap.ContainsKey(targetTile)) return;
+
+        var civ = world.GetCivilization(builder.Identity.CivId);
+        if (civ == null || !civ.CityTerritories.ContainsKey(cityTile)) return;
+
+        // Advance progress on the character's BuildImprovement goal (ImprovementBuildTicks ticks to complete)
+        var buildGoal = builder.Goals.FirstOrDefault(g => g.Type == GoalType.BuildImprovement
+                                                       && g.TargetTile == targetTile);
+        if (buildGoal == null) return;
+
+        int buildTicks = world.SimConfig.Improvements.ImprovementBuildTicks;
+        buildGoal.Progress = Math.Min(1f, buildGoal.Progress + 1f / Math.Max(1, buildTicks));
+
+        if (buildGoal.Progress < 1f) return; // still building
+
+        // Construction complete — place the improvement
+        var improvement = new TileImprovement(cmd.ImprovementType, cityTile, world.CurrentYear, cmd.CharacterId);
+        world.ImprovementMap[targetTile] = improvement;
+
+        // Remove the completed goal
+        builder.Goals.Remove(buildGoal);
+
+        builder.Needs = builder.Needs with
+        {
+            Purpose = Math.Min(1f, builder.Needs.Purpose + 0.15f),
+            Status  = Math.Min(1f, builder.Needs.Status  + 0.1f)
+        };
+        builder.Skills = builder.Skills with
+        {
+            Administration = Math.Min(1f, builder.Skills.Administration + 0.02f)
+        };
+
+        string settName = world.Settlements.TryGetValue(cityTile, out var sett) ? sett.Name : null!;
+        var payload = System.Text.Json.JsonSerializer.Serialize(new ImprovementBuiltPayload(
+            cmd.CharacterId.Value, builder.Identity.Name,
+            builder.Identity.CivId.Value, targetTile.X, targetTile.Y,
+            cmd.ImprovementType.ToString()));
+        pending.Add(new PendingEvent(EventType.ImprovementBuilt, targetTile, null, payload,
+            new[] { cmd.CharacterId.Value },
+            ActorId: cmd.CharacterId.Value, ActorName: builder.Identity.Name,
+            CivId: builder.Identity.CivId.Value, SettlementName: settName));
+    }
+
+    // ─── Territory helpers ────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Claims all unclaimed land tiles within InitialCityClaimRadius around the new city tile.
+    /// The city tile always claims itself. Writes to both TerritoryMap and CityTerritories.
+    /// </summary>
+    private static void ClaimInitialTerritory(
+        TileCoord cityTile, CivId civId, WorldState world, List<PendingEvent> pending)
+    {
+        if (!world.Civilizations.TryGetValue(civId, out var civ)) return;
+
+        var cfg = world.SimConfig.Territory;
+        if (!civ.CityTerritories.ContainsKey(cityTile))
+            civ.CityTerritories[cityTile] = new HashSet<TileCoord>();
+
+        var owned = civ.CityTerritories[cityTile];
+
+        // Collect unclaimed land tiles in radius, sorted by fertility descending
+        var candidates = world.GetTilesInRadius(cityTile, cfg.InitialCityClaimRadius)
+            .Where(t => world.IsLand(t) && !world.TerritoryMap.ContainsKey(t))
+            .OrderByDescending(t => world.TileGrid.GetTile(t).Fertility)
+            .ToList();
+
+        // City tile always claims itself first (may already be in candidates or not)
+        if (!world.TerritoryMap.ContainsKey(cityTile))
+        {
+            world.TerritoryMap[cityTile] = cityTile;
+            owned.Add(cityTile);
+        }
+
+        foreach (var t in candidates)
+        {
+            if (t == cityTile) continue; // already handled
+            world.TerritoryMap[t] = cityTile;
+            owned.Add(t);
+        }
+
+        if (owned.Count == 0) return;
+
+        var payload = JsonSerializer.Serialize(new TerritoryExpandedPayload(
+            civId.Value, civ.Name, cityTile.X, cityTile.Y, owned.Count, owned.Count));
+        pending.Add(new PendingEvent(EventType.TerritoryExpanded, cityTile, null, payload,
+            CivId: civId.Value, SettlementName: world.Settlements.TryGetValue(cityTile, out var s) ? s.Name : null));
+    }
+
+    /// <summary>
+    /// Releases all territory tiles belonging to a city. Called on abandonment or destruction.
+    /// </summary>
+    internal static void ReleaseTerritory(
+        TileCoord cityTile, CivId civId, string civName, string reason,
+        WorldState world, List<PendingEvent>? pending)
+    {
+        if (!world.Civilizations.TryGetValue(civId, out var civ)) return;
+        if (!civ.CityTerritories.TryGetValue(cityTile, out var tiles)) return;
+
+        int count = tiles.Count;
+        foreach (var t in tiles)
+            world.TerritoryMap.Remove(t);
+        civ.CityTerritories.Remove(cityTile);
+
+        // Also remove any improvements on released tiles
+        foreach (var t in tiles)
+            world.ImprovementMap.Remove(t);
+
+        if (pending != null && count > 0)
+        {
+            var payload = JsonSerializer.Serialize(new TerritoryLostPayload(
+                civId.Value, civName, cityTile.X, cityTile.Y, count, 0, reason));
+            pending.Add(new PendingEvent(EventType.TerritoryLost, cityTile, null, payload,
+                CivId: civId.Value));
+        }
+    }
+
+    /// <summary>
+    /// Reassigns all territory tiles of a conquered city to the nearest city of the winning civ.
+    /// Updates both TerritoryMap and both Civilization.CityTerritories dicts.
+    /// </summary>
+    internal static void TransferTerritory(
+        TileCoord conqueredCityTile, CivId losingCivId, CivId winningCivId,
+        WorldState world)
+    {
+        if (!world.Civilizations.TryGetValue(losingCivId, out var losingCiv)) return;
+        if (!world.Civilizations.TryGetValue(winningCivId, out var winningCiv)) return;
+        if (!losingCiv.CityTerritories.TryGetValue(conqueredCityTile, out var tiles)) return;
+
+        losingCiv.CityTerritories.Remove(conqueredCityTile);
+
+        // Find the nearest winning-civ city to absorb these tiles
+        TileCoord? nearestCity = null;
+        float nearestDist = float.MaxValue;
+        foreach (var cityTile in winningCiv.CityTerritories.Keys)
+        {
+            int dx = cityTile.X - conqueredCityTile.X, dy = cityTile.Y - conqueredCityTile.Y;
+            float dist = MathF.Sqrt(dx * dx + dy * dy);
+            if (dist < nearestDist) { nearestDist = dist; nearestCity = cityTile; }
+        }
+
+        // If no existing city found, let the conquered tile become its own city entry
+        var targetCity = nearestCity ?? conqueredCityTile;
+        if (!winningCiv.CityTerritories.TryGetValue(targetCity, out var winnerTiles))
+            winningCiv.CityTerritories[targetCity] = winnerTiles = new HashSet<TileCoord>();
+
+        foreach (var t in tiles)
+        {
+            world.TerritoryMap[t] = targetCity;
+            winnerTiles.Add(t);
+        }
+
+        // Update improvements to reflect new city ownership
+        foreach (var t in tiles)
+        {
+            if (world.ImprovementMap.TryGetValue(t, out var imp))
+                world.ImprovementMap[t] = imp with { CityTile = targetCity };
+        }
     }
 }

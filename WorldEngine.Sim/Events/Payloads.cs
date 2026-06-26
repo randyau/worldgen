@@ -146,3 +146,17 @@ internal sealed record BiomeChangedPayload(string From, string To, float GlobalT
 internal sealed record SeaLevelChangedPayload(float PreviousLevel, float NewLevel, float Delta);
 
 internal sealed record EmptyPayload();
+
+// ─── Territory / Improvements (Phase 3.0) ────────────────────────────────────
+
+internal sealed record TerritoryExpandedPayload(
+    long CivId, string CivName, int CityTileX, int CityTileY,
+    int TileCount, int TotalOwned);
+
+internal sealed record TerritoryLostPayload(
+    long CivId, string CivName, int CityTileX, int CityTileY,
+    int TilesReleased, int TotalOwned, string Reason);
+
+internal sealed record ImprovementBuiltPayload(
+    long BuilderId, string BuilderName, long CivId,
+    int TileX, int TileY, string ImprovementType);

@@ -45,6 +45,10 @@ public sealed class WorldState : IWorldStateReadOnly
     public Dictionary<CivId, Civilization>        Civilizations   { get; } = new();
     public Dictionary<TileCoord, SettlementStub>  Settlements     { get; } = new();
     public Dictionary<TileCoord, RuinRecord>      Ruins           { get; } = new();
+    /// <summary>Tile → owning city tile. Unclaimed tiles are absent. City tiles own themselves.</summary>
+    public Dictionary<TileCoord, TileCoord>       TerritoryMap    { get; } = new();
+    /// <summary>Tile → improvement. One improvement per tile maximum.</summary>
+    public Dictionary<TileCoord, TileImprovement> ImprovementMap  { get; } = new();
     public RelationshipGraph                       Relationships   { get; } = new();
     public int NextCivId { get; set; } = 1;
 
@@ -180,8 +184,10 @@ public sealed class WorldState : IWorldStateReadOnly
 
     // === IWorldStateReadOnly — civilization / character ===
 
-    IReadOnlyDictionary<TileCoord, SettlementStub> IWorldStateReadOnly.Settlements => Settlements;
-    IReadOnlyDictionary<TileCoord, RuinRecord>    IWorldStateReadOnly.Ruins       => Ruins;
+    IReadOnlyDictionary<TileCoord, SettlementStub>  IWorldStateReadOnly.Settlements   => Settlements;
+    IReadOnlyDictionary<TileCoord, RuinRecord>      IWorldStateReadOnly.Ruins         => Ruins;
+    IReadOnlyDictionary<TileCoord, TileCoord>       IWorldStateReadOnly.TerritoryMap  => TerritoryMap;
+    IReadOnlyDictionary<TileCoord, TileImprovement> IWorldStateReadOnly.ImprovementMap => ImprovementMap;
 
     public RelationshipEdge? GetRelationship(EntityId a, EntityId b) =>
         Relationships.Get(a, b);

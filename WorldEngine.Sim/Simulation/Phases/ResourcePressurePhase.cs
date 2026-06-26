@@ -6,6 +6,7 @@ using WorldEngine.Sim.Entities.Characters;
 using WorldEngine.Sim.Events;
 using WorldEngine.Sim.Tiles;
 using WorldEngine.Sim.World;
+using ImpType = WorldEngine.Sim.World.ImprovementType;
 
 namespace WorldEngine.Sim.Simulation.Phases;
 
@@ -23,6 +24,7 @@ public sealed class ResourcePressurePhase
 {
     private readonly ResourcePressureConfig _cfg;
     private readonly SettlementConfig       _settleCfg;
+    private readonly ImprovementsConfig     _impCfg;
 
     // Pre-baked lookup tables to avoid switch/piecewise computation on every reach tile.
     // Built once at construction from config; indexed by (byte)effTemp and (int)BiomeType.
@@ -34,6 +36,7 @@ public sealed class ResourcePressurePhase
     {
         _cfg       = cfg.ResourcePressure;
         _settleCfg = cfg.Settlement;
+        _impCfg    = cfg.Improvements;
         _gsTable    = BuildGrowingSeasonTable(_cfg);
         _foodTable  = BuildFoodTable(_cfg);
         _carryTable = BuildCarryTable(_settleCfg);
@@ -69,8 +72,15 @@ public sealed class ResourcePressurePhase
 
         foreach (var (coord, stub) in world.Settlements.ToList())
         {
-            int reachRadius = stub.ReachRadius();
-            var (ledger, carryingCapacity) = BuildLedger(coord, stub, reachRadius, world);
+            // Use owned territory tiles. If the city has no territory entry yet, fall back to
+            // an empty set (shouldn't happen post-founding but guards against edge cases).
+            IReadOnlyCollection<TileCoord> territoryTiles = Array.Empty<TileCoord>();
+            if (world.Civilizations.TryGetValue(stub.CivId, out var owningCiv)
+                && owningCiv.CityTerritories.TryGetValue(coord, out var owned))
+            {
+                territoryTiles = owned;
+            }
+            var (ledger, carryingCapacity) = BuildLedger(coord, stub, territoryTiles, world);
 
             // ─── Update resource stores ──────────────────────────────────────
             // Build new stores dict from existing stores, applying spoilage and accumulating
@@ -136,7 +146,7 @@ public sealed class ResourcePressurePhase
     // ─── Ledger construction ──────────────────────────────────────────────────
 
     private (Dictionary<string, float> Ledger, int CarryingCapacity) BuildLedger(
-        TileCoord center, SettlementStub stub, int radius, WorldState world)
+        TileCoord center, SettlementStub stub, IReadOnlyCollection<TileCoord> territoryTiles, WorldState world)
     {
         var supply = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);
         int tileCount = 0;
@@ -144,9 +154,9 @@ public sealed class ResourcePressurePhase
 
         int w = world.TileGrid.TileWidth;
 
-        // GetCachedLandTilesInRadius avoids re-computing circle geometry + IsLand filter every tick;
-        // world geometry is immutable after worldgen so results are cached permanently on WorldState.
-        foreach (var coord in world.GetCachedLandTilesInRadius(center, radius))
+        // Iterate owned territory tiles (replacing old radius-circle iteration).
+        // Tiles are claimed at founding and maintained by TerritoryPhase, so only land tiles appear here.
+        foreach (var coord in territoryTiles)
         {
             var tile = world.TileGrid.GetTile(coord);
             tileCount++;
@@ -157,12 +167,29 @@ public sealed class ResourcePressurePhase
             float effectiveMoisture = Math.Max(
                 tile.CurrentMoisture / 255f,
                 tile.BaseMoisture / 255f * _cfg.FoodMoistureFloor);
-            int   idx        = coord.X + coord.Y * w;
-            byte  effTemp    = TileTemperature.Effective(tile, idx, world);
-            var   biome      = (BiomeType)tile.BiomeType;
-            int   biomeIdx   = (int)biome;
-            float foodContrib = (tile.Fertility / 255f) * effectiveMoisture * _gsTable[effTemp] * _foodTable[biomeIdx];
-            Accumulate(supply, "food", foodContrib);
+            int   idx      = coord.X + coord.Y * w;
+            byte  effTemp  = TileTemperature.Effective(tile, idx, world);
+            var   biome    = (BiomeType)tile.BiomeType;
+            int   biomeIdx = (int)biome;
+            float baseFoodContrib = (tile.Fertility / 255f) * effectiveMoisture * _gsTable[effTemp] * _foodTable[biomeIdx];
+
+            // Apply improvement multipliers
+            float foodMult   = 1f;
+            float timberMult = 1f;
+            float mineralMult = 1f;
+            if (world.ImprovementMap.TryGetValue(coord, out var imp))
+            {
+                switch (imp.Type)
+                {
+                    case ImpType.Farm:        foodMult   = _impCfg.FarmFoodMultiplier;     break;
+                    case ImpType.Pasture:     foodMult   = _impCfg.PastureMultiplier;       break;
+                    case ImpType.Fishery:     foodMult   = _impCfg.FisheryMultiplier;       break;
+                    case ImpType.LoggingCamp: timberMult = _impCfg.LoggingYieldMultiplier;  break;
+                    case ImpType.Mine:        mineralMult = _impCfg.MineYieldMultiplier;    break;
+                }
+            }
+
+            Accumulate(supply, "food", baseFoodContrib * foodMult);
 
             // Water: moisture alone (wells, streams, rainfall access)
             Accumulate(supply, "water", tile.CurrentMoisture / 255f);
@@ -170,7 +197,7 @@ public sealed class ResourcePressurePhase
             // Timber: forested biomes
             if (biome is BiomeType.TemperateForest or BiomeType.BorealForest
                       or BiomeType.TropicalRainforest or BiomeType.Swamp)
-                Accumulate(supply, "timber", TimberPerForestTile);
+                Accumulate(supply, "timber", TimberPerForestTile * timberMult);
 
             // Carrying capacity — accumulated alongside food/water in the same tile walk
             carryTotal += _carryTable[biomeIdx];
@@ -183,7 +210,7 @@ public sealed class ResourcePressurePhase
                     // Key = lowercase deposit type: "iron", "copper", "gold", etc.
                     string key = dep.DepositType.ToLowerInvariant();
                     float contrib = dep.Quality / 255f * (1f - dep.Depth / 255f * 0.5f);
-                    Accumulate(supply, key, contrib);
+                    Accumulate(supply, key, contrib * mineralMult);
                 }
             }
         }

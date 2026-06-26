@@ -46,10 +46,14 @@ public interface IWorldStateReadOnly
     IEnumerable<IEntity> GetEntitiesInRadius(TileCoord center, int radius);
 
     // === CIVILIZATION / CHARACTER (Phase 2.2+) ===
-    IReadOnlyDictionary<TileCoord, SettlementStub> Settlements    { get; }
-    IReadOnlyDictionary<TileCoord, RuinRecord>     Ruins          { get; }
-    IReadOnlySet<EntityId>                         ActiveFounders { get; }
+    IReadOnlyDictionary<TileCoord, SettlementStub>  Settlements    { get; }
+    IReadOnlyDictionary<TileCoord, RuinRecord>      Ruins          { get; }
+    IReadOnlySet<EntityId>                          ActiveFounders { get; }
     IReadOnlyDictionary<TileCoord, IReadOnlyList<ResourceDeposit>> ResourceDeposits { get; }
+    /// <summary>Tile → owning city tile. Absent = unclaimed. City tiles map to themselves.</summary>
+    IReadOnlyDictionary<TileCoord, TileCoord>       TerritoryMap   { get; }
+    /// <summary>Tile → improvement record. One improvement per tile.</summary>
+    IReadOnlyDictionary<TileCoord, TileImprovement> ImprovementMap { get; }
     Civilization? GetCivilization(CivId civId);
     RelationshipEdge? GetRelationship(EntityId a, EntityId b);
     int CountAlliances(EntityId id);

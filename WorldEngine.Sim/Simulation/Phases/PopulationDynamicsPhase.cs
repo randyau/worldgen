@@ -204,7 +204,7 @@ public sealed class PopulationDynamicsPhase
         if (!world.Settlements.TryGetValue(tile, out var stub)) return;
         world.Settlements.Remove(tile);
 
-        int timesSettled = CivTracker.RegisterRuin(tile, stub, "abandoned", world);
+        int timesSettled = CivTracker.RegisterRuin(tile, stub, "abandoned", world, pending);
 
         var payload = JsonSerializer.Serialize(new SettlementAbandonedPayload(
             stub.FounderId.Value, stub.FoundedYear, timesSettled, stub.Population));

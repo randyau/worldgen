@@ -26,7 +26,7 @@ public enum Season { Spring = 0, Summer = 1, Autumn = 2, Winter = 3 }
 
 public enum SimSpeed { Paused, Slow, Normal, Fast, Ultrafast }
 
-public enum OverlayType { Biome, Elevation, Temperature, Moisture, Resources, MagicIntensity }
+public enum OverlayType { Biome, Elevation, Temperature, Moisture, Resources, MagicIntensity, Territory }
 
 public enum SimPhase
 {
@@ -132,6 +132,9 @@ public enum EventType
     SuccessionOccurred      = 3205,
     SettlementStraining     = 3206,  // settlement is under food or water shortage
     SettlementConquered     = 3207,  // raiding civ annexed the settlement; survives under new CivId
+    TerritoryExpanded       = 3208,
+    TerritoryLost           = 3209,
+    ImprovementBuilt        = 3210,
 
     // M2+ population events (3400-range)
     SettlementGrew          = 3401,
@@ -232,7 +235,10 @@ public static class VerbClassification
         EventType.BeastSlain       => VerbClass.Destruction,
         EventType.BeastReproduced  => VerbClass.Creation,
         EventType.BeastEncountered  => VerbClass.Interaction,
-        EventType.BeastAttackedChar => VerbClass.Interaction,
+        EventType.BeastAttackedChar  => VerbClass.Interaction,
+        EventType.TerritoryExpanded  => VerbClass.Transfer,
+        EventType.TerritoryLost      => VerbClass.Destruction,
+        EventType.ImprovementBuilt   => VerbClass.Creation,
         _ => throw new ArgumentOutOfRangeException(nameof(type), type, "No VerbClass mapping")
     };
 }

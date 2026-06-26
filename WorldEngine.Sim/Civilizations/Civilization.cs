@@ -1,4 +1,5 @@
 using WorldEngine.Sim.Core;
+using WorldEngine.Sim.World;
 
 namespace WorldEngine.Sim.Civilizations;
 
@@ -64,6 +65,12 @@ public sealed class Civilization
     /// Used to scale the peace cooldown — repeated aggressors face growing exhaustion.
     /// </summary>
     public Dictionary<CivId, int> WarHistory { get; } = [];
+
+    /// <summary>
+    /// Per-city territory. Key = city tile; Value = all tiles that city owns (including itself).
+    /// Maintained by CivTracker on founding, abandonment, conquest, and annual TerritoryPhase.
+    /// </summary>
+    public Dictionary<TileCoord, HashSet<TileCoord>> CityTerritories { get; } = new();
 
     /// <summary>
     /// Number of rulers this civ has had (founder = 1). Incremented on each succession.

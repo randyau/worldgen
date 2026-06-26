@@ -4,6 +4,7 @@ using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities;
 using WorldEngine.Sim.Events;
 using WorldEngine.Sim.World;
+using ImpType = WorldEngine.Sim.World.ImprovementType;
 
 namespace WorldEngine.Sim.Entities.Characters;
 
@@ -13,8 +14,9 @@ public static class GoalManager
     // Expanded to include major character ambitions: expansion, dominance, alliances, plus inner-life goals.
     private static readonly HashSet<GoalType> NotableGoalTypes =
     [
-        GoalType.Bond, GoalType.Avenge, GoalType.Create, GoalType.Colonize,
-        GoalType.Expansion, GoalType.Dominance, GoalType.Alliance
+        GoalType.Bond, GoalType.Avenge, GoalType.Create,
+        GoalType.Dominance, GoalType.Alliance,
+        GoalType.FoundCity, GoalType.BuildImprovement
     ];
 
     public static void UpdateGoals(
@@ -71,8 +73,6 @@ public static class GoalManager
         string? urgent = c.Needs.MostUrgentUnmet();
 
         // 3. Personality-driven goal generation
-        bool hasExpansion = c.Goals.Any(g => g.Type == GoalType.Expansion);
-        bool hasColonize  = c.Goals.Any(g => g.Type == GoalType.Colonize);
         bool hasDominance = c.Goals.Any(g => g.Type == GoalType.Dominance);
         bool hasAlliance  = c.Goals.Any(g => g.Type == GoalType.Alliance);
         bool hasCreate    = c.Goals.Any(g => g.Type == GoalType.Create);
@@ -81,37 +81,8 @@ public static class GoalManager
         int  activeBonds  = c.Goals.Count(g => g.Type == GoalType.Bond);
         bool hasBondRoom  = activeBonds < bondMax;
 
-        // Expansion goal: ambitious non-founders want to build a new settlement.
-        // Allowed while inside a home settlement — wanderlust will push them toward open land;
-        // EstablishSettlement scoring gates on the actual tile being worthwhile.
         bool isFounder = c.Identity.CivId.IsValid && world.ActiveFounders.Contains(c.Id);
         var myCiv = c.Identity.CivId.IsValid ? world.GetCivilization(c.Identity.CivId) : null;
-
-        // Local expansion: fill the civ's existing territory; capped at MaxSettlementsPerCiv.
-        // Skip if character already has Colonize — colonizers seek frontier, not blob-fill.
-        bool civAtSettlementCap = myCiv != null && myCiv.SettlementCount >= cfg.MaxSettlementsPerCiv;
-        if (!hasExpansion && !hasColonize && !isFounder && !civAtSettlementCap && c.Personality.Ambition > cfg.GoalAmbitionThreshold)
-        {
-            c.Goals.Add(new GoalData
-            {
-                Type      = GoalType.Expansion,
-                Priority  = c.Personality.Ambition * 0.8f,
-                StaleSince = (int)currentTick, FormedTick = (int)currentTick
-            });
-        }
-
-        // Colonization: found a distant outpost; requires higher Ambition; separate cap
-        bool civAtColonyCap = myCiv != null && myCiv.ColonyCount >= cfg.MaxColoniesPerCiv;
-        if (!hasColonize && !isFounder && !civAtColonyCap
-            && c.Personality.Ambition > cfg.ColonizeAmbitionThreshold)
-        {
-            c.Goals.Add(new GoalData
-            {
-                Type      = GoalType.Colonize,
-                Priority  = c.Personality.Ambition * 0.9f,
-                StaleSince = (int)currentTick, FormedTick = (int)currentTick
-            });
-        }
 
         if (!hasDominance && c.Personality.Aggression > cfg.GoalAggressionThreshold)
         {
@@ -182,6 +153,53 @@ public static class GoalManager
             pending.Add(MakeGoalEvent(EventType.GoalFormed, c, createGoal));
         }
 
+        // BuildImprovement goal: hard-working civ members on unimproved territory tiles claim one to build on.
+        // Runs only when character is actually standing on such a tile (saves evaluating every civ member every tick).
+        bool hasBuildGoal = c.Goals.Any(g => g.Type == GoalType.BuildImprovement);
+        if (!hasBuildGoal && c.Identity.CivId.IsValid && c.Aptitude.Diligence > cfg.GoalDiligenceThreshold)
+        {
+            if (world.TerritoryMap.TryGetValue(c.Location, out var cityTile)
+                && !world.ImprovementMap.ContainsKey(c.Location))
+            {
+                var myCivForBuild = world.GetCivilization(c.Identity.CivId);
+                // Only on tiles this character's civ actually owns
+                if (myCivForBuild?.CityTerritories.ContainsKey(cityTile) == true)
+                {
+                    var biome = (BiomeType)world.GetTile(c.Location).BiomeType;
+                    ImpType? impType = biome switch
+                    {
+                        BiomeType.Grassland or BiomeType.Plains or BiomeType.Savanna
+                            => ImpType.Farm,
+                        BiomeType.TemperateForest or BiomeType.BorealForest
+                            => ImpType.LoggingCamp,
+                        BiomeType.TropicalRainforest
+                            => ImpType.LoggingCamp,
+                        BiomeType.Mountain or BiomeType.Volcanic
+                            => ImpType.Mine,
+                        BiomeType.Beach or BiomeType.Swamp
+                            => ImpType.Fishery,
+                        _ => null
+                    };
+                    if (impType.HasValue)
+                    {
+                        var buildGoal = new GoalData
+                        {
+                            Type        = GoalType.BuildImprovement,
+                            Object      = GoalObject.Material,
+                            TargetTile  = c.Location,
+                            ResourceTag = impType.Value.ToString(),
+                            Priority    = c.Aptitude.Diligence * 0.7f,
+                            Intensity   = c.Aptitude.Diligence,
+                            StaleSince  = (int)currentTick,
+                            FormedTick  = (int)currentTick,
+                        };
+                        c.Goals.Add(buildGoal);
+                        pending.Add(MakeGoalEvent(EventType.GoalFormed, c, buildGoal));
+                    }
+                }
+            }
+        }
+
         // 4. Recompute priorities: scale with (1 - progress) × intensity
         foreach (var g in c.Goals)
             g.Priority = Math.Clamp(g.Priority * (1f - g.Progress), 0.01f, 1.0f);
@@ -205,7 +223,7 @@ public static class GoalManager
                 GoalType.Grieve  => -cfg.GriefDrainRate * g.Intensity,
                 GoalType.Create   => g.Progress > 0f ? cfg.WellbeingGoalGainRate * g.Intensity : 0f,
                 GoalType.Bond     => g.Progress > 0f ? cfg.WellbeingGoalGainRate * g.Intensity : 0f,
-                GoalType.Colonize => g.Progress > 0f ? cfg.WellbeingGoalGainRate * g.Intensity : 0f,
+                GoalType.FoundCity => g.Progress > 0f ? cfg.WellbeingGoalGainRate * g.Intensity : 0f,
                 GoalType.Endure  => -cfg.WellbeingGoalGainRate * cfg.WellbeingEndureMultiplier,
                 GoalType.Survive => -cfg.WellbeingGoalGainRate * cfg.WellbeingSurviveMultiplier,
                 GoalType.Flee    => -cfg.WellbeingGoalGainRate * cfg.WellbeingFleeMultiplier,

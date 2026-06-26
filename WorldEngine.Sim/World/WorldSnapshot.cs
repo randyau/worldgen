@@ -4,6 +4,24 @@ using WorldEngine.Sim.Entities;
 
 namespace WorldEngine.Sim.World;
 
+/// <summary>
+/// Snapshot entry for one territory tile: which city owns it and which civ that city belongs to.
+/// Keyed by tile coord in WorldSnapshot.TerritoryMap.
+/// </summary>
+public sealed record TerritorySnapshot(
+    TileCoord CityTile,
+    long      CivId);
+
+/// <summary>
+/// Snapshot of a tile improvement: type, owning city, year built, and builder.
+/// Keyed by tile coord in WorldSnapshot.ImprovementMap.
+/// </summary>
+public sealed record ImprovementSnapshot(
+    string    ImprovementType,
+    TileCoord CityTile,
+    int       BuiltYear,
+    long      BuilderId);
+
 /// <summary>Immutable settlement info for UI display.</summary>
 public sealed record SettlementSnapshot(
     TileCoord Coord,
@@ -49,6 +67,12 @@ public sealed record WorldSnapshot(
 
     // Ruins — keyed by tile coord; displayed in inspector and map renderer
     IReadOnlyDictionary<TileCoord, RuinRecord> Ruins,
+
+    // Territory and improvements (M3 Phase 3.0)
+    // TerritoryMap: tile → (owning city tile, civ id). Absent = unclaimed.
+    IReadOnlyDictionary<TileCoord, TerritorySnapshot> TerritoryMap,
+    // ImprovementMap: tile → improvement snapshot. Absent = no improvement.
+    IReadOnlyDictionary<TileCoord, ImprovementSnapshot> ImprovementMap,
 
     // World-level drift parameters for UI status display
     float GlobalTemperatureAnomaly,
