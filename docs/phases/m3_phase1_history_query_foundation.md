@@ -171,6 +171,43 @@ public interface IHistoryQuery
 
 ---
 
+---
+
+## Epic 3.1.5 — Performance Gate
+
+**Goal:** Establish a minimum TPS baseline before narrative UI work begins. The history
+query and narrative layers are only useful if the sim can reach year 2000+ in a
+reasonable wall-clock time. Profile the sim at this phase boundary and fix the top
+hotspots.
+
+**Target:** ≥ 400 TPS sustained from year 100 to year 500 on the reference machine,
+with ≤ 15 active Tier1 characters and ≤ 30 settlements.
+
+### Stories
+
+**3.1.5.1 — Profiling run**
+
+Run a 500-year simulation with profiling enabled (dotnet-trace or BenchmarkDotNet).
+Capture a flamegraph. Identify the top 3 hotspots by self-time. Document findings
+in a short comment in `docs/perf/notes_m3.md`.
+
+**3.1.5.2 — Fix top hotspot**
+
+Implement the single highest-impact fix identified in 3.1.5.1. Common candidates based
+on known architecture:
+- `O(settlements²)` border tension scan — bucket settlements by civ pair first
+- `SnapshotBuilder` building large dicts every tick — use double-buffer or delta approach
+- `RelationshipGraph` linear scans — add secondary index by entity
+- SQLite batch writes blocking sim thread — increase batch size or move to pure async
+
+**3.1.5.3 — Re-measure and gate**
+
+Re-run the 500-year profiling run. If ≥ 400 TPS is achieved, mark the gate passed
+and proceed to Phase 3.2. If not, pick the next hotspot and repeat. Document the
+before/after in `docs/perf/notes_m3.md`.
+
+---
+
 ## Definition of Done
 
 - `CharacterSummaries` and `CivSummaries` tables exist and are populated for a 5000-year run
@@ -179,4 +216,5 @@ public interface IHistoryQuery
 - `IHistoryQuery` is implemented and passes integration tests
 - `GetCharacterHistory(charId)` returns ordered events with causal context for sampled characters
 - `FindCharactersByName` returns correct disambiguation lists for recycled names
+- Performance gate: ≥ 400 TPS sustained over years 100–500
 - All tests pass; no new sim warnings

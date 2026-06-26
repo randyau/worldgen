@@ -305,13 +305,16 @@ public sealed class Game1 : Game
 
     private void ResetToNewWorld()
     {
-        // Stop sim thread first, then truncate DB while connection is still open
-        // (avoids SQLite WAL file-lock on Windows that File.Delete would hit)
+        // Stop sim thread, then dispose connection before deleting the file.
+        // Disposing first releases all WAL locks so File.Delete succeeds on Windows.
         _simLoop?.Stop();
         _simLoop = null;
-        _eventStore?.Truncate();
         _eventStore?.Dispose();
         _eventStore = null;
+
+        const string DbPath = "world.db";
+        foreach (var f in new[] { DbPath, DbPath + "-wal", DbPath + "-shm" })
+            if (File.Exists(f)) File.Delete(f);
 
         // Reset state flags
         _simStarted         = false;

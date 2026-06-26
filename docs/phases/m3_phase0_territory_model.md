@@ -273,6 +273,41 @@ founding is traceable to a specific ruler decision and delegate character.
 
 ---
 
+## Epic 3.0.7 — Snapshot propagation for UI
+
+**Goal:** Territory and improvement data reaches the UI via `WorldSnapshot` so Phase
+3.4 (tile inspect, territory overlay) can read it without touching WorldState directly.
+
+### Stories
+
+**3.0.7.1 — TerritorySnapshot on WorldSnapshot**
+
+Add to `WorldSnapshot`:
+```csharp
+public IReadOnlyDictionary<TileCoord, (CivId CivId, string CivName, TileCoord CityTile)>
+    TerritorySnapshot { get; init; }
+```
+
+`SnapshotBuilder` copies from `world.TerritoryMap`, joining civ name via
+`world.Civilizations`. Use a pre-allocated dict that is reused each tick to avoid
+GC pressure.
+
+**3.0.7.2 — ImprovementSnapshot on WorldSnapshot**
+
+```csharp
+public IReadOnlyDictionary<TileCoord, TileImprovement> ImprovementSnapshot { get; init; }
+```
+
+Direct copy of `world.ImprovementMap` — already immutable records, safe to share
+across threads.
+
+**3.0.7.3 — TileInspectorData extensions**
+
+`SnapshotBuilder.BuildTileInspectorData()` populates the new territory/improvement
+fields on `TileInspectorData` that Phase 3.4.2 will display.
+
+---
+
 ## Implementation Order
 
 1. **3.0.1** (data structures + founding claim) — no behaviour change yet
@@ -281,6 +316,7 @@ founding is traceable to a specific ruler decision and delegate character.
 4. **3.0.4** (improvements) — tile improvements appear and boost output
 5. **3.0.5** (ruler delegation) — new cities founded by ruler decision
 6. **3.0.6** (retire expansion blob) — old mechanic fully removed
+7. **3.0.7** (snapshot propagation) — territory/improvement visible to UI
 
 Do 3.0.1–3.0.3 together before removing expansion; expansion and territory can coexist
 briefly so tests stay green throughout.
