@@ -3,6 +3,7 @@ using WorldEngine.Sim.Civilizations;
 using WorldEngine.Sim.Config;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities.Characters;
+using WorldEngine.Sim.Events;
 using WorldEngine.Sim.Tiles;
 using WorldEngine.Sim.World;
 
@@ -352,15 +353,9 @@ public sealed class ResourcePressurePhase
     private static PendingEvent MakeStrainEvent(
         TileCoord coord, SettlementStub stub, string resource, float ratio)
     {
-        var payload = JsonSerializer.Serialize(new
-        {
-            settlementName = stub.Name,
-            settlementTile = new[] { coord.X, coord.Y },
-            civId          = stub.CivId.Value,
-            resource,
-            ratio,
-            impact         = ratio < 0.3f ? "crisis" : "shortage"
-        });
-        return new PendingEvent(EventType.SettlementStraining, coord, null, payload);
+        var payload = JsonSerializer.Serialize(new SettlementStrainPayload(
+            resource, ratio, ratio < 0.3f ? "crisis" : "shortage"));
+        return new PendingEvent(EventType.SettlementStraining, coord, null, payload,
+            CivId: stub.CivId.Value, SettlementName: stub.Name);
     }
 }

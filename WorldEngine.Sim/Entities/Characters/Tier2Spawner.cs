@@ -1,6 +1,7 @@
 using System.Text.Json;
 using WorldEngine.Sim.Config;
 using WorldEngine.Sim.Core;
+using WorldEngine.Sim.Events;
 using WorldEngine.Sim.World;
 
 namespace WorldEngine.Sim.Entities.Characters;
@@ -110,14 +111,10 @@ public static class Tier2Spawner
 
     private static PendingEvent MakeBornEvent(Tier2Character c, WorldState world)
     {
-        var payload = JsonSerializer.Serialize(new
-        {
-            characterId = c.Id.Value,
-            name        = c.Name,
-            role        = c.Livelihood.Role.ToString(),
-            location    = new[] { c.Location.X, c.Location.Y }
-        });
+        var payload = JsonSerializer.Serialize(new CharacterBornPayload(
+            c.Id.Value, c.Name, null, 0f, 0f, Role: c.Livelihood.Role.ToString()));
         return new PendingEvent(EventType.CharacterBorn, c.Location, null, payload,
-            new[] { c.Id.Value });
+            new[] { c.Id.Value },
+            ActorId: c.Id.Value, ActorName: c.Name);
     }
 }

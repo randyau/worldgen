@@ -115,6 +115,15 @@ public sealed class PhaseRunner
         _phaseObserver?.Invoke(phase);
     }
 
+    private static string GetEventDomain(EventType type) => (int)type switch
+    {
+        >= 1000 and < 2000 => "Environmental",
+        >= 2000 and < 3000 => "Beast",
+        >= 3000 and < 7000 => "Character",
+        >= 9000            => "GodMode",
+        _                  => "Unknown"
+    };
+
     private void RunEventGeneration(WorldState world, List<PendingEvent> pending)
     {
         _phaseObserver?.Invoke(SimPhase.EventGeneration);
@@ -130,8 +139,10 @@ public sealed class PhaseRunner
 
             var ev = new SimEvent
             {
-                Id               = new EventId(0), // assigned by DB on insert
+                Id               = new EventId(0),
                 Type             = pe.Type,
+                TypeName         = pe.Type.ToString(),
+                Domain           = GetEventDomain(pe.Type),
                 Year             = world.CurrentYear,
                 Season           = world.CurrentSeason,
                 Tick             = world.CurrentTick,
@@ -141,6 +152,10 @@ public sealed class PhaseRunner
                 PopulationImpact = impact,
                 IsFirstOfKind    = isFirst,
                 IsGodMode        = false,
+                ActorId          = pe.ActorId,
+                ActorName        = pe.ActorName,
+                CivId            = pe.CivId,
+                SettlementName   = pe.SettlementName,
                 PayloadJson      = pe.PayloadJson,
             };
             batch.Add((pe, ev));

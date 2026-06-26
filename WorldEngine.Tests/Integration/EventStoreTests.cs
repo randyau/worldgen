@@ -18,6 +18,8 @@ public class EventStoreTests
         {
             Id = new EventId(0), // assigned by DB
             Type = type,
+            TypeName = "TestEvent",
+            Domain = "Test",
             Year = year,
             Season = Season.Spring,
             Tick = 0,

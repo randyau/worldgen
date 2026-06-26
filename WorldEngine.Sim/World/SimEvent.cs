@@ -10,6 +10,8 @@ public sealed record SimEvent
 {
     public required EventId Id { get; init; }
     public required EventType Type { get; init; }
+    public required string TypeName { get; init; }
+    public required string Domain { get; init; }
     public required int Year { get; init; }
     public required Season Season { get; init; }
     public required long Tick { get; init; }
@@ -21,6 +23,10 @@ public sealed record SimEvent
     public required PopulationImpact PopulationImpact { get; init; }
     public required bool IsFirstOfKind { get; init; }
     public required bool IsGodMode { get; init; }
+    public long ActorId { get; init; }
+    public string? ActorName { get; init; }
+    public long CivId { get; init; }
+    public string? SettlementName { get; init; }
     public required string PayloadJson { get; init; }
     public string? GeneratedProse { get; init; }  // V2: LLM generation
 }

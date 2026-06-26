@@ -59,6 +59,8 @@ public class EventTypeTests
         {
             Id = new EventId(1),
             Type = EventType.WildfireOccurred,
+            TypeName = "WildfireOccurred",
+            Domain = "Environmental",
             Year = 1,
             Season = Season.Spring,
             Tick = 0,

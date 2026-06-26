@@ -28,33 +28,34 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
     }
 
     /// <summary>
-    /// Creates tables, indexes and sets pragmas. Idempotent — safe to call repeatedly.
-    /// Invoked automatically by the constructor.
+    /// Creates tables, indexes, views, and sets pragmas. Idempotent — safe to call repeatedly.
     /// </summary>
     public void InitializeSchema()
     {
         _conn.Execute("PRAGMA journal_mode=WAL;");
         _conn.Execute("PRAGMA synchronous=NORMAL;");
         _conn.Execute("PRAGMA foreign_keys=ON;");
-        _conn.Execute("PRAGMA cache_size=-65536;");       // 64 MB page cache
-        _conn.Execute("PRAGMA mmap_size=67108864;");      // 64 MB memory-mapped I/O
-        _conn.Execute("PRAGMA temp_store=memory;");        // temp tables in RAM
-        _conn.Execute("PRAGMA wal_autocheckpoint=1000;"); // checkpoint every 1000 pages (default)
+        _conn.Execute("PRAGMA cache_size=-65536;");
+        _conn.Execute("PRAGMA mmap_size=67108864;");
+        _conn.Execute("PRAGMA temp_store=memory;");
+        _conn.Execute("PRAGMA wal_autocheckpoint=1000;");
 
         _conn.Execute(DatabaseSchema.CreateEvents);
+        _conn.Execute(DatabaseSchema.CreateCausalEdges);
+        _conn.Execute(DatabaseSchema.CreateEventEntities);
+        _conn.Execute(DatabaseSchema.CreateViewReadable);
         _conn.Execute(DatabaseSchema.CreateIndexYear);
         _conn.Execute(DatabaseSchema.CreateIndexType);
         _conn.Execute(DatabaseSchema.CreateIndexTier);
         _conn.Execute(DatabaseSchema.CreateIndexLocation);
-        _conn.Execute(DatabaseSchema.CreateCausalEdges);
-        _conn.Execute(DatabaseSchema.CreateEventEntities);
+        _conn.Execute(DatabaseSchema.CreateIndexCivId);
+        _conn.Execute(DatabaseSchema.CreateIndexActorId);
         _conn.Execute(DatabaseSchema.CreateIndexEventEntities);
     }
 
     /// <summary>
     /// Writes the entire classified event batch (events + causal edges + entity cross-refs)
-    /// in a single SQLite transaction. One commit per tick instead of three.
-    /// Returns copies of the events with DB-assigned Ids.
+    /// in a single SQLite transaction. Returns copies of the events with DB-assigned Ids.
     /// </summary>
     public IReadOnlyList<SimEvent> BatchWriteAll(IReadOnlyList<(PendingEvent Pe, SimEvent Ev)> batch)
     {
@@ -63,12 +64,13 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
         var result = new List<SimEvent>(batch.Count);
         using var tx = _conn.BeginTransaction();
 
-        // 1. Insert events, collect assigned IDs
         foreach (var (_, ev) in batch)
         {
             long id = _conn.ExecuteScalar<long>(_insertEventSql, new
             {
                 Type             = (int)ev.Type,
+                ev.TypeName,
+                ev.Domain,
                 ev.Year,
                 Season           = (int)ev.Season,
                 ev.Tick,
@@ -79,30 +81,38 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
                 PopulationImpact = (int)ev.PopulationImpact,
                 IsFirstOfKind    = ev.IsFirstOfKind ? 1 : 0,
                 IsGodMode        = ev.IsGodMode ? 1 : 0,
+                ActorId          = ev.ActorId == 0 ? (long?)null : ev.ActorId,
+                ev.ActorName,
+                CivId            = ev.CivId == 0 ? (long?)null : ev.CivId,
+                ev.SettlementName,
                 ev.PayloadJson
             }, tx);
             result.Add(ev with { Id = new EventId(id) });
         }
 
-        // 2. Causal edges — uses assigned IDs from step 1
         for (int i = 0; i < batch.Count; i++)
         {
-            var pe   = batch[i].Pe;
+            var pe    = batch[i].Pe;
             long evId = result[i].Id.Value;
             if (pe.CauseEventId is { } causeId && causeId.Value > 0)
                 _conn.Execute(_insertEdgeSql,
                     new { PredecessorId = causeId.Value, SuccessorId = evId }, tx);
         }
 
-        // 3. Entity cross-references
         for (int i = 0; i < batch.Count; i++)
         {
-            var pe   = batch[i].Pe;
+            var pe    = batch[i].Pe;
             long evId = result[i].Id.Value;
-            if (pe.EntityIds is { Count: > 0 } ids)
-                foreach (long eid in ids)
+
+            if (pe.PrimaryEntityIds is { Count: > 0 } primary)
+                foreach (long eid in primary)
                     _conn.Execute(_insertEntitySql,
-                        new { EventId = evId, EntityId = eid }, tx);
+                        new { EventId = evId, EntityId = eid, Role = "Primary" }, tx);
+
+            if (pe.SecondaryEntityIds is { Count: > 0 } secondary)
+                foreach (long eid in secondary)
+                    _conn.Execute(_insertEntitySql,
+                        new { EventId = evId, EntityId = eid, Role = "Secondary" }, tx);
         }
 
         tx.Commit();
@@ -123,6 +133,8 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
             long id = _conn.ExecuteScalar<long>(_insertEventSql, new
             {
                 Type             = (int)ev.Type,
+                ev.TypeName,
+                ev.Domain,
                 ev.Year,
                 Season           = (int)ev.Season,
                 ev.Tick,
@@ -133,6 +145,10 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
                 PopulationImpact = (int)ev.PopulationImpact,
                 IsFirstOfKind    = ev.IsFirstOfKind ? 1 : 0,
                 IsGodMode        = ev.IsGodMode ? 1 : 0,
+                ActorId          = ev.ActorId == 0 ? (long?)null : ev.ActorId,
+                ev.ActorName,
+                CivId            = ev.CivId == 0 ? (long?)null : ev.CivId,
+                ev.SettlementName,
                 ev.PayloadJson
             }, tx);
             result.Add(ev with { Id = new EventId(id) });
@@ -144,11 +160,13 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
 
     private const string _insertEventSql = """
         INSERT INTO Events
-            (Type, Year, Season, Tick, LocationX, LocationY,
-             TierInvolvement, VerbClass, PopulationImpact, IsFirstOfKind, IsGodMode, PayloadJson)
+            (Type, TypeName, Domain, Year, Season, Tick, LocationX, LocationY,
+             TierInvolvement, VerbClass, PopulationImpact, IsFirstOfKind, IsGodMode,
+             ActorId, ActorName, CivId, SettlementName, PayloadJson)
         VALUES
-            (@Type, @Year, @Season, @Tick, @LocationX, @LocationY,
-             @TierInvolvement, @VerbClass, @PopulationImpact, @IsFirstOfKind, @IsGodMode, @PayloadJson);
+            (@Type, @TypeName, @Domain, @Year, @Season, @Tick, @LocationX, @LocationY,
+             @TierInvolvement, @VerbClass, @PopulationImpact, @IsFirstOfKind, @IsGodMode,
+             @ActorId, @ActorName, @CivId, @SettlementName, @PayloadJson);
         SELECT last_insert_rowid();
         """;
 
@@ -158,8 +176,8 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
         """;
 
     private const string _insertEntitySql = """
-        INSERT OR IGNORE INTO EventEntities (EventId, EntityId)
-        VALUES (@EventId, @EntityId);
+        INSERT OR IGNORE INTO EventEntities (EventId, EntityId, Role)
+        VALUES (@EventId, @EntityId, @Role);
         """;
 
     public void InsertCausalEdges(IEnumerable<(long PredecessorId, long SuccessorId)> edges)
@@ -174,7 +192,7 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
     {
         using var tx = _conn.BeginTransaction();
         foreach (var (evId, entId) in pairs)
-            _conn.Execute(_insertEntitySql, new { EventId = evId, EntityId = entId }, tx);
+            _conn.Execute(_insertEntitySql, new { EventId = evId, EntityId = entId, Role = "Primary" }, tx);
         tx.Commit();
     }
 
@@ -220,9 +238,8 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
 
     public IEnumerable<SimEvent> GetCausalChain(EventId eventId, int maxDepth = 10)
     {
-        // Breadth-first walk over successors, bounded by maxDepth.
-        var visited = new HashSet<long>();
-        var ordered = new List<SimEvent>();
+        var visited  = new HashSet<long>();
+        var ordered  = new List<SimEvent>();
         var frontier = new Queue<(long id, int depth)>();
         frontier.Enqueue((eventId.Value, 0));
 
@@ -265,7 +282,6 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
 
     /// <summary>
     /// Removes all events and causal edges while keeping the schema intact.
-    /// Use before reusing the same DB file for a new world.
     /// </summary>
     public void Truncate()
     {
@@ -280,8 +296,9 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
     // ---- helpers ----
 
     private const string SelectColumns =
-        "SELECT Id, Type, Year, Season, Tick, LocationX, LocationY, " +
-        "TierInvolvement, VerbClass, PopulationImpact, IsFirstOfKind, IsGodMode, PayloadJson FROM Events";
+        "SELECT Id, Type, TypeName, Domain, Year, Season, Tick, LocationX, LocationY, " +
+        "TierInvolvement, VerbClass, PopulationImpact, IsFirstOfKind, IsGodMode, " +
+        "ActorId, ActorName, CivId, SettlementName, PayloadJson FROM Events";
 
     private IEnumerable<SimEvent> Query(string sql, object param) =>
         _conn.Query<EventRow>(sql, param).Select(MapRow).ToList();
@@ -290,6 +307,8 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
     {
         Id               = new EventId(r.Id),
         Type             = (EventType)r.Type,
+        TypeName         = r.TypeName,
+        Domain           = r.Domain,
         Year             = r.Year,
         Season           = (Season)r.Season,
         Tick             = r.Tick,
@@ -301,6 +320,10 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
         PopulationImpact = (PopulationImpact)r.PopulationImpact,
         IsFirstOfKind    = r.IsFirstOfKind != 0,
         IsGodMode        = r.IsGodMode != 0,
+        ActorId          = r.ActorId ?? 0,
+        ActorName        = r.ActorName,
+        CivId            = r.CivId ?? 0,
+        SettlementName   = r.SettlementName,
         PayloadJson      = r.PayloadJson
     };
 
@@ -308,6 +331,8 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
     {
         public long Id { get; init; }
         public int Type { get; init; }
+        public string TypeName { get; init; } = "";
+        public string Domain { get; init; } = "";
         public int Year { get; init; }
         public int Season { get; init; }
         public long Tick { get; init; }
@@ -318,6 +343,10 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
         public int PopulationImpact { get; init; }
         public int IsFirstOfKind { get; init; }
         public int IsGodMode { get; init; }
+        public long? ActorId { get; init; }
+        public string? ActorName { get; init; }
+        public long? CivId { get; init; }
+        public string? SettlementName { get; init; }
         public string PayloadJson { get; init; } = "{}";
     }
 }
