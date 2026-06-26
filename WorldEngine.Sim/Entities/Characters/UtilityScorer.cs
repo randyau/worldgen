@@ -346,6 +346,8 @@ public static class UtilityScorer
                 (GoalType.Survive,   ActionType.Travel)    => 0.4f,
                 (GoalType.Expansion, ActionType.Establish) => 1.0f,
                 (GoalType.Expansion, ActionType.Travel)    => 0.7f,  // strong travel drive — expansion chars must physically leave home
+                (GoalType.Colonize,  ActionType.Establish) => 1.0f,
+                (GoalType.Colonize,  ActionType.Travel)    => 0.8f,  // stronger than expansion — must reach distant frontier
                 (GoalType.Dominance, ActionType.War)       => 1.0f,
                 (GoalType.Dominance, ActionType.Raid)      => 0.8f,
                 (GoalType.Alliance,  ActionType.Ally)      => 1.0f,
@@ -454,10 +456,32 @@ public static class UtilityScorer
             if (world.Settlements.TryGetValue(coord, out var s))
             {
                 bool isSameCiv = c.Identity.CivId.IsValid && s.CivId == c.Identity.CivId;
-                if (isSameCiv && isExpandingChar)
+                if (isSameCiv && (isExpandingChar || isColonizingChar))
                     score -= cfg.ExpansionHomePenalty; // actively push away from home
                 else
                     score += isSameCiv ? 150 : 50;
+            }
+            else if (isColonizingChar)
+            {
+                // Frontier bonus: colonizers want tiles FAR from all same-civ settlements.
+                // Check colonize before expansion so colonizers don't blob-fill instead.
+                // r=25 → ~1963 checks per tile — cache by (coord, civId), invalidated on settlement change.
+                var frontierKey = (coord, c.Identity.CivId);
+                if (!_frontierCache.TryGetValue(frontierKey, out bool nearHome))
+                {
+                    int fd = cfg.ColonyMinDistance;
+                    for (int fy = -fd; fy <= fd && !nearHome; fy++)
+                    for (int fx = -fd; fx <= fd && !nearHome; fx++)
+                    {
+                        if (fx * fx + fy * fy > fd * fd) continue;
+                        if (world.Settlements.TryGetValue(new TileCoord(coord.X + fx, coord.Y + fy), out var fs)
+                            && fs.CivId == c.Identity.CivId)
+                            nearHome = true;
+                    }
+                    _frontierCache[frontierKey] = nearHome;
+                }
+                if (!nearHome)
+                    score += cfg.ColonyFrontierBonus;
             }
             else if (isExpandingChar)
             {
@@ -502,27 +526,6 @@ public static class UtilityScorer
                     if (nearSameCiv)
                         score += cfg.ExpansionCompactnessBonus;
                 }
-            }
-            else if (isColonizingChar)
-            {
-                // Frontier bonus: colonizers want tiles FAR from all same-civ settlements.
-                // r=25 → ~1963 checks per tile — cache by (coord, civId), invalidated on settlement change.
-                var frontierKey = (coord, c.Identity.CivId);
-                if (!_frontierCache.TryGetValue(frontierKey, out bool nearHome))
-                {
-                    int fd = cfg.ColonyMinDistance;
-                    for (int fy = -fd; fy <= fd && !nearHome; fy++)
-                    for (int fx = -fd; fx <= fd && !nearHome; fx++)
-                    {
-                        if (fx * fx + fy * fy > fd * fd) continue;
-                        if (world.Settlements.TryGetValue(new TileCoord(coord.X + fx, coord.Y + fy), out var fs)
-                            && fs.CivId == c.Identity.CivId)
-                            nearHome = true;
-                    }
-                    _frontierCache[frontierKey] = nearHome;
-                }
-                if (!nearHome)
-                    score += cfg.ColonyFrontierBonus;
             }
 
             // When shelter is critically low, prefer terrain that provides natural cover.

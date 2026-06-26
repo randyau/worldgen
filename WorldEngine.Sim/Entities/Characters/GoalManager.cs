@@ -87,9 +87,10 @@ public static class GoalManager
         bool isFounder = c.Identity.CivId.IsValid && world.ActiveFounders.Contains(c.Id);
         var myCiv = c.Identity.CivId.IsValid ? world.GetCivilization(c.Identity.CivId) : null;
 
-        // Local expansion: fill the civ's existing territory; capped at MaxSettlementsPerCiv
+        // Local expansion: fill the civ's existing territory; capped at MaxSettlementsPerCiv.
+        // Skip if character already has Colonize — colonizers seek frontier, not blob-fill.
         bool civAtSettlementCap = myCiv != null && myCiv.SettlementCount >= cfg.MaxSettlementsPerCiv;
-        if (!hasExpansion && !isFounder && !civAtSettlementCap && c.Personality.Ambition > cfg.GoalAmbitionThreshold)
+        if (!hasExpansion && !hasColonize && !isFounder && !civAtSettlementCap && c.Personality.Ambition > cfg.GoalAmbitionThreshold)
         {
             c.Goals.Add(new GoalData
             {
