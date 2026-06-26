@@ -51,70 +51,88 @@ def q_overview(c):
         print(f"  Year {band:3d}: {founded:3d} founded, {destroyed:3d} gone, {conquered:3d} conquered → {founded-destroyed} active")
 
     print("\n=== CIV STATS ===")
+    # CivId denormalized column replaces json_extract(PayloadJson,'$.civId')
     for row in c.execute("""
-        SELECT json_extract(PayloadJson,'$.civId') civId,
-               COUNT(*) births
+        SELECT CivId, COUNT(*) births
         FROM Events WHERE Type=3001
-        GROUP BY civId ORDER BY births DESC LIMIT 10
+        GROUP BY CivId ORDER BY births DESC LIMIT 10
     """):
         print(f"  civ {row[0]}: {row[1]:,} chars born")
 
 
 def q_settlements(c):
     print("=== SETTLEMENT SURVIVAL ===")
-    for row in c.execute("SELECT Year, PayloadJson FROM Events WHERE Type=3203 ORDER BY Year"):
-        year, pj = row
-        p = json.loads(pj)
-        tile = p.get('tile', [0,0])
-        name = p.get('settlementName', p.get('name', '?'))
-        civ  = p.get('civId', '?')
-        key  = f'%[{tile[0]}, {tile[1]}]%'
+    # SettlementFoundedPayload: (FounderId, FounderName, CivId, CivName, StartingPopulation)
+    # SettlementName and CivId come from denormalized columns; tile is no longer in the payload.
+    # Cross-reference destroyed/abandoned/conquered by SettlementName column.
+    for row in c.execute("""
+        SELECT Year, SettlementName, CivId
+        FROM Events WHERE Type=3203 ORDER BY Year
+    """):
+        year, name, civ = row
+        name = name or '?'
 
-        d = c.execute("SELECT MIN(Year) FROM Events WHERE Type=3204 AND Year>=? AND PayloadJson LIKE ?", (year, key)).fetchone()[0]
-        a = c.execute("SELECT MIN(Year) FROM Events WHERE Type=3403 AND Year>=? AND PayloadJson LIKE ?", (year, key)).fetchone()[0]
-        q = c.execute("SELECT MIN(Year) FROM Events WHERE Type=3207 AND Year>=? AND PayloadJson LIKE ?", (year, key)).fetchone()[0]
+        d = c.execute("SELECT MIN(Year) FROM Events WHERE Type=3204 AND Year>=? AND SettlementName=?", (year, name)).fetchone()[0]
+        a = c.execute("SELECT MIN(Year) FROM Events WHERE Type=3403 AND Year>=? AND SettlementName=?", (year, name)).fetchone()[0]
+        q = c.execute("SELECT MIN(Year) FROM Events WHERE Type=3207 AND Year>=? AND SettlementName=?", (year, name)).fetchone()[0]
 
         if d:   status = f"destroyed yr {d} (lived {d-year}y)"
         elif a: status = f"abandoned yr {a} (lived {a-year}y)"
         elif q: status = f"conquered yr {q} (lived {q-year}y free)"
         else:   status = "SURVIVED"
-        print(f"  [{tile[0]:3d},{tile[1]:3d}] {name:16s} civ{civ} yr{year:4d}: {status}")
+        print(f"  {name:20s} civ{civ} yr{year:4d}: {status}")
 
 
 def q_expansion(c):
     print("=== CIV EXPANSION (settlements founded per civ) ===")
+    # CivId denormalized column replaces json_extract(PayloadJson,'$.civId')
     for row in c.execute("""
-        SELECT json_extract(PayloadJson,'$.civId') civId,
-               COUNT(*) total, MIN(Year) first, MAX(Year) last
+        SELECT CivId, COUNT(*) total, MIN(Year) first, MAX(Year) last
         FROM Events WHERE Type=3203
-        GROUP BY civId ORDER BY total DESC
+        GROUP BY CivId ORDER BY total DESC
     """):
         print(f"  civ {row[0]:3}: {row[1]:3d} settlements  yr {row[2]}–{row[3]}")
 
     print("\n=== CONQUEST GROWTH (settlements annexed per civ) ===")
+    # SettlementConqueredPayload: (ConquererId, ConquererName, ConquerorCivId, PreviousCivId, SurvivingPop)
+    # CivId column holds ConquerorCivId for conquest events.
     for row in c.execute("""
-        SELECT json_extract(PayloadJson,'$.conqueredByCivId') civId, COUNT(*) cnt
+        SELECT CivId, COUNT(*) cnt
         FROM Events WHERE Type=3207
-        GROUP BY civId ORDER BY cnt DESC
+        GROUP BY CivId ORDER BY cnt DESC
     """):
         print(f"  civ {row[0]}: {row[1]} settlements conquered")
 
 
 def q_wars(c):
     print("=== WAR TIMELINE ===")
+    # WarDeclaredPayload: (DeclarerId, DeclarerName, DeclarerCivId, DeclarerCivName,
+    #                      TargetCivId, TargetCivName, Cause, CauseDescription, WarNumber)
+    # WarEndedPayload:    (CivAId, CivAName, CivBId, CivBName, Outcome, WarNumber)
+    # Key wars by WarNumber since both declared and ended payloads carry it.
     wars = {}
     for row in c.execute("SELECT Year, PayloadJson FROM Events WHERE Type=3103 ORDER BY Year"):
         p = json.loads(row[1])
-        k = tuple(sorted([p.get('declarerId'), p.get('targetId')]))
-        wars[k] = {'declared': row[0], 'a': p.get('declarerName','?'), 'b': p.get('targetName','?')}
+        war_num = p.get('WarNumber')
+        wars[war_num] = {
+            'declared': row[0],
+            # DeclarerCivName / TargetCivName are the fighting civilizations
+            'a': p.get('DeclarerCivName', '?'),
+            'b': p.get('TargetCivName', '?'),
+            'cause': p.get('Cause', '?'),
+        }
     for row in c.execute("SELECT Year, PayloadJson FROM Events WHERE Type=3104 ORDER BY Year"):
         p = json.loads(row[1])
-        k = tuple(sorted([p.get('characterAId'), p.get('characterBId')]))
-        if k in wars: wars[k]['ended'] = row[0]
-    for k, w in sorted(wars.items(), key=lambda x: x[1]['declared']):
+        war_num = p.get('WarNumber')
+        if war_num in wars:
+            wars[war_num]['ended'] = row[0]
+            wars[war_num]['outcome'] = p.get('Outcome', '?')
+    for war_num, w in sorted(wars.items(), key=lambda x: x[1]['declared']):
         ended = w.get('ended', '?')
         dur   = f"{ended-w['declared']}y" if isinstance(ended, int) else "ongoing"
-        print(f"  yr {w['declared']:4d}: {w['a']} vs {w['b']} → ended yr {ended} ({dur})")
+        outcome = w.get('outcome', '')
+        outcome_str = f" [{outcome}]" if outcome else ''
+        print(f"  yr {w['declared']:4d}: {w['a']} vs {w['b']} ({w['cause']}) → ended yr {ended} ({dur}){outcome_str}")
 
     total = c.execute("SELECT COUNT(*) FROM Events WHERE Type=3106").fetchone()[0]
     print(f"\n  Total rivalries formed: {total:,}")
@@ -129,17 +147,37 @@ def q_alliances(c):
     broken = c.execute("SELECT COUNT(*) FROM Events WHERE Type=3102").fetchone()[0]
     print(f"  Formed: {formed:,}  |  Broken: {broken:,}  |  Net active (estimate): {formed-broken}")
     print("\n  Sample alliances formed:")
-    for row in c.execute("SELECT Year, PayloadJson FROM Events WHERE Type=3101 ORDER BY Year LIMIT 15"):
-        p = json.loads(row[1])
-        print(f"    yr {row[0]:4d}: {p.get('declarerName','?')} (civ{p.get('declarerCiv','?')}) ↔ {p.get('targetName','?')} (civ{p.get('targetCiv','?')})")
+    # AllianceFormedPayload: (DeclarerId, DeclarerName, TargetId, TargetName, DeclarerCivId, TargetCivId)
+    # ActorName column holds DeclarerName; TargetName and civ IDs still parsed from JSON (PascalCase).
+    for row in c.execute("""
+        SELECT Year, ActorName, PayloadJson FROM Events WHERE Type=3101 ORDER BY Year LIMIT 15
+    """):
+        year, actor_name, pj = row
+        p = json.loads(pj)
+        print(f"    yr {year:4d}: {actor_name or p.get('DeclarerName','?')} "
+              f"(civ{p.get('DeclarerCivId','?')}) ↔ "
+              f"{p.get('TargetName','?')} (civ{p.get('TargetCivId','?')})")
+
+    print("\n  Sample alliances broken:")
+    # AllianceBrokenPayload: (CharacterAId, CharacterAName, CharacterBId, CharacterBName, Reason)
+    for row in c.execute("""
+        SELECT Year, ActorName, PayloadJson FROM Events WHERE Type=3102 ORDER BY Year LIMIT 10
+    """):
+        year, actor_name, pj = row
+        p = json.loads(pj)
+        print(f"    yr {year:4d}: {actor_name or p.get('CharacterAName','?')} ↔ "
+              f"{p.get('CharacterBName','?')} — {p.get('Reason','?')}")
 
 
 def q_characters(c):
     print("=== CHARACTERS BORN PER CIV ===")
+    # CivId denormalized column replaces json_extract(PayloadJson,'$.civId')
+    # CharacterBornPayload carries (CharacterId, CharacterName, Epithet, Ambition, Aggression, Role, Source);
+    # the civ association is stored only in the denormalized CivId column.
     for row in c.execute("""
-        SELECT json_extract(PayloadJson,'$.civId') civId, COUNT(*) cnt
+        SELECT CivId, COUNT(*) cnt
         FROM Events WHERE Type=3001
-        GROUP BY civId ORDER BY cnt DESC
+        GROUP BY CivId ORDER BY cnt DESC
     """):
         print(f"  civ {row[0]}: {row[1]:,} born")
 
@@ -159,64 +197,86 @@ def q_economy(c):
     print("=== MERCHANT TRADE VOLUME ===")
     total = c.execute("SELECT COUNT(*) FROM Events WHERE Type=3303").fetchone()[0]
     print(f"  Total trade events: {total:,}")
-    print("\n  Top trade destinations (by settlement name in payload):")
+    # MerchantTradePayload: (CharacterId, CharacterName, TradedResource, DestX, DestY)
+    # SettlementName column holds the destination settlement name for trade events.
+    print("\n  Top trade destinations (by SettlementName column):")
     for row in c.execute("""
-        SELECT json_extract(PayloadJson,'$.destinationName') dest, COUNT(*) cnt
+        SELECT SettlementName, COUNT(*) cnt
         FROM Events WHERE Type=3303
-        GROUP BY dest ORDER BY cnt DESC LIMIT 10
+        GROUP BY SettlementName ORDER BY cnt DESC LIMIT 10
     """):
-        print(f"  {row[0]}: {row[1]:,} trades")
+        print(f"  {row[0] or '(unknown)'}: {row[1]:,} trades")
+
+    print("\n  Top traded resources:")
+    # TradedResource is still in the JSON payload (PascalCase)
+    for row in c.execute("""
+        SELECT json_extract(PayloadJson,'$.TradedResource') resource, COUNT(*) cnt
+        FROM Events WHERE Type=3303
+        GROUP BY resource ORDER BY cnt DESC LIMIT 10
+    """):
+        print(f"  {row[0] or '?'}: {row[1]:,} trades")
 
 
 def q_ruins(c):
-    print("=== RUIN EVENTS (most-destroyed tiles) ===")
+    print("=== RUIN EVENTS (most-destroyed settlements) ===")
+    # SettlementDestroyedPayload: (FounderId, DestroyerId, DestroyerName, TimesSettled)
+    # No tile or name in payload; use SettlementName denormalized column.
     for row in c.execute("""
-        SELECT json_extract(PayloadJson,'$.tile') tile,
-               json_extract(PayloadJson,'$.settlementName') name,
-               COUNT(*) destroyed
+        SELECT SettlementName, COUNT(*) destroyed
         FROM Events WHERE Type=3204
-        GROUP BY tile ORDER BY destroyed DESC LIMIT 15
+        GROUP BY SettlementName ORDER BY destroyed DESC LIMIT 15
     """):
-        print(f"  {row[0]:15s} {row[1]:16s}: destroyed {row[2]}x")
+        print(f"  {(row[0] or '?'):20s}: destroyed {row[1]}x")
+
     print("\n  Abandoned settlements:")
+    # SettlementAbandonedPayload: (FounderId, FoundedYear, TimesSettled, Population)
+    # SettlementName column gives the settlement name directly.
     for row in c.execute("""
-        SELECT json_extract(PayloadJson,'$.settlementName') name, Year
-        FROM Events WHERE Type=3403 ORDER BY Year
+        SELECT SettlementName, Year FROM Events WHERE Type=3403 ORDER BY Year
     """):
-        print(f"  yr {row[1]:4d}: {row[0]}")
+        print(f"  yr {row[1]:4d}: {row[0] or '?'}")
 
 
 def q_conquest(c):
     print("=== CONQUEST EVENTS ===")
     total = c.execute("SELECT COUNT(*) FROM Events WHERE Type=3207").fetchone()[0]
     print(f"  Total conquests: {total}")
-    for row in c.execute("SELECT Year, PayloadJson FROM Events WHERE Type=3207 ORDER BY Year"):
-        p = json.loads(row[1])
-        print(f"  yr {row[0]:4d}: {p.get('conquererName','?')} (civ{p.get('conqueredByCivId','?')}) "
-              f"seized {p.get('settlementName','?')} from civ{p.get('previousCivId','?')} "
-              f"(pop → {p.get('survivingPop','?')})")
+    # SettlementConqueredPayload: (ConquererId, ConquererName, ConquerorCivId, PreviousCivId, SurvivingPop)
+    # SettlementName column — name of the conquered settlement.
+    # ActorName column    — ConquererName (the character who led the conquest).
+    # CivId column        — ConquerorCivId.
+    for row in c.execute("""
+        SELECT Year, ActorName, CivId, SettlementName, PayloadJson
+        FROM Events WHERE Type=3207 ORDER BY Year
+    """):
+        year, actor_name, civ_id, settlement_name, pj = row
+        p = json.loads(pj)
+        print(f"  yr {year:4d}: {actor_name or p.get('ConquererName','?')} (civ{civ_id}) "
+              f"seized {settlement_name or '?'} from civ{p.get('PreviousCivId','?')} "
+              f"(pop → {p.get('SurvivingPop','?')})")
 
     print("\n=== CIV COLLAPSE VIA CONQUEST ===")
+    # CivCollapsedPayload: (CivId, Reason) — PascalCase JSON fields.
     for row in c.execute("""
         SELECT Year, PayloadJson FROM Events WHERE Type=3202 ORDER BY Year
     """):
         p = json.loads(row[1])
-        print(f"  yr {row[0]:4d}: civ {p.get('civId','?')} collapsed ({p.get('reason','?')})")
+        print(f"  yr {row[0]:4d}: civ {p.get('CivId','?')} collapsed ({p.get('Reason','?')})")
 
 
 def q_events(c, n=50):
     print(f"=== LAST {n} EVENTS (newest first) ===")
-    for row in c.execute(f"SELECT Year, Season, Type, PayloadJson FROM Events ORDER BY Id DESC LIMIT {n}"):
-        year, season, typ, pj = row
-        # Brief summary from payload
-        try:
-            p = json.loads(pj)
-            summary = (p.get('settlementName') or p.get('name') or
-                       p.get('declarerName') or p.get('founderName') or
-                       p.get('conquererName') or p.get('characterName') or '')
-        except Exception:
-            summary = ''
-        print(f"  yr {year:4d} {season:6} type={typ:4d}  {summary}")
+    # TypeName and ActorName are denormalized columns; SettlementName for settlement context.
+    for row in c.execute(f"""
+        SELECT Year, Season, Type, TypeName, ActorName, SettlementName
+        FROM Events ORDER BY Id DESC LIMIT {n}
+    """):
+        year, season, typ, type_name, actor_name, settlement_name = row
+        label = type_name or f"type={typ}"
+        summary = actor_name or ''
+        if settlement_name:
+            summary = f"{summary} @ {settlement_name}".lstrip(' @ ')
+        print(f"  yr {year:4d} {(season or ''):6}  {label:35s}  {summary}")
 
 
 def q_event_types(c):
