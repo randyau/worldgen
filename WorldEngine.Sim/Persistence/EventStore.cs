@@ -43,6 +43,11 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
         _conn.Execute(DatabaseSchema.CreateEvents);
         _conn.Execute(DatabaseSchema.CreateCausalEdges);
         _conn.Execute(DatabaseSchema.CreateEventEntities);
+        _conn.Execute(DatabaseSchema.CreateCharacterSummaries);
+        _conn.Execute(DatabaseSchema.CreateCivSummaries);
+        _conn.Execute(DatabaseSchema.CreateEras);
+        _conn.Execute(DatabaseSchema.CreateSuccessionChain);
+        _conn.Execute(DatabaseSchema.CreateDynasties);
         _conn.Execute(DatabaseSchema.CreateViewReadable);
         _conn.Execute(DatabaseSchema.CreateIndexYear);
         _conn.Execute(DatabaseSchema.CreateIndexType);
@@ -196,6 +201,28 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
         tx.Commit();
     }
 
+    /// <summary>
+    /// Builds all pre-aggregated summary tables (CharacterSummaries, CivSummaries, Eras,
+    /// SuccessionChain, Dynasties) and populates inferred CausalEdges from event patterns.
+    /// Call once at end of sim or on demand.
+    /// </summary>
+    public void BuildSummaries()
+    {
+        SummaryBuilder.BuildCharacterSummaries(_conn);
+        SummaryBuilder.BuildCivSummaries(_conn);
+        SummaryBuilder.BuildSuccessionChain(_conn);
+        SummaryBuilder.BuildDynasties(_conn);
+        SummaryBuilder.BuildEras(_conn);
+        CausalEdgeBuilder.BuildCausalEdges(_conn);
+    }
+
+    /// <summary>
+    /// Returns a <see cref="IHistoryQuery"/> backed by the current database connection.
+    /// Call <see cref="BuildSummaries"/> before using the returned service to ensure
+    /// summary tables are populated.
+    /// </summary>
+    public IHistoryQuery GetHistoryQuery() => new HistoryQueryService(_conn);
+
     // ---- IHistoryGraphReadOnly ----
 
     public SimEvent? GetEvent(EventId id)
@@ -288,6 +315,11 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
         _conn.Execute("DELETE FROM EventEntities;");
         _conn.Execute("DELETE FROM CausalEdges;");
         _conn.Execute("DELETE FROM Events;");
+        _conn.Execute("DELETE FROM CharacterSummaries;");
+        _conn.Execute("DELETE FROM CivSummaries;");
+        _conn.Execute("DELETE FROM Eras;");
+        _conn.Execute("DELETE FROM SuccessionChain;");
+        _conn.Execute("DELETE FROM Dynasties;");
         _conn.Execute("PRAGMA wal_checkpoint(TRUNCATE);");
     }
 

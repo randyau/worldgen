@@ -39,7 +39,83 @@ public static class DatabaseSchema
         CREATE TABLE IF NOT EXISTS CausalEdges (
             PredecessorId INTEGER NOT NULL REFERENCES Events(Id),
             SuccessorId   INTEGER NOT NULL REFERENCES Events(Id),
+            EdgeType      TEXT,
             PRIMARY KEY (PredecessorId, SuccessorId)
+        );
+        """;
+
+    public const string CreateCharacterSummaries = """
+        CREATE TABLE IF NOT EXISTS CharacterSummaries (
+            CharacterId         INTEGER PRIMARY KEY,
+            Name                TEXT NOT NULL,
+            Epithet             TEXT,
+            NameOrdinal         INTEGER DEFAULT 0,
+            AncestryId          TEXT,
+            CivId               INTEGER,
+            CivName             TEXT,
+            RulerOrdinal        INTEGER DEFAULT 0,
+            BirthYear           INTEGER,
+            DeathYear           INTEGER,
+            DeathCause          TEXT,
+            AgeSeasons          INTEGER,
+            WarsInitiated       INTEGER DEFAULT 0,
+            SettlementsFounded  INTEGER DEFAULT 0,
+            ArtworksCreated     INTEGER DEFAULT 0,
+            SignificantEvents   TEXT
+        );
+        """;
+
+    public const string CreateCivSummaries = """
+        CREATE TABLE IF NOT EXISTS CivSummaries (
+            CivId               INTEGER PRIMARY KEY,
+            Name                TEXT NOT NULL,
+            FoundedYear         INTEGER,
+            CollapseYear        INTEGER,
+            IsCollapsed         INTEGER,
+            PeakSettlements     INTEGER,
+            TotalRulers         INTEGER,
+            TotalWarsInitiated  INTEGER,
+            TotalWarsSuffered   INTEGER,
+            TotalYearsAtWar     INTEGER,
+            DominantAncestry    TEXT,
+            CulturalTraits      TEXT,
+            FirstRulerName      TEXT,
+            LastRulerName       TEXT
+        );
+        """;
+
+    public const string CreateEras = """
+        CREATE TABLE IF NOT EXISTS Eras (
+            EraId       INTEGER PRIMARY KEY AUTOINCREMENT,
+            Name        TEXT NOT NULL,
+            StartYear   INTEGER,
+            EndYear     INTEGER,
+            EraType     TEXT
+        );
+        """;
+
+    public const string CreateSuccessionChain = """
+        CREATE TABLE IF NOT EXISTS SuccessionChain (
+            CivId            INTEGER,
+            Ordinal          INTEGER,
+            CharId           INTEGER,
+            Name             TEXT,
+            BirthYear        INTEGER,
+            TookThroneYear   INTEGER,
+            LostThroneYear   INTEGER,
+            LostThroneReason TEXT,
+            PRIMARY KEY (CivId, Ordinal)
+        );
+        """;
+
+    public const string CreateDynasties = """
+        CREATE TABLE IF NOT EXISTS Dynasties (
+            DynastyId    INTEGER PRIMARY KEY AUTOINCREMENT,
+            CivId        INTEGER,
+            Name         TEXT,
+            StartOrdinal INTEGER,
+            EndOrdinal   INTEGER,
+            AncestryId   TEXT
         );
         """;
 

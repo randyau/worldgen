@@ -95,7 +95,8 @@ One-line description of every non-trivial source file. Check here before running
   - `EntityBehaviorPhase.cs` (~391 lines) — beast and generic entity behavior
   - `Tier2BehaviorPhase.cs` (~409 lines) — specialist NPC behavior by role
   - `PopulationDynamicsPhase.cs` (~362 lines) — settlement growth, death, crystallisation, collapse
-  - `ResourcePressurePhase.cs` (~361 lines) — food/water/resource ledger per settlement
+  - `ResourcePressurePhase.cs` (~361 lines) — food/water/resource ledger per settlement (territory-based since M3.0)
+  - `TerritoryPhase.cs` — M3.0: annual city territory expansion/contraction
 
 ## WorldEngine.Sim/Events/
 - `Payloads.cs` — all event payload records (one per EventType); serialised to JSON for storage
@@ -106,6 +107,8 @@ One-line description of every non-trivial source file. Check here before running
 - `WorldState.cs` — mutable world state; sim thread only; source of truth during sim
 - `IWorldStateReadOnly.cs` — read-only interface passed to entity logic
 - `IHistoryGraphReadOnly.cs` — history query interface (see interface_contracts_events.md)
+- `IHistoryQuery.cs` — M3.1: pre-indexed structured query API (GetCivSummary, GetRulersOfCiv, etc.)
+- `HistoryTypes.cs` — M3.1: CharacterSummary, CivSummary, ConflictRecord record types
 - `WorldSnapshot.cs` — immutable UI-facing projection; created after each tick
 - `StateCache.cs` — thread-safe snapshot bridge between sim and UI threads
 - `SnapshotBuilder.cs` (~228 lines) — builds WorldSnapshot from WorldState each tick
@@ -116,8 +119,11 @@ One-line description of every non-trivial source file. Check here before running
 - `RuinRecord.cs / ResourceDeposit.cs`
 
 ## WorldEngine.Sim/Persistence/
-- `EventStore.cs` (~352 lines) — SQLite writes: events, entities, causal edges; batched per tick
-- `DatabaseSchema.cs` — schema DDL (CREATE TABLE statements)
+- `EventStore.cs` — SQLite writes: events, entities, causal edges; BuildSummaries() + GetHistoryQuery()
+- `DatabaseSchema.cs` — schema DDL (Events, CausalEdges, CharacterSummaries, CivSummaries, Eras, SuccessionChain, Dynasties)
+- `SummaryBuilder.cs` — M3.1: post-sim pass building CharacterSummaries, CivSummaries, SuccessionChain, Dynasties, Eras
+- `CausalEdgeBuilder.cs` — M3.1: infers and writes causal edges from event patterns (war chains, disease→abandonment, etc.)
+- `HistoryQueryService.cs` — M3.1: IHistoryQuery implementation backed by SQLite summary tables; small LRU cache
 
 ## WorldEngine.Sim/Vendor/
 - `FastNoiseLite.cs` (~2505 lines) — **do not read or edit** — vendored noise library
@@ -129,3 +135,7 @@ One-line description of every non-trivial source file. Check here before running
 ## WorldEngine.Tests/
 - xUnit test suite; mirrors Sim folder structure
 - Key files: reproducibility tests, integration tests per phase, world gen tests
+- `Integration/HistoryQueryTests.cs` — M3.1: SummaryBuilder, SuccessionChain, and HistoryQueryService integration tests
+
+## docs/perf/
+- `notes_m3.md` — M3 performance profiling notes and gate status
