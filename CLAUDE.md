@@ -15,7 +15,7 @@ The primary audience is worldbuilders and writers, not traditional gamers. The c
 - `docs/architecture_decision_records.md` — ADR quick-reference (why the codebase is structured as it is)
 - `docs/design_session_decisions.md` — tile layout, world gen algorithms, env sim, UI boundary decisions (DS-A through DS-D)
 - `docs/mvp_spec.md` — milestone and epic definitions
-- `docs/interface_contracts.md` — critical C# interface signatures (TileData, WorldSnapshot, etc.)
+- `docs/interface_contracts.md` — **index only** — links to 4 split files; load only the relevant one
 - `docs/implementation_plan_m1.md` — M1 phase ordering and story-level guide (archived reference)
 
 **Current milestone status:** Milestone 2 COMPLETE (2026-06-23). All M2 phases archived. Beginning Milestone 3 (History & Narrative).
@@ -28,6 +28,33 @@ The primary audience is worldbuilders and writers, not traditional gamers. The c
 **Reusable code patterns and test templates:**
 - `docs/snippets/patterns.md` — command pattern, WorldRng, tile iteration, StateCache, etc.
 - `docs/snippets/test_templates.md` — reproducibility test, unit/integration/thread-safety templates
+
+---
+
+## Token Efficiency
+
+### Model routing
+Use cheap models for navigation; reserve Sonnet for writing/editing code:
+- **Exploration and search:** spawn an `Explore` subagent, or pass `--model haiku` to one-off reads
+- **Implementation:** stay on Sonnet
+- Never load a large file speculatively — locate the symbol with SCIP first, then read only the relevant lines
+
+### Bash searches — always exclude worktrees and build output
+```bash
+# Always add these exclusions or you get duplicate results from mirrored worktrees
+find . -name "*.cs" ! -path "*worktrees*" ! -path "*/obj/*" ! -path "*/Vendor/*"
+grep -r "Symbol" --include="*.cs" . --exclude-dir=obj --exclude-dir=Vendor --exclude-dir=worktrees
+```
+
+### Codebase map
+Before running `find`, check `docs/codebase_map.md` — every source file is listed with a one-line description. Often you can skip the filesystem scan entirely.
+
+### Interface contracts — split by domain
+`docs/interface_contracts.md` is now an index. Load only what you need:
+- `interface_contracts_tiles.md` — TileData, flag enums, disasters, resources
+- `interface_contracts_core.md` — IEntity, ICommand, IWorldStateReadOnly, StateCache, PendingEvent
+- `interface_contracts_snapshot.md` — WorldSnapshot, SettlementStub/Snapshot, Civilization, AncestryConfig
+- `interface_contracts_events.md` — SimEvent, EventType ranges, IHistoryGraphReadOnly, enumerations
 
 ---
 
@@ -226,10 +253,11 @@ At the start of each session:
 
 1. Read this file
 2. Run `python3 scripts/scip-query.py stats` — confirms the SCIP index is fresh and tells you the document/symbol counts. If missing, run `scip-dotnet index WorldEngine.sln --skip-dotnet-restore` first.
-3. Read the active phase doc from `docs/phases/` (whichever phase is in progress). If `docs/phases/` is empty, Milestone 2 is complete and M3 phase docs have not yet been written — check `docs/mvp_spec.md` for the M3 scope summary before starting.
-4. Check `docs/interface_contracts.md` for any interfaces you'll be implementing against
-5. Use `python3 scripts/scip-query.py defs <TypeName>` to locate types before reading files
-6. Load `docs/snippets/patterns.md` when you need code boilerplate
+3. Read the active phase doc from `docs/phases/` (whichever phase is in progress). If `docs/phases/` is empty, check `docs/mvp_spec.md` for the M3 scope summary before starting.
+4. Use `docs/codebase_map.md` to orient yourself — one-line description of every source file; skip filesystem scans when possible.
+5. Check only the relevant `docs/interface_contracts_*.md` split file for interfaces you'll be implementing against.
+6. Use `python3 scripts/scip-query.py defs <TypeName>` to locate types before reading files.
+7. Load `docs/snippets/patterns.md` when you need code boilerplate.
 
 Do not assume continuity from a previous session. Read the code to understand what exists.
 

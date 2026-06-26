@@ -22,7 +22,8 @@ internal sealed record ArtworkCreatedPayload(
 
 internal sealed record GoalEventPayload(
     long CharacterId, string CharacterName,
-    string GoalType, string GoalObject, long? TargetId, float Intensity);
+    string GoalType, string GoalObject, long? TargetId, float Intensity,
+    string Outcome = "formed");  // "formed", "completed", or "abandoned"
 
 internal sealed record CharacterCrystallizedPayload(
     long OldCharacterId, string OldName, long NewCharacterId, string NewName);

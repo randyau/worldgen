@@ -59,6 +59,8 @@ public sealed class SimLoop
     {
         _running = false;
         _thread?.Join(millisecondsTimeout: 2000);
+        // Flush any pending events to ensure they're written before shutdown
+        _phaseRunner.FlushPendingEvents(_world);
     }
 
     private void Run()

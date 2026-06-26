@@ -10,24 +10,29 @@ namespace WorldEngine.Sim.Entities.Characters;
 public static class GoalManager
 {
     // Goal types worth logging as narrative events when formed or resolved.
+    // Expanded to include major character ambitions: expansion, dominance, alliances, plus inner-life goals.
     private static readonly HashSet<GoalType> NotableGoalTypes =
     [
-        GoalType.Bond, GoalType.Avenge, GoalType.Create, GoalType.Colonize
+        GoalType.Bond, GoalType.Avenge, GoalType.Create, GoalType.Colonize,
+        GoalType.Expansion, GoalType.Dominance, GoalType.Alliance
     ];
 
     public static void UpdateGoals(
         Tier1Character c, IWorldStateReadOnly world, long currentTick,
         CharacterSimConfig cfg, List<PendingEvent> pending)
     {
-        // 1. Emit GoalResolved for any notable goals that completed since last tick, then prune.
-        foreach (var g in c.Goals)
+        // 1. Track notable goals before pruning so we can log completions and abandonments.
+        var notableGoalsToCheck = c.Goals.Where(g => NotableGoalTypes.Contains(g.Type)).ToList();
+
+        foreach (var g in notableGoalsToCheck)
         {
-            if (g.IsComplete && NotableGoalTypes.Contains(g.Type))
-                pending.Add(MakeGoalEvent(EventType.GoalResolved, c, g));
+            if (g.IsComplete)
+                pending.Add(MakeGoalEvent(EventType.GoalResolved, c, g, "completed"));
         }
+
         // Inner-life goals (Bond, Create) get a much longer stale window than tactical goals.
         long innerLifeLimit = cfg.GoalStaleSeasonLimit * 20L;
-        c.Goals.RemoveAll(g => g.IsComplete
+        var goalsToRemove = c.Goals.Where(g => g.IsComplete
             || (g.Type != GoalType.Grieve
                 && g.Type != GoalType.Bond
                 && g.Type != GoalType.Create
@@ -35,7 +40,16 @@ public static class GoalManager
                 && g.Progress < 0.1f)
             || ((g.Type == GoalType.Bond || g.Type == GoalType.Create)
                 && currentTick - g.StaleSince > innerLifeLimit
-                && g.Progress < 0.1f));
+                && g.Progress < 0.1f)).ToList();
+
+        // Log abandonments for notable goal types (failed to progress, timed out, or pruned without completion).
+        foreach (var g in goalsToRemove)
+        {
+            if (!g.IsComplete && NotableGoalTypes.Contains(g.Type) && g.Progress < 0.95f)
+                pending.Add(MakeGoalEvent(EventType.GoalResolved, c, g, "abandoned"));
+        }
+
+        c.Goals.RemoveAll(goalsToRemove.Contains);
 
         // 2. Critical survival needs block all goal formation (truly desperate — near zero).
         // Non-critical unmet needs (Status, Purpose, Spiritual) don't block inner-life goals;
@@ -323,12 +337,12 @@ public static class GoalManager
             ActorId: mourner.Id.Value, ActorName: mourner.Identity.Name));
     }
 
-    private static PendingEvent MakeGoalEvent(EventType type, Tier1Character c, GoalData g)
+    private static PendingEvent MakeGoalEvent(EventType type, Tier1Character c, GoalData g, string outcome = "formed")
     {
         var payload = JsonSerializer.Serialize(new GoalEventPayload(
             c.Id.Value, c.Identity.Name,
             g.Type.ToString(), g.Object.ToString(),
-            g.TargetEntityId?.Value, g.Intensity));
+            g.TargetEntityId?.Value, g.Intensity, outcome));
         return new PendingEvent(type, c.Location, null, payload,
             new[] { c.Id.Value },
             ActorId: c.Id.Value, ActorName: c.Identity.Name);

@@ -65,6 +65,9 @@ normal_ticks_per_second = 1.0     # Seasonal ticks per real second at Normal spe
 fast_ticks_per_second   = 10.0    # Seasonal ticks per real second at Fast speed
 ultrafast_snapshot_years = 10     # Push UI snapshot every N sim-years in Ultrafast mode
 
+[sim_loop.persistence]
+event_write_batch_interval_ticks = 20    # Batch event writes every N ticks; ~1 year at Normal speed; 0 = write every tick (legacy, slower)
+
 # =============================================================================
 # EVENTS AND HISTORY
 # =============================================================================
@@ -790,8 +793,8 @@ physician_settlement_heal_rate = 0.5   # health restored per tick to infected se
 
 # Tier2 creator event pacing
 # Most work happens silently; these control when it becomes a history-log event.
-tier2_notable_cooldown_ticks  = 32     # minimum ticks between notable events per character (2 years)
-tier2_exceptional_work_chance = 0.002  # per-tick chance of exceptional work during a notable event (~1 per lifetime)
+tier2_notable_cooldown_ticks  = 64     # minimum ticks between notable events per character (4 years)
+tier2_exceptional_work_chance = 0.001  # per-tick chance of exceptional work during a notable event (~1 per lifetime)
 
 # Tier1 Create goal cooldown
 create_goal_cooldown_ticks = 80        # ticks after completing a Create goal before a new one can form (5 years)

@@ -30,6 +30,10 @@ public sealed class PhaseRunner
     private readonly List<PendingEvent> _injectedEvents = new();
     private int _lastAnnualTickYear;
 
+    // Event write batching: accumulate events and write in bulk every N ticks
+    private readonly List<(PendingEvent Pe, SimEvent Ev)> _pendingEventBatch = new();
+    private long _ticksSinceLastWrite = 0;
+
     public PhaseRunner(
         SimConfig config,
         EventStore eventStore,
@@ -130,7 +134,7 @@ public sealed class PhaseRunner
         if (pending.Count == 0) return;
 
         // Step 1: classify + gate
-        var batch = new List<(PendingEvent pe, SimEvent ev)>();
+        var classifiedBatch = new List<(PendingEvent pe, SimEvent ev)>();
         foreach (var pe in pending)
         {
             bool isFirst = !_eventCache.ContainsType(pe.Type);
@@ -158,18 +162,54 @@ public sealed class PhaseRunner
                 SettlementName   = pe.SettlementName,
                 PayloadJson      = pe.PayloadJson,
             };
-            batch.Add((pe, ev));
+            classifiedBatch.Add((pe, ev));
         }
 
-        if (batch.Count == 0) return;
+        if (classifiedBatch.Count == 0) return;
 
-        // Step 2: DB — single transaction writes events + causal edges + entity refs
+        // Step 2: Accumulate events for batched writes, or write immediately if batching is disabled
+        if (_config.SimLoop.EventWriteBatchIntervalTicks <= 0)
+        {
+            // Legacy mode: write immediately every tick
+            ProcessBatch(world, classifiedBatch);
+        }
+        else
+        {
+            // Batching mode: accumulate events for bulk write
+            _pendingEventBatch.AddRange(classifiedBatch);
+            _ticksSinceLastWrite++;
+
+            if (_ticksSinceLastWrite >= _config.SimLoop.EventWriteBatchIntervalTicks)
+                FlushPendingEvents(world);
+        }
+    }
+
+    /// <summary>
+    /// Writes accumulated events to the database and clears the pending batch.
+    /// Called periodically (based on EventWriteBatchIntervalTicks) or on explicit flush.
+    /// </summary>
+    public void FlushPendingEvents(WorldState world)
+    {
+        if (_pendingEventBatch.Count == 0)
+        {
+            _ticksSinceLastWrite = 0;
+            return;
+        }
+
+        ProcessBatch(world, _pendingEventBatch);
+        _pendingEventBatch.Clear();
+        _ticksSinceLastWrite = 0;
+    }
+
+    private void ProcessBatch(WorldState world, List<(PendingEvent Pe, SimEvent Ev)> batch)
+    {
+        // Step 1: DB — single transaction writes events + causal edges + entity refs
         var inserted = _eventStore.BatchWriteAll(batch);
 
-        // Step 3: Update OriginEventId on matching ActiveDisasters (WorldState mutation, no DB)
+        // Step 2: Update OriginEventId on matching ActiveDisasters (WorldState mutation, no DB)
         UpdateActiveDisasterOrigins(world, batch, inserted);
 
-        // Step 4: Cache (ALWAYS after DB)
+        // Step 3: Cache (ALWAYS after DB)
         foreach (var ev in inserted)
             _eventCache.Add(ev);
     }
