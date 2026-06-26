@@ -38,9 +38,10 @@ public static partial class CivTracker
         declCiv.WarsAgainst[targCiv.Id] = world.CurrentYear;
         targCiv.WarsAgainst[declCiv.Id] = world.CurrentYear;
 
-        // Track war count for exhaustion scaling
+        // Track war count for exhaustion scaling and cultural trait counters
         declCiv.WarHistory[targCiv.Id] = declCiv.WarHistory.GetValueOrDefault(targCiv.Id, 0) + 1;
         targCiv.WarHistory[declCiv.Id] = targCiv.WarHistory.GetValueOrDefault(declCiv.Id, 0) + 1;
+        declCiv.TotalWarsInitiated++;  // declarer's total war count (for Militaristic trait)
 
         // Trust hit between current rulers even if they've never met — reputation travels
         var declRuler = world.GetEntity(declCiv.RulerId) as Tier1Character;
@@ -65,11 +66,15 @@ public static partial class CivTracker
             _                     => cause
         };
         var eventTile = declRuler?.Location ?? declCiv.CapitalTile;
+        string[]? declarerTraits = declCiv.CulturalTraits.Count > 0
+            ? declCiv.CulturalTraits.ToArray()
+            : null;
         var payload = JsonSerializer.Serialize(new WarDeclaredPayload(
             declCiv.RulerId.Value, declRuler?.Identity.Name ?? declCiv.Name,
             declCiv.Id.Value, declCiv.Name,
             targCiv.Id.Value, targCiv.Name,
-            cause, causeDescription, warNumber));
+            cause, causeDescription, warNumber,
+            DeclarerTraits: declarerTraits));
         var warEntityIds = new[] { declCiv.RulerId.Value };
         var warSecondaryIds = targRuler != null ? new[] { targCiv.RulerId.Value } : null;
         pending.Add(new PendingEvent(EventType.WarDeclared, eventTile, null, payload,

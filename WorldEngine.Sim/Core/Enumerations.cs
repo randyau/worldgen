@@ -81,6 +81,18 @@ public enum DisasterType
     // V2: Plague, Blight, ArmyPresence
 }
 
+public enum CulturalTrait
+{
+    Militaristic,    // high war frequency
+    Expansionist,    // high settlement founding rate
+    Mercantile,      // high merchant trade volume
+    Scholarly,       // high scholar discovery rate
+    Reclusive,       // low inter-civ contact
+    UnstableThrone,  // high succession rate
+    WarWeary,        // repeated war exhaustion cooldowns triggered
+    Resilient,       // survived multiple near-collapses
+}
+
 public enum EventType
 {
     // Environmental (1000–1099) — locked, never renumber
@@ -135,6 +147,7 @@ public enum EventType
     TerritoryExpanded       = 3208,
     TerritoryLost           = 3209,
     ImprovementBuilt        = 3210,
+    CivTraitAcquired        = 3211,   // civ crossed a threshold and earned a cultural trait
 
     // M2+ population events (3400-range)
     SettlementGrew          = 3401,
@@ -239,6 +252,7 @@ public static class VerbClassification
         EventType.TerritoryExpanded  => VerbClass.Transfer,
         EventType.TerritoryLost      => VerbClass.Destruction,
         EventType.ImprovementBuilt   => VerbClass.Creation,
+        EventType.CivTraitAcquired   => VerbClass.Transformation,
         _ => throw new ArgumentOutOfRangeException(nameof(type), type, "No VerbClass mapping")
     };
 }

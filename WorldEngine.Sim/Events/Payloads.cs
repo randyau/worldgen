@@ -45,7 +45,8 @@ internal sealed record WarDeclaredPayload(
     long DeclarerId, string DeclarerName,
     long DeclarerCivId, string DeclarerCivName,
     long TargetCivId, string TargetCivName,
-    string Cause, string CauseDescription, int WarNumber);
+    string Cause, string CauseDescription, int WarNumber,
+    string[]? DeclarerTraits = null);
 
 internal sealed record WarEndedPayload(
     long CivAId, string CivAName, long CivBId, string CivBName,
@@ -93,7 +94,8 @@ internal sealed record SettlementStrainPayload(
 
 internal sealed record SuccessionPayload(
     long PredecessorId, string PredecessorName, int PredecessorOrdinal,
-    long SuccessorId, string SuccessorName, int SuccessorOrdinal);
+    long SuccessorId, string SuccessorName, int SuccessorOrdinal,
+    string[]? CivTraits = null);
 
 internal sealed record SuccessionCrisisPayload(long CivId, string CivName, int CrisisEndYear);
 
@@ -146,6 +148,14 @@ internal sealed record BiomeChangedPayload(string From, string To, float GlobalT
 internal sealed record SeaLevelChangedPayload(float PreviousLevel, float NewLevel, float Delta);
 
 internal sealed record EmptyPayload();
+
+// ─── Cultural Traits (Phase 3.2) ─────────────────────────────────────────────
+
+internal sealed record CivTraitAcquiredPayload(
+    int    CivId,
+    string CivName,
+    string Trait,
+    string Reason);
 
 // ─── Territory / Improvements (Phase 3.0) ────────────────────────────────────
 

@@ -77,6 +77,26 @@ public sealed class Civilization
     /// </summary>
     public int RulerCount { get; set; } = 1;
 
+    // ─── Cultural trait counters (maintained by sim phases; read by EvaluateCulturalTraits) ─────
+
+    /// <summary>Total wars this civ has declared (sum across all enemies). Incremented in StartWarBetween.</summary>
+    public int TotalWarsInitiated { get; set; } = 0;
+
+    /// <summary>Total succession events this civ has had. Incremented in CharacterBehaviorPhase when succession fires.</summary>
+    public int TotalSuccessions { get; set; } = 0;
+
+    /// <summary>Total settlements ever founded by this civ. Incremented in CivTracker.EstablishSettlement.</summary>
+    public int TotalSettlementsFounded { get; set; } = 0;
+
+    /// <summary>Number of times TotalPopulation fell below the near-collapse threshold. Checked annually by EvaluateCulturalTraits.</summary>
+    public int NearCollapseCount { get; set; } = 0;
+
+    /// <summary>Total ScholarDiscovery events by civ members. Incremented in Tier2BehaviorPhase.</summary>
+    public int TotalScholarDiscoveries { get; set; } = 0;
+
+    /// <summary>Permanent cultural traits assigned once thresholds are crossed. Maintained by CivTracker.EvaluateCulturalTraits.</summary>
+    public HashSet<string> CulturalTraits { get; } = new(StringComparer.OrdinalIgnoreCase);
+
     public bool InPeaceCooldownWith(CivId other, int currentYear, int cooldownYears, int warExhaustionPerWar = 0)
     {
         if (!PeaceTreaties.TryGetValue(other, out int peaceYear)) return false;

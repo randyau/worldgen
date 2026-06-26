@@ -263,11 +263,14 @@ public sealed class CharacterBehaviorPhase
                 {
                     civ.RulerId = successorId.Value;
                     civ.RulerCount++;
+                    civ.TotalSuccessions++;
                     var successor = (Tier1Character)world.GetEntity(successorId.Value)!;
                     successor.Identity = successor.Identity with { RulerOrdinal = civ.RulerCount };
+                    string[]? civTraits = civ.CulturalTraits.Count > 0 ? civ.CulturalTraits.ToArray() : null;
                     var succPayload = JsonSerializer.Serialize(new SuccessionPayload(
                         c.Id.Value, c.Identity.Name, c.Identity.RulerOrdinal,
-                        successorId.Value.Value, successor.Identity.Name, civ.RulerCount));
+                        successorId.Value.Value, successor.Identity.Name, civ.RulerCount,
+                        CivTraits: civTraits));
                     pending.Add(new PendingEvent(EventType.SuccessionOccurred, civ.CapitalTile, null,
                         succPayload, new[] { c.Id.Value, successorId.Value.Value },
                         ActorId: successorId.Value.Value, ActorName: successor.Identity.Name, CivId: civ.Id.Value));

@@ -28,5 +28,10 @@ public sealed record SimEvent
     public long CivId { get; init; }
     public string? SettlementName { get; init; }
     public required string PayloadJson { get; init; }
+    /// <summary>
+    /// Float significance score (0.0–1.0). Populated by SignificanceRescoringPass after simulation.
+    /// Enables precise ranking of events within a tier (e.g. "top 10 events of a character's life").
+    /// </summary>
+    public float SignificanceScore { get; init; } = 0f;
     public string? GeneratedProse { get; init; }  // V2: LLM generation
 }

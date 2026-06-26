@@ -96,6 +96,7 @@ public static partial class CivTracker
         if (isColony) civRecord.ColonyCount++;
         else          civRecord.SettlementCount++;
         civRecord.LastSettlementFoundedYear = world.CurrentYear;
+        civRecord.TotalSettlementsFounded++;
 
         // Claim initial territory around the new city
         ClaimInitialTerritory(cmd.Tile, civId, world, pending);

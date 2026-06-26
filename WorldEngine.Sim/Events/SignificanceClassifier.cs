@@ -87,6 +87,7 @@ public static class SignificanceClassifier
             EventType.PhysicianHealed         => PopulationImpact.None,
             EventType.CharacterCrystallized   => PopulationImpact.Minor,
             EventType.ArtisanCrafted          => PopulationImpact.None,
+            EventType.CivTraitAcquired        => PopulationImpact.None,
             _                                 => PopulationImpact.None,
         };
     }
@@ -119,5 +120,28 @@ public static class SignificanceClassifier
         }
         catch { /* malformed JSON — treat as 0 */ }
         return 0f;
+    }
+
+    /// <summary>
+    /// Computes an initial float significance score (0.0–1.0) for an event at creation time.
+    /// The retroactive rescore pass (SignificanceRescoringPass) adds additional bonuses based
+    /// on downstream outcomes.
+    /// </summary>
+    /// <param name="tier">The event's assigned tier.</param>
+    /// <param name="isFirstOfKind">True if this is the first event of its type in the sim.</param>
+    /// <param name="isRuler">True if the primary actor is a civ ruler at time of the event.</param>
+    public static float ComputeSignificanceScore(EventTier tier, bool isFirstOfKind, bool isRuler)
+    {
+        float score = tier switch
+        {
+            EventTier.Headline   => 0.8f,
+            EventTier.Regional   => 0.3f,
+            EventTier.Character  => 0.5f,
+            EventTier.Background => 0.1f,
+            _                    => 0.1f
+        };
+        if (isFirstOfKind) score += 0.1f;
+        if (isRuler)       score += 0.1f;
+        return Math.Min(score, 1.0f);
     }
 }

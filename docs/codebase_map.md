@@ -23,6 +23,7 @@ One-line description of every non-trivial source file. Check here before running
 - `ResourcePressureConfig.cs` — food/water/resource pressure constants
 - `SettlementConfig.cs` — population growth rates, carrying capacity config
 - `BeastsSimConfig.cs / BeastSpawnConfig.cs / CombatConfig.cs` — beast behavior constants
+- `CulturalTraitsConfig.cs` — M3.2: thresholds for assigning CulturalTrait values (Militaristic/Expansionist/etc.)
 - Other `*Config.cs` — per-system TOML sections (Climate, Elevation, Tectonic, etc.)
 
 ## WorldEngine.Sim/Tiles/
@@ -120,11 +121,12 @@ One-line description of every non-trivial source file. Check here before running
 - `RuinRecord.cs / ResourceDeposit.cs`
 
 ## WorldEngine.Sim/Persistence/
-- `EventStore.cs` — SQLite writes: events, entities, causal edges; BuildSummaries() + GetHistoryQuery()
-- `DatabaseSchema.cs` — schema DDL (Events, CausalEdges, CharacterSummaries, CivSummaries, Eras, SuccessionChain, Dynasties)
-- `SummaryBuilder.cs` — M3.1: post-sim pass building CharacterSummaries, CivSummaries, SuccessionChain, Dynasties, Eras
+- `EventStore.cs` — SQLite writes: events, entities, causal edges; BuildSummaries() + GetHistoryQuery(); WriteCivTrait()
+- `DatabaseSchema.cs` — schema DDL (Events+SignificanceScore, CausalEdges, CharacterSummaries, CivSummaries, Eras, SuccessionChain, Dynasties, CivTraits)
+- `SummaryBuilder.cs` — M3.1: post-sim pass building CharacterSummaries, CivSummaries (with CulturalTraits), SuccessionChain, Dynasties, Eras
 - `CausalEdgeBuilder.cs` — M3.1: infers and writes causal edges from event patterns (war chains, disease→abandonment, etc.)
 - `HistoryQueryService.cs` — M3.1: IHistoryQuery implementation backed by SQLite summary tables; small LRU cache
+- `SignificanceRescoringPass.cs` — M3.2: retroactive significance pass; upgrades tiers for long-lived settlements/conquests; populates SignificanceScore float column
 
 ## WorldEngine.Sim/Vendor/
 - `FastNoiseLite.cs` (~2505 lines) — **do not read or edit** — vendored noise library
@@ -137,6 +139,8 @@ One-line description of every non-trivial source file. Check here before running
 - xUnit test suite; mirrors Sim folder structure
 - Key files: reproducibility tests, integration tests per phase, world gen tests
 - `Integration/HistoryQueryTests.cs` — M3.1: SummaryBuilder, SuccessionChain, and HistoryQueryService integration tests
+- `Integration/CulturalTraitsTests.cs` — M3.2: CulturalTrait enum, EvaluateCulturalTraits logic, CivTraitAcquired event generation
+- `Integration/SignificanceScoringTests.cs` — M3.2: ComputeSignificanceScore, SignificanceRescoringPass tier upgrades and score population
 
 ## docs/perf/
 - `notes_m3.md` — M3 performance profiling notes and gate status

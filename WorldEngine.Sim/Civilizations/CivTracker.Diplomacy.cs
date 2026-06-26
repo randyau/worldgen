@@ -78,6 +78,9 @@ public static partial class CivTracker
         // 5b. City expansion decisions: rulers delegate FoundCity goals to ambitious members.
         RunCityExpansionDecisions(world, pending);
 
+        // 5c. Cultural trait evaluation: assign permanent traits when thresholds are crossed.
+        EvaluateCulturalTraits(world, pending);
+
         // 6. Civ-level war resolution: expiry, surrender, and collapse
         var processed = new HashSet<(CivId, CivId)>();
         foreach (var civ in world.Civilizations.Values)
@@ -429,4 +432,105 @@ public static partial class CivTracker
 
     private static CivId Min(CivId a, CivId b) => a.Value < b.Value ? a : b;
     private static CivId Max(CivId a, CivId b) => a.Value > b.Value ? a : b;
+
+    // ─── Cultural trait evaluation ────────────────────────────────────────────
+
+    /// <summary>
+    /// Annual evaluation pass: assigns permanent cultural traits to civs that have crossed
+    /// historical thresholds. Traits are never removed once assigned.
+    /// Fires CivTraitAcquired events for new assignments.
+    /// </summary>
+    private static void EvaluateCulturalTraits(WorldState world, List<PendingEvent> pending)
+    {
+        var cfg = world.SimConfig.CulturalTraits;
+
+        foreach (var (_, civ) in world.Civilizations)
+        {
+            if (civ.IsCollapsed) continue;
+            int yearsElapsed = world.CurrentYear - civ.FoundedYear;
+            if (yearsElapsed < 10) continue;  // not enough history to classify
+
+            // Track near-collapse each year (TotalPopulation refreshed by PopulationDynamicsPhase)
+            if (civ.TotalPopulation > 0 && civ.TotalPopulation < cfg.ResilientNearCollapsePopThreshold)
+                civ.NearCollapseCount++;
+
+            TryAssignTrait(civ, CulturalTrait.Militaristic, world, pending,
+                MilitaristicQualifies(civ, yearsElapsed, cfg));
+
+            TryAssignTrait(civ, CulturalTrait.Expansionist, world, pending,
+                ExpansionistQualifies(civ, yearsElapsed, cfg));
+
+            TryAssignTrait(civ, CulturalTrait.WarWeary, world, pending,
+                WarWearyQualifies(civ, cfg));
+
+            TryAssignTrait(civ, CulturalTrait.Resilient, world, pending,
+                ResilientQualifies(civ, cfg));
+
+            TryAssignTrait(civ, CulturalTrait.Scholarly, world, pending,
+                civ.TotalScholarDiscoveries >= cfg.ScholarlyMinDiscoveries);
+
+            TryAssignTrait(civ, CulturalTrait.UnstableThrone, world, pending,
+                UnstableThroneQualifies(civ, yearsElapsed, cfg));
+        }
+    }
+
+    private static void TryAssignTrait(
+        Civilization civ, CulturalTrait trait,
+        WorldState world, List<PendingEvent> pending,
+        bool qualifies)
+    {
+        if (!qualifies) return;
+        string traitName = trait.ToString();
+        if (!civ.CulturalTraits.Add(traitName)) return;  // already assigned — no duplicate event
+
+        string reason = trait switch
+        {
+            CulturalTrait.Militaristic   => $"initiated {civ.TotalWarsInitiated} total wars",
+            CulturalTrait.Expansionist   => $"founded {civ.TotalSettlementsFounded} settlements",
+            CulturalTrait.WarWeary       => "repeatedly exhausted by wars against the same rival",
+            CulturalTrait.Resilient      => $"survived {civ.NearCollapseCount} near-collapse episode(s)",
+            CulturalTrait.Scholarly      => $"made {civ.TotalScholarDiscoveries} scholarly discoveries",
+            CulturalTrait.UnstableThrone => $"had {civ.TotalSuccessions} successions in recent history",
+            _                            => "threshold crossed"
+        };
+
+        var payload = JsonSerializer.Serialize(new CivTraitAcquiredPayload(
+            (int)civ.Id.Value, civ.Name, traitName, reason));
+        pending.Add(new PendingEvent(EventType.CivTraitAcquired, civ.CapitalTile, null, payload,
+            CivId: civ.Id.Value));
+    }
+
+    private static bool MilitaristicQualifies(Civilization civ, int yearsElapsed, CulturalTraitsConfig cfg)
+    {
+        if (civ.TotalWarsInitiated < cfg.MilitaristicMinWars) return false;
+        float decades = yearsElapsed / 10f;
+        return decades > 0 && (civ.TotalWarsInitiated / decades) >= cfg.MilitaristicWarsPerDecade;
+    }
+
+    private static bool ExpansionistQualifies(Civilization civ, int yearsElapsed, CulturalTraitsConfig cfg)
+    {
+        if (yearsElapsed < cfg.ExpansionistSustainedYears) return false;
+        float rate = civ.TotalSettlementsFounded / (yearsElapsed / 10f);
+        return rate >= cfg.ExpansionistFoundingRate;
+    }
+
+    private static bool WarWearyQualifies(Civilization civ, CulturalTraitsConfig cfg)
+    {
+        foreach (var count in civ.WarHistory.Values)
+            if (count >= cfg.WarWearyMinRepeatWars) return true;
+        return false;
+    }
+
+    private static bool ResilientQualifies(Civilization civ, CulturalTraitsConfig cfg)
+        => civ.NearCollapseCount >= cfg.ResilientMinNearCollapseCount;
+
+    private static bool UnstableThroneQualifies(Civilization civ, int yearsElapsed, CulturalTraitsConfig cfg)
+    {
+        // DECISION: uses TotalSuccessions as proxy; a proper rolling window would require
+        // per-succession year tracking which adds significant state. This approximation
+        // checks if rate-over-lifetime exceeds the per-window threshold.
+        if (yearsElapsed < cfg.UnstableThroneYears) return false;
+        float windows = yearsElapsed / (float)cfg.UnstableThroneYears;
+        return civ.TotalSuccessions / windows >= cfg.UnstableThroneMinSuccessions;
+    }
 }

@@ -286,6 +286,14 @@ public sealed class Tier2BehaviorPhase
             world.Settlements[c.Livelihood.SettlementTile] = homeStub with { ResourceStores = stores };
         }
 
+        // Increment civ-level discovery counter for cultural trait evaluation
+        if (c.Livelihood.SettlementTile != default
+            && world.Settlements.TryGetValue(c.Livelihood.SettlementTile, out var scholarHome)
+            && world.Civilizations.TryGetValue(scholarHome.CivId, out var scholarCiv))
+        {
+            scholarCiv.TotalScholarDiscoveries++;
+        }
+
         // Notable event: only when cooldown has cleared (most scholarly work is routine)
         var payload = JsonSerializer.Serialize(new ScholarDiscoveryPayload(
             c.Id.Value, c.Name, discovery.ToString(), bonusKey, _cfg.ScholarDiscoveryBonusAmount));

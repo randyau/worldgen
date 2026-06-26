@@ -22,9 +22,14 @@ public static class DatabaseSchema
             ActorName        TEXT,
             CivId            INTEGER,
             SettlementName   TEXT,
-            PayloadJson      TEXT    NOT NULL
+            PayloadJson      TEXT    NOT NULL,
+            SignificanceScore REAL   NOT NULL DEFAULT 0
         );
         """;
+
+    /// <summary>Migration: adds SignificanceScore to existing Events tables that predate Phase 3.2.</summary>
+    public const string MigrateEventsAddSignificanceScore =
+        "ALTER TABLE Events ADD COLUMN SignificanceScore REAL NOT NULL DEFAULT 0;";
 
     public const string CreateEventEntities = """
         CREATE TABLE IF NOT EXISTS EventEntities (
@@ -155,6 +160,15 @@ public static class DatabaseSchema
             e.IsGodMode,
             e.PayloadJson
         FROM Events e;
+        """;
+
+    public const string CreateCivTraits = """
+        CREATE TABLE IF NOT EXISTS CivTraits (
+            CivId   INTEGER,
+            Trait   TEXT,
+            YearSet INTEGER,
+            PRIMARY KEY (CivId, Trait)
+        );
         """;
 
     // Indexes

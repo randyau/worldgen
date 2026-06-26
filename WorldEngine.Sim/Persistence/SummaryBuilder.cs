@@ -299,6 +299,16 @@ public static class SummaryBuilder
             catch (JsonException) { /* skip */ }
         }
 
+        // Cultural traits per civ from CivTraits table (populated during sim by EvaluateCulturalTraits)
+        var traitsByCiv = new Dictionary<long, List<string>>();
+        foreach (var row in conn.Query<(long CivId, string Trait)>(
+            "SELECT CivId, Trait FROM CivTraits ORDER BY CivId, YearSet"))
+        {
+            if (!traitsByCiv.TryGetValue(row.CivId, out var list))
+                traitsByCiv[row.CivId] = list = new List<string>();
+            list.Add(row.Trait);
+        }
+
         // Succession counts and last-ruler names per civ
         var ruleCount    = new Dictionary<long, int>();
         var lastRuler    = new Dictionary<long, string>();
@@ -359,7 +369,9 @@ public static class SummaryBuilder
                 TotalWarsSuffered  = warsSuffered.GetValueOrDefault(civId, 0),
                 TotalYearsAtWar    = yearAtWar.GetValueOrDefault(civId, 0),
                 DominantAncestry   = (string?)null, // DECISION: ancestry tracking deferred to Phase 3.3
-                CulturalTraits     = "[]",
+                CulturalTraits     = traitsByCiv.TryGetValue(civId, out var traits)
+                                         ? System.Text.Json.JsonSerializer.Serialize(traits)
+                                         : "[]",
                 FirstRulerName     = firstRuler,
                 LastRulerName      = lastRuler.TryGetValue(civId, out string? lr) ? lr : firstRuler
             }, tx);

@@ -931,3 +931,30 @@ suffixes = [
     "reach", "moor", "cliff", "pass", "watch", "crest", "grove", "hollow",
     "peak", "ridge", "bridge", "mill", "shore", "keep", "mark", "lea"
 ]
+
+[cultural_traits]
+# Militaristic: civ must have initiated this many total wars
+militaristic_min_wars         = 10
+# AND average more than this many wars per decade
+militaristic_wars_per_decade  = 2.0
+
+# Expansionist: civ must average > this many settlement foundings per 10 years
+expansionist_founding_rate    = 1.0
+# ...sustained over at least this many years
+expansionist_sustained_years  = 30
+
+# WarWeary: any single enemy must appear in war history this many times
+war_weary_min_repeat_wars     = 3
+
+# Resilient: civ must have survived this many near-collapse episodes
+resilient_min_near_collapse_count     = 1
+# Near-collapse = total population dropped below this threshold
+resilient_near_collapse_pop_threshold = 20
+
+# Scholarly: civ members must have made this many total scholar discoveries
+scholarly_min_discoveries     = 5
+
+# UnstableThrone: this many successions in the rolling window qualifies
+unstable_throne_min_successions = 5
+# Rolling window size in years
+unstable_throne_years           = 50

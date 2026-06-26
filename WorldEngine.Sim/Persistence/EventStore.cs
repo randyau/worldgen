@@ -48,6 +48,7 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
         _conn.Execute(DatabaseSchema.CreateEras);
         _conn.Execute(DatabaseSchema.CreateSuccessionChain);
         _conn.Execute(DatabaseSchema.CreateDynasties);
+        _conn.Execute(DatabaseSchema.CreateCivTraits);
         _conn.Execute(DatabaseSchema.CreateViewReadable);
         _conn.Execute(DatabaseSchema.CreateIndexYear);
         _conn.Execute(DatabaseSchema.CreateIndexType);
@@ -56,6 +57,11 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
         _conn.Execute(DatabaseSchema.CreateIndexCivId);
         _conn.Execute(DatabaseSchema.CreateIndexActorId);
         _conn.Execute(DatabaseSchema.CreateIndexEventEntities);
+
+        // Migration: add SignificanceScore column to existing databases that predate Phase 3.2.
+        // SQLite does not support ALTER TABLE ADD COLUMN IF NOT EXISTS, so we catch the error.
+        try { _conn.Execute(DatabaseSchema.MigrateEventsAddSignificanceScore); }
+        catch (Microsoft.Data.Sqlite.SqliteException) { /* column already exists */ }
     }
 
     /// <summary>
@@ -88,9 +94,10 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
                 IsGodMode        = ev.IsGodMode ? 1 : 0,
                 ActorId          = ev.ActorId == 0 ? (long?)null : ev.ActorId,
                 ev.ActorName,
-                CivId            = ev.CivId == 0 ? (long?)null : ev.CivId,
+                CivId             = ev.CivId == 0 ? (long?)null : ev.CivId,
                 ev.SettlementName,
-                ev.PayloadJson
+                ev.PayloadJson,
+                ev.SignificanceScore
             }, tx);
             result.Add(ev with { Id = new EventId(id) });
         }
@@ -152,9 +159,10 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
                 IsGodMode        = ev.IsGodMode ? 1 : 0,
                 ActorId          = ev.ActorId == 0 ? (long?)null : ev.ActorId,
                 ev.ActorName,
-                CivId            = ev.CivId == 0 ? (long?)null : ev.CivId,
+                CivId             = ev.CivId == 0 ? (long?)null : ev.CivId,
                 ev.SettlementName,
-                ev.PayloadJson
+                ev.PayloadJson,
+                ev.SignificanceScore
             }, tx);
             result.Add(ev with { Id = new EventId(id) });
         }
@@ -167,11 +175,11 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
         INSERT INTO Events
             (Type, TypeName, Domain, Year, Season, Tick, LocationX, LocationY,
              TierInvolvement, VerbClass, PopulationImpact, IsFirstOfKind, IsGodMode,
-             ActorId, ActorName, CivId, SettlementName, PayloadJson)
+             ActorId, ActorName, CivId, SettlementName, PayloadJson, SignificanceScore)
         VALUES
             (@Type, @TypeName, @Domain, @Year, @Season, @Tick, @LocationX, @LocationY,
              @TierInvolvement, @VerbClass, @PopulationImpact, @IsFirstOfKind, @IsGodMode,
-             @ActorId, @ActorName, @CivId, @SettlementName, @PayloadJson);
+             @ActorId, @ActorName, @CivId, @SettlementName, @PayloadJson, @SignificanceScore);
         SELECT last_insert_rowid();
         """;
 
@@ -204,6 +212,7 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
     /// <summary>
     /// Builds all pre-aggregated summary tables (CharacterSummaries, CivSummaries, Eras,
     /// SuccessionChain, Dynasties) and populates inferred CausalEdges from event patterns.
+    /// Also runs the retroactive significance rescore pass.
     /// Call once at end of sim or on demand.
     /// </summary>
     public void BuildSummaries()
@@ -214,6 +223,19 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
         SummaryBuilder.BuildDynasties(_conn);
         SummaryBuilder.BuildEras(_conn);
         CausalEdgeBuilder.BuildCausalEdges(_conn);
+        SignificanceRescoringPass.Run(_conn);
+    }
+
+    /// <summary>
+    /// Writes a cultural trait assignment for a civilization into the CivTraits table.
+    /// Called by CivTracker when a new trait is assigned so the DB stays in sync.
+    /// </summary>
+    public void WriteCivTrait(long civId, string trait, int year)
+    {
+        _conn.Execute("""
+            INSERT OR IGNORE INTO CivTraits (CivId, Trait, YearSet)
+            VALUES (@CivId, @Trait, @Year);
+            """, new { CivId = civId, Trait = trait, Year = year });
     }
 
     /// <summary>
@@ -320,6 +342,7 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
         _conn.Execute("DELETE FROM Eras;");
         _conn.Execute("DELETE FROM SuccessionChain;");
         _conn.Execute("DELETE FROM Dynasties;");
+        _conn.Execute("DELETE FROM CivTraits;");
         _conn.Execute("PRAGMA wal_checkpoint(TRUNCATE);");
     }
 
@@ -330,7 +353,7 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
     private const string SelectColumns =
         "SELECT Id, Type, TypeName, Domain, Year, Season, Tick, LocationX, LocationY, " +
         "TierInvolvement, VerbClass, PopulationImpact, IsFirstOfKind, IsGodMode, " +
-        "ActorId, ActorName, CivId, SettlementName, PayloadJson FROM Events";
+        "ActorId, ActorName, CivId, SettlementName, PayloadJson, SignificanceScore FROM Events";
 
     private IEnumerable<SimEvent> Query(string sql, object param) =>
         _conn.Query<EventRow>(sql, param).Select(MapRow).ToList();
@@ -356,7 +379,8 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
         ActorName        = r.ActorName,
         CivId            = r.CivId ?? 0,
         SettlementName   = r.SettlementName,
-        PayloadJson      = r.PayloadJson
+        PayloadJson      = r.PayloadJson,
+        SignificanceScore = r.SignificanceScore
     };
 
     private sealed class EventRow
@@ -380,5 +404,6 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
         public long? CivId { get; init; }
         public string? SettlementName { get; init; }
         public string PayloadJson { get; init; } = "{}";
+        public float SignificanceScore { get; init; }
     }
 }
