@@ -604,7 +604,7 @@ starvation_health_loss     = 5     # health points lost per season when FoodNeed
 # =============================================================================
 
 [character]
-initial_count             = 20
+initial_count             = 14
 max_age_seasons_min       = 80
 max_age_seasons_max       = 200
 max_health                = 100
@@ -619,7 +619,7 @@ expansion_home_penalty    = 120   # tile score penalty applied to own-civ settle
 expansion_empty_tile_bonus = 80   # tile score bonus for tiles outside every settlement's hinterland when Expansion goal is active
 expansion_compactness_radius = 8  # max tile distance from a same-civ settlement that earns the compactness bonus
 expansion_compactness_bonus  = 60 # bonus added when an unclaimed tile is near an existing same-civ settlement (encourages blob growth)
-max_settlements_per_civ      = 20 # hard cap on local settlements per civ; expansion goals stop forming once reached
+max_settlements_per_civ      = 5  # hard cap on local settlements per civ; at 10 sq km/tile civs are city-states, not village networks
 
 # Colonization — separate long-range founding goal
 colony_min_distance         = 25   # tiles from nearest same-civ settlement for a tile to be "frontier"
@@ -647,7 +647,7 @@ softmax_temp_max          = 2.0
 perception_radius         = 3
 health_per_season_heal    = 5
 combat_damage_base        = 20
-min_fertility_to_settle      = 60   # reduced from 100 — more tiles qualify for expansion
+min_fertility_to_settle      = 90   # only genuinely fertile land gets settled; prevents every mediocre tile from being claimed
 min_base_moisture_to_settle  = 15     # minimum BaseMoisture (0-255) required to found a settlement; prevents founding in climatically arid tiles
 deposit_settle_threshold     = 0.5    # min deposit value to settle despite low fertility
 deposit_score_multiplier     = 0.5    # how much deposit value boosts establish score
@@ -684,11 +684,11 @@ bond_max_base                 = 1
 bond_max_per_compassion       = 2
 
 hinterland_drain_factor          = 0.5   # effective fertility multiplier inside same-civ hinterland (0.5 = half claimed)
-base_founding_cooldown_years     = 8     # base cooldown between same-civ settlements (scales down with pop)
-min_founding_cooldown_years      = 2     # floor — even the largest civ can't expand instantly
-founding_cooldown_pop_scale      = 2000  # civ pop at which cooldown halves (20y→10y, 10y→5y, etc.)
+base_founding_cooldown_years     = 30    # base cooldown between same-civ settlements; slow organic expansion
+min_founding_cooldown_years      = 8     # floor — even large civs can't expand faster than once per 8 years
+founding_cooldown_pop_scale      = 3000  # civ pop at which cooldown halves (30y→15y at 3k, →7.5y at 6k)
 civ_birth_min_pop            = 20   # lowered from 30; settlements reach this faster with improved farming
-civ_birth_chance_per_season = 0.03  # reduced from 0.05; fewer chars = leaner relationship graph and less war volume
+civ_birth_chance_per_season = 0.01  # 1% per year at min-pop; keeps character count manageable for performance
 # Territorial aggression: aggressive founders drain trust from foreign visitors on their settlement tile
 territorial_aggression_min    = 0.55  # chars below this aggression don't apply pressure
 territorial_trust_drain       = 0.025 # trust lost per tick; ~-0.1 in 1 season → rivalry within a year
@@ -810,26 +810,26 @@ pop_decay_rate              = 0.05  # population lost per season unconditionally
 starvation_decay_rate       = 0.3   # extra decay per unit food deficit when food < shortage_threshold
 famine_decay_rate           = 0.8   # extra decay per unit food deficit when food < crisis_threshold
 pop_min_viable              = 5     # below this → settlement abandoned
-pop_max                     = 50000 # absolute hard cap (biome carrying capacity usually binds first)
+pop_max                     = 8000  # hard cap; at 10 sq km/tile a single settlement over 8k is already a major city
 fertility_variance          = 0.15  # per-settlement founding-time multiplier range (±this around 1.0)
 
 # Biome carrying capacity: population supported per reach tile, by biome type.
 # Sums across all land tiles in the settlement's reach to compute a soft population ceiling.
 # Logistic suppression makes growth decelerate as population approaches this ceiling.
-carry_cap_grassland           = 200
-carry_cap_plains              = 160
-carry_cap_tropical_rainforest = 180
-carry_cap_savanna             = 80
-carry_cap_temperate_forest    = 120
-carry_cap_boreal_forest       = 50
-carry_cap_swamp               = 60
-carry_cap_beach               = 40
-carry_cap_mountain            = 30
-carry_cap_high_mountain       = 10
-carry_cap_desert              = 15
-carry_cap_volcanic            = 50
-carry_cap_default             = 60
-carry_cap_minimum             = 50  # floor: even the poorest biome supports a small community
+carry_cap_grassland           = 80   # ~20-25 people/sq km in pre-industrial farmland; radius-2 hinterland → ~1000 cap
+carry_cap_plains              = 65
+carry_cap_tropical_rainforest = 70
+carry_cap_savanna             = 32
+carry_cap_temperate_forest    = 48
+carry_cap_boreal_forest       = 20
+carry_cap_swamp               = 24
+carry_cap_beach               = 16
+carry_cap_mountain            = 12
+carry_cap_high_mountain       = 4
+carry_cap_desert              = 6
+carry_cap_volcanic            = 20
+carry_cap_default             = 24
+carry_cap_minimum             = 20  # floor: even the poorest biome supports a small community
 
 # Disease outbreaks — annual probability; spreads between nearby settlements; drains population while active
 # Risk concentrates in dense cities; small remote settlements are largely immune.
