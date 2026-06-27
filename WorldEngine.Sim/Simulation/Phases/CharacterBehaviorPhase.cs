@@ -450,6 +450,22 @@ public sealed class CharacterBehaviorPhase
                 float modifierAB = registry.GetFirstMeetingTrust(c.Identity.AncestryId, other.Identity.AncestryId);
                 float modifierBA = registry.GetFirstMeetingTrust(other.Identity.AncestryId, c.Identity.AncestryId);
                 trust += (modifierAB + modifierBA) * 0.5f;
+
+                // Seed cross-civ awareness: both civs learn of each other at WandererMet fidelity
+                float encounterGain = _simCfg.Emissary.EncounterConfidenceGain;
+                if (c.Identity.CivId.IsValid && other.Identity.CivId.IsValid)
+                {
+                    if (world.Civilizations.TryGetValue(other.Identity.CivId, out var otherCiv))
+                    {
+                        CivTracker.SeedCivContact(c.Identity.CivId, other.Identity.CivId,
+                            CivContactSource.WandererMet, otherCiv.CapitalTile, encounterGain, world);
+                    }
+                    if (world.Civilizations.TryGetValue(c.Identity.CivId, out var cCiv))
+                    {
+                        CivTracker.SeedCivContact(other.Identity.CivId, c.Identity.CivId,
+                            CivContactSource.WandererMet, cCiv.CapitalTile, encounterGain, world);
+                    }
+                }
             }
 
             // Cultural distance drain — proportional to how different the ancestries are

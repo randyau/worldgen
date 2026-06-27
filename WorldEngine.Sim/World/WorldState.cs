@@ -41,6 +41,13 @@ public sealed class WorldState : IWorldStateReadOnly
     /// <summary>Deferred mythological beast emergence schedule. Processed annually.</summary>
     public List<(int EmergenceYear, string SpeciesId)> BeastEmergenceSchedule { get; } = new();
 
+    /// <summary>
+    /// Emissaries currently in transit. Resolved annually in CivTracker.RunEmissaryResolution
+    /// when their ArrivalYear equals CurrentYear. Canonical list — ActiveEmissaryCountByTarget
+    /// on each Civilization is the per-civ index for cap checks.
+    /// </summary>
+    public List<PendingEmissary> PendingEmissaries { get; } = new();
+
     // === CIVILIZATION / CHARACTER STATE ===
     public Dictionary<CivId, Civilization>        Civilizations   { get; } = new();
     public Dictionary<TileCoord, SettlementStub>  Settlements     { get; } = new();

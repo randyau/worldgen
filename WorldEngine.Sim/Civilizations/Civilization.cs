@@ -104,6 +104,20 @@ public sealed class Civilization
     /// </summary>
     public CulturalProfile? CulturalProfile { get; set; }
 
+    // ─── Civ awareness / emissary system (M4.1) ──────────────────────────────
+
+    /// <summary>
+    /// Civs this civ has knowledge of. Keyed by the known civ's id.
+    /// Populated by KnowledgePropagationPhase; read by emissary dispatch.
+    /// </summary>
+    public Dictionary<CivId, CivContact> KnownCivs { get; } = new();
+
+    /// <summary>
+    /// Emissaries currently in transit dispatched BY this civ, keyed by target CivId.
+    /// Stored here for per-civ cap checks; canonical list is WorldState.PendingEmissaries.
+    /// </summary>
+    public Dictionary<CivId, int> ActiveEmissaryCountByTarget { get; } = new();
+
     public bool InPeaceCooldownWith(CivId other, int currentYear, int cooldownYears, int warExhaustionPerWar = 0)
     {
         if (!PeaceTreaties.TryGetValue(other, out int peaceYear)) return false;
