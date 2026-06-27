@@ -54,6 +54,10 @@ public static partial class CivTracker
 
         // 3. Border tension: accumulate territorial pressure; declare war if threshold crossed
         RunBorderTension(world, pending);
+        // 3b. Territory-adjacency tension: adjacent territory tiles build conflict pressure
+        RunTerritoryBorderTension(world, pending);
+        // 3c. Annual war campaigns: one abstract battle attempt per active war per year
+        RunWarCampaigns(world, pending);
 
         // 4. Succession crisis: if no living ruler exists AND no succession occurred this year,
         //    flag distant settlements. (Normal succession is handled immediately in KillCharacter.)
@@ -305,12 +309,31 @@ public static partial class CivTracker
     /// <summary>
     /// Ends a war between two civs, records a peace treaty on both sides, and fires the event.
     /// Safe to call regardless of which side initiated; handles asymmetric state gracefully.
+    /// Transfers border territory from the loser to the winner proportional to battle advantage.
     /// </summary>
-    private static void EndWarBetween(
+    internal static void EndWarBetween(
         CivId civA, CivId civB, string reason, WorldState world, List<PendingEvent> pending)
     {
         if (!world.Civilizations.TryGetValue(civA, out var ca)) return;
         if (!world.Civilizations.TryGetValue(civB, out var cb)) return;
+
+        // Territory transfer based on battle wins accrued during the war
+        int aWins = ca.WarBattleWins.GetValueOrDefault(civB, 0);
+        int bWins = cb.WarBattleWins.GetValueOrDefault(civA, 0);
+        int advantage = aWins - bWins;
+
+        if (Math.Abs(advantage) >= 1)
+        {
+            var wCfg = world.SimConfig.War;
+            (CivId winner, CivId loser) = advantage > 0 ? (civA, civB) : (civB, civA);
+            int tilesToTransfer = Math.Min(Math.Abs(advantage) * wCfg.TilesPerBattleWin,
+                                           wCfg.MaxTilesTransferredPerWar);
+            TransferBorderTiles(winner, loser, tilesToTransfer, world, pending);
+        }
+
+        // Reset per-war battle win counters
+        ca.WarBattleWins.Remove(civB);
+        cb.WarBattleWins.Remove(civA);
 
         ca.WarsAgainst.Remove(civB);
         cb.WarsAgainst.Remove(civA);
@@ -425,6 +448,153 @@ public static partial class CivTracker
         t *= (1f - rate);
         if (t < 0.01f) tension.Remove(key);
         else tension[key] = t;
+    }
+
+    // ─── Territory-adjacency border tension (M4.2) ────────────────────────────
+
+    /// <summary>
+    /// Scans every tile in the territory map and accrues border tension between civs whose
+    /// territory tiles share an edge. Works independently of city-proximity tension.
+    /// Only counts each pair once by requiring the lower-Id civ's tile to initiate.
+    /// </summary>
+    private static void RunTerritoryBorderTension(WorldState world, List<PendingEvent> pending)
+    {
+        float tensionRate = world.SimConfig.War.TerritoryTensionPerAdjacentPair;
+        int w = world.TileGrid.TileWidth;
+        int h = world.TileGrid.TileHeight;
+        ReadOnlySpan<(int dx, int dy)> neighbors = [(1, 0), (0, 1), (-1, 0), (0, -1)];
+
+        foreach (var (tile, cityTile) in world.TerritoryMap)
+        {
+            if (!world.Settlements.TryGetValue(cityTile, out var ownerStub)) continue;
+            var ownerCivId = ownerStub.CivId;
+
+            foreach (var (dx, dy) in neighbors)
+            {
+                int nx = ((tile.X + dx) % w + w) % w;
+                int ny = tile.Y + dy;
+                if (ny < 0 || ny >= h) continue;
+                var nCoord = new TileCoord(nx, ny);
+
+                if (!world.TerritoryMap.TryGetValue(nCoord, out var nCityTile)) continue;
+                if (!world.Settlements.TryGetValue(nCityTile, out var nStub)) continue;
+                var nCivId = nStub.CivId;
+
+                if (nCivId == ownerCivId) continue;
+                // Count each pair once: only process when this tile's civ has the lower Id
+                if (ownerCivId.Value > nCivId.Value) continue;
+
+                if (!world.Civilizations.TryGetValue(ownerCivId, out var civA)) continue;
+                if (!world.Civilizations.TryGetValue(nCivId, out var civB)) continue;
+
+                // Don't accrue tension if already at war — war is the outcome, not the cause
+                if (civA.IsAtWarWith(nCivId)) continue;
+
+                civA.BorderTension[nCivId] = civA.BorderTension.GetValueOrDefault(nCivId, 0f) + tensionRate;
+                civB.BorderTension[ownerCivId] = civB.BorderTension.GetValueOrDefault(ownerCivId, 0f) + tensionRate;
+            }
+        }
+        // War declaration from the accumulated tension is handled in the next call to RunBorderTension
+    }
+
+    /// <summary>
+    /// Transfers up to <paramref name="count"/> border tiles from the loser's territory to the winner's.
+    /// Picks tiles on the loser's border adjacent to the winner's territory, sorted by proximity
+    /// to the loser's capital (closest tiles are most painful to lose — most strategically significant).
+    /// Emits TerritoryLost for the loser and TerritoryExpanded for the winner.
+    /// </summary>
+    private static void TransferBorderTiles(
+        CivId winnerCivId, CivId loserCivId, int count,
+        WorldState world, List<PendingEvent> pending)
+    {
+        if (!world.Civilizations.TryGetValue(winnerCivId, out var winner)) return;
+        if (!world.Civilizations.TryGetValue(loserCivId, out var loser)) return;
+        if (count <= 0) return;
+
+        int w = world.TileGrid.TileWidth;
+        int h = world.TileGrid.TileHeight;
+        ReadOnlySpan<(int dx, int dy)> neighbors = [(1, 0), (0, 1), (-1, 0), (0, -1)];
+
+        // Find loser's border tiles adjacent to winner's territory
+        var candidates = new List<(TileCoord tile, TileCoord loserCity, float distToLoserCapital)>();
+        foreach (var (tile, cityTile) in world.TerritoryMap)
+        {
+            if (!world.Settlements.TryGetValue(cityTile, out var stub)) continue;
+            if (stub.CivId != loserCivId) continue;
+
+            bool adjacentToWinner = false;
+            foreach (var (dx, dy) in neighbors)
+            {
+                int nx = ((tile.X + dx) % w + w) % w;
+                int ny = tile.Y + dy;
+                if (ny < 0 || ny >= h) continue;
+                var nc = new TileCoord(nx, ny);
+                if (!world.TerritoryMap.TryGetValue(nc, out var nCity)) continue;
+                if (!world.Settlements.TryGetValue(nCity, out var nStub)) continue;
+                if (nStub.CivId == winnerCivId) { adjacentToWinner = true; break; }
+            }
+            if (!adjacentToWinner) continue;
+
+            // Sort by distance to loser capital — closest = highest strategic value to lose
+            int cdx = tile.X - loser.CapitalTile.X, cdy = tile.Y - loser.CapitalTile.Y;
+            float dist = MathF.Sqrt(cdx * cdx + cdy * cdy);
+            candidates.Add((tile, cityTile, dist));
+        }
+
+        if (candidates.Count == 0) return;
+
+        // Sort ascending by distance to loser capital (closest first)
+        candidates.Sort((a, b) => a.distToLoserCapital.CompareTo(b.distToLoserCapital));
+
+        int toTransfer = Math.Min(count, candidates.Count);
+
+        // Find nearest winner city (for assignment of transferred tiles)
+        TileCoord winnerCity = winner.CapitalTile;
+        float nearestWinnerDist = float.MaxValue;
+        foreach (var cityTile in winner.CityTerritories.Keys)
+        {
+            int dx = cityTile.X - loser.CapitalTile.X, dy = cityTile.Y - loser.CapitalTile.Y;
+            float d = MathF.Sqrt(dx * dx + dy * dy);
+            if (d < nearestWinnerDist) { nearestWinnerDist = d; winnerCity = cityTile; }
+        }
+
+        // Transfer each candidate tile
+        var loserCityCountLost = new Dictionary<TileCoord, int>();
+        for (int i = 0; i < toTransfer; i++)
+        {
+            var (tile, loserCity, _) = candidates[i];
+
+            // Remove from loser
+            if (loser.CityTerritories.TryGetValue(loserCity, out var loserTiles))
+                loserTiles.Remove(tile);
+            world.TerritoryMap.Remove(tile);
+
+            // Add to winner
+            if (!winner.CityTerritories.TryGetValue(winnerCity, out var winnerTiles))
+                winner.CityTerritories[winnerCity] = winnerTiles = new HashSet<TileCoord>();
+            winnerTiles.Add(tile);
+            world.TerritoryMap[tile] = winnerCity;
+
+            loserCityCountLost[loserCity] = loserCityCountLost.GetValueOrDefault(loserCity, 0) + 1;
+        }
+
+        // Emit TerritoryLost per affected loser city
+        foreach (var (loserCity, lostCount) in loserCityCountLost)
+        {
+            int loserRemaining = loser.CityTerritories.TryGetValue(loserCity, out var rt) ? rt.Count : 0;
+            var lostPayload = JsonSerializer.Serialize(new TerritoryLostPayload(
+                loserCivId.Value, loser.Name, loserCity.X, loserCity.Y,
+                lostCount, loserRemaining, "war_outcome"));
+            pending.Add(new PendingEvent(EventType.TerritoryLost, loserCity, null, lostPayload,
+                CivId: loserCivId.Value));
+        }
+
+        // Emit TerritoryExpanded for winner
+        int winnerTotal = winner.CityTerritories.TryGetValue(winnerCity, out var wt) ? wt.Count : 0;
+        var gainPayload = JsonSerializer.Serialize(new TerritoryExpandedPayload(
+            winnerCivId.Value, winner.Name, winnerCity.X, winnerCity.Y, toTransfer, winnerTotal));
+        pending.Add(new PendingEvent(EventType.TerritoryExpanded, winnerCity, null, gainPayload,
+            CivId: winnerCivId.Value));
     }
 
     // ─── War helpers ──────────────────────────────────────────────────────────

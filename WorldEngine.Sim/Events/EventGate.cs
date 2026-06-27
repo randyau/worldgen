@@ -13,7 +13,10 @@ public sealed class EventGate(SimConfig config)
     public bool ShouldRecord(EventType type, EventTier tier, bool isGodMode = false)
     {
         if (isGodMode) return true;
-        if (config.Events.SuppressedTypes.Contains(type.ToString())) return false;
+        string typeName = type.ToString();
+        // Always-record list takes priority over suppression and tier filtering
+        if (config.Events.Gate.AlwaysRecordTypes.Contains(typeName)) return true;
+        if (config.Events.SuppressedTypes.Contains(typeName)) return false;
         if (tier < config.Events.MinimumRecordedTier) return false;
         return true;
     }
