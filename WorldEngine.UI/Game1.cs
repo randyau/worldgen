@@ -60,7 +60,6 @@ public sealed class Game1 : Game
 
     // Phase 3.4 panels (created in StartSim)
     private CharacterWatchPanel? _charWatch;
-    private Panel? _mainUI;
 
     // Input
     private MouseState _prevMouse;
