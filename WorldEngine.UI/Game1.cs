@@ -22,7 +22,8 @@ namespace WorldEngine.UI;
 
 public sealed class Game1 : Game
 {
-    private const int SidebarWidth = 360;  // must match sidebar VerticalStackPanel Width
+    private const int SidebarWidth   = 360;   // must match sidebar VerticalStackPanel Width
+    private const int TimelineHeight  = 40;    // px reserved at bottom for timeline bar
 
     private GraphicsDeviceManager _graphics;
     private SpriteBatch? _spriteBatch;
@@ -34,17 +35,28 @@ public sealed class Game1 : Game
     private readonly ConcurrentQueue<(string Layer, float Fraction)> _genProgress = new();
     private SimLoop? _simLoop;
     private EventStore? _eventStore;
+    private IHistoryQuery? _historyQuery;
     private Task<WorldState>? _genTask;
 
     // Rendering
     private Camera2D? _camera;
     private TileMapRenderer? _tileRenderer;
 
-    // UI panels
+    // UI panels (created in LoadContent)
     private WorldGenScreen? _genScreen;
     private TimeControlsPanel? _timeControls;
     private EventLogPanel? _eventLog;
     private TileInspectorPanel? _tileInspector;
+    private Panel? _mainUI;       // reference to the mainUI panel for post-sim panel injection
+
+    // Narrative UI panels (created in StartSim, after historyQuery is available)
+    private CharacterProfilePanel? _charProfile;
+    private CivHistoryPanel?       _civHistory;
+    private TimelineBar?           _timeline;
+    private FocusLensState?        _focusLens;
+
+    // Per-decade event-bucket refresh throttle
+    private int _lastBucketLoadYear = -1;
 
     // Input
     private MouseState _prevMouse;
@@ -99,6 +111,7 @@ public sealed class Game1 : Game
         // Main UI — root Panel so children can overlap the map freely
         // The map renders underneath via SpriteBatch; Myra widgets sit on top
         var mainUI = new Panel { Visible = false, Id = "MainUI" };
+        _mainUI = mainUI;
 
         // Time controls: full-width bar docked to the top
         if (_timeControls is not null)
@@ -127,7 +140,7 @@ public sealed class Game1 : Game
         _crashLabel = new Label
         {
             Text = "",
-            TextColor = Microsoft.Xna.Framework.Color.Red,
+            TextColor = Color.Red,
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment   = VerticalAlignment.Bottom,
             Visible = false
@@ -195,8 +208,26 @@ public sealed class Game1 : Game
             {
                 _lastSnapshot = snapshot;
                 _timeControls?.Update(snapshot);
-                _eventLog?.Update(snapshot);
+                _eventLog?.Update(snapshot, _focusLens);
                 _tileInspector?.Update(snapshot.InspectedTile, snapshot);
+
+                // Refresh timeline event buckets every 50 sim years
+                if (_timeline is not null && _historyQuery is not null
+                    && snapshot.CurrentYear - _lastBucketLoadYear >= 50)
+                {
+                    _timeline.LoadEventBuckets(_historyQuery, snapshot.CurrentYear);
+                    _lastBucketLoadYear = snapshot.CurrentYear;
+                }
+            }
+
+            // Process pending event log interactions (consume-once pattern)
+            if (_eventLog is not null && _historyQuery is not null && _desktop is not null)
+            {
+                if (_eventLog.ConsumePendingCharacterProfile() is long charId)
+                    _charProfile?.ShowCharacter(charId);
+
+                if (_eventLog.ConsumePendingCauseChain() is long evId)
+                    ShowCauseChainDialog(evId);
             }
         }
 
@@ -229,6 +260,7 @@ public sealed class Game1 : Game
 
         _eventStore = new EventStore("world.db");
         _eventStore.InitializeSchema();
+        _historyQuery = _eventStore.GetHistoryQuery();
 
         var spawnEvents = BeastSpawner.SpawnAll(world, beastCatalog);
         var charSpawnEvents  = CharacterSpawner.SpawnAll(world, simCfg);
@@ -250,12 +282,43 @@ public sealed class Game1 : Game
 
         _simLoop = new SimLoop(world, _commandQueue, _stateCache, phaseRunner, snapshotBuilder, simCfg, eventCache);
         _simLoop.Start();
+
+        // ── Narrative UI panels ──────────────────────────────────────────────
+        _focusLens   = new FocusLensState();
+        _charProfile = new CharacterProfilePanel(_historyQuery);
+        _civHistory  = new CivHistoryPanel(_historyQuery);
+
+        // Timeline bar — SpriteBatch component + Myra label overlay
+        _timeline = new TimelineBar();
+        _timeline.Initialize(GraphicsDevice);
+
+        if (_mainUI is not null && _desktop is not null)
+        {
+            // Narrative panels float on the left side, below time controls
+            _charProfile.Root.HorizontalAlignment = HorizontalAlignment.Left;
+            _charProfile.Root.VerticalAlignment   = VerticalAlignment.Top;
+            _charProfile.Root.Top  = 44;
+            _charProfile.Root.Left = 4;
+            _mainUI.Widgets.Add(_charProfile.Root);
+
+            _civHistory.Root.HorizontalAlignment = HorizontalAlignment.Left;
+            _civHistory.Root.VerticalAlignment   = VerticalAlignment.Top;
+            _civHistory.Root.Top  = 44;
+            _civHistory.Root.Left = 4;
+            _mainUI.Widgets.Add(_civHistory.Root);
+
+            // Timeline scrub label — floating overlay at the very top of the root panel
+            // (positioned dynamically in TimelineBar.Update)
+            if (_desktop.Root is Panel rootPanel)
+                rootPanel.Widgets.Add(_timeline.ScrubLabel);
+        }
     }
 
     private void HandleInput(WorldSnapshot snapshot)
     {
         if (_camera is null) return;
         var mouse = Mouse.GetState();
+        var kb    = Keyboard.GetState();
 
         // Right-drag to pan
         if (mouse.RightButton == ButtonState.Pressed && _prevMouse.RightButton == ButtonState.Pressed)
@@ -275,10 +338,11 @@ public sealed class Game1 : Game
         // Left-click → inspect tile (only if click is in the map area, not the sidebar or Myra widgets)
         if (mouse.LeftButton == ButtonState.Released && _prevMouse.LeftButton == ButtonState.Pressed)
         {
-            int mapWidth = GraphicsDevice.Viewport.Width - SidebarWidth;
-            bool inMapArea = mouse.X >= 0 && mouse.X < mapWidth
-                          && mouse.Y >= 0 && mouse.Y < GraphicsDevice.Viewport.Height;
-            bool overGui  = _desktop?.IsMouseOverGUI == true;
+            int   mapWidth  = GraphicsDevice.Viewport.Width - SidebarWidth;
+            int   mapHeight = GraphicsDevice.Viewport.Height - TimelineHeight;
+            bool inMapArea  = mouse.X >= 0 && mouse.X < mapWidth
+                           && mouse.Y >= 0 && mouse.Y < mapHeight;
+            bool overGui   = _desktop?.IsMouseOverGUI == true;
             if (inMapArea && !overGui)
             {
                 var coord = _camera.ScreenToTile(new Vector2(mouse.X, mouse.Y));
@@ -291,7 +355,6 @@ public sealed class Game1 : Game
         }
 
         // Overlay shortcuts
-        var kb = Keyboard.GetState();
         if (kb.IsKeyDown(Keys.B)) _commandQueue.Enqueue(new SetActiveOverlay(OverlayType.Biome));
         if (kb.IsKeyDown(Keys.E)) _commandQueue.Enqueue(new SetActiveOverlay(OverlayType.Elevation));
         if (kb.IsKeyDown(Keys.T)) _commandQueue.Enqueue(new SetActiveOverlay(OverlayType.Temperature));
@@ -299,8 +362,55 @@ public sealed class Game1 : Game
         if (kb.IsKeyDown(Keys.R)) _commandQueue.Enqueue(new SetActiveOverlay(OverlayType.Resources));
         if (kb.IsKeyDown(Keys.G)) _commandQueue.Enqueue(new SetActiveOverlay(OverlayType.MagicIntensity));
 
+        // H = toggle civ history panel (press-edge only)
+        if (kb.IsKeyDown(Keys.H) && !_prevKb.IsKeyDown(Keys.H))
+        {
+            if (_civHistory?.IsVisible == true) _civHistory.Hide();
+            else _civHistory?.Show();
+        }
+
         // N = new world (press-edge only, not hold)
         if (kb.IsKeyDown(Keys.N) && !_prevKb.IsKeyDown(Keys.N) && _simStarted) ResetToNewWorld();
+
+        // Timeline scrubber
+        if (_timeline is not null)
+        {
+            var vp = GraphicsDevice.Viewport;
+            var timelineRect = new Rectangle(0, vp.Height - TimelineHeight, vp.Width - SidebarWidth, TimelineHeight);
+            _timeline.Update(snapshot.CurrentYear, mouse, _prevMouse, timelineRect);
+        }
+    }
+
+    private void ShowCauseChainDialog(long effectEventId)
+    {
+        if (_historyQuery is null || _desktop is null) return;
+
+        var chain = _historyQuery.GetCausalChain(effectEventId, maxDepth: 3);
+
+        var content = new VerticalStackPanel { Spacing = 4 };
+        if (chain.Count == 0)
+        {
+            content.Widgets.Add(new Label { Text = "(No recorded causes found)" });
+        }
+        else
+        {
+            content.Widgets.Add(new Label { Text = $"Upstream causes ({chain.Count}):", TextColor = Color.White });
+            foreach (var (causeId, causeEv, edgeType) in chain)
+                content.Widgets.Add(new Label
+                {
+                    Text      = $"  [{edgeType}] Year {causeEv.Year} — {causeEv.TypeName}",
+                    TextColor = Color.LightGray
+                });
+        }
+
+        var window = new Window
+        {
+            Title   = "Cause Chain",
+            Content = content,
+            Width   = 380,
+            Height  = 260
+        };
+        window.ShowModal(_desktop);
     }
 
     private void ResetToNewWorld()
@@ -310,7 +420,8 @@ public sealed class Game1 : Game
         _simLoop?.Stop();
         _simLoop = null;
         _eventStore?.Dispose();
-        _eventStore = null;
+        _eventStore    = null;
+        _historyQuery  = null;
 
         const string DbPath = "world.db";
         foreach (var f in new[] { DbPath, DbPath + "-wal", DbPath + "-shm" })
@@ -319,7 +430,17 @@ public sealed class Game1 : Game
         // Reset state flags
         _simStarted         = false;
         _simCrashReported   = false;
+        _lastBucketLoadYear = -1;
         if (_crashLabel is not null) _crashLabel.Visible = false;
+
+        // Dispose timeline texture
+        _timeline?.Dispose();
+        _timeline = null;
+
+        // Hide narrative panels
+        _charProfile?.Hide();
+        _civHistory?.Hide();
+        _focusLens?.Clear();
 
         // Reset UI: hide main panels, show gen screen, clear inspector & log
         if (_desktop?.Root is Panel root)
@@ -344,12 +465,22 @@ public sealed class Game1 : Game
         var snapshot = _stateCache.Read();
         if (_simStarted && snapshot is not null && _tileRenderer is not null && _spriteBatch is not null)
         {
-            // Scissor-clip tile rendering to the map area so tiles can't bleed into the sidebar
             var vp = GraphicsDevice.Viewport;
-            GraphicsDevice.ScissorRectangle = new Rectangle(0, 0, vp.Width - SidebarWidth, vp.Height);
+
+            // Scissor-clip tile rendering to the map area (leave sidebar + timeline bar uncovered)
+            GraphicsDevice.ScissorRectangle = new Rectangle(0, 0, vp.Width - SidebarWidth, vp.Height - TimelineHeight);
             _spriteBatch.Begin(rasterizerState: new RasterizerState { ScissorTestEnable = true });
             _tileRenderer.Draw(_spriteBatch, snapshot);
             _spriteBatch.End();
+
+            // Timeline bar — drawn below the map, no scissor
+            if (_timeline is not null)
+            {
+                var timelineRect = new Rectangle(0, vp.Height - TimelineHeight, vp.Width - SidebarWidth, TimelineHeight);
+                _spriteBatch.Begin();
+                _timeline.Draw(_spriteBatch, timelineRect, snapshot.CurrentYear);
+                _spriteBatch.End();
+            }
         }
 
         _desktop?.Render();
@@ -361,5 +492,6 @@ public sealed class Game1 : Game
         _simLoop?.Stop();
         _eventStore?.Dispose();
         _tileRenderer?.Dispose();
+        _timeline?.Dispose();
     }
 }

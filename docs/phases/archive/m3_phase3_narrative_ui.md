@@ -1,7 +1,7 @@
 # Phase 3.3 — Narrative UI
 
 **Milestone:** 3 — Narrative Exploration  
-**Status:** PLANNED  
+**Status:** COMPLETE — 2026-06-26  
 **Goal:** Build the UI that makes history readable: character profile cards, civilization history views, timeline scrubber, and the filter/focus lens system.
 
 Depends on Phase 3.1 (HistoryQuery API) and Phase 3.2 (trait data and significance scores).

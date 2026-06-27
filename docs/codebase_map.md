@@ -131,9 +131,18 @@ One-line description of every non-trivial source file. Check here before running
 ## WorldEngine.Sim/Vendor/
 - `FastNoiseLite.cs` (~2505 lines) — **do not read or edit** — vendored noise library
 
-## WorldEngine.UI/ (high-level only)
-- `Game1.cs` (~362 lines) — MonoGame entry: update/draw loop, StateCache reads, input routing
-- Main sub-systems: TileMapRenderer, EntityRenderer, UIManager (Myra), CommandDispatcher
+## WorldEngine.UI/
+- `Game1.cs` (~380 lines) — MonoGame entry: update/draw loop, StateCache reads, input routing; wires narrative UI panels post-StartSim
+
+## WorldEngine.UI/UI/
+- `EventLogPanel.cs` — sidebar event log; supports FocusLensState dimming and "->" cause-chain buttons per row
+- `TileInspectorPanel.cs` — sidebar tile inspector showing settlement, beast, character, resource data
+- `TimeControlsPanel.cs` — top toolbar: speed buttons, year/season label
+- `WorldGenScreen.cs` — full-screen world-gen progress overlay
+- `CharacterProfilePanel.cs` — M3.3: Myra panel showing character name, ancestry, life events, relationships; V2 narrative hook stub
+- `CivHistoryPanel.cs` — M3.3: Myra panel showing civ arc (rulers, wars, major events, cultural traits); ComboBox civ selector; H key to toggle
+- `TimelineBar.cs` — M3.3: SpriteBatch timeline scrubber drawn at bottom of map; event-density heatmap per decade, scrub handle
+- `FocusLensState.cs` — M3.3: tracks focus target (character or civ); pre-fetches FocusedEventIds for event log filtering
 
 ## WorldEngine.Tests/
 - xUnit test suite; mirrors Sim folder structure
@@ -141,6 +150,7 @@ One-line description of every non-trivial source file. Check here before running
 - `Integration/HistoryQueryTests.cs` — M3.1: SummaryBuilder, SuccessionChain, and HistoryQueryService integration tests
 - `Integration/CulturalTraitsTests.cs` — M3.2: CulturalTrait enum, EvaluateCulturalTraits logic, CivTraitAcquired event generation
 - `Integration/SignificanceScoringTests.cs` — M3.2: ComputeSignificanceScore, SignificanceRescoringPass tier upgrades and score population
+- `Integration/NarrativeUIDataTests.cs` — M3.3: GetCausalChain, GetAllCivSummaries, GetEventCountByDecade, GetCharacterHistory ordering
 
 ## docs/perf/
 - `notes_m3.md` — M3 performance profiling notes and gate status

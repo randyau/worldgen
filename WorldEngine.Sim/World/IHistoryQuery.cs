@@ -38,4 +38,20 @@ public interface IHistoryQuery
     /// Returns a disambiguation list when multiple characters share the name.
     /// </summary>
     IReadOnlyList<CharacterSummary> FindCharactersByName(string name);
+
+    /// <summary>Returns all civs ordered by founding year. Used to populate the civilization selector UI.</summary>
+    IReadOnlyList<CivSummary> GetAllCivSummaries();
+
+    /// <summary>
+    /// Walks CausalEdges upstream from <paramref name="effectEventId"/> up to <paramref name="maxDepth"/> levels.
+    /// Returns cause events in BFS order (closest causes first).
+    /// EdgeType is the value stored in CausalEdges.EdgeType (may be null/empty, returned as "caused").
+    /// </summary>
+    IReadOnlyList<(long CauseEventId, SimEvent CauseEvent, string EdgeType)> GetCausalChain(long effectEventId, int maxDepth = 3);
+
+    /// <summary>
+    /// Returns event count grouped by decade bucket for the timeline density heatmap.
+    /// Key = decade start year (e.g. 0, 10, 20 …), Value = event count in that decade.
+    /// </summary>
+    Dictionary<int, int> GetEventCountByDecade(int startYear, int endYear);
 }

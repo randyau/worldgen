@@ -217,6 +217,63 @@ public sealed class HistoryQueryService : IHistoryQuery
         return rows.Select(MapCharSummary).ToList();
     }
 
+    /// <inheritdoc/>
+    public IReadOnlyList<CivSummary> GetAllCivSummaries()
+    {
+        var rows = _conn.Query<CivSummaryRow>(
+            "SELECT * FROM CivSummaries ORDER BY FoundedYear").ToList();
+        return rows.Select(MapCivSummary).ToList();
+    }
+
+    /// <inheritdoc/>
+    public IReadOnlyList<(long CauseEventId, SimEvent CauseEvent, string EdgeType)> GetCausalChain(long effectEventId, int maxDepth = 3)
+    {
+        var result  = new List<(long, SimEvent, string)>();
+        var visited = new HashSet<long> { effectEventId };
+        var queue   = new Queue<(long Id, int Depth)>();
+        queue.Enqueue((effectEventId, 0));
+
+        while (queue.Count > 0)
+        {
+            var (currentId, depth) = queue.Dequeue();
+            if (depth >= maxDepth) continue;
+
+            var edges = _conn.Query<CausalEdgeRow>(
+                "SELECT PredecessorId, EdgeType FROM CausalEdges WHERE SuccessorId = @id",
+                new { id = currentId }).ToList();
+
+            foreach (var edge in edges)
+            {
+                if (!visited.Add(edge.PredecessorId)) continue;
+
+                var evRow = _conn.QueryFirstOrDefault<EventRow>(
+                    $"{SelectCols} WHERE Id = @id", new { id = edge.PredecessorId });
+                if (evRow is not null)
+                {
+                    result.Add((edge.PredecessorId, MapEvent(evRow), edge.EdgeType ?? "caused"));
+                    queue.Enqueue((edge.PredecessorId, depth + 1));
+                }
+            }
+        }
+
+        return result;
+    }
+
+    /// <inheritdoc/>
+    public Dictionary<int, int> GetEventCountByDecade(int startYear, int endYear)
+    {
+        return _conn.Query<(int Decade, int Count)>(
+            """
+            SELECT (Year / 10) * 10 AS Decade, COUNT(*) AS Count
+            FROM Events
+            WHERE Year BETWEEN @start AND @end
+            GROUP BY Decade
+            ORDER BY Decade
+            """,
+            new { start = startYear, end = endYear })
+            .ToDictionary(r => r.Decade, r => r.Count);
+    }
+
     // ── Mapping ─────────────────────────────────────────────────────────────────────────────────
 
     private static CivSummary MapCivSummary(CivSummaryRow r) => new(
@@ -276,7 +333,8 @@ public sealed class HistoryQueryService : IHistoryQuery
         ActorName        = r.ActorName,
         CivId            = r.CivId ?? 0,
         SettlementName   = r.SettlementName,
-        PayloadJson      = r.PayloadJson
+        PayloadJson      = r.PayloadJson,
+        SignificanceScore = r.SignificanceScore
     };
 
     private static IReadOnlyList<string> ParseStringArray(string? json)
@@ -333,7 +391,7 @@ public sealed class HistoryQueryService : IHistoryQuery
     private const string SelectCols =
         "SELECT Id, Type, TypeName, Domain, Year, Season, Tick, LocationX, LocationY, " +
         "TierInvolvement, VerbClass, PopulationImpact, IsFirstOfKind, IsGodMode, " +
-        "ActorId, ActorName, CivId, SettlementName, PayloadJson FROM Events";
+        "ActorId, ActorName, CivId, SettlementName, PayloadJson, SignificanceScore FROM Events";
 
     // ── Row types ────────────────────────────────────────────────────────────────────────────────
 
@@ -403,5 +461,12 @@ public sealed class HistoryQueryService : IHistoryQuery
         public long?   CivId            { get; init; }
         public string? SettlementName   { get; init; }
         public string  PayloadJson      { get; init; } = "{}";
+        public float   SignificanceScore { get; init; }
+    }
+
+    private sealed class CausalEdgeRow
+    {
+        public long    PredecessorId { get; init; }
+        public string? EdgeType      { get; init; }
     }
 }
