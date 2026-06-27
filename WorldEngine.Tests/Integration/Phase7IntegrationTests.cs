@@ -41,6 +41,7 @@ public class Phase7IntegrationTests
         runner.InjectPendingEvent(new PendingEvent(EventType.WildfireOccurred, new TileCoord(2, 2), null,
             System.Text.Json.JsonSerializer.Serialize(new { Intensity = 0.5f })));
         runner.RunTick(world);
+        runner.FlushPendingEvents(world);
 
         store.GetEventsByYear(world.CurrentYear).Should().NotBeEmpty();
     }
@@ -57,12 +58,14 @@ public class Phase7IntegrationTests
         runner.InjectPendingEvent(new PendingEvent(EventType.VolcanicEruption, new TileCoord(1, 1), null,
             System.Text.Json.JsonSerializer.Serialize(new { Intensity = 0.9f })));
         runner.RunTick(world);
+        runner.FlushPendingEvents(world);
         var root = store.GetEventsByType(EventType.VolcanicEruption).Single();
 
         // Second tick: produce an event caused by the root.
         runner.InjectPendingEvent(new PendingEvent(EventType.WildfireOccurred, new TileCoord(1, 2), root.Id,
             System.Text.Json.JsonSerializer.Serialize(new { Intensity = 0.5f })));
         runner.RunTick(world);
+        runner.FlushPendingEvents(world);
         var child = store.GetEventsByType(EventType.WildfireOccurred).Single();
 
         store.GetCausalSuccessors(root.Id).Should().ContainSingle().Which.Id.Should().Be(child.Id);
@@ -97,6 +100,7 @@ public class Phase7IntegrationTests
         runner.InjectPendingEvent(new PendingEvent(EventType.VolcanicEruption, new TileCoord(0, 0), null,
             System.Text.Json.JsonSerializer.Serialize(new { Intensity = 0.9f })));
         runner.RunTick(world);
+        runner.FlushPendingEvents(world);
 
         cache.GetRecent(10).Should().Contain(e => e.Type == EventType.VolcanicEruption);
     }
@@ -112,6 +116,7 @@ public class Phase7IntegrationTests
         runner.InjectPendingEvent(new PendingEvent(EventType.VolcanicEruption, new TileCoord(0, 0), null,
             System.Text.Json.JsonSerializer.Serialize(new { Intensity = 0.9f })));
         runner.RunTick(world);
+        runner.FlushPendingEvents(world);
 
         var cached = cache.GetRecent(10).Single(e => e.Type == EventType.VolcanicEruption);
         var stored = store.GetEvent(cached.Id);

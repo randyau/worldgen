@@ -54,6 +54,7 @@ public class PhaseRunnerTests
         // Inject a test pending event source into Phase 1
         runner.InjectPendingEvent(new PendingEvent(EventType.WildfireOccurred, null, null, "{}"));
         runner.RunTick(world);
+        runner.FlushPendingEvents(world);
 
         // Phase 7 should have processed the injected event into the cache
         var recent = cache.GetRecent(10);
