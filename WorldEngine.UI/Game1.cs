@@ -315,8 +315,13 @@ public sealed class Game1 : Game
         var simCfg = SimConfigLoader.LoadOrCreateDefault();
         var beastCatalog = BeastCatalogLoader.LoadOrCreateDefault();
 
-        _eventStore = new EventStore("world.db");
-        _eventStore.InitializeSchema();
+        // Reuse the existing connection when the EventStore was already Reset() by
+        // ResetToNewWorld(); create fresh on first startup or after a full dispose.
+        if (_eventStore is null)
+        {
+            _eventStore = new EventStore("world.db");
+            _eventStore.InitializeSchema();
+        }
         _historyQuery = _eventStore.GetHistoryQuery();
 
         var eventCache = new EventCache(simCfg.Events.RecentEventCacheSize);
@@ -489,17 +494,20 @@ public sealed class Game1 : Game
 
     private void ResetToNewWorld()
     {
-        // Stop sim thread, then dispose connection before deleting the file.
-        // Disposing first releases all WAL locks so File.Delete succeeds on Windows.
+        // Stop the sim thread before touching shared state.
         _simLoop?.Stop();
         _simLoop = null;
-        _eventStore?.Dispose();
-        _eventStore    = null;
-        _historyQuery  = null;
 
-        const string DbPath = "world.db";
-        foreach (var f in new[] { DbPath, DbPath + "-wal", DbPath + "-shm" })
-            if (File.Exists(f)) File.Delete(f);
+        // Reset the event store in-place (drops and recreates tables) rather than
+        // closing, deleting, and reopening world.db. On Windows the WAL lock is held
+        // by SQLite's finalizer even after Dispose(), so file deletion races and
+        // crashes the game if all retries are exhausted. Reusing the open connection
+        // avoids the lock entirely.
+        if (_eventStore is not null)
+        {
+            _eventStore.Reset();
+            _historyQuery = _eventStore.GetHistoryQuery();
+        }
 
         // Phase 3.6: delete save directory so the next startup shows no resume prompt
         WorldStateSaver.DeleteSave(SaveDir);
@@ -514,7 +522,16 @@ public sealed class Game1 : Game
         _timeline?.Dispose();
         _timeline = null;
 
-        // Hide all narrative/watch panels
+        // Hide and detach old narrative/watch panels from the widget tree so
+        // StartSim can add fresh ones without stale roots accumulating.
+        if (_mainUI is not null)
+        {
+            if (_charProfile is not null) _mainUI.Widgets.Remove(_charProfile.Root);
+            if (_civHistory  is not null) _mainUI.Widgets.Remove(_civHistory.Root);
+            if (_charWatch   is not null) _mainUI.Widgets.Remove(_charWatch.Root);
+        }
+        if (_desktop?.Root is Panel dp && _timeline is not null)
+            dp.Widgets.Remove(_timeline.ScrubLabel);
         _charProfile?.Hide();
         _civHistory?.Hide();
         _focusLens?.Clear();

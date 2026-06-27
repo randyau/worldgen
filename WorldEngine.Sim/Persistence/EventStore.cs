@@ -28,6 +28,26 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
     }
 
     /// <summary>
+    /// Drops all tables and recreates schema. Used by the UI "new world" reset so we avoid
+    /// closing and re-opening the file, which can race with Windows SQLite WAL locks.
+    /// </summary>
+    public void Reset()
+    {
+        _conn.Execute("PRAGMA foreign_keys=OFF;");
+        _conn.Execute("DROP TABLE IF EXISTS CivTraits;");
+        _conn.Execute("DROP TABLE IF EXISTS Dynasties;");
+        _conn.Execute("DROP TABLE IF EXISTS SuccessionChain;");
+        _conn.Execute("DROP TABLE IF EXISTS Eras;");
+        _conn.Execute("DROP TABLE IF EXISTS CivSummaries;");
+        _conn.Execute("DROP TABLE IF EXISTS CharacterSummaries;");
+        _conn.Execute("DROP TABLE IF EXISTS EventEntities;");
+        _conn.Execute("DROP TABLE IF EXISTS CausalEdges;");
+        _conn.Execute("DROP TABLE IF EXISTS Events;");
+        _conn.Execute("DROP VIEW  IF EXISTS EventsReadable;");
+        InitializeSchema();
+    }
+
+    /// <summary>
     /// Creates tables, indexes, views, and sets pragmas. Idempotent — safe to call repeatedly.
     /// </summary>
     public void InitializeSchema()
