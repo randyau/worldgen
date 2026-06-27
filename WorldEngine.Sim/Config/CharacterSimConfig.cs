@@ -261,11 +261,11 @@ public sealed class CharacterSimConfig
     public float CulturalDistanceDrainRate    { get; set; } = 0.002f; // drain × cultural_distance (0–1)
 
     // Wellbeing — emotional state dynamics
-    public float WellbeingGoalGainRate      { get; set; } = 0.01f;   // per tick when goal is progressing
+    public float WellbeingGoalGainRate      { get; set; } = 0.015f;  // per tick when goal is progressing (raised for bidirectional reachability)
     public float WellbeingCompanionBoost    { get; set; } = 0.005f;  // per tick co-located with Bond target
     public float WellbeingHungerDrain       { get; set; } = 0.02f;   // max drain when food = 0
     public float WellbeingMeanReversionRate { get; set; } = 0.008f;  // pull toward 0 each tick
-    public float FlourishingThreshold       { get; set; } = 0.7f;    // Wellbeing ≥ this → Flourishing
+    public float FlourishingThreshold       { get; set; } = 0.6f;    // Wellbeing ≥ this → Flourishing (lowered for reachability)
     public float SpiralThreshold            { get; set; } = -0.7f;   // Wellbeing ≤ this → Spiraling
     public float DistressedSocialSuppression { get; set; } = 0.4f;   // social action score multiplier when Wellbeing < -0.3
     public float GriefDrainRate             { get; set; } = 0.015f;  // Wellbeing drain per tick per Grieve goal
@@ -307,4 +307,8 @@ public sealed class CharacterSimConfig
     // Ticks after completing a Create goal before the character can start a new one.
     // Prevents back-to-back creative obsession; 80 ticks = 5 years at 16 ticks/year.
     public int   CreateGoalCooldownTicks     { get; set; } = 80;
+
+    // Minimum years between ArtworkCreated events per character.
+    // Without this a character with an active Create goal fires an artwork event every tick.
+    public int   ArtworkCooldownYears        { get; set; } = 10;
 }

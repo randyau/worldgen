@@ -184,7 +184,8 @@ public sealed record Tier1EntityDto(
     int    InfectedSinceYear,
     float  Wellbeing,
     int    TicksInCurrentTile,
-    int    LastCreateCompletedTick);
+    int    LastCreateCompletedTick,
+    int    LastArtworkYear);
 
 public sealed record Tier2EntityDto(
     long   Id,
