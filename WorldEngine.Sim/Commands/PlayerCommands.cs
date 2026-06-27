@@ -16,3 +16,8 @@ public sealed record SetActiveOverlay(OverlayType Overlay) : ICommand;
 /// Sets the character watch target. Pass null EntityId (EntityId with Value 0) to clear.
 /// </summary>
 public sealed record WatchCharacter(EntityId CharacterId) : ICommand;
+
+/// <summary>
+/// Requests a save to the given directory. Handled by SimLoop on a background Task.
+/// </summary>
+public sealed record SaveWorld(string SaveDir) : ICommand;

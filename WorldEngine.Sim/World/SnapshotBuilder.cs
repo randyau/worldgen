@@ -50,7 +50,9 @@ public sealed class SnapshotBuilder
             GlobalTemperatureAnomaly:    world.GlobalTemperatureAnomaly,
             GlobalPrecipitationMultiplier: world.GlobalPrecipitationMultiplier,
             StormCorridorNormalizedLat:  world.StormCorridorNormalizedLat,
-            WatchedCharacter:            watchedChar
+            WatchedCharacter:            watchedChar,
+            IsSaving:                    world.IsSaving,
+            LastSaveTick:                world.LastSaveTick
         );
     }
 

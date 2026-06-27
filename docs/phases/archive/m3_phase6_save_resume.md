@@ -1,7 +1,7 @@
 # Phase 3.6 — Save / Resume
 
 **Milestone:** 3 — Narrative Exploration
-**Status:** PLANNED
+**Status:** COMPLETE — 2026-06-26
 **Goal:** Players can save a running simulation to disk and resume it in a later session.
 Without save/resume, M3 is a demo — any interesting world state is lost when the
 application closes. A 1000-year run takes ~5 minutes at target TPS; players need to be

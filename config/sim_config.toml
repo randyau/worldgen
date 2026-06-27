@@ -58,6 +58,8 @@ rare_resource_density   = 0.003   # Fraction of tiles with rare/magical resource
 [sim_loop]
 days_per_season         = 90      # Simulation days in one season (affects Daily/Standard sync)
 seasons_per_year        = 4       # Always 4: Spring, Summer, Autumn, Winter
+auto_save_interval_ticks = 960    # Auto-save every N ticks (960 = ~60 in-game years at 16 ticks/year)
+auto_save_dir            = "worldsave"  # Directory for auto-saves and Ctrl+S saves
 
 [sim_loop.speed]
 slow_ticks_per_second   = 0.5     # Seasonal ticks per real second at Slow speed

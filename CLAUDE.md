@@ -18,11 +18,11 @@ The primary audience is worldbuilders and writers, not traditional gamers. The c
 - `docs/interface_contracts.md` — **index only** — links to 4 split files; load only the relevant one
 - `docs/implementation_plan_m1.md` — M1 phase ordering and story-level guide (archived reference)
 
-**Current milestone status:** Milestone 2 COMPLETE (2026-06-23). All M2 phases archived. Beginning Milestone 3 (History & Narrative).
+**Current milestone status:** Milestone 2 COMPLETE (2026-06-23). All M2 phases archived. Milestone 3 COMPLETE (2026-06-26). All M3 phases archived.
 
 **For coding sessions — read the active phase doc:**
-- `docs/phases/` — active phase docs for the current milestone (empty until M3 phase docs are written)
-- `docs/phases/archive/` — all M1 and M2 phases archived here for reference
+- `docs/phases/` — active phase docs for the current milestone (empty — all M3 phases are in archive/)
+- `docs/phases/archive/` — all M1, M2, and M3 phases archived here for reference
 - `docs/testing/runbook_m1.md` — M1 manual test runbook (reference for regression testing)
 
 **Reusable code patterns and test templates:**

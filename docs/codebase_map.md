@@ -129,6 +129,9 @@ One-line description of every non-trivial source file. Check here before running
 - `CausalEdgeBuilder.cs` — M3.1: infers and writes causal edges from event patterns (war chains, disease→abandonment, etc.)
 - `HistoryQueryService.cs` — M3.1: IHistoryQuery implementation backed by SQLite summary tables; small LRU cache
 - `SignificanceRescoringPass.cs` — M3.2: retroactive significance pass; upgrades tiers for long-lived settlements/conquests; populates SignificanceScore float column
+- `WorldStateDto.cs` — M3.6: DTO record tree mirroring WorldState; all fields JSON-serializable; WorldStateSerializerContext source-gen
+- `WorldStateMapper.cs` — M3.6: ToDto/FromDto conversion; FromDto regenerates TileGrid from seed + advances EntityId counter
+- `WorldStateSaver.cs` — M3.6: Save/Load/HasSave/ReadMeta/DeleteSave; Save writes meta.json + state.bin + config_snapshot/
 
 ## WorldEngine.Sim/Vendor/
 - `FastNoiseLite.cs` (~2505 lines) — **do not read or edit** — vendored noise library
@@ -159,6 +162,7 @@ One-line description of every non-trivial source file. Check here before running
 - `Integration/CulturalTraitsTests.cs` — M3.2: CulturalTrait enum, EvaluateCulturalTraits logic, CivTraitAcquired event generation
 - `Integration/SignificanceScoringTests.cs` — M3.2: ComputeSignificanceScore, SignificanceRescoringPass tier upgrades and score population
 - `Integration/NarrativeUIDataTests.cs` — M3.3: GetCausalChain, GetAllCivSummaries, GetEventCountByDecade, GetCharacterHistory ordering
+- `Integration/SaveLoadTests.cs` — M3.6: WorldStateSaver round-trip tests (8 tests: files created, year, settlements, entities, territory, round-trip, meta, empty world)
 - `Integration/TileInspectTests.cs` — M3.4: TileInspectorData territory/improvement population, unclaimed tile returns null
 - `Unit/AncestryConfigTests.cs` — M3.5: AncestryConfig field loading, ApplyCulturalSettlementName, GetCivNameSuffix, BuildCulturalProfile
 

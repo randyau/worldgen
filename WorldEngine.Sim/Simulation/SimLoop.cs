@@ -1,6 +1,7 @@
 using WorldEngine.Sim.Commands;
 using WorldEngine.Sim.Config;
 using WorldEngine.Sim.Core;
+using WorldEngine.Sim.Persistence;
 using WorldEngine.Sim.World;
 
 namespace WorldEngine.Sim.Simulation;
@@ -91,16 +92,25 @@ public sealed class SimLoop
                 // 4. Advance time
                 AdvanceTime();
 
-                // 5. Build snapshot (skip in Ultrafast except every N ticks)
+                // 5. Auto-save check — fire-and-forget background task every N ticks
+                if (_cfg.AutoSaveIntervalTicks > 0
+                    && _world.CurrentTick > 0
+                    && _world.CurrentTick % _cfg.AutoSaveIntervalTicks == 0
+                    && !_world.IsSaving)
+                {
+                    TriggerSave(_cfg.AutoSaveDir);
+                }
+
+                // 6. Build snapshot (skip in Ultrafast except every N ticks)
                 bool buildSnapshot = _currentSpeed != SimSpeed.Ultrafast
                     || (_world.CurrentTick % _cfg.UltrafastSnapshotIntervalTicks == 0);
 
                 if (buildSnapshot) CommitSnapshot();
 
-                // 6. Clear StepOneTick after one step
+                // 7. Clear StepOneTick after one step
                 if (_stepOneTick) _stepOneTick = false;
 
-                // 7. Throttle
+                // 8. Throttle
                 int sleepMs = ThrottleSleepMs();
                 if (sleepMs > 0) Thread.Sleep(sleepMs);
             }
@@ -147,7 +157,57 @@ public sealed class SimLoop
                 // EntityId with Value 0 clears the watch target
                 _world.WatchedCharacterId = w.CharacterId.Value == 0 ? null : w.CharacterId;
                 break;
+            case SaveWorld sv:
+                TriggerSave(sv.SaveDir);
+                break;
         }
+    }
+
+    /// <summary>
+    /// Fires a background save task. Sets IsSaving before the task starts and clears it on completion.
+    /// Never throws — exceptions are logged but never propagate to the sim thread.
+    /// </summary>
+    private void TriggerSave(string saveDir)
+    {
+        if (_world.IsSaving) return;   // don't stack saves
+        _world.IsSaving = true;
+        var saveTick = _world.CurrentTick;
+        var cfg = _world.SimConfig;
+        // Capture a DTO snapshot on the sim thread before handing off to avoid data races
+        WorldStateDto dto;
+        try { dto = WorldStateMapper.ToDto(_world); }
+        catch (Exception ex)
+        {
+            _world.IsSaving = false;
+            var logPath = Path.Combine(AppContext.BaseDirectory, "save_error.log");
+            try { File.AppendAllText(logPath, $"\n{DateTime.Now:u} [Save] DTO error: {ex}\n"); } catch { }
+            return;
+        }
+
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                Directory.CreateDirectory(saveDir);
+                var meta = new MetaDto(WorldStateSaver.FormatVersion, _world.Config.Seed,
+                    _world.Config.WidthKm, _world.Config.HeightKm, _world.Config.TileWidthKm,
+                    _world.CurrentYear, saveTick);
+                File.WriteAllBytes(Path.Combine(saveDir, "meta.json"),
+                    System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(meta, WorldStateSerializerContext.Default.MetaDto));
+                File.WriteAllBytes(Path.Combine(saveDir, "state.bin"),
+                    System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(dto, WorldStateSerializerContext.Default.WorldStateDto));
+            }
+            catch (Exception ex)
+            {
+                var logPath = Path.Combine(AppContext.BaseDirectory, "save_error.log");
+                try { File.AppendAllText(logPath, $"\n{DateTime.Now:u} [Save] Write error: {ex}\n"); } catch { }
+            }
+            finally
+            {
+                _world.LastSaveTick = saveTick;
+                _world.IsSaving = false;
+            }
+        });
     }
 
     private void AdvanceTime()

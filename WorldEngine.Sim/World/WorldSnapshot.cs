@@ -104,5 +104,9 @@ public sealed record WorldSnapshot(
     float StormCorridorNormalizedLat,
 
     // Character watch panel (M3 Phase 3.4) — null when no character is being watched
-    CharacterWatchSnapshot? WatchedCharacter = null
+    CharacterWatchSnapshot? WatchedCharacter = null,
+
+    // Save state (M3 Phase 3.6) — used by UI to show "Saving..." overlay
+    bool IsSaving     = false,
+    long LastSaveTick = -1
 );

@@ -61,6 +61,12 @@ public sealed class Game1 : Game
     // Phase 3.4 panels (created in StartSim)
     private CharacterWatchPanel? _charWatch;
 
+    // Phase 3.6 — save / resume
+    private const string SaveDir = "worldsave";
+    private Label? _savingLabel;          // "Saving..." overlay
+    private bool _resumePromptShown;      // true once we've checked for a save on startup
+    private Task<WorldState>? _loadTask;  // background load task for resume
+
     // Input
     private MouseState _prevMouse;
     private KeyboardState _prevKb;
@@ -96,11 +102,21 @@ public sealed class Game1 : Game
         var rootPanel = BuildRootPanel();
         _desktop = new Desktop { Root = rootPanel };
 
-        // Kick off world gen
-        var worldCfg = new WorldConfig { Seed = 42, WidthKm = 2000, HeightKm = 1600, TileWidthKm = 10 };
-        var simCfg   = SimConfigLoader.LoadOrCreateDefault();
-        var progress = new Progress<(string, float)>(p => _genProgress.Enqueue(p));
-        _genTask = Task.Run(() => GenerateWorld(worldCfg, simCfg, progress));
+        // Phase 3.6 — check for a saved world on startup before starting gen
+        if (!_resumePromptShown)
+        {
+            _resumePromptShown = true;
+            var meta = WorldStateSaver.ReadMeta(SaveDir);
+            if (meta is not null)
+            {
+                ShowResumePrompt(meta);
+                // Don't start world gen yet — wait for player choice
+                return;
+            }
+        }
+
+        // No save exists — start world gen immediately
+        StartNewWorldGen();
     }
 
     private Panel BuildRootPanel()
@@ -149,6 +165,18 @@ public sealed class Game1 : Game
         };
         root.Widgets.Add(_crashLabel);
 
+        // Saving overlay — shown briefly while a save is in progress (Phase 3.6)
+        _savingLabel = new Label
+        {
+            Text = "Saving...",
+            TextColor = Color.Yellow,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment   = VerticalAlignment.Top,
+            Top     = 48,
+            Visible = false
+        };
+        root.Widgets.Add(_savingLabel);
+
         return root;
     }
 
@@ -185,6 +213,11 @@ public sealed class Game1 : Game
 
         DrainGenProgress();
 
+        // Resume path: load task completed
+        if (!_simStarted && _loadTask?.IsCompletedSuccessfully == true)
+            StartSimFromLoad(_loadTask.Result);
+
+        // Gen path: gen task completed
         if (!_simStarted && _genTask?.IsCompletedSuccessfully == true)
             StartSim(_genTask.Result);
 
@@ -212,6 +245,10 @@ public sealed class Game1 : Game
                 _timeControls?.Update(snapshot);
                 _eventLog?.Update(snapshot, _focusLens);
                 _tileInspector?.Update(snapshot.InspectedTile, snapshot);
+
+                // Phase 3.6: show/hide saving overlay
+                if (_savingLabel is not null)
+                    _savingLabel.Visible = snapshot.IsSaving;
 
                 _charWatch?.Refresh(snapshot);
 
@@ -258,7 +295,12 @@ public sealed class Game1 : Game
             _genScreen?.Update(p.Layer, p.Fraction);
     }
 
-    private void StartSim(WorldState world)
+    /// <param name="world">World to simulate.</param>
+    /// <param name="spawnInitialEntities">
+    /// True for a freshly generated world (runs spawners).
+    /// False for a loaded world (entities are already present in WorldState).
+    /// </param>
+    private void StartSim(WorldState world, bool spawnInitialEntities = true)
     {
         _simStarted = true;
         _genScreen!.Root.Visible = false;
@@ -277,21 +319,21 @@ public sealed class Game1 : Game
         _eventStore.InitializeSchema();
         _historyQuery = _eventStore.GetHistoryQuery();
 
-        var spawnEvents = BeastSpawner.SpawnAll(world, beastCatalog);
-        var charSpawnEvents  = CharacterSpawner.SpawnAll(world, simCfg);
-        var tier2SpawnEvents = Tier2Spawner.SpawnAll(world, simCfg);
-
         var eventCache = new EventCache(simCfg.Events.RecentEventCacheSize);
         var gate = new EventGate(simCfg);
         var phaseRunner = new PhaseRunner(simCfg, _eventStore, eventCache, gate,
             beastCatalog: beastCatalog);
 
-        foreach (var pe in spawnEvents)
-            phaseRunner.InjectPendingEvent(pe);
-        foreach (var pe in charSpawnEvents)
-            phaseRunner.InjectPendingEvent(pe);
-        foreach (var pe in tier2SpawnEvents)
-            phaseRunner.InjectPendingEvent(pe);
+        if (spawnInitialEntities)
+        {
+            // Fresh world — populate initial entities
+            var spawnEvents      = BeastSpawner.SpawnAll(world, beastCatalog);
+            var charSpawnEvents  = CharacterSpawner.SpawnAll(world, simCfg);
+            var tier2SpawnEvents = Tier2Spawner.SpawnAll(world, simCfg);
+            foreach (var pe in spawnEvents)      phaseRunner.InjectPendingEvent(pe);
+            foreach (var pe in charSpawnEvents)  phaseRunner.InjectPendingEvent(pe);
+            foreach (var pe in tier2SpawnEvents) phaseRunner.InjectPendingEvent(pe);
+        }
 
         var snapshotBuilder = new SnapshotBuilder();
 
@@ -400,6 +442,10 @@ public sealed class Game1 : Game
         // N = new world (press-edge only, not hold)
         if (kb.IsKeyDown(Keys.N) && !_prevKb.IsKeyDown(Keys.N) && _simStarted) ResetToNewWorld();
 
+        // Ctrl+S = manual save (Phase 3.6)
+        if (kb.IsKeyDown(Keys.LeftControl) && kb.IsKeyDown(Keys.S) && !_prevKb.IsKeyDown(Keys.S))
+            _commandQueue.Enqueue(new SaveWorld(SaveDir));
+
         // Timeline scrubber
         if (_timeline is not null)
         {
@@ -455,6 +501,9 @@ public sealed class Game1 : Game
         foreach (var f in new[] { DbPath, DbPath + "-wal", DbPath + "-shm" })
             if (File.Exists(f)) File.Delete(f);
 
+        // Phase 3.6: delete save directory so the next startup shows no resume prompt
+        WorldStateSaver.DeleteSave(SaveDir);
+
         // Reset state flags
         _simStarted         = false;
         _simCrashReported   = false;
@@ -482,10 +531,75 @@ public sealed class Game1 : Game
         _commandQueue.Enqueue(new WatchCharacter(new EntityId(0)));  // clear watch target
 
         // Re-kick world gen
+        StartNewWorldGen();
+    }
+
+    // ── Phase 3.6 helpers ─────────────────────────────────────────────────────
+
+    private void StartNewWorldGen()
+    {
         var worldCfg = new WorldConfig { Seed = Environment.TickCount, WidthKm = 2000, HeightKm = 1600, TileWidthKm = 10 };
         var simCfg   = SimConfigLoader.LoadOrCreateDefault();
         var progress = new Progress<(string, float)>(p => _genProgress.Enqueue(p));
         _genTask = Task.Run(() => GenerateWorld(worldCfg, simCfg, progress));
+    }
+
+    /// <summary>Shows a modal "Resume saved world?" prompt when a save exists at startup.</summary>
+    private void ShowResumePrompt(MetaDto meta)
+    {
+        if (_desktop is null) return;
+
+        var content = new VerticalStackPanel { Spacing = 8 };
+        content.Widgets.Add(new Label
+        {
+            Text      = $"A saved world was found.\nYear {meta.SavedYear} — Seed {meta.Seed}",
+            TextColor = Color.White
+        });
+
+        var btnRow = new HorizontalStackPanel { Spacing = 8, HorizontalAlignment = HorizontalAlignment.Center };
+
+        var resumeBtn = new TextButton { Text = "Resume World" };
+        resumeBtn.Click += (_, _) =>
+        {
+            // Dismiss dialog, start background load
+            (_desktop.Root as Panel)?.Widgets
+                .OfType<Window>().FirstOrDefault()?.Close();
+            var simCfg = SimConfigLoader.LoadOrCreateDefault();
+            _genScreen?.Update("Loading save...", 0.5f);
+            _genScreen!.Root.Visible = true;
+            _loadTask = Task.Run(() => WorldStateSaver.Load(SaveDir, simCfg));
+        };
+
+        var newBtn = new TextButton { Text = "New World" };
+        newBtn.Click += (_, _) =>
+        {
+            (_desktop.Root as Panel)?.Widgets
+                .OfType<Window>().FirstOrDefault()?.Close();
+            WorldStateSaver.DeleteSave(SaveDir);
+            StartNewWorldGen();
+        };
+
+        btnRow.Widgets.Add(resumeBtn);
+        btnRow.Widgets.Add(newBtn);
+        content.Widgets.Add(btnRow);
+
+        var window = new Window
+        {
+            Title   = "Resume Saved World?",
+            Content = content,
+            Width   = 320,
+            Height  = 160
+        };
+        window.ShowModal(_desktop);
+    }
+
+    /// <summary>Called when the background load task completes. Wires up the sim without running world gen or spawning.</summary>
+    private void StartSimFromLoad(WorldState world)
+    {
+        _genScreen!.Root.Visible = false;
+        _loadTask = null;
+        // spawnInitialEntities: false — entities were restored from the save
+        StartSim(world, spawnInitialEntities: false);
     }
 
     protected override void Draw(GameTime gameTime)

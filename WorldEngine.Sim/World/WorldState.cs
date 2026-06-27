@@ -108,6 +108,13 @@ public sealed class WorldState : IWorldStateReadOnly
     /// <summary>Character being watched in the character watch panel. Null means no watch active.</summary>
     public EntityId? WatchedCharacterId { get; internal set; }
 
+    // === SAVE STATE ===
+    /// <summary>True while an auto-save or manual save is running on the background Task.</summary>
+    public volatile bool IsSaving;
+
+    /// <summary>Tick at which the last successful save completed. -1 if never saved.</summary>
+    public long LastSaveTick { get; internal set; } = -1;
+
     public WorldState(
         WorldConfig config,
         SimConfig simConfig,
