@@ -82,4 +82,11 @@ public sealed class SettlementConfig
     public int   CrystalPopScholar        { get; set; } = 300;
     public int   CrystalPopPhysician      { get; set; } = 500;
     public int   CrystalPopMerchant       { get; set; } = 1_000;
+
+    // ─── Population milestone events ──────────────────────────────────────────
+    // Fraction of current population that must change in a single tick to emit
+    // SettlementGrew / SettlementShrank. Captures famines, raids, and founding bursts
+    // while avoiding O(settlements) per-tick noise for steady-state growth.
+    public float GrowthEventThresholdPct  { get; set; } = 0.20f;  // 20% growth in one tick
+    public float ShrinkEventThresholdPct  { get; set; } = 0.15f;  // 15% shrink in one tick
 }

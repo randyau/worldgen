@@ -35,6 +35,9 @@ public sealed class Tier1Character : SimEntity
     // Tick when the most recent Create goal completed (used to gate re-formation)
     public int LastCreateCompletedTick { get; internal set; } = -1;
 
+    // Year when the character last created artwork (gates ArtworkCreated events per cooldown period)
+    public int LastArtworkYear { get; internal set; } = -999;
+
     public Tier1Character(
         EntityId id,
         TileCoord location,

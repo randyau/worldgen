@@ -550,15 +550,15 @@ min_seasonal_moisture_ratio       = 0.20  # seasonal CurrentMoisture floor: max(
 # =============================================================================
 
 [disasters]
-wildfire_ignition_probability_per_tick = 0.0003
+wildfire_ignition_probability_per_tick = 0.00003   # reduced 10× from 0.0003 — was 14× too frequent
 wildfire_ignition_dry_multiplier       = 3.0      # multiplier when moisture < dry threshold
-wildfire_spread_probability_per_tick   = 0.20
+wildfire_spread_probability_per_tick   = 0.10     # reduced from 0.20 — fires were spreading too aggressively
 wildfire_max_ticks                     = 16
 wildfire_dry_moisture_threshold        = 60
 wildfire_hot_temperature_threshold     = 170      # effective temp above which heat multiplier kicks in
 wildfire_ignition_hot_multiplier       = 2.0      # stacks with dry multiplier; hot+dry = 6× base probability
 wildfire_intensity                     = 1.0      # 0-1 severity assigned to wildfire ActiveDisaster
-flood_ignition_probability_per_tick    = 0.0002
+flood_ignition_probability_per_tick    = 0.00002   # reduced 10× from 0.0002
 flood_wet_moisture_threshold           = 200
 flood_wet_multiplier                   = 2.0      # probability multiplier when tile is very wet
 flood_spread_radius                    = 1        # tiles of radius from origin that get secondary flood
@@ -762,12 +762,12 @@ tension_decay_rate          = 0.15  # fraction of tension lost each year when no
 tension_war_threshold       = 1.0   # accumulated tension at which war is declared (if ruler Aggression ≥ war_aggression_threshold)
 
 # Wellbeing — emotional state dynamics (-1 spiraling … +1 flourishing)
-wellbeing_goal_gain_rate        = 0.01    # per tick when a goal is progressing
+wellbeing_goal_gain_rate        = 0.015   # per tick when a goal is progressing (raised from 0.01 — allows positive equilibrium)
 wellbeing_companion_boost       = 0.005   # per tick co-located with Bond target
 wellbeing_hunger_drain          = 0.02    # max drain at zero food
 wellbeing_hunger_threshold      = 0.3     # food need below this triggers hunger wellbeing drain
 wellbeing_mean_reversion_rate   = 0.008   # pull toward 0 each tick (raised from 0.005 — prevents permanent distress equilibrium)
-flourishing_threshold           = 0.7     # Wellbeing ≥ this → Flourishing event fires once
+flourishing_threshold           = 0.6     # Wellbeing ≥ this → Flourishing (lowered from 0.7 — more reachable)
 spiral_threshold                = -0.7    # Wellbeing ≤ this → Spiraling
 distressed_social_suppression   = 0.4     # social action score multiplier when Wellbeing < -0.3
 grief_drain_rate                = 0.015   # Wellbeing drain per tick per Grieve goal
@@ -806,6 +806,10 @@ tier2_exceptional_work_chance = 0.001  # per-tick chance of exceptional work dur
 
 # Tier1 Create goal cooldown
 create_goal_cooldown_ticks = 80        # ticks after completing a Create goal before a new one can form (5 years)
+
+# Artwork event cooldown — min years between ArtworkCreated events per character
+# Without this, every tick of an active Create goal emits an event (208k events observed)
+artwork_cooldown_years = 10            # one artwork event per character per decade at most
 
 # =============================================================================
 # SETTLEMENT (Phase 2.4 — Population Dynamics)
@@ -871,6 +875,12 @@ crystal_pop_artisan         = 200
 crystal_pop_scholar         = 300
 crystal_pop_physician       = 500
 crystal_pop_merchant        = 1000
+
+# Population milestone events — single-tick thresholds for SettlementGrew / SettlementShrank
+# 20% growth in one tick captures founding-burst conditions (e.g. immigration surge)
+# 15% shrink in one tick captures famine, severe raids, and disease spikes
+growth_event_threshold_pct  = 0.20
+shrink_event_threshold_pct  = 0.15
 
 [resource_pressure]
 shortage_threshold      = 0.6    # food ratio below this = shortage; seeds Acquire goals
@@ -939,22 +949,24 @@ suffixes = [
 
 [cultural_traits]
 # Militaristic: civ must have initiated this many total wars
-militaristic_min_wars         = 10
+militaristic_min_wars         = 3    # reduced from 10; avg civ gets 1.45 wars total
 # AND average more than this many wars per decade
 militaristic_wars_per_decade  = 2.0
 
 # Expansionist: civ must average > this many settlement foundings per 10 years
 expansionist_founding_rate    = 1.0
 # ...sustained over at least this many years
-expansionist_sustained_years  = 30
+expansionist_sustained_years  = 20   # reduced from 30
 
 # WarWeary: any single enemy must appear in war history this many times
-war_weary_min_repeat_wars     = 3
+war_weary_min_repeat_wars     = 2    # reduced from 3; same-enemy repeat wars are rare
 
 # Resilient: civ must have survived this many near-collapse episodes
 resilient_min_near_collapse_count     = 1
 # Near-collapse = total population dropped below this threshold
-resilient_near_collapse_pop_threshold = 20
+# Raised from 20 → 50: with min_viable_pop=5, TotalPopulation never reaches 5-19 while a
+# settlement still exists. 50 captures civs with a single struggling hamlet.
+resilient_near_collapse_pop_threshold = 50
 
 # Scholarly: civ members must have made this many total scholar discoveries
 scholarly_min_discoveries     = 5

@@ -467,10 +467,10 @@ public sealed class CharacterBehaviorPhase
     // ─── Artwork creation ────────────────────────────────────────────────────
 
 
-    private static void ResolveCreateArtwork(
+    private void ResolveCreateArtwork(
         Tier1Character c, WorldState world, List<PendingEvent> pending, long tick)
     {
-        // Progress the Create goal and boost Wellbeing
+        // Progress the Create goal and boost Wellbeing regardless of cooldown
         var createGoal = c.Goals.FirstOrDefault(g => g.Type == GoalType.Create);
         if (createGoal != null)
         {
@@ -484,6 +484,11 @@ public sealed class CharacterBehaviorPhase
             }
         }
         c.Wellbeing = Math.Min(1f, c.Wellbeing + 0.05f);
+
+        // Gate ArtworkCreated events to at most one per cooldown period to prevent
+        // 200k+ event explosion when a character with an active Create goal spams per-tick.
+        if (world.CurrentYear - c.LastArtworkYear < _cfg.ArtworkCooldownYears) return;
+        c.LastArtworkYear = world.CurrentYear;
 
         // Art type weighted toward character personality:
         // high Compassion → Epic/Song (social/emotional), high Ingenuity → Sculpture/Painting,

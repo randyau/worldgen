@@ -132,8 +132,16 @@ public sealed class PopulationDynamicsPhase
             newPop = Math.Max(0, newPop - diseaseDrain);
         }
 
-        // SettlementGrew/Shrank are suppressed in config — don't generate them to avoid
-        // O(settlements) pending event allocations per tick.
+        // Emit SettlementGrew / SettlementShrank for dramatic single-tick population changes.
+        // Threshold-gated to avoid O(settlements) noise during steady-state growth.
+        if (stub.Population > 0)
+        {
+            float changeRatio = (float)(newPop - stub.Population) / stub.Population;
+            if (changeRatio >= _cfg.GrowthEventThresholdPct)
+                pending.Add(MakePopEvent(EventType.SettlementGrew, stub, tile, newPop));
+            else if (changeRatio <= -_cfg.ShrinkEventThresholdPct)
+                pending.Add(MakePopEvent(EventType.SettlementShrank, stub, tile, newPop));
+        }
 
         // Specialist crystallization
         int newThresh = stub.LastCrystalThresh;

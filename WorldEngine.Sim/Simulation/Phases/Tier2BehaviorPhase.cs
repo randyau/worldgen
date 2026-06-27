@@ -66,12 +66,18 @@ public sealed class Tier2BehaviorPhase
 
         if (c.AgeSeason >= c.MaxAgeSeason || c.Needs.Food <= 0f || c.Needs.Safety <= 0f)
         {
+            string deathCause = c.AgeSeason >= c.MaxAgeSeason ? "old age" : "needs";
             c.IsAlive = false;
-            var payload = JsonSerializer.Serialize(new CharacterDeathPayload(
-                c.Id.Value, c.Name,
-                c.AgeSeason >= c.MaxAgeSeason ? "old age" : "needs",
-                c.AgeSeason));
-            pending.Add(new PendingEvent(EventType.CharacterDied, c.Location, null, payload,
+            var deathPayload = JsonSerializer.Serialize(new CharacterDeathPayload(
+                c.Id.Value, c.Name, deathCause, c.AgeSeason));
+            pending.Add(new PendingEvent(EventType.CharacterDied, c.Location, null, deathPayload,
+                new[] { c.Id.Value },
+                ActorId: c.Id.Value, ActorName: c.Name));
+
+            // Emit DismissedFromRole when a Tier 2 specialist dies — their role ends with them.
+            var dismissPayload = JsonSerializer.Serialize(new SpecialistDismissedPayload(
+                c.Id.Value, c.Name, c.Livelihood.Role.ToString(), deathCause));
+            pending.Add(new PendingEvent(EventType.DismissedFromRole, c.Location, null, dismissPayload,
                 new[] { c.Id.Value },
                 ActorId: c.Id.Value, ActorName: c.Name));
         }

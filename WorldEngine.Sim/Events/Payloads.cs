@@ -104,6 +104,9 @@ internal sealed record SuccessionCrisisPayload(long CivId, string CivName, int C
 internal sealed record SpecialistAppointedPayload(
     long CharacterId, string CharacterName, string Role, int Population, int Threshold);
 
+internal sealed record SpecialistDismissedPayload(
+    long CharacterId, string CharacterName, string Role, string Reason);
+
 internal sealed record MerchantTradePayload(
     long CharacterId, string CharacterName, string TradedResource,
     int DestX, int DestY);
