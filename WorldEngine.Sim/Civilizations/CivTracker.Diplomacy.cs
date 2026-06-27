@@ -280,8 +280,8 @@ public static partial class CivTracker
         int h = world.TileGrid.TileHeight;
 
         var candidates = new List<TileCoord>();
-        for (int y = 1; y < h - 1; y += 4)
-        for (int x = 0; x < w; x += 4)
+        for (int y = 1; y < h - 1; y++)
+        for (int x = 0; x < w; x++)
         {
             var coord = new TileCoord(x, y);
             if (!world.IsLand(coord)) continue;
