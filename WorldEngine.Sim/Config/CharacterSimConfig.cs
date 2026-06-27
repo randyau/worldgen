@@ -156,14 +156,14 @@ public sealed class CharacterSimConfig
 
     // Civilization-born character generation
     public int   CivBirthMinPop         { get; set; } = 20;   // settlement needs this many people
-    public float CivBirthChancePerSeason { get; set; } = 0.03f; // ~1 birth per 33 seasons at min pop
+    public float CivBirthChancePerSeason { get; set; } = 0.01f; // ~1% per year at min-pop
 
     // Territorial aggression — aggressive founders develop negative trust with foreign visitors
     public float TerritorialAggressionMin { get; set; } = 0.55f; // aggression threshold to apply pressure
     public float TerritorialTrustDrain    { get; set; } = 0.025f; // trust lost per tick; ~-0.1 in 4 ticks (1 season)
 
     // Beast encounters — predators on the same tile can attack characters
-    public float BeastEncounterAggressionMin { get; set; } = 0.4f;  // beasts below this are passive
+    public float BeastEncounterAggressionMin { get; set; } = 0.3f;  // beasts below this are passive
     public float BeastEncounterChance        { get; set; } = 0.15f; // probability of attack per shared tick
     public float BeastDamageMultiplier       { get; set; } = 0.3f;  // beast.Strength × this = damage to char
     public float CharCounterDamageMultiplier { get; set; } = 0.4f;  // c.Skills.Combat × MaxHealth × this = counter-damage to beast
@@ -269,7 +269,7 @@ public sealed class CharacterSimConfig
     public float SpiralThreshold            { get; set; } = -0.7f;   // Wellbeing ≤ this → Spiraling
     public float DistressedSocialSuppression { get; set; } = 0.4f;   // social action score multiplier when Wellbeing < -0.3
     public float GriefDrainRate             { get; set; } = 0.015f;  // Wellbeing drain per tick per Grieve goal
-    public float GriefDecayRate             { get; set; } = 0.002f;  // grief Intensity decay per tick
+    public float GriefDecayRate             { get; set; } = 0.004f;  // grief Intensity decay per tick
     public int   StagnationThresholdTicks   { get; set; } = 80;      // ticks before inactive goal drains wellbeing (~1 season)
     public float StagnationDrainRate        { get; set; } = 0.002f;  // wellbeing drain per tick for stagnant goals
     public float PurposeDroughtDrain        { get; set; } = 0.003f;  // wellbeing drain per tick with no flourishing goals
