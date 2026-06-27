@@ -33,6 +33,8 @@ public sealed class CharacterSimConfig
     // Colonization: separate goal type for long-range settlement founding
     // Minimum tile distance from any same-civ settlement for a tile to count as "frontier"
     public int   ColonyMinDistance         { get; set; } = 25;
+    // Minimum tile distance from ANY settlement (any civ) to prevent clustering across factions
+    public int   GlobalSettlementMinDist   { get; set; } = 8;
     // Score bonus when a tile is beyond ColonyMinDistance from all same-civ settlements
     public int   ColonyFrontierBonus       { get; set; } = 120;
     // Ambition threshold to form a Colonize goal (higher than regular expansion)

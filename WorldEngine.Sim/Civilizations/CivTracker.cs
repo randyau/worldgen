@@ -52,6 +52,12 @@ public static partial class CivTracker
         if (world.Settlements.ContainsKey(cmd.Tile)) return;
         if (world.GetEntity(cmd.CharacterId) is not Tier1Character founder) return;
 
+        // Reject founding if any existing settlement (any civ) is within GlobalSettlementMinDist tiles
+        int globalMinDist = world.SimConfig.Character.GlobalSettlementMinDist;
+        if (globalMinDist > 0 && world.Settlements.Values.Any(s =>
+            Math.Sqrt(Math.Pow(s.Tile.X - cmd.Tile.X, 2) + Math.Pow(s.Tile.Y - cmd.Tile.Y, 2)) < globalMinDist))
+            return;
+
         // Create settlement
         var civId = founder.Identity.CivId;
         bool newCiv = !civId.IsValid;

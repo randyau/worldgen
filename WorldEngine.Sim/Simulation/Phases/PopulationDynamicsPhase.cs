@@ -37,7 +37,7 @@ public sealed class PopulationDynamicsPhase
         {
             var tile    = kvp.Key;
             var stub    = kvp.Value;
-            var updated = UpdateSettlement(stub, tile, world, pending);
+            var updated = UpdateSettlement(stub, tile, world, pending, isAnnualTick);
 
             if (updated.Population <= 0)
                 toAbandon.Add(tile);
@@ -68,7 +68,8 @@ public sealed class PopulationDynamicsPhase
     // ─── Per-settlement update ────────────────────────────────────────────────
 
     private SettlementStub UpdateSettlement(
-        SettlementStub stub, TileCoord tile, WorldState world, List<PendingEvent> pending)
+        SettlementStub stub, TileCoord tile, WorldState world, List<PendingEvent> pending,
+        bool isAnnualTick = false)
     {
         var tileData = world.GetTile(tile);
         // Per-settlement founding-time variance permanently differentiates otherwise similar tiles
@@ -132,9 +133,10 @@ public sealed class PopulationDynamicsPhase
             newPop = Math.Max(0, newPop - diseaseDrain);
         }
 
-        // Emit SettlementGrew / SettlementShrank for dramatic single-tick population changes.
-        // Threshold-gated to avoid O(settlements) noise during steady-state growth.
-        if (stub.Population > 0)
+        // Emit SettlementGrew / SettlementShrank once per year (annual tick only).
+        // Per-tick checks were too noisy (tiny pop changes every season); annual comparison
+        // catches meaningful year-over-year shifts with the same config thresholds.
+        if (isAnnualTick && stub.Population > 0)
         {
             float changeRatio = (float)(newPop - stub.Population) / stub.Population;
             if (changeRatio >= _cfg.GrowthEventThresholdPct)
