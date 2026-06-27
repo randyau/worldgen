@@ -51,7 +51,7 @@ public sealed class TileMapRenderer(GraphicsDevice gd, Camera2D camera)
 
                 sb.Draw(_pixel, rect, OverlayRenderer.GetColor(tile, snapshot.ActiveOverlay));
 
-                // Territory overlay: apply semi-transparent civ-color tint
+                // Territory overlay: apply semi-transparent civ-color tint + border outline
                 if (territoryMode && snapshot.TerritoryMap.TryGetValue(coord, out var terr))
                 {
                     var civColor = CivColor(terr.CivId);
@@ -59,6 +59,22 @@ public sealed class TileMapRenderer(GraphicsDevice gd, Camera2D camera)
                     bool isCity = snapshot.Settlements.ContainsKey(coord);
                     float alpha = isCity ? 0.65f : 0.35f;
                     sb.Draw(_pixel, rect, civColor * alpha);
+
+                    // Draw civ-colored border on edges that touch a different civ or unclaimed land.
+                    // Border width scales with zoom so it stays visually consistent.
+                    int b = Math.Max(1, (int)MathF.Round(camera.Zoom * 0.12f));
+                    var border = civColor * 0.92f;
+
+                    int lx = ((wx - 1) % tw + tw) % tw;
+                    int rx = (wx + 1) % tw;
+                    if (!snapshot.TerritoryMap.TryGetValue(new TileCoord(lx, ty),  out var lt) || lt.CivId != terr.CivId)
+                        sb.Draw(_pixel, new Rectangle(rect.X,          rect.Y, b, rect.Height), border);
+                    if (!snapshot.TerritoryMap.TryGetValue(new TileCoord(rx, ty),  out var rt) || rt.CivId != terr.CivId)
+                        sb.Draw(_pixel, new Rectangle(rect.Right - b,  rect.Y, b, rect.Height), border);
+                    if (ty == 0 || !snapshot.TerritoryMap.TryGetValue(new TileCoord(wx, ty - 1), out var tt) || tt.CivId != terr.CivId)
+                        sb.Draw(_pixel, new Rectangle(rect.X, rect.Y,           rect.Width, b), border);
+                    if (ty == th - 1 || !snapshot.TerritoryMap.TryGetValue(new TileCoord(wx, ty + 1), out var bt) || bt.CivId != terr.CivId)
+                        sb.Draw(_pixel, new Rectangle(rect.X, rect.Bottom - b,  rect.Width, b), border);
                 }
 
                 if (drawBorder)
