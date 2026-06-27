@@ -51,6 +51,20 @@ public sealed class AncestryConfig
     public string[] FirstNames { get; set; } = [];
     public string[] Epithets   { get; set; } = [];
 
+    // Cultural descriptors (M3.5) — used for settlement naming and UI display
+    /// <summary>Primary building material / construction vocabulary. E.g. "hewn-stone", "woven-wood".</summary>
+    public string   ArchitecturalStyle      { get; set; } = "";
+    /// <summary>Singular noun for a settlement of this ancestry. E.g. "hold", "grove", "encampment".</summary>
+    public string   SettlementDescriptor    { get; set; } = "";
+    /// <summary>Per-biome flavour lines. Format: "biome: description".</summary>
+    public string[] BiomeAdaptations        { get; set; } = [];
+    /// <summary>Per-improvement flavour lines. Format: "improvement_type: description".</summary>
+    public string[] ImprovementDescriptors  { get; set; } = [];
+    /// <summary>Named art forms practiced by this ancestry. E.g. ["stonework", "oral saga"].</summary>
+    public string[] ArtisticTraditions      { get; set; } = [];
+    /// <summary>Suffix for civ names: "Grixal's [Hold|Covenant|Domain]". Defaults to "Domain".</summary>
+    public string   CivNameSuffix           { get; set; } = "Domain";
+
     // V2 mechanical hooks — ignored until implemented
     public string[] PhysicalTags { get; set; } = [];
 }

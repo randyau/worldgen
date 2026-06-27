@@ -15,7 +15,7 @@ One-line description of every non-trivial source file. Check here before running
 - `SimConfig.cs` — root config container; all subsections loaded from sim_config.toml
 - `SimConfigLoader.cs` — Tomlyn-based TOML loader
 - `CharacterSimConfig.cs` (~300 lines) — all character behavior constants: needs decay, skill growth, diplomacy, war thresholds
-- `AncestryConfig.cs` — per-ancestry personality/aptitude biases, name pools, spawn weights
+- `AncestryConfig.cs` — per-ancestry personality/aptitude biases, name pools, spawn weights; M3.5: cultural descriptors (ArchitecturalStyle, SettlementDescriptor, BiomeAdaptations, ImprovementDescriptors, ArtisticTraditions, CivNameSuffix)
 - `AncestryRegistry.cs` — collection of AncestryConfig; biome-weighted sampling
 - `AncestryLoader.cs` — loads ancestries.toml
 - `SettlementNamesConfig.cs` — prefix/suffix pools for procedural settlement names
@@ -53,8 +53,9 @@ One-line description of every non-trivial source file. Check here before running
 - `CivTracker.cs` — `Resolve()` dispatcher + EstablishSettlement, AllyWith, DeclareRivalry, RegisterRuin
 - `CivTracker.War.cs` — ResolveWar, StartWarBetween, ResolveRaid, ResolveNegotiate
 - `CivTracker.Diplomacy.cs` — RunAnnualDiplomacy, RunBorderTension, RunCivFloorSpawns, EndWarBetween, FireAllianceBroken
-- `CivTracker.Naming.cs` — GenerateSettlementName, GenerateFertilityMultiplier, BiasedIndex, FireCivFounded, FireSettlementFounded
-- `Civilization.cs` — mutable civ class: ruler, members, war state, border tension
+- `CivTracker.Naming.cs` — GenerateSettlementName, GenerateFertilityMultiplier, BiasedIndex, FireCivFounded, FireSettlementFounded; M3.5: ApplyCulturalSettlementName, GetCivNameSuffix, BuildCulturalProfile
+- `CulturalProfile.cs` — M3.5: immutable record (AncestryId, ArchitecturalStyle, SettlementDescriptor, ArtisticTraditions, ActiveTraits, DominantBiome)
+- `Civilization.cs` — mutable civ class: ruler, members, war state, border tension; M3.5: CulturalProfile?
 - `SettlementStub.cs` — live settlement record on sim thread
 
 ## WorldEngine.Sim/Entities/
@@ -151,6 +152,7 @@ One-line description of every non-trivial source file. Check here before running
 - `Integration/CulturalTraitsTests.cs` — M3.2: CulturalTrait enum, EvaluateCulturalTraits logic, CivTraitAcquired event generation
 - `Integration/SignificanceScoringTests.cs` — M3.2: ComputeSignificanceScore, SignificanceRescoringPass tier upgrades and score population
 - `Integration/NarrativeUIDataTests.cs` — M3.3: GetCausalChain, GetAllCivSummaries, GetEventCountByDecade, GetCharacterHistory ordering
+- `Unit/AncestryConfigTests.cs` — M3.5: AncestryConfig field loading, ApplyCulturalSettlementName, GetCivNameSuffix, BuildCulturalProfile
 
 ## docs/perf/
 - `notes_m3.md` — M3 performance profiling notes and gate status

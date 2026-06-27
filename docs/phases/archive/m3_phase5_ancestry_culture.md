@@ -1,7 +1,7 @@
 # Phase 3.5 — Ancestry & Cultural Flavour
 
 **Milestone:** 3 — Narrative Exploration
-**Status:** PLANNED
+**Status:** COMPLETE — 2026-06-26
 **Goal:** Give each civilization a culturally distinct voice — architectural vocabulary,
 naming conventions, artistic traditions — derived from their founding ancestry and shaped
 by their history. This feeds spotlight tile generation (M3 Phase 3.4) and character

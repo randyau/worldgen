@@ -58,11 +58,17 @@ public static partial class CivTracker
         if (newCiv)
         {
             civId = new CivId(world.NextCivId++);
-            string civName = $"{founder.Identity.Name}'s Domain";
+            string civSuffix = GetCivNameSuffix(founder.Identity.AncestryId, world.SimConfig.AncestryRegistry);
+            string civName   = $"{founder.Identity.Name}'s {civSuffix}";
             var civ = new Civilization(civId, civName, founder.Id, cmd.Tile, world.CurrentYear);
             civ.Members.Add(founder.Id);
             world.Civilizations[civId] = civ;
             founder.Identity = founder.Identity with { CivId = civId, RulerOrdinal = 1 };
+
+            // Build initial cultural profile from founding ancestry
+            var capitalBiome = (BiomeType)world.TileGrid.GetTile(cmd.Tile).BiomeType;
+            civ.CulturalProfile = BuildCulturalProfile(
+                founder.Identity.AncestryId, capitalBiome, world.SimConfig.AncestryRegistry, []);
 
             FireCivFounded(civ, founder, world, pending);
         }
@@ -72,6 +78,8 @@ public static partial class CivTracker
         }
 
         string settlementName    = GenerateSettlementName(cmd.Tile, world, namesConfig);
+        settlementName           = ApplyCulturalSettlementName(
+            settlementName, founder.Identity.AncestryId, world.SimConfig.AncestryRegistry);
         float  fertilityVariance = GenerateFertilityMultiplier(cmd.Tile, world);
 
         // Classify: colony if no same-civ settlement is within ColonyMinDistance tiles

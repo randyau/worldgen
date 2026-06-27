@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.Xna.Framework;
 using Myra.Graphics2D.UI;
+using WorldEngine.Sim.Config;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.World;
 
@@ -13,15 +14,17 @@ namespace WorldEngine.UI.UI;
 public sealed class CharacterProfilePanel
 {
     private readonly IHistoryQuery _history;
+    private readonly AncestryRegistry? _ancestries;
     private readonly VerticalStackPanel _content;
 
     public Widget Root { get; }
     public bool IsVisible { get; private set; }
 
-    public CharacterProfilePanel(IHistoryQuery history)
+    public CharacterProfilePanel(IHistoryQuery history, AncestryRegistry? ancestries = null)
     {
-        _history = history;
-        _content = new VerticalStackPanel { Spacing = 2 };
+        _history    = history;
+        _ancestries = ancestries;
+        _content    = new VerticalStackPanel { Spacing = 2 };
 
         var scroll = new ScrollViewer { Content = _content, Width = 330, Height = 460 };
 
@@ -61,6 +64,22 @@ public sealed class CharacterProfilePanel
             life += "  |  Alive";
         }
         AddLine(life, Color.LightGray);
+
+        // Cultural descriptor from ancestry (M3.5)
+        if (_ancestries is not null && summary.AncestryId is not null)
+        {
+            var anc = _ancestries.Get(summary.AncestryId);
+            if (anc is not null)
+            {
+                var descriptors = new List<string>();
+                if (!string.IsNullOrEmpty(anc.ArchitecturalStyle))
+                    descriptors.Add(anc.ArchitecturalStyle + " culture");
+                if (anc.ArtisticTraditions.Length > 0)
+                    descriptors.Add("traditions: " + string.Join(", ", anc.ArtisticTraditions));
+                if (descriptors.Count > 0)
+                    AddLine("  " + string.Join("  |  ", descriptors), Color.DarkGray);
+            }
+        }
 
         // Ruler info
         if (summary.RulerOrdinal > 0)

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.Xna.Framework;
 using Myra.Graphics2D.UI;
+using WorldEngine.Sim.Config;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.World;
 
@@ -13,6 +14,7 @@ namespace WorldEngine.UI.UI;
 public sealed class CivHistoryPanel
 {
     private readonly IHistoryQuery _history;
+    private readonly AncestryRegistry? _ancestries;
     private readonly VerticalStackPanel _content;
     private readonly ComboBox _civCombo;
     private readonly List<long> _civIds = new();
@@ -20,9 +22,10 @@ public sealed class CivHistoryPanel
     public Widget Root { get; }
     public bool IsVisible { get; private set; }
 
-    public CivHistoryPanel(IHistoryQuery history)
+    public CivHistoryPanel(IHistoryQuery history, AncestryRegistry? ancestries = null)
     {
-        _history = history;
+        _history    = history;
+        _ancestries = ancestries;
 
         _civCombo = new ComboBox { Width = 320, HorizontalAlignment = HorizontalAlignment.Stretch };
         _civCombo.SelectedIndexChanged += OnCivSelected;
@@ -116,7 +119,22 @@ public sealed class CivHistoryPanel
         AddLine(status, Color.LightGray);
 
         if (summary.DominantAncestry is not null)
+        {
             AddLine($"Dominant ancestry: {summary.DominantAncestry}", Color.LightGray);
+
+            // Cultural style from ancestry registry (M3.5)
+            if (_ancestries is not null)
+            {
+                var anc = _ancestries.Get(summary.DominantAncestry);
+                if (anc is not null)
+                {
+                    if (!string.IsNullOrEmpty(anc.ArchitecturalStyle))
+                        AddLine($"  Cultural style: {anc.ArchitecturalStyle}  |  {anc.SettlementDescriptor}", Color.DarkGray);
+                    if (anc.ArtisticTraditions.Length > 0)
+                        AddLine($"  Artistic traditions: {string.Join(", ", anc.ArtisticTraditions)}", Color.DarkGray);
+                }
+            }
+        }
 
         // Stats
         AddLine($"Peak settlements: {summary.PeakSettlements}  |  Rulers: {summary.TotalRulers}  |  Wars: {summary.TotalWarsInitiated + summary.TotalWarsSuffered}  |  Yrs at war: {summary.TotalYearsAtWar}", Color.LightGray);

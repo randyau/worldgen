@@ -16,6 +16,23 @@ max_lifespan_seasons  = 200
 spawn_weights         = { grassland = 2.0, plains = 2.0, savanna = 2.0, temperate_forest = 1.5, boreal_forest = 1.0, hills = 1.5, desert = 1.0, tundra = 0.5 }
 first_meeting_trust   = { elf = 0.0, dwarf = 0.05, dark_elf = -0.05, orc = -0.05, halfling = 0.10 }
 cultural_distance     = { elf = 0.10, dwarf = 0.15, dark_elf = 0.40, orc = 0.35, halfling = 0.10 }
+architectural_style    = "timber-framed"
+settlement_descriptor  = "town"
+biome_adaptations      = [
+  "grassland: low walled towns with market squares and dusty lanes",
+  "plains: sprawling homesteads connected by packed-earth roads",
+  "temperate_forest: timber halls and cleared farmland at forest edges",
+  "hills: terraced streets climbing the slope, cellars dug into the hillside",
+  "desert: thick-walled mud-brick compounds arranged around a central well",
+  "tundra: closely packed longhouses with shared smoke-vents against the cold"
+]
+improvement_descriptors = [
+  "farm: orderly furrows and hedge-rows, tended with seasonal rotation",
+  "mine: broad-mouthed adits with cart tracks and timber props",
+  "logging_camp: cleared slopes with stacked timber and bark-stripped paths"
+]
+artistic_traditions    = ["ballad", "portrait", "weaving"]
+civ_name_suffix        = "Domain"
 first_names = [
   "Navar", "Lyra", "Gawen", "Hessa", "Ceryn", "Barath", "Elowen", "Farid",
   "Isolde", "Jorath", "Kira", "Mira", "Oryn", "Petra", "Rolan", "Sabel",
@@ -52,6 +69,21 @@ bias_focus            = 0.10
 spawn_weights         = { temperate_forest = 3.0, boreal_forest = 2.0, grassland = 1.0, hills = 0.5 }
 first_meeting_trust   = { human = 0.0, dwarf = -0.05, dark_elf = -0.25, orc = -0.10, halfling = 0.05 }
 cultural_distance     = { human = 0.10, dwarf = 0.20, dark_elf = 0.70, orc = 0.40, halfling = 0.20 }
+architectural_style    = "woven-wood"
+settlement_descriptor  = "grove"
+biome_adaptations      = [
+  "temperate_forest: tree-platforms and woven-branch halls connected by rope bridges",
+  "boreal_forest: raised walkways between the great pines, smoke rising through needle crowns",
+  "grassland: slender spires rising from hidden root networks beneath open meadow",
+  "hills: terraced gardens descending into carved stone chambers beneath the hillcrest"
+]
+improvement_descriptors = [
+  "farm: tended glades with guided water channels and gentle soil-turning",
+  "mine: minimal shaft work, following natural seams by candlelight and patience",
+  "logging_camp: selective harvest leaving the canopy intact; fallen trees only"
+]
+artistic_traditions    = ["tapestry", "song", "sculpture"]
+civ_name_suffix        = "Covenant"
 first_names = [
   "Aelindra", "Sylarel", "Caelwyn", "Elowen", "Vaelith", "Sorel", "Mireille",
   "Aeryn", "Lioren", "Thessaly", "Caladrel", "Erevyn", "Faelindra", "Galathen",
@@ -85,6 +117,21 @@ bias_perfectionism    = 0.10
 spawn_weights         = { mountain = 3.0, hills = 3.0, boreal_forest = 0.5, tundra = 0.5 }
 first_meeting_trust   = { human = 0.05, elf = -0.05, dark_elf = -0.25, orc = -0.15, halfling = 0.05 }
 cultural_distance     = { human = 0.15, elf = 0.20, dark_elf = 0.65, orc = 0.50, halfling = 0.15 }
+architectural_style    = "hewn-stone"
+settlement_descriptor  = "hold"
+biome_adaptations      = [
+  "mountain: carved into cliffsides with narrow approach roads and iron-gate outer wards",
+  "hills: deep-founded stone towers above a warren of underground halls",
+  "boreal_forest: timber-reinforced stone longhouses, chimneys buried in the hillside",
+  "tundra: low-profile fortresses half-sunk into permafrost, heated by forge-warmth"
+]
+improvement_descriptors = [
+  "farm: terraced slopes with gravity-fed irrigation channels cut from stone",
+  "mine: deep-carved shafts with rope-and-pulley ore lifts and phosphorescent moss lighting",
+  "logging_camp: minimal — timber imported from lowland allies; stone is preferred"
+]
+artistic_traditions    = ["engraved stonework", "metalwork", "oral chronicle"]
+civ_name_suffix        = "Hold"
 first_names = [
   "Brom", "Korda", "Tilda", "Garuk", "Merna", "Dolun", "Hessa", "Vrund",
   "Agna", "Borun", "Kelda", "Griff", "Torva", "Skeld", "Wulfa", "Durgin",
@@ -119,6 +166,21 @@ bias_composure        = 0.10
 spawn_weights         = { volcanic = 3.0, swamp = 2.0, boreal_forest = 1.0, mountain = 1.0 }
 first_meeting_trust   = { human = -0.05, elf = -0.25, dwarf = -0.25, orc = 0.05, halfling = -0.10 }
 cultural_distance     = { human = 0.40, elf = 0.70, dwarf = 0.65, orc = 0.30, halfling = 0.55 }
+architectural_style    = "obsidian-spire"
+settlement_descriptor  = "citadel"
+biome_adaptations      = [
+  "volcanic: sleek obsidian towers rising from lava-cooled plateaus, heat vented downward",
+  "swamp: stilted black-lacquered halls above the waterline, connected by covered walkways",
+  "boreal_forest: windowless stone keeps amid dead-standing timber, fire-lit within",
+  "mountain: vertical citadels carved against cliff faces, accessible only by hidden paths"
+]
+improvement_descriptors = [
+  "farm: controlled plots worked by bound labor, yields maximized through harsh rotation",
+  "mine: tiered excavations with precise record-keeping of every extracted gram",
+  "logging_camp: efficient clear-cuts; lumber is a resource, not a living thing"
+]
+artistic_traditions    = ["shadow-weaving", "blade-carving", "strategic chronicle"]
+civ_name_suffix        = "Ascendancy"
 first_names = [
   "Zarveth", "Xilana", "Korriv", "Malvex", "Vythis", "Draxil", "Nyssara",
   "Ravaxa", "Thrix", "Ulveth", "Vexara", "Wrixal", "Xavri", "Yxara",
@@ -152,6 +214,22 @@ bias_composure        = 0.10
 spawn_weights         = { plains = 3.0, savanna = 3.0, grassland = 1.5, hills = 1.0, desert = 1.0 }
 first_meeting_trust   = { human = -0.05, elf = -0.10, dwarf = -0.15, dark_elf = 0.05, halfling = -0.10 }
 cultural_distance     = { human = 0.35, elf = 0.40, dwarf = 0.50, dark_elf = 0.30, halfling = 0.40 }
+architectural_style    = "bone-and-hide"
+settlement_descriptor  = "camp"
+biome_adaptations      = [
+  "plains: ring-fort of earthen berm and sharpened stakes, tents within",
+  "savanna: open kraals with watch-posts, built to be dismantled and moved seasonally",
+  "grassland: fortified encampments around a central fire-mound",
+  "hills: perimeter walled in dry-stacked stone, with hide-roofed longhouses inside",
+  "desert: deep-dug pit-camps with overhead canopies of stretched hide"
+]
+improvement_descriptors = [
+  "farm: cleared land with minimal terracing, relying on strong backs over technique",
+  "mine: fast-dug open pits; depth traded for speed and accessible ore",
+  "logging_camp: rapid felling with axes; stumps left standing, no replanting"
+]
+artistic_traditions    = ["war-drum", "body-marking", "oral legend"]
+civ_name_suffix        = "Warband"
 first_names = [
   "Grak", "Urva", "Kargal", "Drusk", "Thugga", "Brul", "Varg", "Morda",
   "Grasha", "Krug", "Lorga", "Murgal", "Norg", "Proga", "Qurg", "Roga",
@@ -186,6 +264,21 @@ bias_composure        = 0.10
 spawn_weights         = { grassland = 3.0, plains = 2.0, temperate_forest = 1.5, hills = 1.0 }
 first_meeting_trust   = { human = 0.10, elf = 0.05, dwarf = 0.05, dark_elf = -0.10, orc = -0.10 }
 cultural_distance     = { human = 0.10, elf = 0.20, dwarf = 0.15, dark_elf = 0.55, orc = 0.40 }
+architectural_style    = "round-door"
+settlement_descriptor  = "shire"
+biome_adaptations      = [
+  "grassland: hobbit-hole clusters dug into gentle rises, doors painted in bright colours",
+  "plains: low round-topped cottages half-buried in the earth, gardens facing south",
+  "temperate_forest: compact villages of whitewashed cottages under the tree canopy",
+  "hills: hillside burrow-towns with cobbled lanes and communal ovens"
+]
+improvement_descriptors = [
+  "farm: lovingly tended kitchen gardens and orchards, famous for variety over yield",
+  "mine: shallow delves for clay and building stone; nothing too deep or dark",
+  "logging_camp: careful harvesting with an eye to keeping shade for future orchards"
+]
+artistic_traditions    = ["pipe-music", "culinary craft", "illustrated chronicle"]
+civ_name_suffix        = "Shire"
 first_names = [
   "Tobin", "Merry", "Perla", "Willo", "Rucco", "Delma", "Hamlin", "Rosie",
   "Pippa", "Cob", "Daisy", "Fergo", "Ginny", "Hobb", "Ivy", "Jory",

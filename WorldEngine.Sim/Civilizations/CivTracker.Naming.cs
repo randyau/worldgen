@@ -74,4 +74,51 @@ public static partial class CivTracker
         };
         return (int)(((raw + shift + 1f) % 1f) * count);
     }
+
+    // ─── Cultural naming helpers (M3.5) ──────────────────────────────────────
+
+    /// <summary>
+    /// Replaces a "Domain" suffix in a name with the ancestry's SettlementDescriptor if
+    /// the ancestry is known. Returns <paramref name="baseName"/> unchanged when the
+    /// ancestry is unknown, the descriptor is empty, or the name does not end with "Domain".
+    /// </summary>
+    public static string ApplyCulturalSettlementName(
+        string baseName, string? ancestryId, AncestryRegistry? registry)
+    {
+        if (ancestryId is null || registry is null) return baseName;
+        var ancestry = registry.Get(ancestryId);
+        if (ancestry is null || string.IsNullOrEmpty(ancestry.SettlementDescriptor)) return baseName;
+        return baseName.EndsWith("Domain", StringComparison.OrdinalIgnoreCase)
+            ? baseName[..^6] + ancestry.SettlementDescriptor
+            : baseName;
+    }
+
+    /// <summary>
+    /// Returns the culturally appropriate civilization name suffix for the given ancestry.
+    /// Falls back to "Domain" if the ancestry is unknown or has no configured suffix.
+    /// </summary>
+    public static string GetCivNameSuffix(string? ancestryId, AncestryRegistry? registry)
+    {
+        if (ancestryId is null || registry is null) return "Domain";
+        var ancestry = registry.Get(ancestryId);
+        return !string.IsNullOrEmpty(ancestry?.CivNameSuffix) ? ancestry!.CivNameSuffix : "Domain";
+    }
+
+    /// <summary>
+    /// Builds a <see cref="CulturalProfile"/> for a civilization from its founding ancestry
+    /// and current cultural traits. Called at founding and whenever new traits are acquired.
+    /// </summary>
+    public static CulturalProfile BuildCulturalProfile(
+        string? ancestryId, BiomeType dominantBiome,
+        AncestryRegistry registry, IEnumerable<string> activeTraits)
+    {
+        var ancestry = ancestryId is not null ? registry.Get(ancestryId) : null;
+        return new CulturalProfile(
+            AncestryId:          ancestryId ?? "human",
+            ArchitecturalStyle:  ancestry?.ArchitecturalStyle  ?? "",
+            SettlementDescriptor: ancestry?.SettlementDescriptor ?? "",
+            ArtisticTraditions:  ancestry?.ArtisticTraditions  ?? [],
+            ActiveTraits:        activeTraits.ToArray(),
+            DominantBiome:       dominantBiome.ToString());
+    }
 }

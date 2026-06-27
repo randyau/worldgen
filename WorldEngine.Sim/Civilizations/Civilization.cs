@@ -97,6 +97,13 @@ public sealed class Civilization
     /// <summary>Permanent cultural traits assigned once thresholds are crossed. Maintained by CivTracker.EvaluateCulturalTraits.</summary>
     public HashSet<string> CulturalTraits { get; } = new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// Cultural profile derived from the founding ancestry and active traits (M3.5).
+    /// Built at civ founding; updated when new cultural traits are acquired.
+    /// Null until the civ is fully initialized.
+    /// </summary>
+    public CulturalProfile? CulturalProfile { get; set; }
+
     public bool InPeaceCooldownWith(CivId other, int currentYear, int cooldownYears, int warExhaustionPerWar = 0)
     {
         if (!PeaceTreaties.TryGetValue(other, out int peaceYear)) return false;

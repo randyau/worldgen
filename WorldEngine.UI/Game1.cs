@@ -285,8 +285,9 @@ public sealed class Game1 : Game
 
         // ── Narrative UI panels ──────────────────────────────────────────────
         _focusLens   = new FocusLensState();
-        _charProfile = new CharacterProfilePanel(_historyQuery);
-        _civHistory  = new CivHistoryPanel(_historyQuery);
+        var ancestries = world.SimConfig.AncestryRegistry;
+        _charProfile = new CharacterProfilePanel(_historyQuery, ancestries);
+        _civHistory  = new CivHistoryPanel(_historyQuery, ancestries);
 
         // Timeline bar — SpriteBatch component + Myra label overlay
         _timeline = new TimelineBar();
