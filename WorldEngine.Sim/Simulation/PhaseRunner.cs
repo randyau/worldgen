@@ -83,6 +83,7 @@ public sealed class PhaseRunner
         RunCharacterBehaviorPhase(world, pending, isAnnualTick);
         if (isAnnualTick)
         {
+            KnowledgePropagationPhase.Execute(world);
             CivTracker.RunAnnualDiplomacy(world, pending);
             pending.AddRange(_territoryPhase.Execute(world));
         }

@@ -88,6 +88,11 @@ public static class SignificanceClassifier
             EventType.CharacterCrystallized   => PopulationImpact.Minor,
             EventType.ArtisanCrafted          => PopulationImpact.None,
             EventType.CivTraitAcquired        => PopulationImpact.None,
+            // M4 Phase 1 emissary events
+            EventType.EmissaryDispatched       => PopulationImpact.None,
+            EventType.EmissaryLost             => PopulationImpact.None,   // Destruction verb → Regional floor
+            EventType.ReligiousEmissaryArrived => PopulationImpact.Minor,
+            EventType.CivIntelGathered         => PopulationImpact.None,
             _                                 => PopulationImpact.None,
         };
     }

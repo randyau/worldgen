@@ -81,6 +81,13 @@ public static partial class CivTracker
         // 5c. Cultural trait evaluation: assign permanent traits when thresholds are crossed.
         EvaluateCulturalTraits(world, pending);
 
+        // 5d. Emissary dispatch: rulers consider sending emissaries every DispatchCheckYears.
+        if (world.CurrentYear % world.SimConfig.Emissary.DispatchCheckYears == 0)
+            RunEmissaryDispatch(world, pending);
+
+        // 5e. Emissary resolution: arrivals for this year are processed.
+        RunEmissaryResolution(world, pending);
+
         // 6. Civ-level war resolution: expiry, surrender, and collapse
         var processed = new HashSet<(CivId, CivId)>();
         foreach (var civ in world.Civilizations.Values)
@@ -532,5 +539,322 @@ public static partial class CivTracker
         if (yearsElapsed < cfg.UnstableThroneYears) return false;
         float windows = yearsElapsed / (float)cfg.UnstableThroneYears;
         return civ.TotalSuccessions / windows >= cfg.UnstableThroneMinSuccessions;
+    }
+
+    // ─── Civ knowledge system (M4.1) ─────────────────────────────────────────
+
+    private const int SaltEmissaryDispatch   = 4102;
+    private const int SaltEmissaryResolution = 4103;
+
+    /// <summary>
+    /// Upserts a CivContact into the target civ's KnownCivs. If the contact already exists,
+    /// upgrades BestSource if the new source is higher-fidelity, adds confidence (clamped to 1),
+    /// and updates YearLastContact. If new, creates the contact.
+    /// </summary>
+    public static void SeedCivContact(
+        CivId knowerCivId, CivId knownCivId,
+        CivContactSource source, TileCoord capitalTile,
+        float confidenceGain, WorldState world)
+    {
+        if (!world.Civilizations.TryGetValue(knowerCivId, out var knower)) return;
+
+        if (knower.KnownCivs.TryGetValue(knownCivId, out var existing))
+        {
+            knower.KnownCivs[knownCivId] = existing with
+            {
+                YearLastContact = world.CurrentYear,
+                BestSource      = (CivContactSource)Math.Max((int)existing.BestSource, (int)source),
+                CapitalTile     = source >= existing.BestSource ? capitalTile : existing.CapitalTile,
+                Confidence      = Math.Min(1f, existing.Confidence + confidenceGain)
+            };
+        }
+        else
+        {
+            knower.KnownCivs[knownCivId] = new CivContact(
+                KnownCivId:      knownCivId,
+                YearFirstContact: world.CurrentYear,
+                YearLastContact: world.CurrentYear,
+                BestSource:      source,
+                CapitalTile:     capitalTile,
+                Confidence:      Math.Min(1f, confidenceGain));
+        }
+    }
+
+    // ─── Emissary dispatch ────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Annual emissary dispatch decision. Called from RunAnnualDiplomacy when
+    /// CurrentYear % DispatchCheckYears == 0.
+    ///
+    /// For each non-collapsed civ that is under the active emissary cap, evaluates
+    /// known civs with sufficient confidence and dispatches emissaries based on
+    /// ruler personality and trust levels.
+    /// </summary>
+    internal static void RunEmissaryDispatch(WorldState world, List<PendingEvent> pending)
+    {
+        var cfg = world.SimConfig.Emissary;
+
+        foreach (var civ in world.Civilizations.Values)
+        {
+            if (civ.IsCollapsed) continue;
+
+            int totalActive = 0;
+            foreach (var count in civ.ActiveEmissaryCountByTarget.Values) totalActive += count;
+            if (totalActive >= cfg.MaxActiveEmissariesPerCiv) continue;
+
+            var ruler = world.GetEntity(civ.RulerId) as Tier1Character;
+
+            foreach (var (targetCivId, contact) in civ.KnownCivs)
+            {
+                if (contact.Confidence <= 0.1f) continue;
+                if (!world.Civilizations.TryGetValue(targetCivId, out var targetCiv)) continue;
+                if (targetCiv.IsCollapsed) continue;
+                if (civ.IsAtWarWith(targetCivId)) continue;
+
+                // Cap re-check (may have dispatched earlier in this loop)
+                totalActive = 0;
+                foreach (var count in civ.ActiveEmissaryCountByTarget.Values) totalActive += count;
+                if (totalActive >= cfg.MaxActiveEmissariesPerCiv) break;
+
+                // Already have an active emissary to this target
+                if (civ.ActiveEmissaryCountByTarget.GetValueOrDefault(targetCivId, 0) > 0) continue;
+
+                // Determine purpose
+                float trust = 0f;
+                if (ruler != null && world.GetEntity(targetCiv.RulerId) is Tier1Character targetRuler)
+                    trust = world.Relationships.Get(civ.RulerId, targetRuler.Id)?.Trust ?? 0f;
+
+                EmissaryPurpose? purpose = SelectEmissaryPurpose(ruler, trust, civ, targetCivId, cfg, world);
+                if (purpose is null) continue;
+
+                // Distance and survival chance
+                int dx = civ.CapitalTile.X - contact.CapitalTile.X;
+                int dy = civ.CapitalTile.Y - contact.CapitalTile.Y;
+                float dist = MathF.Sqrt(dx * dx + dy * dy);
+                float survivalChance = Math.Clamp(
+                    1f - dist * cfg.EmissaryDeathPerTile,
+                    cfg.EmissaryMinSurvivalChance, 1f);
+                int arrivalYear = world.CurrentYear + (int)MathF.Ceiling(dist / cfg.EmissaryTravelSpeedTilesPerYear);
+
+                var emissary = new PendingEmissary(
+                    FromCiv: civ.Id, ToCiv: targetCivId,
+                    Purpose: purpose.Value,
+                    DepartedYear: world.CurrentYear,
+                    ArrivalYear: arrivalYear,
+                    SurvivalChance: survivalChance);
+
+                world.PendingEmissaries.Add(emissary);
+                civ.ActiveEmissaryCountByTarget[targetCivId] =
+                    civ.ActiveEmissaryCountByTarget.GetValueOrDefault(targetCivId, 0) + 1;
+
+                // Fire EmissaryDispatched event for history log
+                var payload = JsonSerializer.Serialize(new EmissaryDispatchedPayload(
+                    civ.Id.Value, civ.Name, targetCivId.Value, targetCiv.Name,
+                    purpose.Value.ToString(), arrivalYear, survivalChance));
+                pending.Add(new PendingEvent(EventType.EmissaryDispatched, civ.CapitalTile,
+                    null, payload, CivId: civ.Id.Value));
+            }
+        }
+    }
+
+    private static EmissaryPurpose? SelectEmissaryPurpose(
+        Tier1Character? ruler, float trust, Civilization civ,
+        CivId targetCivId, EmissaryConfig cfg, WorldState world)
+    {
+        // DECISION: Cunning is proxied from Rationality + (1 - Honesty) since Tier1 has no
+        // explicit Cunning trait. Piety comes from Skills.Piety (a skill, not personality).
+        float cunning = ruler != null
+            ? (ruler.Personality.Rationality + (1f - ruler.Personality.Honesty)) * 0.5f
+            : 0.3f;
+        float piety = ruler?.Skills.Piety ?? 0f;
+
+        if (trust < cfg.SpyDispatchMaxTrust && cunning > 0.5f)
+            return EmissaryPurpose.Spy;
+        if (trust >= cfg.TradeDispatchMinTrust)
+            return EmissaryPurpose.Trade;
+        if (trust >= cfg.DiplomacyDispatchMinTrust && !civ.IsAtWarWith(targetCivId))
+            return EmissaryPurpose.Diplomacy;
+        if (piety > 0.6f)
+            return EmissaryPurpose.Religious;
+        return null;
+    }
+
+    // ─── Emissary resolution ──────────────────────────────────────────────────
+
+    /// <summary>
+    /// Resolves all emissaries whose ArrivalYear == CurrentYear.
+    /// Applies mortality roll, then purpose-specific outcomes.
+    /// </summary>
+    internal static void RunEmissaryResolution(WorldState world, List<PendingEvent> pending)
+    {
+        var cfg      = world.SimConfig.Emissary;
+        var arrivals = world.PendingEmissaries
+            .Where(e => e.ArrivalYear == world.CurrentYear)
+            .ToList();
+
+        foreach (var emissary in arrivals)
+        {
+            world.PendingEmissaries.Remove(emissary);
+
+            if (!world.Civilizations.TryGetValue(emissary.FromCiv, out var fromCiv)) continue;
+            if (!world.Civilizations.TryGetValue(emissary.ToCiv,   out var toCiv))   continue;
+
+            // Decrement active count
+            if (fromCiv.ActiveEmissaryCountByTarget.TryGetValue(emissary.ToCiv, out int cur) && cur > 0)
+                fromCiv.ActiveEmissaryCountByTarget[emissary.ToCiv] = cur - 1;
+
+            // Mark emissary dispatch-refreshed so proximity decay doesn't erase the contact this tick
+            // (the emissary itself is knowledge; the seed below handles the confidence bump)
+
+            // Mortality roll
+            float roll = WorldRng.FloatAt(world.WorldSeed, world.CurrentYear,
+                emissary.FromCiv.Value, emissary.ToCiv.Value, SaltEmissaryResolution);
+
+            if (roll > emissary.SurvivalChance)
+            {
+                var lostPayload = JsonSerializer.Serialize(new EmissaryLostPayload(
+                    emissary.FromCiv.Value, fromCiv.Name,
+                    emissary.ToCiv.Value,   toCiv.Name,
+                    emissary.Purpose.ToString()));
+                pending.Add(new PendingEvent(EventType.EmissaryLost, fromCiv.CapitalTile,
+                    null, lostPayload, CivId: emissary.FromCiv.Value));
+                continue;
+            }
+
+            // Successful arrival — upgrade contact to EmissaryExchange
+            SeedCivContact(emissary.FromCiv, emissary.ToCiv,
+                CivContactSource.EmissaryExchange, toCiv.CapitalTile, 1f, world);
+
+            ResolveEmissaryArrival(emissary, fromCiv, toCiv, world, pending, cfg);
+        }
+    }
+
+    private static void ResolveEmissaryArrival(
+        PendingEmissary emissary,
+        Civilization fromCiv, Civilization toCiv,
+        WorldState world, List<PendingEvent> pending,
+        EmissaryConfig cfg)
+    {
+        switch (emissary.Purpose)
+        {
+            case EmissaryPurpose.Trade:
+                ResolveTrade(emissary, fromCiv, toCiv, world, pending, cfg);
+                break;
+            case EmissaryPurpose.Diplomacy:
+                ResolveDiplomacy(emissary, fromCiv, toCiv, world, pending, cfg);
+                break;
+            case EmissaryPurpose.Spy:
+                ResolveSpy(emissary, fromCiv, toCiv, world, pending, cfg);
+                break;
+            case EmissaryPurpose.Religious:
+                ResolveReligious(emissary, fromCiv, toCiv, world, pending, cfg);
+                break;
+        }
+    }
+
+    private static void ResolveTrade(
+        PendingEmissary emissary, Civilization fromCiv, Civilization toCiv,
+        WorldState world, List<PendingEvent> pending, EmissaryConfig cfg)
+    {
+        // Both civs need minimum population to meaningfully trade
+        if (fromCiv.TotalPopulation < cfg.TradeMinPopForGoods ||
+            toCiv.TotalPopulation   < cfg.TradeMinPopForGoods)
+            return;
+
+        // Fire MerchantTradeCompleted (reuses existing event type)
+        var tradePayload = JsonSerializer.Serialize(new MerchantTradePayload(
+            fromCiv.RulerId.Value, fromCiv.Name, "diplomacy_goods",
+            toCiv.CapitalTile.X, toCiv.CapitalTile.Y));
+        pending.Add(new PendingEvent(EventType.MerchantTradeCompleted, fromCiv.CapitalTile,
+            null, tradePayload, CivId: fromCiv.Id.Value));
+
+        // Trust bump between rulers
+        if (world.GetEntity(fromCiv.RulerId) is Tier1Character fromRuler &&
+            world.GetEntity(toCiv.RulerId)   is Tier1Character toRuler)
+        {
+            var rel = world.Relationships.GetOrCreate(fromRuler.Id, toRuler.Id);
+            world.Relationships.Upsert(rel with
+            {
+                Trust = Math.Clamp(rel.Trust + cfg.TradeTrustGain, -1f, 1f)
+            });
+        }
+    }
+
+    private static void ResolveDiplomacy(
+        PendingEmissary emissary, Civilization fromCiv, Civilization toCiv,
+        WorldState world, List<PendingEvent> pending, EmissaryConfig cfg)
+    {
+        if (world.GetEntity(fromCiv.RulerId) is not Tier1Character fromRuler) return;
+        if (world.GetEntity(toCiv.RulerId)   is not Tier1Character toRuler)   return;
+
+        var rel = world.Relationships.GetOrCreate(fromRuler.Id, toRuler.Id);
+        float newTrust = Math.Clamp(rel.Trust + cfg.TradeTrustGain * 2f, -1f, 1f);
+        world.Relationships.Upsert(rel with { Trust = newTrust });
+
+        // Check if trust now crosses alliance threshold
+        if (newTrust >= cfg.DiplomacyAllianceMinTrust && !rel.IsAlly)
+        {
+            world.Relationships.Upsert(world.Relationships.GetOrCreate(fromRuler.Id, toRuler.Id) with
+            {
+                Flags = rel.Flags | RelationshipFlags.IsAlly
+            });
+
+            var alliancePayload = JsonSerializer.Serialize(new AllianceFormedPayload(
+                fromRuler.Id.Value, fromRuler.Identity.Name,
+                toRuler.Id.Value,   toRuler.Identity.Name,
+                fromCiv.Id.Value, toCiv.Id.Value));
+            pending.Add(new PendingEvent(EventType.AllianceFormed, fromCiv.CapitalTile,
+                null, alliancePayload, new[] { fromRuler.Id.Value }, new[] { toRuler.Id.Value },
+                ActorId: fromRuler.Id.Value, ActorName: fromRuler.Identity.Name,
+                CivId: fromCiv.Id.Value));
+        }
+    }
+
+    private static void ResolveSpy(
+        PendingEmissary emissary, Civilization fromCiv, Civilization toCiv,
+        WorldState world, List<PendingEvent> pending, EmissaryConfig cfg)
+    {
+        // Spy emissaries upgrade confidence significantly; no visible event to target civ
+        if (fromCiv.KnownCivs.TryGetValue(toCiv.Id, out var contact))
+        {
+            fromCiv.KnownCivs[toCiv.Id] = contact with
+            {
+                Confidence  = Math.Min(1f, contact.Confidence + cfg.SpyConfidenceBoost),
+                BestSource  = (CivContactSource)Math.Max((int)contact.BestSource,
+                                                          (int)CivContactSource.EmissaryExchange)
+            };
+        }
+
+        // Fire CivIntelGathered for the history log (silent to target)
+        float finalConfidence = fromCiv.KnownCivs.TryGetValue(toCiv.Id, out var updated)
+            ? updated.Confidence : cfg.SpyConfidenceBoost;
+
+        var intelPayload = JsonSerializer.Serialize(new CivIntelGatheredPayload(
+            fromCiv.Id.Value, fromCiv.Name, toCiv.Id.Value, toCiv.Name, finalConfidence));
+        pending.Add(new PendingEvent(EventType.CivIntelGathered, fromCiv.CapitalTile,
+            null, intelPayload, CivId: fromCiv.Id.Value));
+    }
+
+    private static void ResolveReligious(
+        PendingEmissary emissary, Civilization fromCiv, Civilization toCiv,
+        WorldState world, List<PendingEvent> pending, EmissaryConfig cfg)
+    {
+        int affected = 0;
+
+        // Boost Spiritual need for all target-civ living characters — seeds religion founding
+        foreach (var memberId in toCiv.Members)
+        {
+            if (world.GetEntity(memberId) is not Tier1Character member || !member.IsAlive) continue;
+            member.Needs = member.Needs with
+            {
+                Spiritual = Math.Min(1f, member.Needs.Spiritual + cfg.ReligiousSpreadAweBoost)
+            };
+            affected++;
+        }
+
+        var payload = JsonSerializer.Serialize(new ReligiousEmissaryArrivedPayload(
+            fromCiv.Id.Value, fromCiv.Name, toCiv.Id.Value, toCiv.Name, affected));
+        pending.Add(new PendingEvent(EventType.ReligiousEmissaryArrived, toCiv.CapitalTile,
+            null, payload, CivId: toCiv.Id.Value));
     }
 }

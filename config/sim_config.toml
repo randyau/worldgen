@@ -975,3 +975,36 @@ scholarly_min_discoveries     = 5
 unstable_throne_min_successions = 5
 # Rolling window size in years
 unstable_throne_years           = 50
+
+# =============================================================================
+# EMISSARY SYSTEM (M4 Phase 1 — Civ Awareness & Emissary)
+# =============================================================================
+
+[emissary]
+# Knowledge propagation
+knowledge_spread_radius         = 30    # tiles; civs within this range gain Rumor contact (vs WarProximityRadius ~8)
+rumor_confidence_gain           = 0.15  # confidence added per year of proximity rumor
+encounter_confidence_gain       = 0.35  # confidence added on character cross-civ encounter
+confidence_decay_per_year       = 0.05  # lost per year without contact
+rumor_chain_probability         = 0.05  # annual chance Civ A passes knowledge of Civ C to Civ B (per pair)
+rumor_chain_confidence_factor   = 0.5   # chained rumors arrive at fraction of source confidence
+
+# Emissary dispatch
+dispatch_check_years            = 5     # ruler considers dispatching per this many years
+max_active_emissaries_per_civ   = 3     # cap on simultaneous in-transit emissaries
+emissary_travel_speed_tiles_per_year = 8.0  # how fast emissaries travel; affects delay and mortality
+trade_dispatch_min_trust        = -0.1  # min character trust to send trade emissary
+diplomacy_dispatch_min_trust    = 0.1   # min trust for diplomatic mission
+spy_dispatch_max_trust          = 0.2   # spy missions target civs you don't trust well
+
+# Emissary mortality
+emissary_death_per_tile         = 0.008  # cumulative per-tile mortality rate
+emissary_min_survival_chance    = 0.2    # floor: even a 200-tile journey has 20% success
+                                         # effective formula: clamp(1 - dist * death_per_tile, min_survival, 1.0)
+
+# Emissary outcomes (on arrival)
+trade_trust_gain                = 0.08
+trade_min_pop_for_goods         = 50     # both civs need this pop to meaningfully trade
+diplomacy_alliance_min_trust    = 0.25   # trust required after emissary to trigger AllianceFormed
+spy_confidence_boost            = 0.4    # how much the contact confidence improves from spy intel
+religious_spread_awe_boost      = 0.3    # awe modifier added to target-civ chars on religious emissary

@@ -5,6 +5,8 @@ namespace WorldEngine.Sim.Persistence;
 // ─── JSON source-gen context ──────────────────────────────────────────────────
 [JsonSerializable(typeof(WorldStateDto))]
 [JsonSerializable(typeof(MetaDto))]
+[JsonSerializable(typeof(CivContactDto))]
+[JsonSerializable(typeof(PendingEmissaryDto))]
 internal partial class WorldStateSerializerContext : JsonSerializerContext { }
 
 // ─── Meta ─────────────────────────────────────────────────────────────────────
@@ -60,7 +62,8 @@ public sealed record WorldStateDto(
     Dictionary<string, int>                         NameOrdinals,
     List<long>                                      ActiveFounders,
     List<BeastEmergenceEntryDto>                    BeastEmergenceSchedule,
-    long?                                           WatchedCharacterId
+    long?                                           WatchedCharacterId,
+    List<PendingEmissaryDto>                        PendingEmissaries
 );
 
 // ─── Environment ──────────────────────────────────────────────────────────────
@@ -107,7 +110,10 @@ public sealed record CivilizationDto(
     Dictionary<string, int>          WarHistory,
     List<string>                     CulturalTraits,
     Dictionary<string, List<string>> CityTerritories,
-    CulturalProfileDto?              CulturalProfile);
+    CulturalProfileDto?              CulturalProfile,
+    // M4 Phase 1 — civ awareness
+    Dictionary<string, CivContactDto> KnownCivs,
+    Dictionary<string, int>           ActiveEmissaryCountByTarget);
 
 public sealed record CulturalProfileDto(
     string   AncestryId,
@@ -276,3 +282,21 @@ public sealed record RelationshipEdgeDto(
 
 // ─── Beast emergence ──────────────────────────────────────────────────────────
 public sealed record BeastEmergenceEntryDto(int EmergenceYear, string SpeciesId);
+
+// ─── M4 Phase 1 — Emissary system ────────────────────────────────────────────
+
+public sealed record CivContactDto(
+    int    KnownCivId,
+    int    YearFirstContact,
+    int    YearLastContact,
+    int    BestSource,       // (int)CivContactSource
+    string CapitalTile,      // "x,y"
+    float  Confidence);
+
+public sealed record PendingEmissaryDto(
+    int   FromCiv,
+    int   ToCiv,
+    int   Purpose,           // (int)EmissaryPurpose
+    int   DepartedYear,
+    int   ArrivalYear,
+    float SurvivalChance);

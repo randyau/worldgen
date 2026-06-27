@@ -173,3 +173,27 @@ internal sealed record TerritoryLostPayload(
 internal sealed record ImprovementBuiltPayload(
     long BuilderId, string BuilderName, long CivId,
     int TileX, int TileY, string ImprovementType);
+
+// ─── M4 Phase 1 — Emissary events ────────────────────────────────────────────
+
+internal sealed record EmissaryDispatchedPayload(
+    long FromCivId, string FromCivName,
+    long ToCivId,   string ToCivName,
+    string Purpose,
+    int    ArrivalYear,
+    float  SurvivalChance);
+
+internal sealed record EmissaryLostPayload(
+    long FromCivId, string FromCivName,
+    long ToCivId,   string ToCivName,
+    string Purpose);
+
+internal sealed record ReligiousEmissaryArrivedPayload(
+    long FromCivId, string FromCivName,
+    long ToCivId,   string ToCivName,
+    int  CharactersAffected);
+
+internal sealed record CivIntelGatheredPayload(
+    long FromCivId, string FromCivName,
+    long ToCivId,   string ToCivName,
+    float NewConfidence);

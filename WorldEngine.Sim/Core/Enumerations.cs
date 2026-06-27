@@ -177,6 +177,12 @@ public enum EventType
     GodModeCharacterCreated     = 9003,
     GodModeArtifactPlaced       = 9004,
     GodModeCivilizationForced   = 9005,
+
+    // M4 Phase 1 — Diplomatic emissary events (5000-range)
+    EmissaryDispatched          = 5001,  // civ sent an emissary to a known civ
+    EmissaryLost                = 5002,  // emissary did not survive the journey
+    ReligiousEmissaryArrived    = 5003,  // successful religious mission; awe seeds planted
+    CivIntelGathered            = 5004,  // spy emissary returned with intelligence
 }
 
 public static class VerbClassification
@@ -253,6 +259,11 @@ public static class VerbClassification
         EventType.TerritoryLost      => VerbClass.Destruction,
         EventType.ImprovementBuilt   => VerbClass.Creation,
         EventType.CivTraitAcquired   => VerbClass.Transformation,
+        // M4 Phase 1 emissary events
+        EventType.EmissaryDispatched       => VerbClass.Transfer,
+        EventType.EmissaryLost             => VerbClass.Destruction,
+        EventType.ReligiousEmissaryArrived => VerbClass.Interaction,
+        EventType.CivIntelGathered         => VerbClass.Interaction,
         _ => throw new ArgumentOutOfRangeException(nameof(type), type, "No VerbClass mapping")
     };
 }

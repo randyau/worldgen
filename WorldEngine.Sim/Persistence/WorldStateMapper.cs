@@ -58,7 +58,12 @@ internal static class WorldStateMapper
             BeastEmergenceSchedule:      w.BeastEmergenceSchedule
                                           .Select(e => new BeastEmergenceEntryDto(e.EmergenceYear, e.SpeciesId))
                                           .ToList(),
-            WatchedCharacterId:          w.WatchedCharacterId?.Value);
+            WatchedCharacterId:          w.WatchedCharacterId?.Value,
+            PendingEmissaries:           w.PendingEmissaries
+                                          .Select(e => new PendingEmissaryDto(
+                                              e.FromCiv.Value, e.ToCiv.Value,
+                                              (int)e.Purpose, e.DepartedYear, e.ArrivalYear, e.SurvivalChance))
+                                          .ToList());
     }
 
     private static Dictionary<string, List<ResourceDepositDto>> MapResourceRegistry(WorldState w)
@@ -90,6 +95,12 @@ internal static class WorldStateMapper
         var cityTerr = new Dictionary<string, List<string>>(c.CityTerritories.Count);
         foreach (var (city, tiles) in c.CityTerritories)
             cityTerr[TileKey(city)] = tiles.Select(TileKey).ToList();
+
+        var knownCivs = new Dictionary<string, CivContactDto>(c.KnownCivs.Count);
+        foreach (var (targetId, contact) in c.KnownCivs)
+            knownCivs[targetId.Value.ToString()] = new CivContactDto(
+                contact.KnownCivId.Value, contact.YearFirstContact, contact.YearLastContact,
+                (int)contact.BestSource, TileKey(contact.CapitalTile), contact.Confidence);
 
         return new CivilizationDto(
             Id:                      c.Id.Value,
@@ -124,7 +135,10 @@ internal static class WorldStateMapper
                 c.CulturalProfile.SettlementDescriptor,
                 c.CulturalProfile.ArtisticTraditions,
                 c.CulturalProfile.ActiveTraits,
-                c.CulturalProfile.DominantBiome));
+                c.CulturalProfile.DominantBiome),
+            KnownCivs:               knownCivs,
+            ActiveEmissaryCountByTarget: c.ActiveEmissaryCountByTarget
+                .ToDictionary(kv => kv.Key.Value.ToString(), kv => kv.Value));
     }
 
     private static Dictionary<string, SettlementStubDto> MapSettlements(WorldState w)
@@ -398,6 +412,13 @@ internal static class WorldStateMapper
         if (dto.WatchedCharacterId.HasValue)
             world.WatchedCharacterId = new EntityId(dto.WatchedCharacterId.Value);
 
+        // 21. Restore pending emissaries (M4 Phase 1)
+        foreach (var e in dto.PendingEmissaries)
+            world.PendingEmissaries.Add(new Civilizations.PendingEmissary(
+                new CivId(e.FromCiv), new CivId(e.ToCiv),
+                (Civilizations.EmissaryPurpose)e.Purpose,
+                e.DepartedYear, e.ArrivalYear, e.SurvivalChance));
+
         return world;
     }
 
@@ -448,6 +469,18 @@ internal static class WorldStateMapper
             civ.CulturalProfile = new CulturalProfile(
                 cp.AncestryId, cp.ArchitecturalStyle, cp.SettlementDescriptor,
                 cp.ArtisticTraditions, cp.ActiveTraits, cp.DominantBiome);
+
+        // M4 Phase 1 — restore civ awareness data
+        foreach (var (key, cd) in dto.KnownCivs)
+        {
+            var knownId = new CivId(int.Parse(key));
+            civ.KnownCivs[knownId] = new Civilizations.CivContact(
+                knownId, cd.YearFirstContact, cd.YearLastContact,
+                (Civilizations.CivContactSource)cd.BestSource,
+                ParseTile(cd.CapitalTile), cd.Confidence);
+        }
+        foreach (var kv in dto.ActiveEmissaryCountByTarget)
+            civ.ActiveEmissaryCountByTarget[new CivId(int.Parse(kv.Key))] = kv.Value;
 
         return civ;
     }
