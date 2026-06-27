@@ -109,14 +109,15 @@ One-line description of every non-trivial source file. Check here before running
 - `WorldState.cs` — mutable world state; sim thread only; source of truth during sim
 - `IWorldStateReadOnly.cs` — read-only interface passed to entity logic
 - `IHistoryGraphReadOnly.cs` — history query interface (see interface_contracts_events.md)
-- `IHistoryQuery.cs` — M3.1: pre-indexed structured query API (GetCivSummary, GetRulersOfCiv, etc.)
+- `IHistoryQuery.cs` — M3.1: pre-indexed structured query API (GetCivSummary, GetRulersOfCiv, etc.); M3.4: adds GetTileHistory
 - `HistoryTypes.cs` — M3.1: CharacterSummary, CivSummary, ConflictRecord record types
-- `WorldSnapshot.cs` — immutable UI-facing projection; created after each tick
+- `WorldSnapshot.cs` — immutable UI-facing projection; M3.4 adds CharacterWatchSnapshot + GoalWatchEntry
 - `StateCache.cs` — thread-safe snapshot bridge between sim and UI threads
-- `SnapshotBuilder.cs` (~228 lines) — builds WorldSnapshot from WorldState each tick
+- `SnapshotBuilder.cs` — builds WorldSnapshot from WorldState each tick; M3.4: populates tile inspector territory/improvement/history + CharacterWatchSnapshot
 - `SimEvent.cs` — history log event record (immutable once written)
 - `PendingEvent.cs` — pre-commit event emitted by phases; enriched by Phase 7
-- `TileDisplayData.cs / TileInspectorData.cs` — UI tile rendering data
+- `TileDisplayData.cs` — UI tile display struct
+- `TileInspectorData.cs` — tile inspect panel data; M3.4 adds territory/improvement/history fields
 - `TileImprovement.cs` — M3.0: ImprovementType enum + TileImprovement record (Farm/Mine/etc.)
 - `ActiveDisaster.cs / ActiveDrought.cs / BorderManifest.cs / BorderManifestStore.cs / BorderManifestSample.cs`
 - `RuinRecord.cs / ResourceDeposit.cs`
@@ -133,17 +134,23 @@ One-line description of every non-trivial source file. Check here before running
 - `FastNoiseLite.cs` (~2505 lines) — **do not read or edit** — vendored noise library
 
 ## WorldEngine.UI/
-- `Game1.cs` (~380 lines) — MonoGame entry: update/draw loop, StateCache reads, input routing; wires narrative UI panels post-StartSim
+- `Game1.cs` — MonoGame entry: update/draw loop, StateCache reads, input routing; H=civ history, W=watch panel, T=territory overlay
 
 ## WorldEngine.UI/UI/
-- `EventLogPanel.cs` — sidebar event log; supports FocusLensState dimming and "->" cause-chain buttons per row
-- `TileInspectorPanel.cs` — sidebar tile inspector showing settlement, beast, character, resource data
+- `EventLogPanel.cs` — sidebar event log; FocusLensState dimming, cause-chain buttons, character name clickthrough (M3.3)
+- `TileInspectorPanel.cs` — sidebar tile inspector; territory/improvement/history sections; [Watch] buttons per character (M3.4)
 - `TimeControlsPanel.cs` — top toolbar: speed buttons, year/season label
 - `WorldGenScreen.cs` — full-screen world-gen progress overlay
-- `CharacterProfilePanel.cs` — M3.3: Myra panel showing character name, ancestry, life events, relationships; V2 narrative hook stub
-- `CivHistoryPanel.cs` — M3.3: Myra panel showing civ arc (rulers, wars, major events, cultural traits); ComboBox civ selector; H key to toggle
-- `TimelineBar.cs` — M3.3: SpriteBatch timeline scrubber drawn at bottom of map; event-density heatmap per decade, scrub handle
-- `FocusLensState.cs` — M3.3: tracks focus target (character or civ); pre-fetches FocusedEventIds for event log filtering
+- `CharacterProfilePanel.cs` — M3.3: character name/ancestry/life events/relationships; V2 narrative hook stub
+- `CivHistoryPanel.cs` — M3.3: civ arc (rulers, wars, major events, cultural traits); ComboBox civ selector; H key toggle
+- `TimelineBar.cs` — M3.3: SpriteBatch timeline scrubber; event-density heatmap per decade, scrub handle
+- `FocusLensState.cs` — M3.3: focus target (character or civ); pre-fetches FocusedEventIds for event log filtering
+- `CharacterWatchPanel.cs` — M3.4: live character watch panel; needs bars, goals, personality; W key toggle
+
+## WorldEngine.UI/Rendering/
+- `TileMapRenderer.cs` — draws tiles + entity/settlement/ruin markers; M3.4: territory civ-color tint + improvement icons
+- `OverlayRenderer.cs` — per-tile color for each OverlayType (Biome/Elevation/Temp/Moisture/Resources/Magic/Territory)
+- `Camera2D.cs` — pan/zoom camera for the tile map
 
 ## WorldEngine.Tests/
 - xUnit test suite; mirrors Sim folder structure
@@ -152,6 +159,7 @@ One-line description of every non-trivial source file. Check here before running
 - `Integration/CulturalTraitsTests.cs` — M3.2: CulturalTrait enum, EvaluateCulturalTraits logic, CivTraitAcquired event generation
 - `Integration/SignificanceScoringTests.cs` — M3.2: ComputeSignificanceScore, SignificanceRescoringPass tier upgrades and score population
 - `Integration/NarrativeUIDataTests.cs` — M3.3: GetCausalChain, GetAllCivSummaries, GetEventCountByDecade, GetCharacterHistory ordering
+- `Integration/TileInspectTests.cs` — M3.4: TileInspectorData territory/improvement population, unclaimed tile returns null
 - `Unit/AncestryConfigTests.cs` — M3.5: AncestryConfig field loading, ApplyCulturalSettlementName, GetCivNameSuffix, BuildCulturalProfile
 
 ## docs/perf/

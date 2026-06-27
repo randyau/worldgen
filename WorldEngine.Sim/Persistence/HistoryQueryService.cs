@@ -274,6 +274,15 @@ public sealed class HistoryQueryService : IHistoryQuery
             .ToDictionary(r => r.Decade, r => r.Count);
     }
 
+    /// <inheritdoc/>
+    public IReadOnlyList<SimEvent> GetTileHistory(TileCoord coord, int maxEvents = 10)
+    {
+        return _conn.Query<EventRow>(
+            $"{SelectCols} WHERE LocationX = @x AND LocationY = @y ORDER BY Year DESC, Season DESC, Tick DESC LIMIT @limit",
+            new { x = coord.X, y = coord.Y, limit = maxEvents })
+            .Select(MapEvent).ToList();
+    }
+
     // ── Mapping ─────────────────────────────────────────────────────────────────────────────────
 
     private static CivSummary MapCivSummary(CivSummaryRow r) => new(

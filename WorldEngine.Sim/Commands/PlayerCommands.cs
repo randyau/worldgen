@@ -12,3 +12,7 @@ public sealed record StepOneTick : ICommand;
 public sealed record SetViewport(int X, int Y, int Width, int Height) : ICommand;
 public sealed record SetInspectedTile(TileCoord? Coord) : ICommand;
 public sealed record SetActiveOverlay(OverlayType Overlay) : ICommand;
+/// <summary>
+/// Sets the character watch target. Pass null EntityId (EntityId with Value 0) to clear.
+/// </summary>
+public sealed record WatchCharacter(EntityId CharacterId) : ICommand;

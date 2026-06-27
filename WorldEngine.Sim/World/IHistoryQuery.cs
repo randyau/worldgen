@@ -45,7 +45,6 @@ public interface IHistoryQuery
     /// <summary>
     /// Walks CausalEdges upstream from <paramref name="effectEventId"/> up to <paramref name="maxDepth"/> levels.
     /// Returns cause events in BFS order (closest causes first).
-    /// EdgeType is the value stored in CausalEdges.EdgeType (may be null/empty, returned as "caused").
     /// </summary>
     IReadOnlyList<(long CauseEventId, SimEvent CauseEvent, string EdgeType)> GetCausalChain(long effectEventId, int maxDepth = 3);
 
@@ -54,4 +53,10 @@ public interface IHistoryQuery
     /// Key = decade start year (e.g. 0, 10, 20 …), Value = event count in that decade.
     /// </summary>
     Dictionary<int, int> GetEventCountByDecade(int startYear, int endYear);
+
+    /// <summary>
+    /// Returns up to <paramref name="maxEvents"/> events that occurred at the given tile coordinate,
+    /// ordered newest-first. Used by the tile inspect panel history section.
+    /// </summary>
+    IReadOnlyList<SimEvent> GetTileHistory(TileCoord coord, int maxEvents = 10);
 }

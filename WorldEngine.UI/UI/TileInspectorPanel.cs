@@ -10,6 +10,16 @@ public sealed class TileInspectorPanel
     public readonly Panel Root;
     private readonly VerticalStackPanel _content;
 
+    // Consume-once: set when user clicks [Watch] next to a character name.
+    // Game1 reads this each frame and clears it after consuming.
+    private long _pendingWatchCharacterId;
+    public long ConsumePendingWatch()
+    {
+        var id = _pendingWatchCharacterId;
+        _pendingWatchCharacterId = 0;
+        return id;
+    }
+
     public TileInspectorPanel()
     {
         _content = new VerticalStackPanel { Spacing = 2 };
@@ -82,11 +92,11 @@ public sealed class TileInspectorPanel
         AddLine($"Fertility: {tile.Fertility}");
 
         AddLine("--- Seasonal Profile ---");
-        var p = data.SeasonalProfile;
-        AddLine($"Spring:  Temp {TempDeltaC(p.TempDeltaSpring):+#.#;-#.#;0}°C  Moist {p.MoistureDeltaSpring:+#;-#;0}");
-        AddLine($"Summer:  Temp {TempDeltaC(p.TempDeltaSummer):+#.#;-#.#;0}°C  Moist {p.MoistureDeltaSummer:+#;-#;0}");
-        AddLine($"Autumn:  Temp {TempDeltaC(p.TempDeltaAutumn):+#.#;-#.#;0}°C  Moist {p.MoistureDeltaAutumn:+#;-#;0}");
-        AddLine($"Winter:  Temp {TempDeltaC(p.TempDeltaWinter):+#.#;-#.#;0}°C  Moist {p.MoistureDeltaWinter:+#;-#;0}");
+        var prof = data.SeasonalProfile;
+        AddLine($"Spring:  Temp {TempDeltaC(prof.TempDeltaSpring):+#.#;-#.#;0}°C  Moist {prof.MoistureDeltaSpring:+#;-#;0}");
+        AddLine($"Summer:  Temp {TempDeltaC(prof.TempDeltaSummer):+#.#;-#.#;0}°C  Moist {prof.MoistureDeltaSummer:+#;-#;0}");
+        AddLine($"Autumn:  Temp {TempDeltaC(prof.TempDeltaAutumn):+#.#;-#.#;0}°C  Moist {prof.MoistureDeltaAutumn:+#;-#;0}");
+        AddLine($"Winter:  Temp {TempDeltaC(prof.TempDeltaWinter):+#.#;-#.#;0}°C  Moist {prof.MoistureDeltaWinter:+#;-#;0}");
 
         AddLine("--- Resources ---");
         if (data.Deposits.Count == 0) AddLine("(none)");
@@ -99,11 +109,37 @@ public sealed class TileInspectorPanel
             AddLine($"{d.Type} {d.Intensity:F2} [{(d.TicksRemaining < 0 ? "∞" : d.TicksRemaining.ToString())} ticks]");
         AddLine($"In drought: {data.IsInActiveDrought}");
 
-        // Beast section — built from EntitySnapshots filtered by tile coord
+        // ── Territory section (M3 Phase 3.4) ─────────────────────────────────
+        if (data.TerritoryOwnerName is not null)
+        {
+            AddLine("--- Territory ---");
+            string cityPart = data.TerritoryCityName is not null
+                ? $" (city: {data.TerritoryCityName})" : "";
+            AddLine($"  {data.TerritoryOwnerName}{cityPart}");
+
+            if (data.Improvement.HasValue)
+            {
+                string builtYear = data.ImprovementBuiltYear > 0
+                    ? $", built Year {data.ImprovementBuiltYear}" : "";
+                string builder = data.ImprovementBuilderName is not null
+                    ? $" by {data.ImprovementBuilderName}" : "";
+                AddLine($"  Improvement: {data.Improvement}{builtYear}{builder}");
+            }
+        }
+
+        // ── Characters + Watch buttons (M3 Phase 3.4) ────────────────────────
         if (snapshot is not null)
         {
             AddBeastSection(data.Coord, snapshot.EntitySnapshots);
             AddCharacterSection(data.Coord, snapshot.EntitySnapshots);
+        }
+
+        // ── History at tile (M3 Phase 3.4) ───────────────────────────────────
+        if (data.TileHistory is { Count: > 0 } history)
+        {
+            AddLine("--- History at this tile ---");
+            foreach (var (year, desc) in history)
+                AddLine($"  Year {year} — {desc}");
         }
     }
 
@@ -144,7 +180,21 @@ public sealed class TileInspectorPanel
         {
             string civTag = c.CivName is not null ? $" [{c.CivName}]" : "";
             string ancTag = c.AncestryId.Length > 0 ? $" ({c.AncestryId})" : "";
-            AddLine($"{c.Name}{civTag}{ancTag}");
+
+            // Row: name label + Watch button
+            var row = new HorizontalStackPanel { Spacing = 4 };
+            row.Widgets.Add(new Label { Text = $"{c.Name}{civTag}{ancTag}" });
+
+            long capturedId = c.Id.Value;
+            var watchBtn = new TextButton
+            {
+                Text    = "[Watch]",
+                Padding = new Myra.Graphics2D.Thickness(2)
+            };
+            watchBtn.Click += (_, _) => _pendingWatchCharacterId = capturedId;
+            row.Widgets.Add(watchBtn);
+            _content.Widgets.Add(row);
+
             string wbLabel = c.Wellbeing switch
             {
                 >= 0.7f  => "Flourishing",

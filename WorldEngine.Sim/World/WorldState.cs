@@ -105,6 +105,9 @@ public sealed class WorldState : IWorldStateReadOnly
     /// <summary>Set by SetInspectedTile command. Null means no tile is selected.</summary>
     public TileCoord? InspectedTile { get; internal set; }
 
+    /// <summary>Character being watched in the character watch panel. Null means no watch active.</summary>
+    public EntityId? WatchedCharacterId { get; internal set; }
+
     public WorldState(
         WorldConfig config,
         SimConfig simConfig,

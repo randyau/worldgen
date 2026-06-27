@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities;
+using WorldEngine.Sim.Entities.Characters;
 
 namespace WorldEngine.Sim.World;
 
@@ -34,6 +35,29 @@ public sealed record SettlementSnapshot(
     int       ConqueredYear      = 0,
     int       ConqueredFromCivId = 0,
     IReadOnlyDictionary<string, float>? ResourceStores = null);
+
+/// <summary>
+/// Immutable snapshot of a single active goal for the watch panel.
+/// Carries just what the UI needs to display goals.
+/// </summary>
+public sealed record GoalWatchEntry(string Description, float Priority);
+
+/// <summary>
+/// Live snapshot of a watched character for the character watch panel (M3 Phase 3.4).
+/// Populated by SnapshotBuilder when WatchedCharacterId is set on WorldState.
+/// </summary>
+public sealed record CharacterWatchSnapshot(
+    EntityId   Id,
+    string     Name,
+    string     Epithet,
+    string     CivName,
+    TileCoord  Location,
+    string     BiomeName,
+    int        AgeSeasons,
+    float      Wellbeing,
+    NeedsVector   Needs,
+    PersonalityVector Personality,
+    IReadOnlyList<GoalWatchEntry> Goals);
 
 /// <summary>
 /// Immutable projection of world state for the UI. Created after each tick.
@@ -77,5 +101,8 @@ public sealed record WorldSnapshot(
     // World-level drift parameters for UI status display
     float GlobalTemperatureAnomaly,
     float GlobalPrecipitationMultiplier,
-    float StormCorridorNormalizedLat
+    float StormCorridorNormalizedLat,
+
+    // Character watch panel (M3 Phase 3.4) — null when no character is being watched
+    CharacterWatchSnapshot? WatchedCharacter = null
 );

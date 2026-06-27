@@ -1,7 +1,7 @@
 # Phase 3.4 — Tile Inspect & Character Watch
 
 **Milestone:** 3 — Narrative Exploration
-**Status:** PLANNED
+**Status:** COMPLETE — 2026-06-26
 **Goal:** Let the player click any tile and see what is actually in it — territory owner,
 improvement, characters present, deposits, and what has happened there — and open a
 read-only character watch panel for any named character. This is the M3-safe foundation

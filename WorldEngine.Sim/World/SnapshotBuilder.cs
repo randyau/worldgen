@@ -1,6 +1,7 @@
 using WorldEngine.Sim.Civilizations;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities;
+using WorldEngine.Sim.Entities.Characters;
 using WorldEngine.Sim.Tiles;
 
 namespace WorldEngine.Sim.World;
@@ -22,11 +23,12 @@ public sealed class SnapshotBuilder
         var entitySnapshots  = BuildEntitySnapshots(world);
         var tiles            = BuildAllTiles(world, entitySnapshots);
         var inspected        = world.InspectedTile.HasValue
-            ? BuildInspectorData(world, world.InspectedTile.Value)
+            ? BuildInspectorData(world, world.InspectedTile.Value, recentEvents)
             : null;
         var settlements      = BuildSettlementSnapshots(world);
         var territoryMap     = BuildTerritorySnapshot(world);
         var improvementMap   = BuildImprovementSnapshot(world);
+        var watchedChar      = BuildCharacterWatchSnapshot(world);
 
         return new WorldSnapshot(
             CurrentYear:                 world.CurrentYear,
@@ -47,7 +49,8 @@ public sealed class SnapshotBuilder
             ImprovementMap:              improvementMap,
             GlobalTemperatureAnomaly:    world.GlobalTemperatureAnomaly,
             GlobalPrecipitationMultiplier: world.GlobalPrecipitationMultiplier,
-            StormCorridorNormalizedLat:  world.StormCorridorNormalizedLat
+            StormCorridorNormalizedLat:  world.StormCorridorNormalizedLat,
+            WatchedCharacter:            watchedChar
         );
     }
 
@@ -108,7 +111,7 @@ public sealed class SnapshotBuilder
         foreach (var (id, entity) in world.Entities.All)
         {
             var snap = entity.ToSnapshot();
-            if (entity is Entities.Characters.Tier1Character c && c.Identity.CivId.IsValid
+            if (entity is Tier1Character c && c.Identity.CivId.IsValid
                 && world.Civilizations.TryGetValue(c.Identity.CivId, out var civ))
                 snap = snap with { CivName = civ.Name };
             dict[id] = snap;
@@ -195,7 +198,8 @@ public sealed class SnapshotBuilder
             _             => 0
         };
 
-    private static TileInspectorData BuildInspectorData(WorldState world, TileCoord coord)
+    private static TileInspectorData BuildInspectorData(
+        WorldState world, TileCoord coord, IReadOnlyList<SimEvent> recentEvents)
     {
         var tile = world.TileGrid.GetTile(coord);
         int idx = world.TileGrid.FlatIndex(coord);
@@ -235,16 +239,59 @@ public sealed class SnapshotBuilder
             .FirstOrDefault(d => d.LatitudeBandIndex == latBand && d.AffectedBiome == biome);
         bool inDrought = drought is not null;
 
+        // Territory section — look up who owns this tile
+        string? territoryOwnerName = null;
+        string? territoryCityName  = null;
+        TileCoord? territoryCityTile = null;
+        if (world.TerritoryMap.TryGetValue(coord, out var cityTile)
+            && world.Settlements.TryGetValue(cityTile, out var stub))
+        {
+            string civName = world.Civilizations.TryGetValue(stub.CivId, out var civ)
+                ? civ.Name : "Unknown";
+            territoryOwnerName = civName;
+            territoryCityName  = stub.Name;
+            territoryCityTile  = cityTile;
+        }
+
+        // Improvement section
+        ImprovementType? improvementType = null;
+        int  improvementBuiltYear   = 0;
+        string? improvementBuilderName = null;
+        if (world.ImprovementMap.TryGetValue(coord, out var imp))
+        {
+            improvementType      = imp.Type;
+            improvementBuiltYear = imp.BuiltYear;
+            // Resolve builder name from entity registry if still alive
+            if (world.Entities.All.TryGetValue(imp.BuilderId, out var builder))
+                improvementBuilderName = builder.ToSnapshot().Name;
+        }
+
+        // Tile history — filter recent events by location (newest first, cap at 10)
+        var tileHistory = recentEvents
+            .Where(e => e.Location == coord)
+            .OrderByDescending(e => e.Year)
+            .ThenByDescending(e => e.Tick)
+            .Take(10)
+            .Select(e => (e.Year, (string)e.TypeName))
+            .ToList();
+
         return new TileInspectorData(
-            Coord:                coord,
-            RawTile:              tile,
-            SeasonalProfile:      profile,
-            EffectiveTemperature: effectiveTemp,
-            CurrentMoistureF:     Math.Clamp(effectiveMoist, 0f, 255f),
-            Deposits:             deposits,
-            Disasters:            disasters,
-            IsInActiveDrought:    inDrought,
-            DroughtOriginEventId: inDrought ? drought!.OriginEventId : null
+            Coord:                   coord,
+            RawTile:                 tile,
+            SeasonalProfile:         profile,
+            EffectiveTemperature:    effectiveTemp,
+            CurrentMoistureF:        Math.Clamp(effectiveMoist, 0f, 255f),
+            Deposits:                deposits,
+            Disasters:               disasters,
+            IsInActiveDrought:       inDrought,
+            DroughtOriginEventId:    inDrought ? drought!.OriginEventId : null,
+            TerritoryOwnerName:      territoryOwnerName,
+            TerritoryCityName:       territoryCityName,
+            TerritoryCityTile:       territoryCityTile,
+            Improvement:             improvementType,
+            ImprovementBuiltYear:    improvementBuiltYear,
+            ImprovementBuilderName:  improvementBuilderName,
+            TileHistory:             tileHistory
         );
     }
 
@@ -257,4 +304,41 @@ public sealed class SnapshotBuilder
             Season.Winter => profile.MoistureDeltaWinter,
             _             => 0
         };
+
+    /// <summary>
+    /// Builds the character watch snapshot when a watch target is set.
+    /// </summary>
+    private static CharacterWatchSnapshot? BuildCharacterWatchSnapshot(WorldState world)
+    {
+        if (world.WatchedCharacterId is not { } watchId) return null;
+        if (!world.Entities.All.TryGetValue(watchId, out var entity)) return null;
+        if (entity is not Tier1Character c) return null;
+        if (!c.IsAlive) return null;
+
+        string civName = c.Identity.CivId.IsValid
+            && world.Civilizations.TryGetValue(c.Identity.CivId, out var civ)
+            ? civ.Name : "Unknown";
+
+        var biome = (BiomeType)world.TileGrid.GetTile(c.Location).BiomeType;
+
+        var goals = c.Goals
+            .Where(g => !g.IsComplete)
+            .OrderByDescending(g => g.Priority)
+            .Take(5)
+            .Select(g => new GoalWatchEntry(g.Type.ToString(), g.Priority))
+            .ToList();
+
+        return new CharacterWatchSnapshot(
+            Id:          c.Id,
+            Name:        c.Identity.Name,
+            Epithet:     c.Identity.Epithet,
+            CivName:     civName,
+            Location:    c.Location,
+            BiomeName:   biome.ToString(),
+            AgeSeasons:  c.AgeSeason,
+            Wellbeing:   c.Wellbeing,
+            Needs:       c.Needs,
+            Personality: c.Personality,
+            Goals:       goals);
+    }
 }

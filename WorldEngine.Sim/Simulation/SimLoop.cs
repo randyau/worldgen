@@ -143,6 +143,10 @@ public sealed class SimLoop
             case SetActiveOverlay o:
                 _overlay = o.Overlay;
                 break;
+            case WatchCharacter w:
+                // EntityId with Value 0 clears the watch target
+                _world.WatchedCharacterId = w.CharacterId.Value == 0 ? null : w.CharacterId;
+                break;
         }
     }
 

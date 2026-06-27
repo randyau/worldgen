@@ -58,6 +58,10 @@ public sealed class Game1 : Game
     // Per-decade event-bucket refresh throttle
     private int _lastBucketLoadYear = -1;
 
+    // Phase 3.4 panels (created in StartSim)
+    private CharacterWatchPanel? _charWatch;
+    private Panel? _mainUI;
+
     // Input
     private MouseState _prevMouse;
     private KeyboardState _prevKb;
@@ -109,7 +113,6 @@ public sealed class Game1 : Game
             root.Widgets.Add(_genScreen.Root);
 
         // Main UI — root Panel so children can overlap the map freely
-        // The map renders underneath via SpriteBatch; Myra widgets sit on top
         var mainUI = new Panel { Visible = false, Id = "MainUI" };
         _mainUI = mainUI;
 
@@ -211,12 +214,25 @@ public sealed class Game1 : Game
                 _eventLog?.Update(snapshot, _focusLens);
                 _tileInspector?.Update(snapshot.InspectedTile, snapshot);
 
+                _charWatch?.Refresh(snapshot);
+
                 // Refresh timeline event buckets every 50 sim years
                 if (_timeline is not null && _historyQuery is not null
                     && snapshot.CurrentYear - _lastBucketLoadYear >= 50)
                 {
                     _timeline.LoadEventBuckets(_historyQuery, snapshot.CurrentYear);
                     _lastBucketLoadYear = snapshot.CurrentYear;
+                }
+            }
+
+            // Consume Watch button clicks from the tile inspector
+            if (_tileInspector is not null)
+            {
+                long watchId = _tileInspector.ConsumePendingWatch();
+                if (watchId != 0)
+                {
+                    _commandQueue.Enqueue(new WatchCharacter(new EntityId(watchId)));
+                    _charWatch?.Show();
                 }
             }
 
@@ -283,7 +299,7 @@ public sealed class Game1 : Game
         _simLoop = new SimLoop(world, _commandQueue, _stateCache, phaseRunner, snapshotBuilder, simCfg, eventCache);
         _simLoop.Start();
 
-        // ── Narrative UI panels ──────────────────────────────────────────────
+        // ── Narrative UI panels (Phase 3.3) ─────────────────────────────────
         _focusLens   = new FocusLensState();
         var ancestries = world.SimConfig.AncestryRegistry;
         _charProfile = new CharacterProfilePanel(_historyQuery, ancestries);
@@ -293,9 +309,11 @@ public sealed class Game1 : Game
         _timeline = new TimelineBar();
         _timeline.Initialize(GraphicsDevice);
 
+        // ── Character Watch panel (Phase 3.4) ───────────────────────────────
+        _charWatch = new CharacterWatchPanel();
+
         if (_mainUI is not null && _desktop is not null)
         {
-            // Narrative panels float on the left side, below time controls
             _charProfile.Root.HorizontalAlignment = HorizontalAlignment.Left;
             _charProfile.Root.VerticalAlignment   = VerticalAlignment.Top;
             _charProfile.Root.Top  = 44;
@@ -308,8 +326,12 @@ public sealed class Game1 : Game
             _civHistory.Root.Left = 4;
             _mainUI.Widgets.Add(_civHistory.Root);
 
-            // Timeline scrub label — floating overlay at the very top of the root panel
-            // (positioned dynamically in TimelineBar.Update)
+            _charWatch.Root.HorizontalAlignment = HorizontalAlignment.Left;
+            _charWatch.Root.VerticalAlignment   = VerticalAlignment.Top;
+            _charWatch.Root.Top  = 44;
+            _charWatch.Root.Left = 4;
+            _mainUI.Widgets.Add(_charWatch.Root);
+
             if (_desktop.Root is Panel rootPanel)
                 rootPanel.Widgets.Add(_timeline.ScrubLabel);
         }
@@ -356,18 +378,24 @@ public sealed class Game1 : Game
         }
 
         // Overlay shortcuts
+        // DECISION: T is Territory overlay (M3 Phase 3.4). Temperature moved off keyboard.
         if (kb.IsKeyDown(Keys.B)) _commandQueue.Enqueue(new SetActiveOverlay(OverlayType.Biome));
         if (kb.IsKeyDown(Keys.E)) _commandQueue.Enqueue(new SetActiveOverlay(OverlayType.Elevation));
-        if (kb.IsKeyDown(Keys.T)) _commandQueue.Enqueue(new SetActiveOverlay(OverlayType.Temperature));
+        if (kb.IsKeyDown(Keys.T)) _commandQueue.Enqueue(new SetActiveOverlay(OverlayType.Territory));
         if (kb.IsKeyDown(Keys.M)) _commandQueue.Enqueue(new SetActiveOverlay(OverlayType.Moisture));
         if (kb.IsKeyDown(Keys.R)) _commandQueue.Enqueue(new SetActiveOverlay(OverlayType.Resources));
         if (kb.IsKeyDown(Keys.G)) _commandQueue.Enqueue(new SetActiveOverlay(OverlayType.MagicIntensity));
 
-        // H = toggle civ history panel (press-edge only)
+        // H = toggle civ history panel; W = toggle character watch panel
         if (kb.IsKeyDown(Keys.H) && !_prevKb.IsKeyDown(Keys.H))
         {
             if (_civHistory?.IsVisible == true) _civHistory.Hide();
             else _civHistory?.Show();
+        }
+        if (kb.IsKeyDown(Keys.W) && !_prevKb.IsKeyDown(Keys.W))
+        {
+            if (_charWatch?.IsVisible == true) _charWatch.Hide();
+            else _charWatch?.Show();
         }
 
         // N = new world (press-edge only, not hold)
@@ -438,10 +466,11 @@ public sealed class Game1 : Game
         _timeline?.Dispose();
         _timeline = null;
 
-        // Hide narrative panels
+        // Hide all narrative/watch panels
         _charProfile?.Hide();
         _civHistory?.Hide();
         _focusLens?.Clear();
+        _charWatch?.Hide();
 
         // Reset UI: hide main panels, show gen screen, clear inspector & log
         if (_desktop?.Root is Panel root)
@@ -451,6 +480,7 @@ public sealed class Game1 : Game
         }
         _genScreen!.Root.Visible = true;
         _commandQueue.Enqueue(new SetInspectedTile(null));
+        _commandQueue.Enqueue(new WatchCharacter(new EntityId(0)));  // clear watch target
 
         // Re-kick world gen
         var worldCfg = new WorldConfig { Seed = Environment.TickCount, WidthKm = 2000, HeightKm = 1600, TileWidthKm = 10 };

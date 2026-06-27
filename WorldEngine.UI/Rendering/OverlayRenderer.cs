@@ -14,6 +14,8 @@ public static class OverlayRenderer
         OverlayType.Moisture    => MoistureGradient(tile.CurrentMoisture),
         OverlayType.Resources   => GetResourceColor(tile),
         OverlayType.MagicIntensity => MagicGradient(tile.MagicIntensity),
+        // Territory overlay base is biome; civ-color tint applied in TileMapRenderer
+        OverlayType.Territory   => GetBiomeColor(tile.Biome),
         _ => Color.Magenta
     };
 

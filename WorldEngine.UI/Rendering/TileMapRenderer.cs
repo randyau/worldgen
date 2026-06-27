@@ -15,7 +15,8 @@ public sealed class TileMapRenderer(GraphicsDevice gd, Camera2D camera)
 
     public void Draw(SpriteBatch sb, WorldSnapshot snapshot)
     {
-        bool drawBorder = camera.Zoom > 4f;
+        bool drawBorder    = camera.Zoom > 4f;
+        bool territoryMode = snapshot.ActiveOverlay == OverlayType.Territory;
         int tw = snapshot.WorldTileWidth, th = snapshot.WorldTileHeight;
 
         // Compute visible tile range — clip right edge to map area, excluding sidebar
@@ -50,6 +51,16 @@ public sealed class TileMapRenderer(GraphicsDevice gd, Camera2D camera)
 
                 sb.Draw(_pixel, rect, OverlayRenderer.GetColor(tile, snapshot.ActiveOverlay));
 
+                // Territory overlay: apply semi-transparent civ-color tint
+                if (territoryMode && snapshot.TerritoryMap.TryGetValue(coord, out var terr))
+                {
+                    var civColor = CivColor(terr.CivId);
+                    // City tile itself gets full brightness tint; other territory gets alpha tint
+                    bool isCity = snapshot.Settlements.ContainsKey(coord);
+                    float alpha = isCity ? 0.65f : 0.35f;
+                    sb.Draw(_pixel, rect, civColor * alpha);
+                }
+
                 if (drawBorder)
                 {
                     var borderColor = Color.Black * 0.3f;
@@ -58,6 +69,10 @@ public sealed class TileMapRenderer(GraphicsDevice gd, Camera2D camera)
                 }
             }
         }
+
+        // Territory mode: draw improvement icons on top of tiles (zoom ≥ 2)
+        if (territoryMode && camera.Zoom >= 2f)
+            DrawImprovementIcons(sb, snapshot, tw, th, minX, maxX, minY, maxY);
 
         // Draw beast markers — a small dot centered on each occupied tile
         if (camera.Zoom >= 4f)
@@ -90,6 +105,70 @@ public sealed class TileMapRenderer(GraphicsDevice gd, Camera2D camera)
             sb.Draw(_pixel, new Rectangle(x1s - B,  y0s,      B, h),    hi); // right
         }
     }
+
+    /// <summary>
+    /// Derives a deterministic color for a civilization from its numeric id.
+    /// Uses a fixed hue rotation so each civ gets a visually distinct color.
+    /// </summary>
+    private static Color CivColor(long civId)
+    {
+        // Rotate hue by a golden-angle step for each civ so colors spread evenly
+        float hue  = (civId * 137.508f) % 360f;
+        float sat  = 0.65f;
+        float val  = 0.90f;
+        return HsvToRgb(hue, sat, val);
+    }
+
+    private static Color HsvToRgb(float h, float s, float v)
+    {
+        h = h % 360f;
+        float c  = v * s;
+        float x  = c * (1f - MathF.Abs((h / 60f) % 2f - 1f));
+        float m  = v - c;
+        float r1, g1, b1;
+        if      (h < 60)  { r1 = c; g1 = x; b1 = 0; }
+        else if (h < 120) { r1 = x; g1 = c; b1 = 0; }
+        else if (h < 180) { r1 = 0; g1 = c; b1 = x; }
+        else if (h < 240) { r1 = 0; g1 = x; b1 = c; }
+        else if (h < 300) { r1 = x; g1 = 0; b1 = c; }
+        else              { r1 = c; g1 = 0; b1 = x; }
+        return new Color((int)((r1 + m) * 255), (int)((g1 + m) * 255), (int)((b1 + m) * 255));
+    }
+
+    /// <summary>
+    /// Draws a small colored glyph in the top-left corner of each tile that has an improvement.
+    /// Icons are pure-pixel art: Farm=green square, Mine=gray, LoggingCamp=brown, Pasture=light-green, Fishery=blue.
+    /// </summary>
+    private void DrawImprovementIcons(
+        SpriteBatch sb, WorldSnapshot snapshot,
+        int tw, int th, int minX, int maxX, int minY, int maxY)
+    {
+        int iconSize = Math.Max(2, (int)(camera.Zoom * 0.18f));
+
+        for (int ty = minY; ty <= maxY; ty++)
+        for (int tx = minX; tx <= maxX; tx++)
+        {
+            int wx    = ((tx % tw) + tw) % tw;
+            var coord = new TileCoord(wx, ty);
+            if (!snapshot.ImprovementMap.TryGetValue(coord, out var imp)) continue;
+
+            var pos = camera.TileToScreen(coord);
+            int ix  = (int)MathF.Round(pos.X) + 1;
+            int iy  = (int)MathF.Round(pos.Y) + 1;
+            var color = ImprovementColor(imp.ImprovementType);
+            sb.Draw(_pixel, new Rectangle(ix, iy, iconSize, iconSize), color);
+        }
+    }
+
+    private static Color ImprovementColor(string improvementType) => improvementType switch
+    {
+        "Farm"        => new Color(60, 180, 60),    // green
+        "Mine"        => new Color(150, 140, 130),  // gray
+        "LoggingCamp" => new Color(120, 70, 30),    // brown
+        "Pasture"     => new Color(160, 220, 100),  // light green
+        "Fishery"     => new Color(50, 120, 200),   // blue
+        _             => Color.White
+    };
 
     private void DrawBeastMarkers(
         SpriteBatch sb, WorldSnapshot snapshot,
