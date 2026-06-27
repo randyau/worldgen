@@ -209,7 +209,7 @@ public static class GoalManager
     /// Updates Wellbeing each tick based on goals, relationships, and resource security.
     /// Call after UpdateGoals in the behavior loop.
     /// </summary>
-    public static bool UpdateWellbeing(Tier1Character c, IWorldStateReadOnly world, CharacterSimConfig cfg, out bool crossedFlourishing)
+    public static bool UpdateWellbeing(Tier1Character c, IWorldStateReadOnly world, long currentTick, CharacterSimConfig cfg, out bool crossedFlourishing)
     {
         crossedFlourishing = false;
         float prev = c.Wellbeing;
@@ -230,6 +230,18 @@ public static class GoalManager
                 _                => 0f,
             };
         }
+
+        // Stagnation penalty: goals stuck without progress drain wellbeing slowly
+        foreach (var g in c.Goals)
+        {
+            if (currentTick - g.StaleSince > cfg.StagnationThresholdTicks)
+                delta -= cfg.StagnationDrainRate;
+        }
+
+        // Purpose drought: characters with no flourishing goals lose wellbeing (existential aimlessness)
+        bool hasFlourishing = c.Goals.Any(g => g.Type is GoalType.Create or GoalType.Bond or GoalType.FoundCity);
+        if (!hasFlourishing)
+            delta -= cfg.PurposeDroughtDrain;
 
         // Co-location with a Bond target is a passive wellbeing gain
         foreach (var g in c.Goals)

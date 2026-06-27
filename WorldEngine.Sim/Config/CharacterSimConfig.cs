@@ -264,12 +264,15 @@ public sealed class CharacterSimConfig
     public float WellbeingGoalGainRate      { get; set; } = 0.01f;   // per tick when goal is progressing
     public float WellbeingCompanionBoost    { get; set; } = 0.005f;  // per tick co-located with Bond target
     public float WellbeingHungerDrain       { get; set; } = 0.02f;   // max drain when food = 0
-    public float WellbeingMeanReversionRate { get; set; } = 0.005f;  // pull toward 0 each tick
+    public float WellbeingMeanReversionRate { get; set; } = 0.008f;  // pull toward 0 each tick
     public float FlourishingThreshold       { get; set; } = 0.7f;    // Wellbeing ≥ this → Flourishing
     public float SpiralThreshold            { get; set; } = -0.7f;   // Wellbeing ≤ this → Spiraling
     public float DistressedSocialSuppression { get; set; } = 0.4f;   // social action score multiplier when Wellbeing < -0.3
     public float GriefDrainRate             { get; set; } = 0.015f;  // Wellbeing drain per tick per Grieve goal
     public float GriefDecayRate             { get; set; } = 0.002f;  // grief Intensity decay per tick
+    public int   StagnationThresholdTicks   { get; set; } = 80;      // ticks before inactive goal drains wellbeing (~1 season)
+    public float StagnationDrainRate        { get; set; } = 0.002f;  // wellbeing drain per tick for stagnant goals
+    public float PurposeDroughtDrain        { get; set; } = 0.003f;  // wellbeing drain per tick with no flourishing goals
 
     // Tier 2 tuning
     public int   Tier2PerPopulation     { get; set; } = 10;  // one Tier2 per this many pop

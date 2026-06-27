@@ -778,6 +778,9 @@ grief_completion_threshold      = 0.05    # grief Intensity below this → grief
 wellbeing_endure_multiplier     = 0.5     # Endure: slow draining perseverance
 wellbeing_survive_multiplier    = 0.3     # Survive: urgent pressure but lower emotional weight
 wellbeing_flee_multiplier       = 0.4     # Flee: flight-or-fight stress
+wellbeing_stagnation_threshold_ticks = 80  # ticks (~1 season at 16/year) before inactive goal drains wellbeing
+wellbeing_stagnation_drain_rate = 0.002    # per tick for goals stuck without progress
+wellbeing_purpose_drought_drain = 0.003    # per tick when character has no flourishing goals (Create/Bond/FoundCity)
 
 # Tier 2 sub-tuning (appended to [character] section — Tomlyn merges same-section keys)
 tier2_per_population        = 10
