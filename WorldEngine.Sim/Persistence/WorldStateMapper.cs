@@ -138,6 +138,8 @@ internal static class WorldStateMapper
                 c.CulturalProfile.DominantBiome),
             KnownCivs:               knownCivs,
             ActiveEmissaryCountByTarget: c.ActiveEmissaryCountByTarget
+                .ToDictionary(kv => kv.Key.Value.ToString(), kv => kv.Value),
+            WarBattleWins: c.WarBattleWins
                 .ToDictionary(kv => kv.Key.Value.ToString(), kv => kv.Value));
     }
 
@@ -481,6 +483,8 @@ internal static class WorldStateMapper
         }
         foreach (var kv in dto.ActiveEmissaryCountByTarget)
             civ.ActiveEmissaryCountByTarget[new CivId(int.Parse(kv.Key))] = kv.Value;
+        foreach (var kv in dto.WarBattleWins)
+            civ.WarBattleWins[new CivId(int.Parse(kv.Key))] = kv.Value;
 
         return civ;
     }

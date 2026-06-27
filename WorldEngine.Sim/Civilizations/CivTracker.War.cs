@@ -10,7 +10,8 @@ namespace WorldEngine.Sim.Civilizations;
 
 public static partial class CivTracker
 {
-    private const int SaltRaidDamage = 700;
+    private const int SaltRaidDamage  = 700;
+    private const int SaltWarCampaign = 4200;
 
     private static void ResolveWar(DeclareWar cmd, WorldState world, List<PendingEvent> pending)
     {
@@ -81,6 +82,144 @@ public static partial class CivTracker
             warEntityIds, warSecondaryIds,
             ActorId: declCiv.RulerId.Value, ActorName: declRuler?.Identity.Name ?? declCiv.Name,
             CivId: declCiv.Id.Value));
+    }
+
+    // ─── Annual war campaigns (M4.2) ─────────────────────────────────────────
+
+    /// <summary>
+    /// Fires one abstract campaign battle per active war per year.
+    /// Removes the character-proximity bottleneck: declared wars now always generate battles
+    /// regardless of where named characters happen to be.
+    /// </summary>
+    internal static void RunWarCampaigns(WorldState world, List<PendingEvent> pending)
+    {
+        var wCfg = world.SimConfig.War;
+        var processed = new HashSet<(CivId, CivId)>();
+
+        foreach (var civA in world.Civilizations.Values)
+        {
+            if (civA.IsCollapsed) continue;
+
+            foreach (var (enemyCivId, _) in civA.WarsAgainst.ToList())
+            {
+                // Only process each pair once
+                var key = (Min(civA.Id, enemyCivId), Max(civA.Id, enemyCivId));
+                if (!processed.Add(key)) continue;
+
+                if (!world.Civilizations.TryGetValue(enemyCivId, out var civB) || civB.IsCollapsed)
+                    continue;
+
+                // Find the nearest enemy settlement to raid via campaign
+                SettlementStub? target = null;
+                TileCoord targetTile = default;
+                float nearestDist = float.MaxValue;
+                foreach (var (tile, stub) in world.Settlements)
+                {
+                    if (stub.CivId != enemyCivId) continue;
+                    float dist = 0f;
+                    foreach (var (aTile, aStub) in world.Settlements)
+                    {
+                        if (aStub.CivId != civA.Id) continue;
+                        int dx = aTile.X - tile.X, dy = aTile.Y - tile.Y;
+                        float d = MathF.Sqrt(dx * dx + dy * dy);
+                        if (d < dist || dist == 0f) dist = d;
+                    }
+                    if (dist < nearestDist) { nearestDist = dist; target = stub; targetTile = tile; }
+                }
+
+                if (target == null) continue; // no settlements for civ B — handled by collapse logic
+
+                // Find best attacker from civ A
+                Tier1Character? bestAttacker = null;
+                float bestCombat = -1f;
+                foreach (var memberId in civA.Members)
+                {
+                    if (world.GetEntity(memberId) is not Tier1Character ch || !ch.IsAlive) continue;
+                    if (ch.Skills.Combat > bestCombat)
+                    {
+                        bestCombat = ch.Skills.Combat;
+                        bestAttacker = ch;
+                    }
+                }
+
+                float attackerStr = bestAttacker?.Skills.Combat ?? wCfg.CampaignBattleBaseStrength;
+                float defenderStr = 0.3f + (target.Health / (float)SettlementStartHealth) * 0.5f;
+
+                // Deterministic roll seeded by world seed, year, and the pair
+                float roll = WorldRng.FloatAt(world.WorldSeed, world.CurrentYear,
+                    civA.Id.Value, enemyCivId.Value, SaltWarCampaign);
+                bool attackerWins = roll < attackerStr / (attackerStr + defenderStr);
+
+                long attackerEntityId = bestAttacker?.Id.Value ?? civA.RulerId.Value;
+                string attackerName   = bestAttacker?.Identity.Name ?? civA.Name;
+
+                if (attackerWins)
+                {
+                    int newHealth = Math.Max(0, target.Health - wCfg.CampaignBattleDamage);
+                    world.Settlements[targetTile] = target with { Health = newHealth };
+                    civA.WarBattleWins[enemyCivId] = civA.WarBattleWins.GetValueOrDefault(enemyCivId, 0) + 1;
+
+                    var bPayload = JsonSerializer.Serialize(new BattlePayload(
+                        attackerEntityId, attackerName,
+                        wCfg.CampaignBattleDamage, newHealth, "campaign_victory",
+                        false, 100));
+                    pending.Add(new PendingEvent(EventType.BattleOccurred, targetTile, null, bPayload,
+                        new[] { attackerEntityId },
+                        CivId: civA.Id.Value, SettlementName: target.Name));
+
+                    // Conquest if health depleted
+                    if (newHealth <= 0)
+                    {
+                        CivId previousCivId = target.CivId;
+                        int   conqueredPop  = Math.Max(1, target.Population / 2);
+                        world.Settlements[targetTile] = target with
+                        {
+                            CivId              = civA.Id,
+                            Health             = SettlementStartHealth / 2,
+                            Population         = conqueredPop,
+                            PopulationF        = 0f,
+                            ConqueredYear      = world.CurrentYear,
+                            ConqueredFromCivId = previousCivId.Value,
+                        };
+
+                        if (world.Civilizations.TryGetValue(previousCivId, out var losingCiv))
+                        {
+                            if (target.IsColony) losingCiv.ColonyCount    = Math.Max(0, losingCiv.ColonyCount    - 1);
+                            else                 losingCiv.SettlementCount = Math.Max(0, losingCiv.SettlementCount - 1);
+                        }
+                        civA.SettlementCount++;
+
+                        TransferTerritory(targetTile, previousCivId, civA.Id, world);
+
+                        pending.Add(new PendingEvent(EventType.SettlementConquered, targetTile, null,
+                            JsonSerializer.Serialize(new SettlementConqueredPayload(
+                                attackerEntityId, attackerName,
+                                civA.Id.Value, previousCivId.Value, conqueredPop)),
+                            new[] { attackerEntityId },
+                            CivId: civA.Id.Value, SettlementName: target.Name));
+
+                        bool anyLeft = world.Settlements.Values.Any(s => s.CivId == previousCivId);
+                        if (!anyLeft)
+                            pending.Add(new PendingEvent(EventType.CivilizationCollapsed, targetTile, null,
+                                JsonSerializer.Serialize(new CivCollapsedPayload(previousCivId.Value, "conquered")),
+                                CivId: previousCivId.Value));
+                    }
+                }
+                else
+                {
+                    // Defender wins — attacker repulsed
+                    civB.WarBattleWins[civA.Id] = civB.WarBattleWins.GetValueOrDefault(civA.Id, 0) + 1;
+
+                    var bPayload = JsonSerializer.Serialize(new BattlePayload(
+                        attackerEntityId, attackerName,
+                        0, target.Health, "repulsed",
+                        false, 100));
+                    pending.Add(new PendingEvent(EventType.BattleOccurred, targetTile, null, bPayload,
+                        new[] { attackerEntityId },
+                        CivId: civA.Id.Value, SettlementName: target.Name));
+                }
+            }
+        }
     }
 
     // ─── Raid ─────────────────────────────────────────────────────────────────

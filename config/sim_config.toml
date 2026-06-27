@@ -123,6 +123,9 @@ always_record_types = [
     "ReligionExtinct",
     "WarDeclared",
     "WarEnded",
+    "TerritoryExpanded",
+    "TerritoryLost",
+    "SettlementConquered",
     "GodModeDisasterTriggered",
     "GodModeEntitySpawned",
     "GodModeCharacterCreated",
@@ -919,7 +922,7 @@ store_raid_destruction_per_damage  = 0.008  # fraction of ALL stores destroyed p
 claim_tiles_per_person    = 8    # 1 tile per N people; city of 800 → 100 tiles (~radius 5)
 min_city_tiles            = 7    # radius-1 circle, always retained
 max_city_tiles            = 120  # ~radius-6; absolute upper bound
-territory_growth_per_year = 2    # max tiles claimed per city per year (prevents instant snowball)
+territory_growth_per_year = 4    # max tiles claimed per city per year (prevents instant snowball)
 initial_city_claim_radius = 2    # tiles claimed at founding (~13 tiles)
 
 # =============================================================================
@@ -1008,3 +1011,21 @@ trade_min_pop_for_goods         = 50     # both civs need this pop to meaningful
 diplomacy_alliance_min_trust    = 0.25   # trust required after emissary to trigger AllianceFormed
 spy_confidence_boost            = 0.4    # how much the contact confidence improves from spy intel
 religious_spread_awe_boost      = 0.3    # awe modifier added to target-civ chars on religious emissary
+
+# =============================================================================
+# WAR (M4 Phase 2 — Territory Dynamics & War Outcomes)
+# =============================================================================
+
+[war]
+# Border tension accrued per year for each adjacent territory tile pair between different civs.
+# At 0.015 per pair: 10 adjacent pairs → 0.15 tension/year → war threshold (1.0) in ~7 years.
+territory_tension_per_adjacent_pair = 0.015
+
+# Campaign battle: abstract annual engagement for each active war.
+# One battle attempt per war per year; winner determined by attacker vs defender strength roll.
+campaign_battle_damage        = 15    # health damage dealt to target settlement per campaign victory
+campaign_battle_base_strength = 0.5   # attacker strength when no character combatant is available
+
+# War end territory transfer: winner gains border tiles proportional to battle advantage.
+tiles_per_battle_win          = 2     # tiles transferred per net battle victory (aWins - bWins)
+max_tiles_transferred_per_war = 12    # cap; prevents one decisive war from reshaping the world

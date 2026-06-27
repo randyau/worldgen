@@ -113,7 +113,9 @@ public sealed record CivilizationDto(
     CulturalProfileDto?              CulturalProfile,
     // M4 Phase 1 — civ awareness
     Dictionary<string, CivContactDto> KnownCivs,
-    Dictionary<string, int>           ActiveEmissaryCountByTarget);
+    Dictionary<string, int>           ActiveEmissaryCountByTarget,
+    // M4 Phase 2 — war campaigns
+    Dictionary<string, int>           WarBattleWins);
 
 public sealed record CulturalProfileDto(
     string   AncestryId,

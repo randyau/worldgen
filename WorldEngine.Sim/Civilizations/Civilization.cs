@@ -104,6 +104,14 @@ public sealed class Civilization
     /// </summary>
     public CulturalProfile? CulturalProfile { get; set; }
 
+    // ─── War campaign tracking (M4.2) ────────────────────────────────────────
+
+    /// <summary>
+    /// Per-war battle win counts against each enemy civ during the current war.
+    /// Incremented by RunWarCampaigns; reset and consumed by EndWarBetween for territory transfer.
+    /// </summary>
+    public Dictionary<CivId, int> WarBattleWins { get; } = new();
+
     // ─── Civ awareness / emissary system (M4.1) ──────────────────────────────
 
     /// <summary>
