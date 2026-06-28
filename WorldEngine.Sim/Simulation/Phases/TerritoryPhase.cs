@@ -35,25 +35,19 @@ public sealed class TerritoryPhase
                 // Only process settlements belonging to this civ
                 if (stub.CivId != civId) continue;
 
-                int maxTiles = Math.Clamp(
-                    stub.Population / _cfg.ClaimTilesPerPerson,
-                    _cfg.MinCityTiles,
-                    _cfg.MaxCityTiles);
-
                 int owned = ownedTiles.Count;
 
-                // ── Expansion ───────────────────────────────────────────────
-                if (owned < maxTiles)
+                // Territory expands freely up to the radius cap (enforced inside ExpandTerritory)
+                // and the MaxCityTiles ceiling. Population is NOT used as a gate here — the
+                // carrying capacity model in ResourcePressurePhase lets population grow to match
+                // what the territory can actually support, rather than the reverse.
+                if (owned < _cfg.MaxCityTiles)
                 {
-                    int canExpand = Math.Min(_cfg.TerritoryGrowthPerYear, maxTiles - owned);
+                    int canExpand = Math.Min(_cfg.TerritoryGrowthPerYear, _cfg.MaxCityTiles - owned);
                     ExpandTerritory(cityTile, civId, civ, ownedTiles, canExpand, world, pending);
                 }
-
-                // ── Contraction ─────────────────────────────────────────────
-                else if (owned > maxTiles)
-                {
-                    ContractTerritory(cityTile, civId, civ, ownedTiles, owned - maxTiles, world, pending);
-                }
+                // Automatic contraction removed — territory is only lost through war/raid
+                // damage or settlement abandonment (handled in CivTracker and PopDynamics).
             }
         }
 
@@ -94,8 +88,10 @@ public sealed class TerritoryPhase
                     if (world.TerritoryMap.ContainsKey(candidate)) continue;
                     if (!world.IsLand(candidate)) continue;
 
-                    // Enforce radius cap from city center
-                    int rdx = candidate.X - cityTile.X, rdy = candidate.Y - cityTile.Y;
+                    // Enforce radius cap from city center (wrap-aware on X axis).
+                    int rdx = candidate.X - cityTile.X;
+                    if (Math.Abs(rdx) > w / 2) rdx -= Math.Sign(rdx) * w;
+                    int rdy = candidate.Y - cityTile.Y;
                     if (rdx * rdx + rdy * rdy > maxRadiusSq) continue;
 
                     int fertility = world.TileGrid.GetTile(candidate).Fertility;

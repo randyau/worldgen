@@ -38,9 +38,10 @@ public static class GoalManager
             || (g.Type != GoalType.Grieve
                 && g.Type != GoalType.Bond
                 && g.Type != GoalType.Create
+                && g.Type != GoalType.FoundCity   // FoundCity uses innerLifeLimit — travel takes years
                 && currentTick - g.StaleSince > cfg.GoalStaleSeasonLimit
                 && g.Progress < 0.1f)
-            || ((g.Type == GoalType.Bond || g.Type == GoalType.Create)
+            || ((g.Type == GoalType.Bond || g.Type == GoalType.Create || g.Type == GoalType.FoundCity)
                 && currentTick - g.StaleSince > innerLifeLimit
                 && g.Progress < 0.1f)).ToList();
 

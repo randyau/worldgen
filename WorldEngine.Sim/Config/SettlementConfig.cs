@@ -2,6 +2,12 @@ namespace WorldEngine.Sim.Config;
 
 public sealed class SettlementConfig
 {
+    // Starting population for every newly founded settlement (capital or colony).
+    // Represents the founding tribe/clan migrating with the leader.
+    // At 100 km²/tile, 500 people on 13 starting tiles = ~0.4/km² — pre-agricultural subsistence level,
+    // which puts tundra/desert in food shortage immediately (intended: marginal biomes are risky) while
+    // good farmland has plenty of room to grow.
+    public int   SettlementStartPop       { get; set; } = 500;
     public float PopGrowthRate            { get; set; } = 0.5f;
     public float PopDecayRate             { get; set; } = 0.05f;
     // Decay multiplier applied per unit of food deficit (foodRatio < 1.0)
@@ -31,7 +37,7 @@ public sealed class SettlementConfig
     public int CarryCapVolcanic           { get; set; } = 50;
     public int CarryCapDefault            { get; set; } = 40;
     // Minimum carrying capacity regardless of biome tiles (prevents instant abandonment on poor land)
-    public int CarryCapMinimum            { get; set; } = 50;
+    public int CarryCapMinimum            { get; set; } = 100;
     // ─── Disease ──────────────────────────────────────────────────────────────
     // Annual outbreak probability per uninfected settlement; multiplied by density factor.
     // Lowered from 0.04: disease should concentrate in dense cities, not plague every hamlet.

@@ -7,13 +7,19 @@ public sealed class ResourcePressureConfig
     public float AcquireGoalIntensity  { get; set; } = 0.7f;
     public float FleeGoalIntensity     { get; set; } = 0.5f;
     public int   StrainEventCooldown   { get; set; } = 8;     // ticks between SettlementStraining events
-    public float PopulationCapPerTile  { get; set; } = 100f;  // population count that equals "full demand" for one tile
+    // Peak population a single perfectly fertile, well-watered, temperate tile can support.
+    // Each tile = 10km × 10km = 100 km². Early-medieval farmland runs ~5-10 people/km²,
+    // so good conditions (Plains biome, typical fertility/moisture) → ~500 people/tile.
+    // Peak grassland (biome mult 2.0, perfect conditions) → up to 1000 people/tile.
+    // Tundra/desert at floor conditions: ~17-22 people/tile (0.17-0.22/km²) — marginal but viable.
+    // This is the single knob that sets world population scale across all biomes.
+    public float PeoplePerTilePeak     { get; set; } = 500f;
     // Proportional moisture floor: 25% of BaseMoisture always available regardless of season.
     public float FoodMoistureFloor         { get; set; } = 0.25f;
     // Absolute moisture floor applied after the proportional one. Ensures tiles with very low
     // BaseMoisture (desert fringe, etc.) still produce a small amount of food from groundwater/rivers,
     // preventing permanent food=0 on marginal-but-habitable land during drought.
-    public float FoodMoistureAbsoluteFloor { get; set; } = 0.20f;
+    public float FoodMoistureAbsoluteFloor { get; set; } = 0.35f;
 
     // ─── Temperature → food production ───────────────────────────────────────
     // Growing-season factor: multiplies food contribution per hinterland tile.
@@ -22,7 +28,7 @@ public sealed class ResourcePressureConfig
     public byte  FrostTemperatureThreshold   { get; set; } = 45;   // below this → cold-hardy floor applies
     // Small food fraction available in permanently-frozen tiles (tundra, arctic).
     // Represents herding, fishing, cold-adapted crops — marginal but non-zero.
-    public float ColdHardyFoodFloor          { get; set; } = 0.12f;
+    public float ColdHardyFoodFloor          { get; set; } = 0.70f;
     public byte  OptimalTemperatureLow       { get; set; } = 100;  // ramp cold-floor→1 between frost and this
     public byte  OptimalTemperatureHigh      { get; set; } = 200;  // ramp 1→heat_floor between this and 255
     public float HeatStressFactor            { get; set; } = 0.7f; // multiplier at extreme heat (255)

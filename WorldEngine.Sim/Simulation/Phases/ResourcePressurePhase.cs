@@ -30,7 +30,6 @@ public sealed class ResourcePressurePhase
     // Built once at construction from config; indexed by (byte)effTemp and (int)BiomeType.
     private readonly float[] _gsTable;    // GrowingSeasonFactor: 256 entries indexed by effective temperature byte
     private readonly float[] _foodTable;  // BiomeFoodMultiplier: 16 entries indexed by (int)BiomeType
-    private readonly int[]   _carryTable; // BiomeCarryingCapacity: 16 entries indexed by (int)BiomeType
 
     public ResourcePressurePhase(SimConfig cfg)
     {
@@ -39,7 +38,6 @@ public sealed class ResourcePressurePhase
         _impCfg    = cfg.Improvements;
         _gsTable    = BuildGrowingSeasonTable(_cfg);
         _foodTable  = BuildFoodTable(_cfg);
-        _carryTable = BuildCarryTable(_settleCfg);
     }
 
     private static float[] BuildGrowingSeasonTable(ResourcePressureConfig cfg)
@@ -53,13 +51,6 @@ public sealed class ResourcePressurePhase
     {
         var t = new float[16];
         for (int i = 0; i < 16; i++) t[i] = BiomeFoodMultiplier((BiomeType)i, cfg);
-        return t;
-    }
-
-    private static int[] BuildCarryTable(SettlementConfig settleCfg)
-    {
-        var t = new int[16];
-        for (int i = 0; i < 16; i++) t[i] = BiomeCarryingCapacity((BiomeType)i, settleCfg);
         return t;
     }
 
@@ -150,7 +141,6 @@ public sealed class ResourcePressurePhase
     {
         var supply = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);
         int tileCount = 0;
-        int carryTotal = 0;
 
         int w = world.TileGrid.TileWidth;
 
@@ -173,7 +163,11 @@ public sealed class ResourcePressurePhase
             byte  effTemp  = TileTemperature.Effective(tile, idx, world);
             var   biome    = (BiomeType)tile.BiomeType;
             int   biomeIdx = (int)biome;
-            float baseFoodContrib = (tile.Fertility / 255f) * effectiveMoisture * _gsTable[effTemp] * _foodTable[biomeIdx];
+            // Tile carrying capacity: how many people this tile can support at current conditions.
+            // Uses the same factors as the old food formula but scaled to population units via
+            // PeoplePerTilePeak. Drought/disaster reduces Fertility → directly reduces capacity.
+            float tileCapacity = _cfg.PeoplePerTilePeak
+                * (tile.Fertility / 255f) * effectiveMoisture * _gsTable[effTemp] * _foodTable[biomeIdx];
 
             // Apply improvement multipliers
             float foodMult   = 1f;
@@ -191,7 +185,7 @@ public sealed class ResourcePressurePhase
                 }
             }
 
-            Accumulate(supply, "food", baseFoodContrib * foodMult);
+            Accumulate(supply, "food", tileCapacity * foodMult);
 
             // Water: moisture alone (wells, streams, rainfall access)
             Accumulate(supply, "water", tile.CurrentMoisture / 255f);
@@ -200,9 +194,6 @@ public sealed class ResourcePressurePhase
             if (biome is BiomeType.TemperateForest or BiomeType.BorealForest
                       or BiomeType.TropicalRainforest or BiomeType.Swamp)
                 Accumulate(supply, "timber", TimberPerForestTile * timberMult);
-
-            // Carrying capacity — accumulated alongside food/water in the same tile walk
-            carryTotal += _carryTable[biomeIdx];
 
             // Mineral deposits — extensible: any new deposit type flows through automatically
             if (world.ResourceRegistry.TryGetValue(coord, out var deposits))
@@ -217,37 +208,22 @@ public sealed class ResourcePressurePhase
             }
         }
 
-        int capacity = Math.Max(_settleCfg.CarryCapMinimum, carryTotal);
+        // Carrying capacity: people the territory can support, floored at CarryCapMinimum so a
+        // newly founded settlement with tiny territory is never instantly at zero.
+        float rawCapacity = supply.GetValueOrDefault("food", 0f);
+        int capacity = (int)Math.Max(_settleCfg.CarryCapMinimum, rawCapacity);
         if (tileCount == 0) return (supply, capacity);
 
-        // Convert absolute supply to supply/demand ratios.
-        // Demand scales with population; PopulationCapPerTile is the full-demand baseline per tile.
-        float demand = Math.Max(1f, stub.Population / _cfg.PopulationCapPerTile);
-
-        // Food and water are per-capita resources; minerals are absolute supply
-        if (supply.TryGetValue("food",  out float fs)) supply["food"]  = fs / demand;
-        if (supply.TryGetValue("water", out float ws)) supply["water"] = ws / demand;
-        // Minerals: leave as absolute supply (surplus if > 0, demand is driven by artisans later)
+        // Normalize food/water to ratios relative to current population.
+        // ratio > 1 → territory supports more than current pop (room to grow)
+        // ratio < 1 → overpopulated for current territory (decline pressure)
+        float population = Math.Max(1f, stub.Population);
+        if (supply.TryGetValue("food",  out float fs)) supply["food"]  = fs / population;
+        if (supply.TryGetValue("water", out float ws)) supply["water"] = ws / population;
+        // Minerals: leave as absolute supply (surplus if > 0, demand driven by artisans)
 
         return (supply, capacity);
     }
-
-    private static int BiomeCarryingCapacity(BiomeType biome, SettlementConfig cfg) => biome switch
-    {
-        BiomeType.Grassland          => cfg.CarryCapGrassland,
-        BiomeType.Plains             => cfg.CarryCapPlains,
-        BiomeType.TropicalRainforest => cfg.CarryCapTropicalRainforest,
-        BiomeType.Savanna            => cfg.CarryCapSavanna,
-        BiomeType.TemperateForest    => cfg.CarryCapTemperateForest,
-        BiomeType.BorealForest       => cfg.CarryCapBorealForest,
-        BiomeType.Swamp              => cfg.CarryCapSwamp,
-        BiomeType.Beach              => cfg.CarryCapBeach,
-        BiomeType.Mountain           => cfg.CarryCapMountain,
-        BiomeType.HighMountain       => cfg.CarryCapHighMountain,
-        BiomeType.Desert             => cfg.CarryCapDesert,
-        BiomeType.Volcanic           => cfg.CarryCapVolcanic,
-        _                            => cfg.CarryCapDefault,
-    };
 
     private static void Accumulate(Dictionary<string, float> dict, string key, float value)
     {

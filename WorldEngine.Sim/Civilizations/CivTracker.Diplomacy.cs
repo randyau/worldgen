@@ -176,11 +176,15 @@ public static partial class CivTracker
             }
             if (alreadyDelegated) continue;
 
-            // Pick the most ambitious non-ruler, non-founder living member
+            // Pick the most ambitious non-ruler, non-founder living member.
+            // Use the same effective-cooldown formula as InCivFoundingCooldown so delegation
+            // only fires when the delegate can actually establish (avoids goal-prune cycles).
             Tier1Character? best = null;
             float bestAmbition = cfg.CityFoundingAmbitionThreshold;
-            bool isFoundingCooldown = world.CurrentYear - civ.LastSettlementFoundedYear
-                                     < cfg.MinFoundingCooldownYears;
+            float effectiveCooldown = cfg.BaseFoundingCooldownYears
+                                    / (1f + civ.TotalPopulation / (float)cfg.FoundingCooldownPopScale);
+            int   cooldownYears     = Math.Max(cfg.MinFoundingCooldownYears, (int)effectiveCooldown);
+            bool  isFoundingCooldown = world.CurrentYear - civ.LastSettlementFoundedYear < cooldownYears;
             if (isFoundingCooldown) continue;
 
             foreach (var memberId in civ.Members)

@@ -150,7 +150,7 @@ public sealed class CharacterSimConfig
     // 0.5 = "half the resources are claimed" — discourages but doesn't block high-fertility tiles.
     public float HinterlandDrainFactor       { get; set; } = 0.5f;
     // Base cooldown years between same-civ settlements; scales down with civ population
-    public int   BaseFoundingCooldownYears   { get; set; } = 8;
+    public int   BaseFoundingCooldownYears   { get; set; } = 4;
     // Minimum cooldown years regardless of population (a civ can't expand instantly even if huge)
     public int   MinFoundingCooldownYears    { get; set; } = 2;
     // Population scale factor: cooldown halves when civ population reaches this value

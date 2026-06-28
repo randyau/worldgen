@@ -699,9 +699,9 @@ bond_max_base                 = 1
 bond_max_per_compassion       = 2
 
 hinterland_drain_factor          = 0.5   # effective fertility multiplier inside same-civ hinterland (0.5 = half claimed)
-base_founding_cooldown_years     = 30    # base cooldown between same-civ settlements; slow organic expansion
-min_founding_cooldown_years      = 8     # floor — even large civs can't expand faster than once per 8 years
-founding_cooldown_pop_scale      = 3000  # civ pop at which cooldown halves (30y→15y at 3k, →7.5y at 6k)
+base_founding_cooldown_years     = 4     # base cooldown between same-civ settlements; halves with population
+min_founding_cooldown_years      = 2     # floor — even large civs can't expand faster than once per 2 years
+founding_cooldown_pop_scale      = 2000  # civ pop at which cooldown halves (4y→2y at 2k pop)
 civ_birth_min_pop            = 20   # lowered from 30; settlements reach this faster with improved farming
 civ_birth_chance_per_season = 0.01  # 1% per year at min-pop; keeps character count manageable for performance
 # Territorial aggression: aggressive founders drain trust from foreign visitors on their settlement tile
@@ -827,13 +827,15 @@ artwork_cooldown_years = 10            # one artwork event per character per dec
 # =============================================================================
 
 [settlement]
+settlement_start_pop        = 500   # founding group size (tribe/clan migrating with the leader); at 100 km²/tile this puts
+                                    # tundra/desert founding at ratio ~0.4-0.5 (shortage — risky) while good farmland thrives
 pop_growth_rate             = 0.5   # population added per season per fertility unit (fertility/255 × this)
                                     # Lower is intentional: fast growth causes Malthusian starvation with no surplus for stores
 pop_decay_rate              = 0.05  # population lost per season unconditionally (hunger/disease baseline)
 starvation_decay_rate       = 0.3   # extra decay per unit food deficit when food < shortage_threshold
 famine_decay_rate           = 0.8   # extra decay per unit food deficit when food < crisis_threshold
 pop_min_viable              = 5     # below this → settlement abandoned
-pop_max                     = 8000  # hard cap; at 10 sq km/tile a single settlement over 8k is already a major city
+pop_max                     = 50000 # hard cap; tiles = 100 km² each; 50k is a large early-medieval city + hinterland (early-medieval Paris ~30k)
 fertility_variance          = 0.15  # per-settlement founding-time multiplier range (±this around 1.0)
 
 # Biome carrying capacity: population supported per reach tile, by biome type.
@@ -852,7 +854,7 @@ carry_cap_high_mountain       = 4
 carry_cap_desert              = 6
 carry_cap_volcanic            = 20
 carry_cap_default             = 24
-carry_cap_minimum             = 20  # floor: even the poorest biome supports a small community
+carry_cap_minimum             = 100 # floor: even the poorest biome supports a small community (scale: settlement_start_pop = 500)
 
 # Disease outbreaks — annual probability; spreads between nearby settlements; drains population while active
 # Risk concentrates in dense cities; small remote settlements are largely immune.
@@ -899,13 +901,16 @@ crisis_threshold        = 0.3    # food ratio below this = crisis; also seeds Fl
 acquire_goal_intensity  = 0.7
 flee_goal_intensity     = 0.5
 strain_event_cooldown   = 8      # ticks between SettlementStraining events per settlement
-population_cap_per_tile = 100.0  # pop count that equals "full demand" for one tile's food
+# Single scale factor for world population. Tiles = 10km × 10km = 100 km² each.
+# Early medieval farmland: ~5-10 people/km² → 500-1000 per good tile.
+# All biomes scale from this via fertility × moisture × growing season × biome factor.
+people_per_tile_peak    = 500.0  # Plains at typical conditions: ~500/tile (5/km²); grassland peak: ~1000/tile; tundra: ~17/tile; desert: ~18/tile
 food_moisture_floor          = 0.25   # proportional floor: fraction of BaseMoisture always available (wells, root storage, irrigation)
-food_moisture_absolute_floor = 0.20   # absolute floor applied after proportional; ensures low-BaseMoisture tiles still produce food from groundwater/rivers rather than zeroing out in drought
+food_moisture_absolute_floor = 0.35   # absolute floor applied after proportional; ensures low-BaseMoisture tiles still produce food from groundwater/rivers rather than zeroing out in drought
 # Growing-season temperature factor (multiplies food contribution per hinterland tile)
 # Cold-hardy floor below frost, then ramp to 1.0 at optimal_low → flat 1.0 to optimal_high → ramp to heat_stress_factor at 255
 frost_temperature_threshold = 45   # effective temp (byte) below which the cold-hardy floor applies
-cold_hardy_food_floor       = 0.12 # food fraction available below frost threshold (herding, fishing, cold-adapted crops); marginal but non-zero
+cold_hardy_food_floor       = 0.70 # food fraction available below frost threshold (herding, fishing, cold-adapted crops); 0.70 gives tundra ~14-tile viability at initial territory
 optimal_temperature_low     = 100  # lower bound of peak growing band; below this food scales up from 0
 optimal_temperature_high    = 200  # upper bound of peak growing band; above this heat stress begins
 heat_stress_factor          = 0.7  # multiplier at extreme heat (255); tropical-desert crops still viable but stressed
