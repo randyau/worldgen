@@ -28,6 +28,9 @@ public enum GoalType
     // M3+ city-state
     FoundCity,         // ruler-delegated: travel to frontier and found a new city
     BuildImprovement,  // build a Farm/Mine/etc. on a territory tile
+
+    // M4 Phase 3 — religion
+    FoundReligion,     // high-spiritual character founds a religious movement
 }
 
 public enum GoalObject

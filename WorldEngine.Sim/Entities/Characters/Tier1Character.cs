@@ -38,6 +38,9 @@ public sealed class Tier1Character : SimEntity
     // Year when the character last created artwork (gates ArtworkCreated events per cooldown period)
     public int LastArtworkYear { get; internal set; } = -999;
 
+    // Year when the character last founded a religion (gates re-founding via cooldown)
+    public int LastReligionFoundedYear { get; internal set; } = -999;
+
     public Tier1Character(
         EntityId id,
         TileCoord location,

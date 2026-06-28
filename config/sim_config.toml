@@ -406,6 +406,13 @@ spread_trust_threshold      = 0.5    # Minimum trust required for religion to sp
 inter_religion_trust_penalty = -0.15  # Baseline trust penalty between members of different religions
 conversion_experience_threshold = 0.3 # How much more positive experience with new religion before conversion
 
+# M4 Phase 3 — Religion founding (character goal)
+spiritual_founding_threshold     = 0.75  # Spiritual need level to trigger FoundReligion goal
+piety_founding_threshold         = 0.50  # Piety skill floor to qualify as a founder
+wonder_founding_threshold        = 0.60  # Wonder personality trait floor
+religion_founding_progress_per_year = 0.35  # progress per year; ~3 years to complete
+religion_founding_cooldown_years    = 50    # per character: min years between foundings
+
 # =============================================================================
 # CULTURAL MODIFIERS
 # =============================================================================

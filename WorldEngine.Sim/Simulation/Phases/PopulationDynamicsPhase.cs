@@ -177,8 +177,11 @@ public sealed class PopulationDynamicsPhase
 
         foreach (var (threshold, role) in thresholds)
         {
-            if (threshold <= currentThresh) continue;
             if (pop < threshold) break;
+            // Allow re-spawn if population still meets threshold but specialist has died
+            bool hasLiving = world.Entities.Tier2Chars.Any(t =>
+                t.IsAlive && t.Livelihood.SettlementTile == tile && t.Livelihood.Role == role);
+            if (hasLiving) continue;
 
             // Spawn a Tier 2 specialist
             var personality = PersonalityVector6.Default; // stub — future: random personality

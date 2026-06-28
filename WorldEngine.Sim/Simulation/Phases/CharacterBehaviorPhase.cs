@@ -46,6 +46,13 @@ public sealed class CharacterBehaviorPhase
             if (isAnnualTick) ProcessAnnualDisease(c, world, pending);
             if (!c.IsAlive) { deathsThisTick.Add((c.Id, c.Identity.Name)); continue; }
 
+            // Annual religion: progress existing FoundReligion goal first; then try to form one
+            if (isAnnualTick)
+            {
+                AdvanceFoundReligionGoal(c, world, pending, tick);
+                TryFormFoundReligionGoal(c, world, tick);
+            }
+
             c.TicksInCurrentTile++;
             NeedsUpdater.Update(c, world, _cfg);
             GoalManager.UpdateGoals(c, world, tick, _cfg, pending);
@@ -331,6 +338,67 @@ public sealed class CharacterBehaviorPhase
                 c.InfectedSinceYear = 0;
             }
         }
+    }
+
+    // ─── Religion founding ────────────────────────────────────────────────────
+
+    private void TryFormFoundReligionGoal(Tier1Character c, WorldState world, long tick)
+    {
+        var cfg = world.SimConfig.Religion;
+        if (c.Needs.Spiritual    < cfg.SpiritualFoundingThreshold) return;
+        if (c.Skills.Piety       < cfg.PietyFoundingThreshold)     return;
+        if (c.Personality.Wonder < cfg.WonderFoundingThreshold)    return;
+        if (c.LastReligionFoundedYear > -999
+            && world.CurrentYear - c.LastReligionFoundedYear < cfg.ReligionFoundingCooldownYears)
+            return;
+        if (c.Goals.Any(g => g.Type == GoalType.FoundReligion && !g.IsComplete)) return;
+
+        c.Goals.Add(new GoalData
+        {
+            Type       = GoalType.FoundReligion,
+            Priority   = 0.8f,
+            Intensity  = 0.9f,
+            Progress   = 0f,
+            FormedTick = (int)tick,
+            StaleSince = (int)tick,  // prevent immediate GoalManager staleness pruning
+        });
+    }
+
+    private void AdvanceFoundReligionGoal(
+        Tier1Character c, WorldState world, List<PendingEvent> pending, long tick = 0L)
+    {
+        var goal = c.Goals.FirstOrDefault(g => g.Type == GoalType.FoundReligion && !g.IsComplete);
+        if (goal is null) return;
+
+        var cfg = world.SimConfig.Religion;
+
+        // Abandon if Spiritual has dropped well below the threshold
+        if (c.Needs.Spiritual < cfg.SpiritualFoundingThreshold - 0.1f)
+        {
+            goal.IsComplete = true;
+            return;
+        }
+
+        goal.StaleSince = (int)tick;  // refresh so GoalManager doesn't prune mid-journey
+        goal.Progress = Math.Min(1f, goal.Progress + cfg.ReligionFoundingProgressPerYear);
+        if (goal.Progress < 1f) return;
+
+        goal.IsComplete = true;
+        c.LastReligionFoundedYear = world.CurrentYear;
+        c.Needs = c.Needs with
+        {
+            Purpose   = Math.Min(1f, c.Needs.Purpose   + 0.25f),
+            Spiritual = Math.Min(1f, c.Needs.Spiritual + 0.15f),
+            Status    = Math.Min(1f, c.Needs.Status    + 0.20f),
+        };
+
+        var payload = JsonSerializer.Serialize(new ReligionFoundedPayload(
+            c.Id.Value, c.Identity.Name, world.CurrentYear,
+            c.Location.X, c.Location.Y));
+        pending.Add(new PendingEvent(EventType.ReligionFounded, c.Location, null, payload,
+            new[] { c.Id.Value },
+            ActorId: c.Id.Value, ActorName: c.Identity.Name,
+            CivId: c.Identity.CivId.Value));
     }
 
     // ─── Command resolution ────────────────────────────────────────────────────

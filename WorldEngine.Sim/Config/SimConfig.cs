@@ -18,6 +18,7 @@ public class SimConfig
     public CulturalTraitsConfig  CulturalTraits  { get; set; } = new();
     public EmissaryConfig        Emissary        { get; set; } = new();
     public WarConfig             War             { get; set; } = new();
+    public ReligionConfig        Religion        { get; set; } = new();
 
     // Loaded separately by AncestryLoader — not from sim_config.toml
     public AncestryRegistry AncestryRegistry { get; set; } = AncestryRegistry.Empty;

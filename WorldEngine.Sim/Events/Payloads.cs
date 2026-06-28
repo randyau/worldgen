@@ -197,3 +197,10 @@ internal sealed record CivIntelGatheredPayload(
     long FromCivId, string FromCivName,
     long ToCivId,   string ToCivName,
     float NewConfidence);
+
+// ─── M4 Phase 3 — Religion ────────────────────────────────────────────────────
+
+internal sealed record ReligionFoundedPayload(
+    long   FounderId, string FounderName,
+    int    Year,
+    int    TileX, int TileY);

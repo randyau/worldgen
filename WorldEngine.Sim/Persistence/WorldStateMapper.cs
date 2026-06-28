@@ -215,7 +215,8 @@ internal static class WorldStateMapper
             IsInfected:  c.IsInfected, InfectedSinceYear: c.InfectedSinceYear,
             Wellbeing:   c.Wellbeing, TicksInCurrentTile: c.TicksInCurrentTile,
             LastCreateCompletedTick: c.LastCreateCompletedTick,
-            LastArtworkYear: c.LastArtworkYear);
+            LastArtworkYear: c.LastArtworkYear,
+            LastReligionFoundedYear: c.LastReligionFoundedYear);
     }
 
     private static Tier2EntityDto MapTier2(Tier2Character c)
@@ -518,8 +519,9 @@ internal static class WorldStateMapper
         character.InfectedSinceYear   = d.InfectedSinceYear;
         character.Wellbeing           = d.Wellbeing;
         character.TicksInCurrentTile  = d.TicksInCurrentTile;
-        character.LastCreateCompletedTick = d.LastCreateCompletedTick;
-        character.LastArtworkYear         = d.LastArtworkYear;
+        character.LastCreateCompletedTick   = d.LastCreateCompletedTick;
+        character.LastArtworkYear           = d.LastArtworkYear;
+        character.LastReligionFoundedYear   = d.LastReligionFoundedYear;
 
         foreach (var gd in d.Goals)
             character.Goals.Add(new GoalData

@@ -193,7 +193,8 @@ public sealed record Tier1EntityDto(
     float  Wellbeing,
     int    TicksInCurrentTile,
     int    LastCreateCompletedTick,
-    int    LastArtworkYear);
+    int    LastArtworkYear,
+    int    LastReligionFoundedYear);
 
 public sealed record Tier2EntityDto(
     long   Id,
