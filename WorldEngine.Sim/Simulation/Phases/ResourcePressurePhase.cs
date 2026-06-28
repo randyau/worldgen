@@ -162,11 +162,13 @@ public sealed class ResourcePressurePhase
             tileCount++;
 
             // Food: fertility × moisture × growing-season temperature factor.
-            // Moisture floor: use higher of current or 25% of base to represent wells/irrigation.
-            // Temperature factor: 0 at frost, 1.0 in the optimal temperate band, tapering at extreme heat.
+            // Moisture floor: proportional (25% of BaseMoisture for wells/irrigation) combined with
+            // an absolute floor so tiles with very low BaseMoisture still produce some food from
+            // groundwater access rather than zeroing out during drought.
             float effectiveMoisture = Math.Max(
                 tile.CurrentMoisture / 255f,
-                tile.BaseMoisture / 255f * _cfg.FoodMoistureFloor);
+                Math.Max(tile.BaseMoisture / 255f * _cfg.FoodMoistureFloor,
+                         _cfg.FoodMoistureAbsoluteFloor));
             int   idx      = coord.X + coord.Y * w;
             byte  effTemp  = TileTemperature.Effective(tile, idx, world);
             var   biome    = (BiomeType)tile.BiomeType;
@@ -259,7 +261,9 @@ public sealed class ResourcePressurePhase
     /// </summary>
     private static float GrowingSeasonFactor(byte effTemp, ResourcePressureConfig cfg)
     {
-        if (effTemp <= cfg.FrostTemperatureThreshold) return 0f;
+        // Below frost: return a small cold-hardy floor (herding, fishing, cold-adapted crops)
+        // rather than hard zero, so tundra/polar settlements can eke out a marginal existence.
+        if (effTemp <= cfg.FrostTemperatureThreshold) return cfg.ColdHardyFoodFloor;
         if (effTemp <= cfg.OptimalTemperatureLow)
             return (float)(effTemp - cfg.FrostTemperatureThreshold)
                  / (cfg.OptimalTemperatureLow - cfg.FrostTemperatureThreshold);

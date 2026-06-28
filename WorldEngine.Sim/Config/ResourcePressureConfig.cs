@@ -8,17 +8,22 @@ public sealed class ResourcePressureConfig
     public float FleeGoalIntensity     { get; set; } = 0.5f;
     public int   StrainEventCooldown   { get; set; } = 8;     // ticks between SettlementStraining events
     public float PopulationCapPerTile  { get; set; } = 100f;  // population count that equals "full demand" for one tile
-    // Minimum effective moisture fraction used in food calculation, regardless of season.
-    // Prevents winter moisture crashes from zeroing out food supply for well-established settlements.
-    // 0.25 = even in the driest winter, 25% of base moisture is assumed available (root storage, wells, etc.)
-    public float FoodMoistureFloor     { get; set; } = 0.25f;
+    // Proportional moisture floor: 25% of BaseMoisture always available regardless of season.
+    public float FoodMoistureFloor         { get; set; } = 0.25f;
+    // Absolute moisture floor applied after the proportional one. Ensures tiles with very low
+    // BaseMoisture (desert fringe, etc.) still produce a small amount of food from groundwater/rivers,
+    // preventing permanent food=0 on marginal-but-habitable land during drought.
+    public float FoodMoistureAbsoluteFloor { get; set; } = 0.20f;
 
     // ─── Temperature → food production ───────────────────────────────────────
     // Growing-season factor: multiplies food contribution per hinterland tile.
-    // Piecewise linear: 0 at frost, ramp up to 1.0 at optimal low, flat 1.0 through
-    // optimal high, then ramp down to HeatStressFactor at 255.
-    public byte  FrostTemperatureThreshold   { get; set; } = 45;   // below this → no crop growth
-    public byte  OptimalTemperatureLow       { get; set; } = 100;  // ramp 0→1 between frost and this
+    // Below frost: cold-hardy floor (herding/fishing/cold crops). Then ramp 0→1 to optimal low,
+    // flat 1.0 through optimal high, then ramp down to HeatStressFactor at 255.
+    public byte  FrostTemperatureThreshold   { get; set; } = 45;   // below this → cold-hardy floor applies
+    // Small food fraction available in permanently-frozen tiles (tundra, arctic).
+    // Represents herding, fishing, cold-adapted crops — marginal but non-zero.
+    public float ColdHardyFoodFloor          { get; set; } = 0.12f;
+    public byte  OptimalTemperatureLow       { get; set; } = 100;  // ramp cold-floor→1 between frost and this
     public byte  OptimalTemperatureHigh      { get; set; } = 200;  // ramp 1→heat_floor between this and 255
     public float HeatStressFactor            { get; set; } = 0.7f; // multiplier at extreme heat (255)
 
