@@ -931,7 +931,9 @@ store_raid_destruction_per_damage  = 0.008  # fraction of ALL stores destroyed p
 [territory]
 claim_tiles_per_person    = 8    # 1 tile per N people; city of 800 → 100 tiles (~radius 5)
 min_city_tiles            = 7    # radius-1 circle, always retained
-max_city_tiles            = 120  # ~radius-6; absolute upper bound
+max_city_tiles            = 120  # absolute upper bound on tile count regardless of radius
+territory_max_radius      = 10   # hard Euclidean radius cap from city center; territory never expands beyond this
+                                  # — civs must found a new city to access land further out
 territory_growth_per_year = 4    # max tiles claimed per city per year (prevents instant snowball)
 initial_city_claim_radius = 2    # tiles claimed at founding (~13 tiles)
 

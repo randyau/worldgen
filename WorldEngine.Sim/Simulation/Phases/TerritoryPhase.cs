@@ -71,12 +71,15 @@ public sealed class TerritoryPhase
         int h = world.TileGrid.TileHeight;
         int[] dx = { -1, 1, 0, 0 };
         int[] dy = { 0, 0, -1, 1 };
+        int maxRadiusSq = world.SimConfig.Territory.MaxTerritoryRadius
+                        * world.SimConfig.Territory.MaxTerritoryRadius;
 
         int claimed = 0;
 
         for (int pass = 0; pass < claimCount; pass++)
         {
-            // Find the highest-fertility unclaimed adjacent land tile
+            // Find the highest-fertility unclaimed adjacent land tile within MaxTerritoryRadius.
+            // Radius cap forces civs to found new cities to access land beyond it.
             TileCoord? bestCoord = null;
             int bestFertility = -1;
 
@@ -90,6 +93,10 @@ public sealed class TerritoryPhase
 
                     if (world.TerritoryMap.ContainsKey(candidate)) continue;
                     if (!world.IsLand(candidate)) continue;
+
+                    // Enforce radius cap from city center
+                    int rdx = candidate.X - cityTile.X, rdy = candidate.Y - cityTile.Y;
+                    if (rdx * rdx + rdy * rdy > maxRadiusSq) continue;
 
                     int fertility = world.TileGrid.GetTile(candidate).Fertility;
                     if (fertility > bestFertility)
