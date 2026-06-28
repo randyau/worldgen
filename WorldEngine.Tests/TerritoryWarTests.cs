@@ -43,10 +43,14 @@ public class TerritoryWarTests
         var founder = CharacterFactory.Spawn(cityTile, biome, world.WorldSeed, 1L + seedOffset, world.SimConfig, world.CurrentYear);
         world.Entities.Add(founder);
 
+        // Disable global min-distance so small test worlds can host multiple settlements
+        int savedMinDist = world.SimConfig.Character.GlobalSettlementMinDist;
+        world.SimConfig.Character.GlobalSettlementMinDist = 0;
         var pending = new List<PendingEvent>();
         CivTracker.Resolve(
             new EstablishSettlement(founder.Id, cityTile),
             world, pending, world.SimConfig.SettlementNames);
+        world.SimConfig.Character.GlobalSettlementMinDist = savedMinDist;
 
         var civId = world.Settlements[cityTile].CivId;
         return (world, cityTile, civId);

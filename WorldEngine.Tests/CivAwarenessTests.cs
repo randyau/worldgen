@@ -670,4 +670,115 @@ public class CivAwarenessTests
         civ1.KnownCivs[civ2.Id].Confidence.Should()
             .BeApproximately(0.35f, 0.001f, "confidence matches EncounterConfidenceGain");
     }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // EPIC 4.1.6 — Integration & tuning tests
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void PropagationIntegration_FourCivRow_DirectContactsAndChaining()
+    {
+        // A(5,5) — B(35,5) — C(65,5) — D(95,5), each 30 tiles apart.
+        // knowledge_spread_radius = 30, so each adjacent pair is exactly in range.
+        var world = BuildBareWorld(widthKm: 1200, heightKm: 200, tileWidthKm: 10);
+        world.SimConfig.Emissary.KnowledgeSpreadRadius  = 30;
+        world.SimConfig.Emissary.RumorConfidenceGain    = 0.15f;
+        world.SimConfig.Emissary.ConfidenceDecayPerYear = 0.01f;
+        world.SimConfig.Emissary.RumorChainProbability  = 1.0f;   // guaranteed chains
+        world.SimConfig.Emissary.RumorChainConfidenceFactor = 0.5f;
+
+        var civA = MakeCiv(1, new TileCoord(5,  5), world);
+        var civB = MakeCiv(2, new TileCoord(35, 5), world);
+        var civC = MakeCiv(3, new TileCoord(65, 5), world);
+        var civD = MakeCiv(4, new TileCoord(95, 5), world);
+
+        AddSettlement(civA.Id, new TileCoord(5,  5), 100, world);
+        AddSettlement(civB.Id, new TileCoord(35, 5), 100, world);
+        AddSettlement(civC.Id, new TileCoord(65, 5), 100, world);
+        AddSettlement(civD.Id, new TileCoord(95, 5), 100, world);
+
+        // One proximity pass — adjacent pairs learn of each other
+        KnowledgePropagationPhase.Execute(world);
+
+        civA.KnownCivs.Should().ContainKey(civB.Id, "A and B are within spread radius");
+        civB.KnownCivs.Should().ContainKey(civA.Id, "symmetric");
+        civB.KnownCivs.Should().ContainKey(civC.Id, "B and C within spread radius");
+        civC.KnownCivs.Should().ContainKey(civB.Id, "symmetric");
+        civC.KnownCivs.Should().ContainKey(civD.Id, "C and D within spread radius");
+        civD.KnownCivs.Should().ContainKey(civC.Id, "symmetric");
+
+        civA.KnownCivs.Should().NotContainKey(civC.Id, "A and C are 60 tiles apart — out of range");
+        civD.KnownCivs.Should().NotContainKey(civA.Id, "A and D are 90 tiles apart");
+
+        // For chaining: seed B with WandererMet of C (simulates a character encounter
+        // that gives B non-Rumor knowledge of C, making it eligible to chain to A).
+        CivTracker.SeedCivContact(civB.Id, civC.Id, CivContactSource.WandererMet,
+            civC.CapitalTile, 0.8f, world);
+
+        world.CurrentYear++;
+        KnowledgePropagationPhase.Execute(world);
+
+        // B now has WandererMet of C, and B has Rumor of A → A should learn of C via chain
+        civA.KnownCivs.Should().ContainKey(civC.Id,
+            "A learns of C via 1-hop chain through B (B knows A and B knows C non-Rumor)");
+        civA.KnownCivs[civC.Id].BestSource.Should().Be(CivContactSource.Rumor,
+            "chained knowledge arrives as Rumor");
+
+        // D should not learn of A — that would require 3 hops and the one-hop rule prevents it
+        civD.KnownCivs.Should().NotContainKey(civA.Id,
+            "D cannot learn of A within 1-hop chain (A→C contact is now Rumor, ineligible to chain)");
+    }
+
+    [Fact]
+    public void EmissaryEndToEnd_TradeEmissaryDispatched_AndResolvedAsMerchantTrade()
+    {
+        var world = BuildBareWorld(widthKm: 600, heightKm: 200, tileWidthKm: 10);
+        world.SimConfig.Emissary.DispatchCheckYears              = 1;   // check every year
+        world.SimConfig.Emissary.KnowledgeSpreadRadius           = 30;
+        world.SimConfig.Emissary.RumorConfidenceGain             = 0.5f;
+        world.SimConfig.Emissary.EmissaryDeathPerTile            = 0f;  // no mortality
+        world.SimConfig.Emissary.EmissaryTravelSpeedTilesPerYear = 8f;
+        world.SimConfig.Emissary.TradeDispatchMinTrust           = -1f; // always dispatch trade
+        world.SimConfig.Emissary.TradeMinPopForGoods             = 10;
+
+        // Two civs 20 tiles apart — within knowledge_spread_radius
+        var civ1 = MakeCiv(1, new TileCoord(5,  5), world);
+        var civ2 = MakeCiv(2, new TileCoord(25, 5), world);
+        civ1.TotalPopulation = 200;
+        civ2.TotalPopulation = 200;
+        AddSettlement(civ1.Id, new TileCoord(5,  5), 100, world);
+        AddSettlement(civ2.Id, new TileCoord(25, 5), 100, world);
+
+        // Establish high trust between rulers so trade is the chosen purpose
+        var rel = world.Relationships.GetOrCreate(civ1.RulerId, civ2.RulerId);
+        world.Relationships.Upsert(rel with { Trust = 0.5f });
+
+        var allPending = new List<PendingEvent>();
+
+        // Run several years until an emissary is dispatched and resolves
+        bool tradeFired = false;
+        for (int year = 0; year < 20 && !tradeFired; year++)
+        {
+            world.CurrentYear = year;
+            KnowledgePropagationPhase.Execute(world);
+            CivTracker.RunEmissaryDispatch(world, allPending);
+
+            // Advance to any arrival year
+            var arrivals = world.PendingEmissaries.Where(e => e.ArrivalYear <= year + 10).ToList();
+            if (arrivals.Count > 0)
+            {
+                world.CurrentYear = arrivals.Min(e => e.ArrivalYear);
+                CivTracker.RunEmissaryResolution(world, allPending);
+            }
+
+            tradeFired = allPending.Any(e => e.Type == EventType.MerchantTradeCompleted);
+        }
+
+        tradeFired.Should().BeTrue("a Trade emissary should complete within 20 years");
+
+        // Ruler trust should have increased after successful trade
+        var finalRel = world.Relationships.Get(civ1.RulerId, civ2.RulerId);
+        finalRel.Should().NotBeNull();
+        finalRel!.Trust.Should().BeGreaterThan(0.5f, "trade completion bumps ruler trust");
+    }
 }

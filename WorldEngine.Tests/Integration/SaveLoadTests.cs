@@ -7,6 +7,7 @@ using WorldEngine.Sim.Persistence;
 using WorldEngine.Sim.Simulation;
 using WorldEngine.Sim.World;
 using WorldEngine.Tests.Helpers;
+using FluentAssertions;
 
 namespace WorldEngine.Tests.Integration;
 
@@ -186,5 +187,75 @@ public class SaveLoadTests : IDisposable
         WorldStateSaver.Save(world, _saveDir, simCfg);
         var loaded = WorldStateSaver.Load(_saveDir, simCfg);
         Assert.Equal(world.CurrentYear, loaded.CurrentYear);
+    }
+
+    // ── Test 9: KnownCivs and PendingEmissaries round-trip (M4 Phase 1) ─────
+
+    [Fact]
+    public void WorldStateSaver_RoundTrip_KnownCivsAndPendingEmissaries()
+    {
+        var world  = WorldTestHelper.CreateSmallWorld(seed: 42);
+        var simCfg = TestSimConfig.Default();
+
+        // Build two minimal civs with a known-civ relationship
+        var civ1Id = new CivId(1);
+        var civ2Id = new CivId(2);
+        var capital1 = new TileCoord(5, 5);
+        var capital2 = new TileCoord(20, 5);
+
+        var founder1 = new WorldEngine.Sim.Entities.Characters.Tier1Character(
+            new EntityId(101L), capital1,
+            WorldEngine.Sim.Entities.Characters.PersonalityVector.Default,
+            WorldEngine.Sim.Entities.Characters.AptitudeVector.Default,
+            WorldEngine.Sim.Entities.Characters.SkillVector.Default,
+            new WorldEngine.Sim.Entities.Characters.IdentityData("Ruler1", "the First", "test",
+                null, null, civ1Id, 0, 0),
+            100, 200);
+        var founder2 = new WorldEngine.Sim.Entities.Characters.Tier1Character(
+            new EntityId(102L), capital2,
+            WorldEngine.Sim.Entities.Characters.PersonalityVector.Default,
+            WorldEngine.Sim.Entities.Characters.AptitudeVector.Default,
+            WorldEngine.Sim.Entities.Characters.SkillVector.Default,
+            new WorldEngine.Sim.Entities.Characters.IdentityData("Ruler2", "the Second", "test",
+                null, null, civ2Id, 0, 0),
+            100, 200);
+        world.Entities.Add(founder1);
+        world.Entities.Add(founder2);
+
+        var civ1 = new Civilization(civ1Id, "Civ1", founder1.Id, capital1, 0);
+        var civ2 = new Civilization(civ2Id, "Civ2", founder2.Id, capital2, 0);
+        world.Civilizations[civ1Id] = civ1;
+        world.Civilizations[civ2Id] = civ2;
+
+        // Seed a contact and a pending emissary
+        civ1.KnownCivs[civ2Id] = new CivContact(
+            civ2Id, YearFirstContact: 0, YearLastContact: 1,
+            CivContactSource.WandererMet, capital2, Confidence: 0.75f);
+
+        world.PendingEmissaries.Add(new PendingEmissary(
+            FromCiv: civ1Id, ToCiv: civ2Id,
+            Purpose: EmissaryPurpose.Trade,
+            DepartedYear: 0, ArrivalYear: 3, SurvivalChance: 0.8f));
+
+        WorldStateSaver.Save(world, _saveDir, simCfg);
+        var loaded = WorldStateSaver.Load(_saveDir, simCfg);
+
+        // KnownCivs round-trip
+        loaded.Civilizations.Should().ContainKey(civ1Id);
+        var loadedCiv1 = loaded.Civilizations[civ1Id];
+        loadedCiv1.KnownCivs.Should().ContainKey(civ2Id, "KnownCivs must survive save/load");
+        var contact = loadedCiv1.KnownCivs[civ2Id];
+        contact.BestSource.Should().Be(CivContactSource.WandererMet);
+        contact.Confidence.Should().BeApproximately(0.75f, 0.001f);
+        contact.CapitalTile.Should().Be(capital2);
+
+        // PendingEmissaries round-trip
+        loaded.PendingEmissaries.Should().HaveCount(1, "one pending emissary must survive save/load");
+        var em = loaded.PendingEmissaries[0];
+        em.FromCiv.Should().Be(civ1Id);
+        em.ToCiv.Should().Be(civ2Id);
+        em.Purpose.Should().Be(EmissaryPurpose.Trade);
+        em.ArrivalYear.Should().Be(3);
+        em.SurvivalChance.Should().BeApproximately(0.8f, 0.001f);
     }
 }
