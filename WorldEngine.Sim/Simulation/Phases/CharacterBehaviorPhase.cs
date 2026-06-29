@@ -222,7 +222,7 @@ public sealed class CharacterBehaviorPhase
         }
     }
 
-    private static void KillCharacter(
+    private void KillCharacter(
         Tier1Character c, WorldState world, string cause, List<PendingEvent> pending)
     {
         c.IsAlive = false;
@@ -285,13 +285,56 @@ public sealed class CharacterBehaviorPhase
                 // No successor found → succession crisis fires in RunAnnualDiplomacy
             }
 
+            // When no members remain, check if a settlement survives. If so, a new leader
+            // rises from the population rather than the civilization collapsing. A civ only
+            // truly collapses when both its named members AND all its settlements are gone.
             if (civ.Members.Count == 0 && !civ.IsCollapsed)
             {
-                civ.IsCollapsed = true;
-                var civPayload = JsonSerializer.Serialize(new CivCollapsedPayload(civ.Id.Value));
-                pending.Add(new PendingEvent(
-                    EventType.CivilizationCollapsed, civ.CapitalTile, null, civPayload,
-                    CivId: civ.Id.Value));
+                TileCoord? survivingTile = null;
+                foreach (var (tile, stub) in world.Settlements)
+                {
+                    if (stub.CivId == civ.Id && stub.Population >= _cfg.CivBirthMinPop)
+                    {
+                        survivingTile = tile;
+                        break;
+                    }
+                }
+
+                if (survivingTile.HasValue)
+                {
+                    var sTile = survivingTile.Value;
+                    long seq = (300_000L + world.CurrentYear * 997L + sTile.X * 31L + sTile.Y) & 0x7FFFFFFF;
+                    var tileData = world.TileGrid.GetTile(sTile);
+                    var newRuler = CharacterFactory.Spawn(sTile, (BiomeType)tileData.BiomeType,
+                        world.WorldSeed, seq, _simCfg, world.CurrentYear);
+                    int nameOrdinal = world.ClaimNameOrdinal(newRuler.Identity.Name);
+                    civ.RulerId = newRuler.Id;
+                    civ.RulerCount++;
+                    civ.TotalSuccessions++;
+                    civ.Members.Add(newRuler.Id);
+                    newRuler.Identity = newRuler.Identity with
+                    {
+                        CivId = civ.Id,
+                        NameOrdinal = nameOrdinal,
+                        RulerOrdinal = civ.RulerCount
+                    };
+                    world.Entities.Add(newRuler);
+
+                    var bornPayload = JsonSerializer.Serialize(new CharacterBornPayload(
+                        newRuler.Id.Value, newRuler.Identity.Name, newRuler.Identity.Epithet,
+                        newRuler.Personality.Ambition, newRuler.Personality.Aggression));
+                    pending.Add(new PendingEvent(EventType.CharacterBorn, sTile, null, bornPayload,
+                        new[] { newRuler.Id.Value },
+                        ActorId: newRuler.Id.Value, ActorName: newRuler.Identity.Name, CivId: civ.Id.Value));
+                }
+                else
+                {
+                    civ.IsCollapsed = true;
+                    var civPayload = JsonSerializer.Serialize(new CivCollapsedPayload(civ.Id.Value));
+                    pending.Add(new PendingEvent(
+                        EventType.CivilizationCollapsed, civ.CapitalTile, null, civPayload,
+                        CivId: civ.Id.Value));
+                }
             }
         }
     }

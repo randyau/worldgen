@@ -30,7 +30,7 @@ public static partial class CivTracker
         var payload = JsonSerializer.Serialize(new SettlementFoundedPayload(
             founder.Id.Value, founder.Identity.Name,
             stub.CivId.Value, world.Civilizations.TryGetValue(stub.CivId, out var c) ? c.Name : "",
-            50)); // SettlementStartPop
+            stub.Population));
         pending.Add(new PendingEvent(EventType.SettlementFounded, stub.Tile, null, payload,
             new[] { founder.Id.Value },
             ActorId: founder.Id.Value, ActorName: founder.Identity.Name,
