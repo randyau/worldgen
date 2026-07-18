@@ -89,8 +89,9 @@ One-line description of every non-trivial source file. Check here before running
   - `BeastSpeciesConfig.cs / BeastSpawnConfig.cs / CombatConfig.cs`
 
 ## WorldEngine.Sim/Simulation/
-- `SimLoop.cs` — main tick loop: emit→resolve→commit cycle, speed control
-- `PhaseRunner.cs` (~224 lines) — runs all 7 phases in order per tick; writes events to DB
+- `SimLoop.cs` — main tick loop: emit→resolve→commit cycle, speed control; A1: RunSynchronous(ticks) for headless batch runs
+- `PhaseRunner.cs` (~224 lines) — runs all 7 phases in order per tick; writes events to DB; A2: drives MetricsAccumulator YTD counts + calls MetricsCollector.Sample on annual tick
+- `MetricsCollector.cs` — A2: samples WorldState once/year → writes yearly_metrics row; also defines MetricsAccumulator (YTD event counters) and YearlyMetricsRow moved to Persistence/
 - `SimRngSalts.cs` — integer salt constants used with WorldRng for reproducibility
 - `EventCache.cs` — in-memory ring buffer of recent SimEvents for snapshot
 - **Phases/** — one file per sim phase:
@@ -125,8 +126,9 @@ One-line description of every non-trivial source file. Check here before running
 - `RuinRecord.cs / ResourceDeposit.cs`
 
 ## WorldEngine.Sim/Persistence/
-- `EventStore.cs` — SQLite writes: events, entities, causal edges; BuildSummaries() + GetHistoryQuery(); WriteCivTrait()
-- `DatabaseSchema.cs` — schema DDL (Events+SignificanceScore, CausalEdges, CharacterSummaries, CivSummaries, Eras, SuccessionChain, Dynasties, CivTraits)
+- `EventStore.cs` — SQLite writes: events, entities, causal edges; BuildSummaries() + GetHistoryQuery(); WriteCivTrait(); A2: WriteMetricsRow/GetLastMetricsRow/GetMetricsRowCount for yearly_metrics
+- `DatabaseSchema.cs` — schema DDL (Events+SignificanceScore, CausalEdges, CharacterSummaries, CivSummaries, Eras, SuccessionChain, Dynasties, CivTraits, yearly_metrics)
+- `YearlyMetricsRow.cs` — A2: mutable class for one row of yearly_metrics; Dapper-friendly (parameterless constructor + settable properties)
 - `SummaryBuilder.cs` — M3.1: post-sim pass building CharacterSummaries, CivSummaries (with CulturalTraits), SuccessionChain, Dynasties, Eras
 - `CausalEdgeBuilder.cs` — M3.1: infers and writes causal edges from event patterns (war chains, disease→abandonment, etc.)
 - `HistoryQueryService.cs` — M3.1: IHistoryQuery implementation backed by SQLite summary tables; small LRU cache
@@ -160,6 +162,8 @@ One-line description of every non-trivial source file. Check here before running
 ## WorldEngine.Tests/
 - xUnit test suite; mirrors Sim folder structure
 - Key files: reproducibility tests, integration tests per phase, world gen tests
+- `Integration/HeadlessRunnerTests.cs` — A1: headless runner smoke tests (world.db created, events exist, world gen reproducibility)
+- `Integration/MetricsCollectorTests.cs` — A2: yearly_metrics row count, last row fields, gate-independence, final year consistency
 - `Integration/HistoryQueryTests.cs` — M3.1: SummaryBuilder, SuccessionChain, and HistoryQueryService integration tests
 - `Integration/CulturalTraitsTests.cs` — M3.2: CulturalTrait enum, EvaluateCulturalTraits logic, CivTraitAcquired event generation
 - `Integration/SignificanceScoringTests.cs` — M3.2: ComputeSignificanceScore, SignificanceRescoringPass tier upgrades and score population
@@ -170,6 +174,17 @@ One-line description of every non-trivial source file. Check here before running
 
 ## docs/perf/
 - `notes_m3.md` — M3 performance profiling notes and gate status
+
+## scripts/
+- `balance-run.py` — A3: multi-seed headless sweep; fans out sim subprocesses, reads yearly_metrics, prints cross-seed mean/min/max table, exports merged CSV; --compare mode diffs two sweep dirs
+- `world-sanity.py` — post-run sanity checks against world.db; exits 0 on pass, 1 on fail (CI-ready)
+- `character-analysis.py` — ad-hoc character behavior analysis queries
+- `civ-history.py` — civ summary queries
+- `scip-query.py` — SCIP code navigation (defs, refs, types, impls, stats)
+
+## config/profiles/
+- `fast_history.toml` — 1 tick/season (4× faster); halved disease_base_chance; for multi-seed sweeps
+- `small_world.toml` — A3: 1 tick/season + halved disease for fast smoke tests (sub-minute runs)
 
 ## docs/
 - `config_future.md` — TOML sections removed from sim_config.toml during B2 purge; preserved as design intent for unimplemented systems ([admin_distance], [spatial_buffer], [specialists], [artifacts], [cultural_modifiers], [civilization.settler_seeding]); includes dead-vs-live disagreement table

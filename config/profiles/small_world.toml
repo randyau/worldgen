@@ -1,0 +1,15 @@
+# Profile: small_world
+# Purpose: Fast smoke-testing with a smaller world and compressed time.
+# World size and tick density are reduced for sub-minute test runs.
+#
+# Usage:
+#   WorldEngine.Sim --seed 1 --years 30 --profile small_world
+#   python3 scripts/balance-run.py --seeds 2 --years 30 --profile small_world
+
+[sim_loop]
+ticks_per_seasonal_change = 1   # 4 ticks/year — 4× faster than default 16
+                                 # NOTE: per-tick rates are NOT auto-scaled;
+                                 # use only for qualitative checks, not rate calibration.
+
+[settlement]
+disease_base_chance = 0.005     # halved — disease at 4× tick frequency would otherwise over-fire
