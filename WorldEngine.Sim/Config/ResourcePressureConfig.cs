@@ -9,11 +9,12 @@ public sealed class ResourcePressureConfig
     public int   StrainEventCooldown   { get; set; } = 8;     // ticks between SettlementStraining events
     // Peak population a single perfectly fertile, well-watered, temperate tile can support.
     // Each tile = 10km × 10km = 100 km². Early-medieval farmland runs ~5-10 people/km²,
-    // so good conditions (Plains biome, typical fertility/moisture) → ~500 people/tile.
-    // Peak grassland (biome mult 2.0, perfect conditions) → up to 1000 people/tile.
-    // Tundra/desert at floor conditions: ~17-22 people/tile (0.17-0.22/km²) — marginal but viable.
-    // This is the single knob that sets world population scale across all biomes.
-    public float PeoplePerTilePeak     { get; set; } = 500f;
+    // so good conditions (Plains biome, typical fertility/moisture) → ~500 people/tile at historical peak.
+    // D1 recalibration: lowered to 50 so food-derived capacity is tight enough for drought/disaster
+    // to push settlements below FoodRatio=1.0. At 50/tile, a 13-tile founding territory supports
+    // ~370 people — below founding pop of 500, so food is a real constraint from day 1 in marginal biomes.
+    // Tune this knob to scale world population (--audit-food shows per-tile contributions).
+    public float PeoplePerTilePeak     { get; set; } = 50f;
     // Proportional moisture floor: 25% of BaseMoisture always available regardless of season.
     public float FoodMoistureFloor         { get; set; } = 0.25f;
     // Absolute moisture floor applied after the proportional one. Ensures tiles with very low
@@ -40,11 +41,13 @@ public sealed class ResourcePressureConfig
 
     // ─── Resource stores ─────────────────────────────────────────────────────
     // Fraction of per-tick surplus that goes into stores (rest consumed immediately).
-    public float StoreAccumulateRate            { get; set; } = 0.6f;
+    // D1 recalibration: reduced from 0.6 so stores drain faster during drought (food actually binds).
+    public float StoreAccumulateRate            { get; set; } = 0.4f;
 
     // Vital resources (food/water): max store depth in "seasons of supply" scaled with population.
-    public float StoreMaxSeasonsPerKPop         { get; set; } = 4.0f;
-    public float StoreMinSeasons                { get; set; } = 2.0f;
+    // D1 recalibration: reduced from 4.0/2.0 so drought depletes stores within the season.
+    public float StoreMaxSeasonsPerKPop         { get; set; } = 2.0f;
+    public float StoreMinSeasons                { get; set; } = 1.0f;
 
     // Per-resource spoilage rates (fraction lost per tick regardless of draws).
     public float FoodSpoilageRate               { get; set; } = 0.002f;  // ~500 ticks to fully spoil

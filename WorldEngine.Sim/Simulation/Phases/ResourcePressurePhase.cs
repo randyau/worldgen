@@ -71,7 +71,7 @@ public sealed class ResourcePressurePhase
             {
                 territoryTiles = owned;
             }
-            var (ledger, carryingCapacity) = BuildLedger(coord, stub, territoryTiles, world);
+            var (ledger, carryingCapacity, smoothedCapacity) = BuildLedger(coord, stub, territoryTiles, world);
 
             // ─── Update resource stores ──────────────────────────────────────
             // Build new stores dict from existing stores, applying spoilage and accumulating
@@ -109,7 +109,8 @@ public sealed class ResourcePressurePhase
                 WaterPressureRatio = effectiveWaterRatio,
                 ResourceLedger     = ledger,
                 ResourceStores     = newStores,
-                CarryingCapacity   = carryingCapacity
+                CarryingCapacity   = (int)smoothedCapacity,
+                SmoothedCapacity   = smoothedCapacity
             };
 
             // Shortage response (based on effective ratios after store draw)
@@ -136,7 +137,7 @@ public sealed class ResourcePressurePhase
 
     // ─── Ledger construction ──────────────────────────────────────────────────
 
-    private (Dictionary<string, float> Ledger, int CarryingCapacity) BuildLedger(
+    private (Dictionary<string, float> Ledger, int CarryingCapacity, float SmoothedCapacity) BuildLedger(
         TileCoord center, SettlementStub stub, IReadOnlyCollection<TileCoord> territoryTiles, WorldState world)
     {
         var supply = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);
@@ -208,11 +209,27 @@ public sealed class ResourcePressurePhase
             }
         }
 
-        // Carrying capacity: people the territory can support, floored at CarryCapMinimum so a
-        // newly founded settlement with tiny territory is never instantly at zero.
+        // Carrying capacity: food-ledger derived — how many people this territory can feed at
+        // FoodRatio = 1.0. Raw capacity = sum of per-tile PeoplePerTilePeak × food factors across
+        // all territory tiles. Floored at CarryCapMinimum so a newly-founded settlement with
+        // tiny territory is never instantly at zero.
+        // This is the single ceiling used by logistic suppression in PopulationDynamicsPhase;
+        // the old per-biome carry_cap_* table has been removed (see D1 in tuning review).
         float rawCapacity = supply.GetValueOrDefault("food", 0f);
-        int capacity = (int)Math.Max(_settleCfg.CarryCapMinimum, rawCapacity);
-        if (tileCount == 0) return (supply, capacity);
+        float flooredCapacity = Math.Max(_settleCfg.CarryCapMinimum, rawCapacity);
+
+        // EMA smoothing: damps territory-population feedback oscillation.
+        // smoothed = alpha × raw + (1 − alpha) × prev_smoothed
+        // At alpha = 0.05: half-life ≈ 13 ticks (~0.8 years); response to permanent changes
+        // (conquest, drought clearing) is gradual rather than instantaneous.
+        float alpha = _settleCfg.CapacitySmoothingAlpha;
+        float prevSmoothed = stub.SmoothedCapacity <= 0f ? flooredCapacity : stub.SmoothedCapacity;
+        float smoothed = alpha * flooredCapacity + (1f - alpha) * prevSmoothed;
+        // Floor the smoothed value so we never suppress below minimum even transiently.
+        smoothed = Math.Max(_settleCfg.CarryCapMinimum, smoothed);
+
+        int capacity = (int)smoothed;
+        if (tileCount == 0) return (supply, capacity, smoothed);
 
         // Normalize food/water to ratios relative to current population.
         // ratio > 1 → territory supports more than current pop (room to grow)
@@ -222,7 +239,7 @@ public sealed class ResourcePressurePhase
         if (supply.TryGetValue("water", out float ws)) supply["water"] = ws / population;
         // Minerals: leave as absolute supply (surplus if > 0, demand driven by artisans)
 
-        return (supply, capacity);
+        return (supply, capacity, smoothed);
     }
 
     private static void Accumulate(Dictionary<string, float> dict, string key, float value)

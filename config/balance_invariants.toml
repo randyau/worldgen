@@ -12,10 +12,12 @@
 #   legitimately shifts world outcomes. Never widen just to make a test green without
 #   understanding why the number moved.
 #
-# Calibration run (2026-07-18):
-#   Seeds: 42, 777, 9999  |  Years: 300  |  Wall time: ~58s/seed (Release build)
+# Calibration run (2026-07-18, post-D1):
+#   Seeds: 42, 777, 9999  |  Years: 300  |  Wall time: ~46s/seed (Release build)
 #   World: default (sim_config.toml, no profile)
-#   Commit: C0 (post-determinism fix)
+#   Key D1 change: people_per_tile_peak lowered from 500 to 50; store buffer reduced;
+#     carry_cap_* per-biome table removed (was dead code — capacity was already food-ledger derived).
+#   Food now binds: min_food_ratio < 1.0 occurs 4–13 years per 300-year run in drought+near-cap events.
 #
 # See docs/balance_invariants.md for philosophy and update procedure.
 
@@ -33,40 +35,44 @@
   max = 12
   rationale = "Observed 5/5/5 across 3 seeds. Floor catches collapse cascade, ceiling catches floor-spawn runaway."
 
-  # Observed: 7939–18184 across 3 seeds (2.3× spread). ±40% margin applied to observed min/max.
-  # D1 (pop-ceiling unification) will shift this significantly — re-anchor after D1.
+  # Post-D1 observed: 6290–15436 across 3 seeds (2.5× spread). ±40% margin applied.
+  # Population is lower than pre-D1 (was 7939–18184) due to people_per_tile_peak reduction
+  # (500→50), which tightens the food ceiling and reduces logistic growth ceiling.
+  # D1 goal: food should actually bind → capacity is intentionally tighter now.
   [year_300.world_population]
-  min = 4500
-  max = 26000
-  rationale = "Observed 7939–18184 (mean 12319). Wide margin because pop has high seed variance. Re-anchor post-D1."
+  min = 3500
+  max = 22000
+  rationale = "Post-D1 observed 6290–15436 (mean 10134). Reduced from pre-D1 range (4500–26000) due to tighter food ceiling. ±40% margin."
 
-  # Observed: 5–11 settlements. Generous margin for small-world variance.
+  # Observed: 5–11 settlements. Unchanged from pre-D1.
   [year_300.settlements_total]
   min = 3
   max = 18
   rationale = "Observed 5–11 settlements. Margin accounts for world-size variance."
 
-  # Observed: 36.0–58.7 (mean ~44). Min set to 1.5 (crisis threshold × 3) to catch food collapse.
-  # Maximum of 100 is unconstrained in practice (theoretically unlimited ratio).
+  # Post-D1 observed: 4.46–6.88 (mean 5.30). Pre-D1 was 36–59 (food never bound).
+  # Food ratio now reflects actual population vs. food capacity at near-equilibrium.
+  # Min=1.0 catches food model collapse (all settlements in permanent starvation).
+  # Max=50 catches food never binding (population far below capacity — old bug).
+  # NOTE: food DOES go below 1.0 during the sim (4–13 times per 300-year run); the
+  # year-300 SNAPSHOT happens to be a non-shortage year. This band guards the snapshot.
   [year_300.mean_food_ratio]
-  min = 1.5
-  max = 200.0
-  rationale = "Observed 36–59 food ratio. Min=1.5 catches food collapse (crisis=0.5). Very high ratio is also suspicious."
+  min = 1.0
+  max = 50.0
+  rationale = "Post-D1 observed 4.5–6.9 (mean 5.3). Food now binds in sim (dips below 1.0 during drought years). Min=1.0 catches collapse, max=50 catches regression to old un-constrained behavior."
 
-  # Observed: -0.30 to -0.08. Negative wellbeing is the current baseline — characters
-  # struggle to meet needs in early-medieval tile scale. Band allows up to +0.5 (thriving)
-  # and down to -0.6 (deeply miserable, likely a needs-decay bug).
+  # Observed: -0.30 to -0.08. Unchanged from pre-D1.
   [year_300.mean_wellbeing]
   min = -0.6
   max = 0.5
   rationale = "Observed -0.30 to -0.08. Negative is normal at current scale. Tighten when needs model improves."
 
-  # Observed: 0 active diseases in all 3 seeds at year 300.
+  # Post-D1 observed: 0–1 active diseases at year 300.
   # Max of 8 allows disease activity without flagging as broken.
   # D4 (structural disease model) will change this — re-anchor after D4.
   [year_300.active_diseases_max]
   value = 8
-  rationale = "Observed 0 at year 300. Disease is functional but rare at default density. Re-anchor post-D4."
+  rationale = "Observed 0–1 at year 300. Disease is functional but rare at default density. Re-anchor post-D4."
 
   # Observed: 7–17 goals formed at year 300 (annual rate). Min=1 guards observation-A5
   # regression (emotional events never firing). Max=100 is a sanity cap.

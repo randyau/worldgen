@@ -154,7 +154,8 @@ internal static class WorldStateMapper
                 s.ResourceLedger is null ? null : new Dictionary<string, float>(s.ResourceLedger),
                 s.FertilityMultiplier, s.ConqueredYear, s.ConqueredFromCivId,
                 s.ResourceStores is null ? null : new Dictionary<string, float>(s.ResourceStores),
-                s.CarryingCapacity, s.IsColony, s.IsInfected, s.InfectedSinceYear);
+                s.CarryingCapacity, s.IsColony, s.IsInfected, s.InfectedSinceYear,
+                s.SmoothedCapacity);
         return result;
     }
 
@@ -349,8 +350,9 @@ internal static class WorldStateMapper
                 s.ResourceLedger is null ? null : (IReadOnlyDictionary<string, float>)s.ResourceLedger,
                 s.FertilityMultiplier, s.ConqueredYear, s.ConqueredFromCivId,
                 s.ResourceStores is null ? null : (IReadOnlyDictionary<string, float>)s.ResourceStores,
-                s.CarryingCapacity, s.IsColony, s.IsInfected, s.InfectedSinceYear);
+                s.CarryingCapacity, s.SmoothedCapacity, s.IsColony, s.IsInfected, s.InfectedSinceYear);
             world.Settlements[tile] = stub;
+
         }
 
         // 12. Restore ruins

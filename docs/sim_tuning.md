@@ -27,16 +27,21 @@ Ranges marked **untested** mean no calibration data exists; change carefully and
 
 ---
 
-## Carrying Capacity (settlement.carry_cap_*)
+## Carrying Capacity (settlement section — D1 unified model)
 
-These are soft population ceilings per territory tile per biome.
-D1 (pop-ceiling unification) will replace all of these with a single derived formula.
+**D1 completed 2026-07-18.** Carrying capacity is now derived entirely from the food model:
+`capacity = Σ (PeoplePerTilePeak × fertility × moisture × growing_season × biome_mult)` over territory tiles.
+The old `carry_cap_grassland … carry_cap_default` per-biome table (13 keys) has been removed.
+Biome differentiation lives in `BiomeFoodMultiplier` (ResourcePressurePhase) + `biome_food_bonus_scale`.
+Capacity is EMA-smoothed each tick to damp territory-population feedback oscillation.
+
+To diagnose why a settlement's population is capped, use `--audit-food` (see D2 section below).
 
 | Knob | Current | Safe range | Too-low symptom | Too-high symptom | Metric to watch |
 |---|---|---|---|---|---|
-| `carry_cap_grassland` | 80 | 40–200 | Grassland civs underperform | Grassland civs dominate; monoculture history | `world_population`, `settlements_total` |
-| `carry_cap_desert` | 6 | 2–20 | Desert civs always collapse | Desert as productive as plains | `active_civs`, `collapsed_civs` |
 | `carry_cap_minimum` | 100 | 20–500 | Very harsh biomes impossible to settle | Floor dominates; biome differentiation erased | `active_civs`, `settlements_total` |
+| `capacity_smoothing_alpha` | 0.05 | 0.01–0.5 | Capacity frozen; doesn't respond to conquest/drought | Capacity jumps every tick; oscillation if territory grows with pop | `world_population`, `mean_food_ratio` |
+| `people_per_tile_peak` (in resource_pressure) | 500 | 200–1500 | Population ceiling too low | Population explodes, Malthusian collapses | `world_population`, `mean_food_ratio` |
 
 ---
 
@@ -118,6 +123,7 @@ All disaster knobs are per-tick probabilities. Multiply by 16 (ticks/year) × el
 
 ## Notes for Phase D Workers
 
-- **D1 (pop-ceiling unification):** After D1 ships, re-calibrate `world_population`, `settlements_total`, and all `carry_cap_*` bands. The `people_per_tile_peak` knob becomes the single tuning lever; most `carry_cap_*` keys will be removed.
-- **D4 (structural disease model):** After D4, disease outbreak rate becomes density/contact-derived. `disease_base_chance` and `disease_density_mult` will either be replaced or supplemented with `disease_density_threshold` (population / carrying capacity fraction). Re-calibrate `active_diseases` and `deaths_disease` bands.
+- **D1 complete (2026-07-18):** `carry_cap_*` per-biome table removed; capacity is now food-ledger derived with EMA smoothing. `people_per_tile_peak` is the single world-population scale knob. Balance invariants re-anchored at post-D1 calibration. Food now binds (min_food_ratio < 1.0 observed) — the carry-cap ceiling no longer silently dominates.
+- **D2 (food audit):** Run `dotnet run --project WorldEngine.Sim -c Release -- --seed N --years Y --audit-food all` to print per-tile factor breakdown and per-settlement totals. Useful for diagnosing "why is this biome struggling" without a SQL session.
+- **D4 (structural disease model):** Disease outbreak probability should be `f(pop / carrying_capacity, trade_contact, famine_active)`. The `stub.CarryingCapacity` and `stub.Population` fields are available per-tick; the density fraction is already computed in `RunAnnualDiseaseChecks` as `density = pop / CarryingCapacity`. D4 should add contact-link and famine terms to this existing calculation. Re-calibrate `active_diseases` and `deaths_disease` bands after D4.
 - **D5 (war consolidation):** After D5, consolidate all `[character]` war keys (`tension_accrual_per_pair`, `tension_war_threshold`, `tension_decay_rate`, `max_war_duration_years`, `peace_cooldown_years`, `raid_damage_*`) into `[war]` section alongside the territory tension keys. Re-calibrate `wars_active` bands from 0 baseline.

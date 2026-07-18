@@ -483,23 +483,15 @@ pop_min_viable              = 5     # below this → settlement abandoned
 pop_max                     = 50000 # hard cap; tiles = 100 km² each; 50k is a large early-medieval city + hinterland (early-medieval Paris ~30k)
 fertility_variance          = 0.15  # per-settlement founding-time multiplier range (±this around 1.0)
 
-# Biome carrying capacity: population supported per reach tile, by biome type.
-# Sums across all land tiles in the settlement's reach to compute a soft population ceiling.
-# Logistic suppression makes growth decelerate as population approaches this ceiling.
-carry_cap_grassland           = 80   # ~20-25 people/sq km in pre-industrial farmland; radius-2 hinterland → ~1000 cap
-carry_cap_plains              = 65
-carry_cap_tropical_rainforest = 70
-carry_cap_savanna             = 32
-carry_cap_temperate_forest    = 48
-carry_cap_boreal_forest       = 20
-carry_cap_swamp               = 24
-carry_cap_beach               = 16
-carry_cap_mountain            = 12
-carry_cap_high_mountain       = 4
-carry_cap_desert              = 6
-carry_cap_volcanic            = 20
-carry_cap_default             = 24
-carry_cap_minimum             = 100 # floor: even the poorest biome supports a small community (scale: settlement_start_pop = 500)
+# Population ceiling — food-ledger derived (D1 unification).
+# Carrying capacity is now computed directly from the food model:
+#   capacity = sum over territory tiles of (PeoplePerTilePeak × fertility × moisture × growing_season × biome_mult)
+# Biome differentiation lives in BiomeFoodMultiplier (ResourcePressurePhase). No separate per-biome
+# table is needed. The old carry_cap_grassland … carry_cap_default keys have been removed.
+carry_cap_minimum         = 100   # floor: newly-founded settlement with tiny territory never hits zero instantly
+# EMA smoothing alpha for the derived capacity. Damps territory-population feedback oscillation.
+# 0 = frozen (never updates), 1 = raw each tick. At 0.05: half-life ~13 ticks (≈0.8 years).
+capacity_smoothing_alpha  = 0.05
 
 # Disease outbreaks — annual probability; spreads between nearby settlements; drains population while active
 # Risk concentrates in dense cities; small remote settlements are largely immune.
@@ -549,7 +541,10 @@ strain_event_cooldown   = 8      # ticks between SettlementStraining events per 
 # Single scale factor for world population. Tiles = 10km × 10km = 100 km² each.
 # Early medieval farmland: ~5-10 people/km² → 500-1000 per good tile.
 # All biomes scale from this via fertility × moisture × growing season × biome factor.
-people_per_tile_peak    = 500.0  # Plains at typical conditions: ~500/tile (5/km²); grassland peak: ~1000/tile; tundra: ~17/tile; desert: ~18/tile
+people_per_tile_peak    = 50.0   # D1 recalibration: target food ratio 2-5 by year 300 so drought/disaster can push below 1.0.
+                                 # At 50/tile and 13 starting tiles: founding territory supports ~370 people (ratio 0.74 at start_pop 500) — food-constrained from day 1.
+                                 # World population scales proportionally; tune this knob to set world-population scale (--audit-food shows per-tile contributions).
+                                 # Old value of 500 kept food ratio at 36-58; at 50 food becomes a real constraint within the first century.
 food_moisture_floor          = 0.25   # proportional floor: fraction of BaseMoisture always available (wells, root storage, irrigation)
 food_moisture_absolute_floor = 0.35   # absolute floor applied after proportional; ensures low-BaseMoisture tiles still produce food from groundwater/rivers rather than zeroing out in drought
 # Growing-season temperature factor (multiplies food contribution per hinterland tile)
@@ -563,9 +558,9 @@ heat_stress_factor          = 0.7  # multiplier at extreme heat (255); tropical-
 # Resource stores — settlements accumulate persistent reserves for all resources
 # Vital resources (food, water) draw from stores during shortages; wealth/stockpile resources just accumulate.
 biome_food_bonus_scale             = 1.0    # 0=all biomes equal, 1.0=full biome differentiation (grassland 2x, desert 0.3x)
-store_accumulate_rate              = 0.6     # fraction of per-tick surplus that goes into stores (vital resources)
-store_max_seasons_per_k_pop        = 4.0    # max vital store depth in seasons per 1000 population
-store_min_seasons                  = 2.0    # hard floor on vital store capacity; small settlements buffer 2 seasons
+store_accumulate_rate              = 0.4     # D1 recalibration: fraction of per-tick surplus that goes into stores (was 0.6; reduced so stores drain more in drought)
+store_max_seasons_per_k_pop        = 2.0    # max vital store depth in seasons per 1000 population (was 4.0; reduced to let drought deplete stores faster)
+store_min_seasons                  = 1.0    # hard floor on vital store capacity; small settlements buffer 1 season (was 2.0; reduced so drought can push ratio below 1.0)
 # Per-resource spoilage rates (fraction lost per tick regardless of draws)
 food_spoilage_rate                 = 0.002  # ~500 ticks (35y) to fully spoil if never drawn
 water_spoilage_rate                = 0.010  # cisterns evaporate faster; settlements need continuous rainfall

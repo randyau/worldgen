@@ -21,23 +21,16 @@ public sealed class SettlementConfig
     public float FertilityVariance        { get; set; } = 0.15f;
     // Effective fertility multiplier applied to tiles already in a same-civ settlement's hinterland
     public float HinterlandDrainFactor    { get; set; } = 0.15f;
-    // Biome carrying capacity: max population supported per reach tile, by biome.
-    // Sums across all land tiles in reach radius to give a soft population ceiling.
-    public int CarryCapGrassland          { get; set; } = 200;
-    public int CarryCapPlains             { get; set; } = 160;
-    public int CarryCapTropicalRainforest { get; set; } = 180;
-    public int CarryCapSavanna            { get; set; } = 80;
-    public int CarryCapTemperateForest    { get; set; } = 120;
-    public int CarryCapBorealForest       { get; set; } = 50;
-    public int CarryCapSwamp              { get; set; } = 60;
-    public int CarryCapBeach              { get; set; } = 40;
-    public int CarryCapMountain           { get; set; } = 30;
-    public int CarryCapHighMountain       { get; set; } = 10;
-    public int CarryCapDesert             { get; set; } = 15;
-    public int CarryCapVolcanic           { get; set; } = 50;
-    public int CarryCapDefault            { get; set; } = 40;
-    // Minimum carrying capacity regardless of biome tiles (prevents instant abandonment on poor land)
+    // Minimum carrying capacity regardless of territory conditions (prevents instant abandonment on
+    // newly-founded settlements with tiny territory).
+    // DECISION: Only the minimum floor is kept here; biome differentiation lives in the food model
+    // (BiomeFoodMultiplier × PeoplePerTilePeak). See D1 in docs/tuning_balance_review_2026-07-18.md.
     public int CarryCapMinimum            { get; set; } = 100;
+    // EMA smoothing alpha for the food-derived carrying capacity (0 = perfectly smooth / frozen,
+    // 1 = no smoothing / raw each tick). Lower values damp population-territory feedback oscillation
+    // at the cost of slower response to real land-use changes (clearing forest, drought, conquest).
+    // Calibrated: alpha = 0.05 → ~20-tick half-life (≈1.25 years at 16 ticks/year).
+    public float CapacitySmoothingAlpha   { get; set; } = 0.05f;
     // ─── Disease ──────────────────────────────────────────────────────────────
     // Annual outbreak probability per uninfected settlement; multiplied by density factor.
     // Lowered from 0.04: disease should concentrate in dense cities, not plague every hamlet.

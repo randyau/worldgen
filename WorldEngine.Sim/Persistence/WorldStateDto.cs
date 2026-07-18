@@ -147,7 +147,8 @@ public sealed record SettlementStubDto(
     int    CarryingCapacity,
     bool   IsColony,
     bool   IsInfected,
-    int    InfectedSinceYear);
+    int    InfectedSinceYear,
+    float  SmoothedCapacity = 0f);  // EMA of food-derived capacity; 0 triggers re-init from raw on first tick
 
 public sealed record RuinRecordDto(
     string Tile,
