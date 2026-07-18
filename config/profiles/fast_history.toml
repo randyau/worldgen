@@ -1,0 +1,14 @@
+# Profile: fast_history
+# Purpose: Accelerate multi-seed balance sweeps by increasing tick density
+# and relaxing founding constraints. For use with the Phase A headless runner.
+#
+# Usage: WorldEngine.Sim --seed N --years 500 --profile fast_history
+
+[sim_loop]
+ticks_per_seasonal_change = 1   # 1 tick/season → 4 ticks/year (4× faster than default 4)
+                                 # NOTE: rates that are per-tick will not auto-scale;
+                                 # use this profile with the same seed as a baseline comparison,
+                                 # not for calibrating absolute rates.
+
+[settlement]
+disease_base_chance = 0.005     # halved — disease at 4× tick frequency would otherwise over-fire
