@@ -321,6 +321,14 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
         _conn.Query<YearlyMetricsRow>("SELECT * FROM yearly_metrics ORDER BY year;").ToList();
 
     /// <summary>
+    /// Returns the metrics row for the given year, or null if not present.
+    /// Used by the balance regression harness to check specific checkpoint years.
+    /// </summary>
+    public YearlyMetricsRow? GetMetricsRowForYear(int year) =>
+        _conn.QuerySingleOrDefault<YearlyMetricsRow>(
+            "SELECT * FROM yearly_metrics WHERE year=@year;", new { year });
+
+    /// <summary>
     /// Returns the number of events with the given TypeName string. Used by tests.
     /// </summary>
     public int CountEventsOfType(string typeName) =>

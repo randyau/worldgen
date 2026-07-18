@@ -41,6 +41,10 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>config\ancestries.toml</Link>
     </Content>
+    <Content Include="..\config\balance_invariants.toml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>config\balance_invariants.toml</Link>
+    </Content>
   </ItemGroup>
 
 </Project>
