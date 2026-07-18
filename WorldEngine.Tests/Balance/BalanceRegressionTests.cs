@@ -77,6 +77,10 @@ public class BalanceRegressionTests
             // ── wars_active ≤ max ─────────────────────────────────────────────
             if (metrics.WarsActive > invariants.Y300WarsActiveMax)
                 failures.Add($"seed={seed} wars_active={metrics.WarsActive} exceeds max={invariants.Y300WarsActiveMax}");
+
+            // ── max_cities_per_civ ≤ max (S4 multipolarity: no empire snowballing) ─
+            if (metrics.MaxCitiesPerCivActual > invariants.Y300MaxCitiesPerCivMax)
+                failures.Add($"seed={seed} max_cities_per_civ_actual={metrics.MaxCitiesPerCivActual} exceeds max={invariants.Y300MaxCitiesPerCivMax}");
         }
 
         if (failures.Count > 0)
@@ -218,12 +222,14 @@ public class BalanceRegressionTests
             Y300GoalsFormedYtdMin  = (int)GetLong(GetSection(doc, "year_300", "goals_formed_ytd"), "min", 1),
             Y300WarsActiveMax      = (int)GetLong(GetSection(doc, "year_300", "wars_active_max"), "value", 5),
             Y300CumulativeGoalsMin = GetLong(GetSection(doc, "year_300", "goals_formed_cumulative_min"), "value", 500),
+            Y300MaxCitiesPerCivMax = (int)GetLong(GetSection(doc, "year_300", "max_cities_per_civ"), "value", 12),
         };
     }
 
     private sealed class BalanceInvariants
     {
         public int    Y300ActiveCivsMin      { get; set; }
+        public int    Y300MaxCitiesPerCivMax { get; set; }
         public int    Y300ActiveCivsMax      { get; set; }
         public int    Y300PopMin             { get; set; }
         public int    Y300PopMax             { get; set; }

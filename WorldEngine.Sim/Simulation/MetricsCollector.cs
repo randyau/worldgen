@@ -87,6 +87,33 @@ public static class MetricsCollector
 
         float meanCitiesPerCiv = activeCivs > 0 ? (float)totalCitiesAllCivs / activeCivs : 0f;
 
+        // ── Territorial contact (S4; consumed by D5 war tuning) ──────────────
+        // Count distinct civ pairs whose territory tiles share an edge. One scan of the
+        // territory map per year — O(territory tiles × 2 neighbor checks).
+        var borderPairs = new HashSet<(int, int)>();
+        {
+            int w = world.TileGrid.TileWidth, h = world.TileGrid.TileHeight;
+            foreach (var (tile, cityTile) in world.TerritoryMap)
+            {
+                if (!settlements.TryGetValue(cityTile, out var ownerStub)) continue;
+                int ownerCiv = ownerStub.CivId.Value;
+
+                // Only east + south neighbors — each adjacency examined exactly once.
+                for (int i = 0; i < 2; i++)
+                {
+                    int nx = i == 0 ? ((tile.X + 1) % w + w) % w : tile.X;
+                    int ny = i == 0 ? tile.Y : tile.Y + 1;
+                    if (ny >= h) continue;
+                    var nCoord = new Core.TileCoord(nx, ny);
+                    if (!world.TerritoryMap.TryGetValue(nCoord, out var nCity)) continue;
+                    if (!settlements.TryGetValue(nCity, out var nStub)) continue;
+                    int nCiv = nStub.CivId.Value;
+                    if (nCiv == ownerCiv) continue;
+                    borderPairs.Add(ownerCiv < nCiv ? (ownerCiv, nCiv) : (nCiv, ownerCiv));
+                }
+            }
+        }
+
         // ── Characters ────────────────────────────────────────────────────────
         int tier1Count      = world.Entities.Characters.Count;
         int tier2Count      = world.Entities.Tier2Chars.Count;
@@ -142,7 +169,8 @@ public static class MetricsCollector
             maxCitiesPerCivActual:   maxCitiesPerCiv,
             meanCitiesPerCiv:        meanCitiesPerCiv,
             secessionsYtd:           acc.SecessionsYtd,
-            meanUnrest:              settTotal > 0 ? (float)(unrestSum / settTotal) : 0f));
+            meanUnrest:              settTotal > 0 ? (float)(unrestSum / settTotal) : 0f,
+            civBorderPairs:          borderPairs.Count));
 
         // Reset YTD counters for the next year
         acc.ResetYtd();

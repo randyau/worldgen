@@ -103,6 +103,8 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
         catch (Microsoft.Data.Sqlite.SqliteException) { /* column already exists */ }
         try { _conn.Execute(DatabaseSchema.MigrateYearlyMetricsAddMeanUnrest); }
         catch (Microsoft.Data.Sqlite.SqliteException) { /* column already exists */ }
+        try { _conn.Execute(DatabaseSchema.MigrateYearlyMetricsAddBorderPairs); }
+        catch (Microsoft.Data.Sqlite.SqliteException) { /* column already exists */ }
     }
 
     /// <summary>
@@ -297,7 +299,7 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
                 wars_ended_conquest_ytd, tier1_count, tier2_count,
                 goals_formed_ytd, goals_resolved_ytd, mean_wellbeing,
                 max_cities_per_civ_actual, mean_cities_per_civ,
-                secessions_ytd, mean_unrest
+                secessions_ytd, mean_unrest, civ_border_pairs
             ) VALUES (
                 @Year, @WorldPopulation, @ActiveCivs, @CollapsedCivs,
                 @SettlementsTotal, @SettlementsFoundedYtd, @SettlementsAbandonedYtd,
@@ -308,7 +310,7 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
                 @WarsEndedConquestYtd, @Tier1Count, @Tier2Count,
                 @GoalsFormedYtd, @GoalsResolvedYtd, @MeanWellbeing,
                 @MaxCitiesPerCivActual, @MeanCitiesPerCiv,
-                @SecessionsYtd, @MeanUnrest
+                @SecessionsYtd, @MeanUnrest, @CivBorderPairs
             );
             """, row);
     }

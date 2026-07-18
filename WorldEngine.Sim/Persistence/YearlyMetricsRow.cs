@@ -42,7 +42,8 @@ public sealed class YearlyMetricsRow
         int   maxCitiesPerCivActual,
         float meanCitiesPerCiv,
         int   secessionsYtd,
-        float meanUnrest)
+        float meanUnrest,
+        int   civBorderPairs)
     {
         Year                   = year;
         WorldPopulation        = worldPopulation;
@@ -74,6 +75,7 @@ public sealed class YearlyMetricsRow
         MeanCitiesPerCiv       = meanCitiesPerCiv;
         SecessionsYtd          = secessionsYtd;
         MeanUnrest             = meanUnrest;
+        CivBorderPairs         = civBorderPairs;
     }
 
     // ── Properties (snake_case aliases handled by Dapper column mapping) ──────
@@ -111,4 +113,6 @@ public sealed class YearlyMetricsRow
     public int   SecessionsYtd           { get; set; }
     /// <summary>Mean unrest across all settlements this year (0=content, 1=fully rebellious).</summary>
     public float MeanUnrest              { get; set; }
+    /// <summary>Distinct civ pairs whose territory tiles share an edge this year (territorial contact).</summary>
+    public int   CivBorderPairs          { get; set; }
 }

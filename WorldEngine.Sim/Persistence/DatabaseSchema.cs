@@ -43,6 +43,10 @@ public static class DatabaseSchema
     public const string MigrateYearlyMetricsAddMeanUnrest =
         "ALTER TABLE yearly_metrics ADD COLUMN mean_unrest REAL NOT NULL DEFAULT 0.0;";
 
+    /// <summary>Migration: adds civ_border_pairs to yearly_metrics (S4; used by D5 war tuning).</summary>
+    public const string MigrateYearlyMetricsAddBorderPairs =
+        "ALTER TABLE yearly_metrics ADD COLUMN civ_border_pairs INTEGER NOT NULL DEFAULT 0;";
+
     public const string CreateEventEntities = """
         CREATE TABLE IF NOT EXISTS EventEntities (
             EventId    INTEGER NOT NULL REFERENCES Events(Id),
@@ -218,7 +222,8 @@ public static class DatabaseSchema
             max_cities_per_civ_actual INTEGER NOT NULL DEFAULT 0,
             mean_cities_per_civ       REAL    NOT NULL DEFAULT 0.0,
             secessions_ytd            INTEGER NOT NULL DEFAULT 0,
-            mean_unrest               REAL    NOT NULL DEFAULT 0.0
+            mean_unrest               REAL    NOT NULL DEFAULT 0.0,
+            civ_border_pairs          INTEGER NOT NULL DEFAULT 0
         );
         """;
 

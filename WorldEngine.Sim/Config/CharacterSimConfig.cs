@@ -34,7 +34,7 @@ public sealed class CharacterSimConfig
     // Minimum tile distance from any same-civ settlement for a tile to count as "frontier"
     public int   ColonyMinDistance         { get; set; } = 10;
     // Minimum tile distance from ANY settlement (any civ) to prevent clustering across factions
-    public int   GlobalSettlementMinDist   { get; set; } = 4;
+    public int   GlobalSettlementMinDist   { get; set; } = 3;
     // Score bonus when a tile is beyond ColonyMinDistance from all same-civ settlements
     public int   ColonyFrontierBonus       { get; set; } = 120;
     // Ambition threshold to form a Colonize goal (higher than regular expansion)
@@ -79,7 +79,7 @@ public sealed class CharacterSimConfig
     public int   PerceptionRadius       { get; set; } = 3;
     public int   HealthPerSeasonHeal    { get; set; } = 5;
     public int   CombatDamageBase       { get; set; } = 20;
-    public int   MinFertilityToSettle    { get; set; } = 30;
+    public int   MinFertilityToSettle    { get; set; } = 17;
     // Minimum base moisture (0-255) required to found a settlement.
     // Prevents founding on tiles that are climatically too dry to sustain a population.
     // Deposit-rich founding is still allowed below this threshold (miners live there anyway).
@@ -186,7 +186,7 @@ public sealed class CharacterSimConfig
     // ─── Civilisation floor ───────────────────────────────────────────────────
     // When active (non-collapsed) civ count falls below this value, the annual pass
     // rolls to spawn a new free-agent founder character on suitable unclaimed land.
-    public int   CivFloorCount       { get; set; } = 5;
+    public int   CivFloorCount       { get; set; } = 4;
     // Annual probability per missing civ slot of spawning a replacement founder.
     // e.g. at 0.3 and 2 slots missing: each slot has a 30% chance → ~51% at least one spawns.
     public float CivFloorSpawnChance { get; set; } = 0.3f;

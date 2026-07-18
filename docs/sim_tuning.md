@@ -110,6 +110,44 @@ All disaster knobs are per-tick probabilities. Multiply by 16 (ticks/year) × el
 
 ---
 
+## Unrest / Secession ([unrest] section — S2/S4)
+
+Unrest accumulates on settlements annually from three independent drivers (distance, size, famine) and decays at a fixed rate. When a settlement's unrest crosses `unrest_secession_threshold` it has an annual chance to splinter into a new civ, dragging nearby high-unrest settlements with it.
+
+| Knob | Current | Safe range | Too-low symptom | Too-high symptom | Metric to watch |
+|---|---|---|---|---|---|
+| `unrest_comfort_radius` | 35 | 15–60 | All distant settlements always in unrest; constant premature secessions | Distance driver never fires; civs grow without unrest | `secessions_ytd`, `active_civs` |
+| `unrest_distance_per_tile` | 0.003 | 0.001–0.02 | Distant cities barely accumulate unrest | Even slightly-distant cities reach threshold in a few years | `mean_unrest`, `secessions_ytd` |
+| `unrest_soft_city_threshold` | 6 | 4–10 | Size driver fires too early; splinter after 4 cities | Empires can grow to 10+ cities without unrest | `max_cities_per_civ_actual`, `secessions_ytd` |
+| `unrest_per_excess_city` | 0.04 | 0.01–0.15 | Size driver too weak; civs grow past threshold without fracturing | Any civ past threshold immediately spirals to secession | `mean_unrest`, `max_cities_per_civ_actual` |
+| `unrest_famine_bonus` | 0.15 | 0.05–0.4 | Famine doesn't drive unrest; starving cities stay calm | Famine always causes immediate secession | `secessions_ytd`, `settlements_in_crisis` |
+| `unrest_succession_bonus` | 0.20 | 0.05–0.5 | Leadership crises have no effect | Any succession causes immediate secession | `secessions_ytd` |
+| `unrest_decay_rate` | 0.10 | 0.02–0.3 | Unrest accumulates permanently; all distant cities eventually secede | Unrest never builds; splinter mechanic dormant | `mean_unrest` |
+| `unrest_secession_threshold` | 0.70 | 0.5–0.95 | Secessions fire too easily (threshold too low) | Secession impossible in practice | `secessions_ytd`, `active_civs` |
+| `unrest_secession_chance` | 0.40 | 0.1–0.8 | Low annual probability; cities linger just over threshold for years | First year over threshold always fires | `secessions_ytd` |
+| `unrest_cluster_radius` | 25 | 10–50 | Seceded civ spawns as a single isolated city | Entire continent joins the new civ | `active_civs`, `settlements_total` |
+| `unrest_cluster_min_unrest` | 0.30 | 0.1–0.6 | Only the seceding city leaves (no cluster) | Moderately unhappy cities always join secession | `active_civs`, `secessions_ytd` |
+| `splinter_initial_tension` | 0.60 | 0.2–0.9 | Parent civ immediately attacks seceded state | Seceded civ is immediately allied with parent | `wars_active`, `wars_declared_ytd` |
+
+**Tuning notes (S4 2026-07-18):** Comfort radius bumped 20→35 because at 20 tiles, second cities in distant geography were accumulating unrest within 50 years and splintering before civs had time to grow. At 35, the secession life-cycle operates at the correct cadence (Y74–Y590 observed first secessions). The cluster radius (15→25) and min unrest (0.50→0.30) together mean seceded civs arrive with 2–3 cities rather than just 1, giving them enough economic base to survive.
+
+---
+
+## Expansion / Settlement Founding ([character] section — S1/S4)
+
+| Knob | Current | Safe range | Too-low symptom | Too-high symptom | Metric to watch |
+|---|---|---|---|---|---|
+| `global_settlement_min_dist` | 3 | 2–8 | Settlements cluster unrealistically close (3 tiles = 30 km at 10 km/tile) | Tile space exhausted too quickly; growth stalls | `settlements_total`, `mean_cities_per_civ` |
+| `min_fertility_to_settle` | 17 | 5–50 | Any marginal land settled; too many barren outposts | Growth stalls in geographies with moderate-fertility biomes | `settlements_total`, `active_civs` |
+| `colony_min_distance` | 10 | 5–25 | Colonize goals form next to parent city (no real expansion) | Long-range colonization never attempted | `settlements_total`, `goals_formed_ytd` |
+| `max_settlements_per_civ` | 15 | 8–25 | Civs hit ceiling before splinter fires; ceiling+splinter interact | untested | `max_cities_per_civ_actual` |
+| `civ_floor_count` | 4 | 2–8 | World converges to 1–2 civs (no floor protection) | Floor mechanic creates constant founder-spam | `active_civs`, `goals_formed_ytd` |
+| `civ_floor_spawn_chance` | 0.30 | 0.05–0.7 | Founder rarely spawns even when floor is breached | One missing civ slot always spawns a founder annually | `active_civs` |
+
+**Tuning notes (S4 2026-07-18):** `min_fertility_to_settle` 30→17 unlocked settlement founding in seed 777's moderate-fertility geography that was stalling at 30. `global_settlement_min_dist` 4→3 allowed denser but still historically reasonable city spacing (30 km). `civ_floor_count` 5→4 stops the floor mechanic from spawning excess civs when the world naturally sustains 4–5 stable civs.
+
+---
+
 ## Goals / Wellbeing (character section)
 
 | Knob | Current | Safe range | Too-low symptom | Too-high symptom | Metric to watch |
@@ -125,5 +163,6 @@ All disaster knobs are per-tick probabilities. Multiply by 16 (ticks/year) × el
 
 - **D1 complete (2026-07-18):** `carry_cap_*` per-biome table removed; capacity is now food-ledger derived with EMA smoothing. `people_per_tile_peak` is the single world-population scale knob. Balance invariants re-anchored at post-D1 calibration. Food now binds (min_food_ratio < 1.0 observed) — the carry-cap ceiling no longer silently dominates.
 - **D2 (food audit):** Run `dotnet run --project WorldEngine.Sim -c Release -- --seed N --years Y --audit-food all` to print per-tile factor breakdown and per-settlement totals. Useful for diagnosing "why is this biome struggling" without a SQL session.
+- **S1–S4 expansion/splinter arc complete (2026-07-18):** Growth throttles opened, splinter mechanic added, biome spawn weights added, border-pair metric added. World is now multipolar with active secession/war. Balance bands re-anchored post-S4. Key 600-year observations: active_civs stabilises at 7–8 by Y600; 4–15 cumulative secessions per seed; `civ_border_pairs` 1–10 at Y600 (sustained territorial contact). War system fires regularly (3–5 wars active at Y300).
 - **D4 (structural disease model):** Disease outbreak probability should be `f(pop / carrying_capacity, trade_contact, famine_active)`. The `stub.CarryingCapacity` and `stub.Population` fields are available per-tick; the density fraction is already computed in `RunAnnualDiseaseChecks` as `density = pop / CarryingCapacity`. D4 should add contact-link and famine terms to this existing calculation. Re-calibrate `active_diseases` and `deaths_disease` bands after D4.
-- **D5 (war consolidation):** After D5, consolidate all `[character]` war keys (`tension_accrual_per_pair`, `tension_war_threshold`, `tension_decay_rate`, `max_war_duration_years`, `peace_cooldown_years`, `raid_damage_*`) into `[war]` section alongside the territory tension keys. Re-calibrate `wars_active` bands from 0 baseline.
+- **D5 (war consolidation):** After D5, consolidate all `[character]` war keys (`tension_accrual_per_pair`, `tension_war_threshold`, `tension_decay_rate`, `max_war_duration_years`, `peace_cooldown_years`, `raid_damage_*`) into `[war]` section alongside the territory tension keys. Re-calibrate `wars_active` bands from 0 baseline. **`civ_border_pairs` metric** (added S4) is the prerequisite signal for opportunistic war causes — query `yearly_metrics.civ_border_pairs` to find which years have sustained territorial contact. The metric counts distinct civ-pair adjacencies in the territory map (east+south neighbor scan, each edge examined once). Non-zero means the war system's territory-tension driver has active input. Observed at Y600: mean=5, max=10.

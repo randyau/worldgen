@@ -280,8 +280,9 @@ max_settlements_per_civ      = 15  # generous backstop; splinter mechanic (S2) i
 # Colonization — separate long-range founding goal
 colony_min_distance         = 10   # tiles from nearest same-civ settlement for a tile to be "frontier"
                                    # (was 25→15→10; S1 growth overhaul 2026-07-18)
-global_settlement_min_dist  = 4    # minimum tiles from ANY existing settlement (any civ) — prevents clustering
-                                   # (was 8→6→4; S1 growth overhaul 2026-07-18)
+global_settlement_min_dist  = 3    # minimum tiles from ANY existing settlement (any civ) — prevents clustering
+                                   # (was 8→4→3; S4 verification: 4 was the primary growth binder — at 10 km/tile,
+                                   # 30 km city spacing is historically reasonable; 2026-07-18)
 colony_frontier_bonus       = 120  # tile score bonus for candidate tiles in frontier territory
 colonize_ambition_threshold = 0.5  # min Ambition to form a Colonize goal (was 0.72 — too restrictive; S1 2026-07-18)
 max_colonies_per_civ        = 5    # hard cap on live colonies (was 3; S1 growth overhaul 2026-07-18)
@@ -308,8 +309,9 @@ softmax_temp_max          = 2.0
 perception_radius         = 3
 health_per_season_heal    = 5
 combat_damage_base        = 20
-min_fertility_to_settle      = 30   # allow marginal land to be settled; only truly barren tiles excluded
-                                   # (was 90→50→30; S1 growth overhaul 2026-07-18)
+min_fertility_to_settle      = 17   # allow marginal land to be settled; only truly barren tiles excluded
+                                   # (was 90→30→17; S4 verification: 30 stalled some geographies (seed 777);
+                                   # 15 caused fragmentation churn; 17 balances all test seeds; 2026-07-18)
 min_base_moisture_to_settle  = 15     # minimum BaseMoisture (0-255) required to found a settlement; prevents founding in climatically arid tiles
 deposit_settle_threshold     = 0.5    # min deposit value to settle despite low fertility
 deposit_score_multiplier     = 0.5    # how much deposit value boosts establish score
@@ -406,7 +408,7 @@ war_aggression_threshold     = 0.5   # minimum Aggression to consider DeclareWar
 # Civilisation floor — prevents the world from converging to one or zero civs
 # If active (non-collapsed) civ count drops below civ_floor_count, the annual pass
 # rolls to spawn a new free-agent founder on unclaimed fertile land.
-civ_floor_count        = 5     # minimum active civs; floor kicks in below this
+civ_floor_count        = 4     # minimum active civs; floor kicks in below this
 civ_floor_spawn_chance = 0.3   # annual probability per missing civ slot to spawn a founder
 civ_floor_min_dist     = 20    # minimum tile distance from existing settlements for the spawn tile
 civ_floor_preferred_max_dist = 80  # S3: prefer floor-spawn sites within this distance of an existing
@@ -736,14 +738,15 @@ religion_founding_cooldown_years    = 50    # per character: min years between f
 
 [unrest]
 # Distance driver: settlements beyond this radius from the capital accumulate unrest
-unrest_comfort_radius        = 20     # tiles; within this range, distance driver is zero
+unrest_comfort_radius        = 35     # tiles; within this range, distance driver is zero
+                                      # (was 20; S4 — premature distance splinters at 20; 2026-07-18)
 unrest_distance_per_tile     = 0.003  # unrest/tile/year beyond comfort_radius
                                       # at 30 tiles excess → +0.09/yr; crosses 0.7 threshold in ~8 years
 
 # Size driver: empire-scale unrest; fires above soft city threshold
-unrest_soft_city_threshold   = 5     # cities before size-driver kicks in
-unrest_per_excess_city       = 0.02  # unrest/yr per excess city above threshold
-                                     # at 8 cities (3 excess) → +0.06/yr to distant settlements
+unrest_soft_city_threshold   = 6     # cities before size-driver kicks in (was 5; S4 — splinter past ~6-7 cities)
+unrest_per_excess_city       = 0.04  # unrest/yr per excess city above threshold (was 0.02; S4)
+                                     # at 8 cities (2 excess) → +0.08/yr to distant settlements
 
 # Famine driver: food crisis accelerates unrest
 unrest_famine_bonus          = 0.15  # extra unrest/yr when settlement is in food crisis
@@ -757,6 +760,7 @@ unrest_decay_rate            = 0.10  # fraction decayed per year (10%/yr → hal
 # Secession trigger
 unrest_secession_threshold   = 0.70  # unrest level that makes a settlement eligible to secede
 unrest_secession_chance      = 0.40  # annual probability of secession when above threshold
-unrest_cluster_radius        = 15    # tile radius; nearby same-civ high-unrest settlements may join
-unrest_cluster_min_unrest    = 0.50  # min unrest for a neighbour to join the seceding cluster
+unrest_cluster_radius        = 25    # tile radius; nearby same-civ high-unrest settlements may join (was 15; S4 —
+                                     # bigger clusters mean seceded civs start with 2-3 cities, not 1)
+unrest_cluster_min_unrest    = 0.30  # min unrest for a neighbour to join the seceding cluster (was 0.50; S4)
 splinter_initial_tension     = 0.60  # initial BorderTension the new civ has toward its parent
