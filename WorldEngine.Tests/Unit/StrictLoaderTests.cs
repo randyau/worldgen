@@ -164,4 +164,22 @@ public class StrictLoaderTests : IDisposable
         act.Should().Throw<InvalidOperationException>()
             .Which.Message.Should().Contain("bogus_one").And.Contain("bogus_two");
     }
+
+    // ── B2: production sim_config.toml loads with zero dead keys ─────────────
+
+    /// <summary>
+    /// Verifies that the shipped sim_config.toml has zero unbound keys (B2 guarantee).
+    /// Any future addition to sim_config.toml must be backed by a C# config property
+    /// or this test will fail, preventing the dead-key problem from recurring.
+    /// </summary>
+    [Fact]
+    public void ProductionToml_LoadsCleanUnderStrictMode()
+    {
+        SimConfigLoader.StrictMode = true;
+
+        // LoadOrCreateDefault() searches for the real config file
+        var act = () => SimConfigLoader.LoadOrCreateDefault();
+
+        act.Should().NotThrow("sim_config.toml must contain zero unbound keys");
+    }
 }

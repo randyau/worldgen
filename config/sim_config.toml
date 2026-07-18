@@ -1,5 +1,5 @@
 # World Engine — Simulation Configuration
-# Version: 0.1
+# Version: 0.2  (B2 purge — 2026-07-18)
 #
 # This file contains all simulation balance constants.
 # Edit values here to tune behavior without recompiling.
@@ -10,6 +10,17 @@
 #
 # RULE: If a number affects simulation behavior or balance, it lives here.
 # Structural constants (save format version, enum values) stay in code.
+#
+# DEAD SECTIONS REMOVED (2026-07-18 — B2 config hygiene):
+#   [characters], [utility], [goals], [environment], [civilization], top-level [resources],
+#   [performance], legacy [events] keys, [events.population_impact_thresholds],
+#   [world_gen.climate], [world_gen.ocean.min_ocean_8neighbors],
+#   [sim_loop.speed] (keys moved to [sim_loop] with corrected names),
+#   [sim_loop.persistence] (key moved to [sim_loop]).
+# Future-intent sections moved to docs/config_future.md:
+#   [admin_distance], [spatial_buffer], [specialists], [artifacts],
+#   [cultural_modifiers], [civilization.settler_seeding].
+# Runtime fertility keys from dead [resources] bound via [world_gen.resources].
 
 # =============================================================================
 # WORLD GENERATION
@@ -20,7 +31,6 @@ default_tile_size_km    = 10      # Real-world km per world-scale tile
 default_width_km        = 4000    # Default world width (Europe-scale)
 default_height_km       = 3000    # Default world height (Europe-scale)
 chunk_size              = 16      # Tile grid chunk dimensions (16×16 tiles per chunk)
-border_manifest_samples = 64      # Samples per tile edge in border manifests
 magic_intensity_scale   = 1.0     # Multiplier on magic intensity peaks (V2 stub)
 
 [world_gen.elevation]
@@ -32,43 +42,41 @@ smoothing_passes        = 3       # Box-blur passes on elevation after normaliza
 
 [world_gen.ocean]
 default_sea_level       = 0.40    # Fraction of tiles (by elevation rank) that are ocean
-erosion_passes          = 2       # Passes to strip thin ridges (≥min_ocean_8neighbors ocean 8-neighbors → ocean)
-min_ocean_8neighbors    = 5       # Threshold for erosion: tiles with this many ocean 8-neighbors become ocean
+erosion_passes          = 2       # Passes to strip thin ridges (≥min_ocean8_neighbors ocean 8-neighbors → ocean)
+min_ocean8_neighbors    = 5       # Threshold for erosion: tiles with this many ocean 8-neighbors become ocean
                                    # 5 removes 1-tile-wide and 2-tile-wide protrusions; solid coasts are ≤4
 
-[world_gen.climate]
-equator_temperature     = 0.9     # Temperature at equator (0-1 scaled)
-pole_temperature        = 0.05    # Temperature at poles (0-1 scaled)
-elevation_temp_penalty  = 0.4     # How much elevation reduces temperature
-rain_shadow_strength    = 0.7     # How much mountains reduce precipitation on leeward side
-monsoon_threshold       = 0.6     # Moisture level above which a region has monsoon season
-storm_corridor_latitude = 0.55    # Normalized latitude band where storm corridors form
-
 [world_gen.resources]
+# World-gen mineral density
 iron_density            = 0.08    # Fraction of mountain/hill tiles with iron deposits
 copper_density          = 0.04    # Fraction of volcanic-adjacent tiles with copper
 tin_density             = 0.015   # Fraction of eligible tiles with tin (rare by design)
 precious_metal_density  = 0.005   # Fraction of volcanic tiles with precious metals
 rare_resource_density   = 0.003   # Fraction of tiles with rare/magical resources
 
+# Runtime fertility dynamics (Phase 5) — previously in dead [resources] section
+# DECISION: kept in [world_gen.resources] alongside density keys because ResourcesConfig
+# is the binding type; the runtime/worldgen distinction is semantic, not structural.
+fertility_recovery_per_year          = 3  # byte/year; recovery must be faster than penalty (ratio ~1:1)
+post_fire_fertility_boost            = 30 # temporary fertility bonus (byte) after fire clears
+drought_fertility_penalty_per_season = 3  # byte/season; balanced against recovery rate
+drought_fertility_floor              = 5  # minimum fertility during drought (byte); prevents permanent zero
+
 # =============================================================================
 # SIMULATION LOOP
 # =============================================================================
 
 [sim_loop]
-days_per_season         = 90      # Simulation days in one season (affects Daily/Standard sync)
-seasons_per_year        = 4       # Always 4: Spring, Summer, Autumn, Winter
-auto_save_interval_ticks = 960    # Auto-save every N ticks (960 = ~60 in-game years at 16 ticks/year)
-auto_save_dir            = "worldsave"  # Directory for auto-saves and Ctrl+S saves
-
-[sim_loop.speed]
-slow_ticks_per_second   = 0.5     # Seasonal ticks per real second at Slow speed
-normal_ticks_per_second = 1.0     # Seasonal ticks per real second at Normal speed
-fast_ticks_per_second   = 10.0    # Seasonal ticks per real second at Fast speed
-ultrafast_snapshot_years = 10     # Push UI snapshot every N sim-years in Ultrafast mode
-
-[sim_loop.persistence]
-event_write_batch_interval_ticks = 20    # Batch event writes every N ticks; ~1 year at Normal speed; 0 = write every tick (legacy, slower)
+ticks_per_seasonal_change    = 4      # ticks between season changes (4 ticks/season × 4 seasons = 16 ticks/year)
+auto_save_interval_ticks     = 960    # auto-save every N ticks (960 = ~60 in-game years at 16 ticks/year)
+auto_save_dir                = "worldsave"  # directory for auto-saves and Ctrl+S saves
+# Speed settings (moved from dead [sim_loop.speed] sub-table)
+slow_ticks_per_second        = 0.5    # seasonal ticks per real second at Slow speed
+normal_ticks_per_second      = 1.0    # seasonal ticks per real second at Normal speed
+fast_ticks_per_second        = 10.0   # seasonal ticks per real second at Fast speed
+ultrafast_snapshot_interval_ticks = 160  # push UI snapshot every N ticks in Ultrafast (160 = 10 years)
+# Persistence (moved from dead [sim_loop.persistence] sub-table)
+event_write_batch_interval_ticks = 20    # batch event writes every N ticks; ~1 year at Normal speed; 0=every tick
 
 # =============================================================================
 # EVENTS AND HISTORY
@@ -80,38 +88,8 @@ minimum_recorded_tier        = 0        # 0=Background, 1=Character, 2=Regional,
 recent_event_cache_size      = 500
 suppressed_types = ["SettlementGrew", "SettlementShrank", "Negotiated"]  # suppress per-tick noise; Negotiated floods DB before chars ally
 
-# --- Legacy keys below are ignored (IgnoreMissingProperties=true) ---
-# Pre-write gate minimums
-# Increase these to reduce database size (record less)
-# Decrease to record more (use "Background" for development/research mode)
-# Values: "Background"=0, "Character"=1, "Regional"=2, "Headline"=3
-minimum_tier_to_record       = "Background"    # Start permissive, tighten empirically
-minimum_population_impact    = "None"          # Effectively no population gate initially
-
-# Event cache (in-memory ring buffer of recent events)
-cache_size                   = 400    # Number of recent events kept in memory
-                                       # Used for UI event log and IsFirstOfKind checks
-
-# Pruning: events below Regional tier older than this are eligible for pruning
-# Set to 0 to disable pruning (development mode)
-retention_years              = 500
-
-# IsFirstOfKind lookback window
-first_of_kind_lookback_years = 50    # How far back to check when classifying IsFirstOfKind
-
-[events.population_impact_thresholds]
-# Population affected → PopulationImpact tier
-# Both absolute count AND regional fraction are checked — either condition triggers the tier
-catastrophic_absolute        = 10000  # Absolute population affected
-catastrophic_fraction        = 0.25   # Fraction of regional population affected
-major_absolute               = 500
-major_fraction               = 0.05
-moderate_absolute            = 50
-moderate_fraction             = 0.01
-
 [events.gate]
 # Event types always recorded regardless of other gate settings
-# Add to this list for types that should never be filtered
 always_record_types = [
     "CharacterBorn",
     "CharacterDied",
@@ -134,8 +112,6 @@ always_record_types = [
 ]
 
 # Event types always suppressed regardless of other gate settings
-# Pure simulation bookkeeping with no narrative value
-# Add to this list empirically as you discover noise categories
 suppressed_types = [
     "Tier3ResourceTick",
     "SettlementFoodAccounting",
@@ -144,325 +120,6 @@ suppressed_types = [
     "RelationshipDecayTick",
     "CharacterMoved",          # pure locomotion: 77% of all events, zero narrative value
 ]
-
-# Verb classes to suppress entirely (empty = suppress nothing)
-# Add verb classes here if an entire category proves to be noise
-suppressed_verb_classes = []
-
-# =============================================================================
-# ENVIRONMENTAL SIMULATION
-# =============================================================================
-
-[environment]
-# Natural disaster base probabilities per seasonal tick per eligible tile
-# These are per-tick probabilities — multiply by 4 for annual rate
-earthquake_prob         = 0.0002   # Per fault line tile per season
-wildfire_prob           = 0.0005   # Per forest tile in dry season
-flood_prob              = 0.001    # Per river-adjacent tile in wet season
-drought_chance_per_year = 0.02     # Per region per year (not per tile)
-
-# Disaster spread
-wildfire_spread_prob    = 0.3      # Probability wildfire spreads to adjacent forest tile per tick
-flood_spread_radius     = 3        # Maximum tiles a flood event spreads from origin
-
-# Climate drift
-climate_drift_rate      = 0.01    # How fast regional temperature/moisture drifts per year
-biome_change_threshold  = 0.15     # How much climate must drift before biome reclassifies
-
-# Resource regeneration rates (fraction of max per year)
-forest_regrowth_rate    = 0.05     # Forests regrow at 5% per year after wildfire
-soil_recovery_rate      = 0.08     # Soil fertility recovers at 8% per year after drought
-fish_recovery_rate      = 0.12     # Fish populations recover at 12% per year
-
-# Sea level change
-sea_level_change_rate   = 0.0002   # Maximum sea level change per year (fraction of world height)
-sea_level_event_threshold = 0.01   # Sea level change required to trigger a SeaLevelChanged event
-
-# =============================================================================
-# CIVILIZATION
-# =============================================================================
-
-[civilization]
-# Population thresholds for settlement state changes
-min_viable_population       = 50      # Below this, settlement is in danger of collapse
-collapse_threshold          = 0.15    # Fraction of peak population — triggers Collapsed state
-recovery_threshold          = 0.40    # Fraction needed to exit Declining state
-
-# Role pressure — population required before Tier 2 specialists crystallize
-# (See also [specialists] section for specialist-specific thresholds)
-first_tier2_threshold       = 100     # Population before first Tier 2 role crystallizes
-tier2_per_population        = 200     # Roughly one new Tier 2 role per N additional population
-
-# Civilization label application
-min_tier1_for_civ_label     = 1       # Minimum Tier 1 leaders
-min_tier2_roles_for_civ     = 3       # Minimum distinct Tier 2 roles
-min_territory_tiles         = 5       # Minimum controlled tiles
-
-# Civilization lifecycle
-ruins_to_myth_years         = 500     # Years before abandoned ruins become Myth state
-ruins_proximity_to_active_bonus = 200 # Bonus years before Myth if near active civilization
-
-[civilization.settler_seeding]
-global_pop_threshold        = 500     # World population below this triggers spontaneous seeding check
-probability_per_century     = 0.15    # 15% chance per century when below threshold
-starting_population         = 20      # Initial settler group size
-
-# =============================================================================
-# ADMINISTRATIVE DISTANCE PENALTY
-# =============================================================================
-
-[admin_distance]
-max_distance_penalty        = 0.6     # Maximum loyalty reduction at zero authority
-max_cultural_bonus          = 0.2     # Loyalty bonus from cultural alignment
-max_religion_bonus          = 0.15    # Loyalty bonus from shared religion
-max_personal_bonus          = 0.25    # Loyalty bonus from personal relationship with Tier 1
-revolt_threshold            = 0.25    # Loyalty below this enables revolt probability
-base_revolt_probability     = 0.02    # Base revolt chance per season at threshold (2%)
-
-[admin_distance.movement_costs]
-# Base movement cost (seasons to traverse) by biome
-plains          = 1.0
-grassland       = 1.0
-forest          = 2.0
-dense_forest    = 3.0
-hills           = 2.0
-mountains       = 5.0
-high_mountains  = 10.0
-desert          = 2.5
-swamp           = 3.0
-tundra          = 2.0
-road_multiplier = 0.4     # Roads reduce movement cost by 60%
-river_following = 0.7     # Following a river reduces cost
-river_crossing  = 1.5     # Crossing a river increases cost
-winter_mult     = 1.8     # Winter slows all movement
-monsoon_mult    = 1.6     # Monsoon season slows movement
-
-[admin_distance.anchors.capital]
-core_radius     = 3.0     # Seasons of travel = full authority
-max_radius      = 15.0    # Seasons of travel = zero authority
-decay_rate      = 0.3
-strength        = 1.0
-
-[admin_distance.anchors.sub_capital]
-core_radius     = 2.0
-max_radius      = 10.0
-decay_rate      = 0.35
-strength        = 0.7
-
-[admin_distance.anchors.tier1_presence]
-core_radius     = 1.0
-max_radius      = 5.0
-decay_rate      = 0.5
-strength        = 0.5
-
-[admin_distance.anchors.garrison]
-core_radius     = 1.0
-max_radius      = 3.0
-decay_rate      = 0.6
-strength        = 0.3
-
-[admin_distance.anchors.religious_center]
-core_radius     = 2.0
-max_radius      = 8.0
-decay_rate      = 0.4
-strength        = 0.4
-
-# =============================================================================
-# CHARACTER SYSTEM
-# =============================================================================
-
-[characters]
-# Tier 1 / Tier 2 limits
-max_tier1_active            = 100     # Maximum simultaneously simulated Tier 1 characters
-max_tier2_active            = 500     # Maximum simultaneously simulated Tier 2 characters
-
-# Relationship dynamics
-relationship_decay_per_tick = 0.01    # Relationship drifts toward neutral without interaction
-max_relationship_value      = 1.0
-min_relationship_value      = -1.0
-
-# Character generation
-personality_noise_stddev    = 0.2     # Gaussian noise on trait generation
-parental_inheritance_weight = 0.6     # How much traits pull toward parent average
-cultural_shift_weight       = 0.3     # How much cultural modifiers shift trait distributions
-
-[characters.needs]
-# Needs decay rates per seasonal tick (how fast unmet needs worsen)
-food_decay                  = 0.10
-safety_decay                = 0.05
-shelter_decay               = 0.01
-belonging_decay             = 0.02
-status_decay                = 0.03
-purpose_decay               = 0.03
-spiritual_decay             = 0.02
-
-# Satisfaction thresholds (needs below this are "unmet" for behavior purposes)
-critical_need_threshold     = 0.2     # Below this, character is in crisis for this need
-unmet_need_threshold        = 0.4     # Below this, need is considered unmet in utility calc
-
-[characters.skills]
-base_growth_rate            = 0.002   # Base skill growth per use per tick
-max_skill_value             = 1.0
-min_skill_value             = 0.0
-diminishing_returns_factor  = 0.7     # How much growth slows near max skill
-                                       # growth_rate × (1 - skill × factor)
-
-[characters.aging]
-adult_age                   = 18      # Age at which character becomes fully active
-elder_age                   = 60      # Age at which decline mechanics begin
-max_age_base                = 80      # Base maximum age before death check each year
-max_age_variance            = 20      # Random variance added to max age
-
-# =============================================================================
-# UTILITY FUNCTION WEIGHTS
-# =============================================================================
-
-[utility]
-# Weights for the utility function — must sum to 1.0
-needs_weight                = 0.40
-goals_weight                = 0.35
-personality_weight          = 0.15
-relationship_weight         = 0.10
-
-# Softmax selection temperature range
-# Higher temperature = more random selection (less deterministic)
-# Curiosity trait interpolates between min and max
-min_temperature             = 0.2
-max_temperature             = 0.5
-
-# Actions with utility below this threshold are ignored
-min_utility_threshold       = 0.05
-
-# Risk aversion
-# Characters risk-averse when action risk exceeds their risk tolerance
-# Risk tolerance = Aggression × 0.5 + Safety_need × 0.3
-max_risk_penalty            = 0.6     # Maximum utility reduction from risk aversion
-
-# =============================================================================
-# GOALS
-# =============================================================================
-
-[goals]
-# How many ticks before a newly spawned goal reaches full urgency
-urgency_ramp_ticks          = 20      # 5 years at seasonal resolution
-
-# Maximum active goals per character
-max_active_goals            = 5       # Goals beyond this are queued
-
-# Goal spawn thresholds — personality traits required to spawn goal types
-vengeance_aggression_min    = 0.3     # Minimum Aggression to spawn VengeanceGoal
-religion_wonder_min         = 0.5     # Minimum Wonder to spawn FoundReligionGoal
-seize_power_aggression_min  = 0.6     # Minimum Aggression for SeizePowerGoal
-seize_power_greed_min       = 0.4     # Minimum Greed for SeizePowerGoal
-
-# =============================================================================
-# SPECIALISTS
-# =============================================================================
-
-[specialists]
-# Minimum settlement population to support each specialist type
-apothecary_threshold        = 200
-priest_threshold            = 300
-entertainer_threshold       = 500
-teacher_threshold           = 500
-weaponsmith_threshold       = 800
-physician_threshold         = 1000
-scholar_threshold           = 2000
-alchemist_threshold         = 3000
-jeweler_threshold           = 3000
-cartographer_threshold      = 5000
-advisor_threshold           = 5000
-spy_threshold               = 8000
-architect_threshold         = 10000
-
-# Livelihood thresholds
-subsistence_needs_threshold = 0.3     # Needs below this = Survival state
-independent_client_minimum  = 3       # Minimum regular clients for Independent state
-
-# Reputation
-reputation_boost_threshold  = 0.7    # Quality above which work boosts reputation
-reputation_decay_rate       = 0.005  # Reputation decay per tick without high-quality work
-reputation_spread_hops      = 2      # How many relationship hops reputation spreads
-
-# =============================================================================
-# ARTIFACTS
-# =============================================================================
-
-[artifacts]
-# Artifact generation (crafting specialists)
-base_generation_probability = 0.05   # At max skill, 5% chance per crafting task
-notable_performance_threshold = 0.75 # Quality above which a performance is notable
-covet_threshold             = 0.6    # Artifact property score above which NPCs covet it
-
-# =============================================================================
-# RELIGION
-# =============================================================================
-
-[religion]
-awe_threshold_base          = 0.6    # Base probability threshold for awe event to trigger religion
-wonder_trait_multiplier     = 0.5    # High Wonder reduces the threshold (more receptive)
-piety_trait_multiplier      = 0.3    # High Piety also reduces threshold
-spread_trust_threshold      = 0.5    # Minimum trust required for religion to spread via relationship
-inter_religion_trust_penalty = -0.15  # Baseline trust penalty between members of different religions
-conversion_experience_threshold = 0.3 # How much more positive experience with new religion before conversion
-
-# M4 Phase 3 — Religion founding (character goal)
-spiritual_founding_threshold     = 0.75  # Spiritual need level to trigger FoundReligion goal
-piety_founding_threshold         = 0.50  # Piety skill floor to qualify as a founder
-wonder_founding_threshold        = 0.60  # Wonder personality trait floor
-religion_founding_progress_per_year = 0.35  # progress per year; ~3 years to complete
-religion_founding_cooldown_years    = 50    # per character: min years between foundings
-
-# =============================================================================
-# CULTURAL MODIFIERS
-# =============================================================================
-
-[cultural_modifiers]
-expiry_threshold            = 0.03   # Modifier magnitude below this is considered expired
-max_active_per_region       = 20     # Performance cap on active modifiers per region
-reinforcement_window_years  = 50     # How recent must a similar event be to reinforce decay slowdown
-reinforcement_bonus         = 0.15   # Magnitude boost per reinforcing event
-
-[cultural_modifiers.half_life_years]
-# How many years for a modifier to halve in magnitude
-# Shorter = fades faster, Longer = persists longer
-animosity_major_war         = 150
-animosity_minor_war         = 60
-fear_disaster               = 100
-reverence_golden_age        = 120
-xenophobia_plague           = 80
-religious_fervor            = 200
-trade_goodwill              = 40
-military_trauma             = 100
-cultural_pride              = 90
-
-# =============================================================================
-# SPATIAL BUFFER (SPOTLIGHT MODE)
-# =============================================================================
-
-[spatial_buffer]
-detailed_radius_world_tiles = 1      # World tiles of daily resolution around spotlight (3×3 zone)
-buffer_width_world_tiles    = 2      # Width of interpolation buffer ring in world tiles
-interpolation_noise_max     = 1      # Maximum tile offset in daily path interpolation
-
-# =============================================================================
-# PERFORMANCE
-# =============================================================================
-
-[performance]
-autosave_interval_ticks     = 40     # state.bin autosave every N ticks (10 years at seasonal)
-snapshot_interval_years     = 100    # Historical snapshot every N sim-years
-event_cache_size            = 400    # Recent events kept in memory (ring buffer)
-voxel_cache_entries         = 5      # LRU voxel grid cache entries
-influence_map_recompute_batch = 10   # Max influence maps recomputed per tick during invalidation
-
-# Tile processing
-dirty_flag_chunk_skip       = true   # Skip chunks with no dirty tiles (significant performance gain)
-parallel_tile_assembly      = true   # Assemble TileGrid in parallel after world gen
-
-# Database
-sqlite_cache_size_kb        = 4096   # SQLite page cache size
-sqlite_mmap_size_mb         = 64     # Memory-mapped I/O size for SQLite
 
 # =============================================================================
 # WORLD GENERATION — TECTONICS
@@ -501,7 +158,7 @@ dry_moisture            = 60    # byte moisture below which tile is "dry" (savan
 arid_moisture           = 30    # byte moisture below which tile is "arid" (desert only)
 
 # =============================================================================
-# CLIMATE (world-gen parameters for ClimateLayer)
+# CLIMATE (runtime parameters for ClimateLayer + seasonal sim)
 # =============================================================================
 
 [climate]
@@ -548,8 +205,6 @@ continental_amplification         = 0.18  # Temperature deviation: coast cooled,
 lake_moisture_recharge            = 0.40  # Moisture carry level that lake tiles raise the sweep to (0-1, fraction of max).
                                            # Lakes act as inland moisture sources; arid interiors with lakes stay wetter.
 river_moisture_bonus              = 0.08  # Flat carry bonus added when sweep crosses a river tile. Stacks with existing carry.
-                                           # 0 = pure horizontal sweep (bands strongly). 0.15-0.30 = angled, moisture crosses
-                                           # latitude lines. Above 0.40 is unphysical. Works alongside moisture_noise_scale.
 continental_seasonal_threshold    = 0.25  # maritime influence below this → continental seasonal profile (wet summer, dry winter)
 maritime_seasonal_threshold       = 0.50  # maritime influence above this → maritime profile (dry summer, wet autumn/winter)
 min_seasonal_moisture_ratio       = 0.20  # seasonal CurrentMoisture floor: max(BaseMoisture + delta, BaseMoisture × this)
@@ -588,21 +243,6 @@ drought_drought_multiplier             = 2.0      # chance multiplier when preci
 drought_precipitation_threshold        = 0.7
 drought_min_seasons                    = 2
 drought_max_seasons                    = 8
-
-# =============================================================================
-# RESOURCES (runtime, Phase 5)
-# =============================================================================
-
-[resources]
-iron_density                  = 0.08
-copper_density                = 0.04
-tin_density                   = 0.015
-precious_metal_density        = 0.005
-rare_resource_density         = 0.003
-fertility_recovery_per_year          = 3  # byte/year; was 1 — recovery must be faster than penalty (ratio was 1:5, now 1:1)
-post_fire_fertility_boost            = 30 # temporary fertility bonus after fire clears
-drought_fertility_penalty_per_season = 3  # byte/year; was 5 — balanced against recovery rate; tile can recover in ~drought-duration years
-drought_fertility_floor              = 5  # minimum fertility during drought; prevents permanent zero on marginal tiles
 
 # =============================================================================
 # BEASTS (lifecycle constants — species stats are in config/beasts.toml)
@@ -789,11 +429,15 @@ grief_completion_threshold      = 0.05    # grief Intensity below this → grief
 wellbeing_endure_multiplier     = 0.5     # Endure: slow draining perseverance
 wellbeing_survive_multiplier    = 0.3     # Survive: urgent pressure but lower emotional weight
 wellbeing_flee_multiplier       = 0.4     # Flee: flight-or-fight stress
-wellbeing_stagnation_threshold_ticks = 80  # ticks (~1 season at 16/year) before inactive goal drains wellbeing
-wellbeing_stagnation_drain_rate = 0.002    # per tick for goals stuck without progress
-wellbeing_purpose_drought_drain = 0.003    # per tick when character has no flourishing goals (Create/Bond/FoundCity)
+# Stagnation: inactive goals drain wellbeing after this many ticks (note: TOML previously had wellbeing_ prefix; renamed to match C# property)
+stagnation_threshold_ticks      = 80  # ticks before inactive goal drains wellbeing (~5 years at 16 ticks/year)
+stagnation_drain_rate           = 0.002    # per tick for goals stuck without progress
+purpose_drought_drain           = 0.003    # per tick when character has no flourishing goals (Create/Bond/FoundCity)
 
 # Tier 2 sub-tuning (appended to [character] section — Tomlyn merges same-section keys)
+# NOTE: tier2_* keys previously failed to bind due to digit→uppercase PascalToSnakeCase bug (fixed in B2).
+# Dead-vs-live disagreements resolved: tier2_notable_cooldown_ticks TOML was 64, live was 32 → kept 32.
+#                                       tier2_exceptional_work_chance TOML was 0.001, live was 0.002 → kept 0.002.
 tier2_per_population        = 10
 tier2_max_age_seasons_min   = 600   # ~38 years at 16 ticks/year (was 60 — 4 years, broken)
 tier2_max_age_seasons_max   = 1200  # ~75 years (was 120 — also broken)
@@ -812,14 +456,13 @@ physician_settlement_heal_rate = 0.5   # health restored per tick to infected se
 
 # Tier2 creator event pacing
 # Most work happens silently; these control when it becomes a history-log event.
-tier2_notable_cooldown_ticks  = 64     # minimum ticks between notable events per character (4 years)
-tier2_exceptional_work_chance = 0.001  # per-tick chance of exceptional work during a notable event (~1 per lifetime)
+tier2_notable_cooldown_ticks  = 32     # minimum ticks between notable events per character (2 years; was 64 in dead TOML — live value 32 preserved)
+tier2_exceptional_work_chance = 0.002  # per-tick chance of exceptional work (~1 per lifetime; was 0.001 in dead TOML — live value 0.002 preserved)
 
 # Tier1 Create goal cooldown
 create_goal_cooldown_ticks = 80        # ticks after completing a Create goal before a new one can form (5 years)
 
 # Artwork event cooldown — min years between ArtworkCreated events per character
-# Without this, every tick of an active Create goal emits an event (208k events observed)
 artwork_cooldown_years = 10            # one artwork event per character per decade at most
 
 # =============================================================================
@@ -927,7 +570,7 @@ water_spoilage_rate                = 0.010  # cisterns evaporate faster; settlem
 wealth_spoilage_rate               = 0.0001 # gold/gems essentially permanent
 stockpile_spoilage_rate            = 0.0005 # iron/copper/timber decay slowly
 wealth_accumulate_rate             = 0.2    # fraction of non-vital ledger supply that banks into stores per tick
-store_raid_destruction_per_damage  = 0.008  # fraction of ALL stores destroyed per point of raid damage
+store_raid_destruction_per_damage  = 0.008  # fraction of ALL stores destroyed per point of raid damage (granaries/vaults burn)
 
 # =============================================================================
 # TERRITORY (Phase 3.0 — City-State Territory Model)
@@ -937,8 +580,8 @@ store_raid_destruction_per_damage  = 0.008  # fraction of ALL stores destroyed p
 claim_tiles_per_person    = 8    # 1 tile per N people; city of 800 → 100 tiles (~radius 5)
 min_city_tiles            = 7    # radius-1 circle, always retained
 max_city_tiles            = 120  # absolute upper bound on tile count regardless of radius
-territory_max_radius      = 10   # hard Euclidean radius cap from city center; territory never expands beyond this
-                                  # — civs must found a new city to access land further out
+max_territory_radius      = 10   # hard Euclidean radius cap from city center; territory never expands beyond this
+                                  # (TOML was territory_max_radius — renamed to match C# property max_territory_radius)
 territory_growth_per_year = 4    # max tiles claimed per city per year (prevents instant snowball)
 initial_city_claim_radius = 2    # tiles claimed at founding (~13 tiles)
 
@@ -1046,3 +689,14 @@ campaign_battle_base_strength = 0.5   # attacker strength when no character comb
 # War end territory transfer: winner gains border tiles proportional to battle advantage.
 tiles_per_battle_win          = 2     # tiles transferred per net battle victory (aWins - bWins)
 max_tiles_transferred_per_war = 12    # cap; prevents one decisive war from reshaping the world
+
+# =============================================================================
+# RELIGION (M4 Phase 3 — Religion founding via character goal)
+# =============================================================================
+
+[religion]
+spiritual_founding_threshold     = 0.75  # Spiritual need level to trigger FoundReligion goal
+piety_founding_threshold         = 0.50  # Piety skill floor to qualify as a founder
+wonder_founding_threshold        = 0.60  # Wonder personality trait floor
+religion_founding_progress_per_year = 0.35  # progress per year; ~3 years to complete
+religion_founding_cooldown_years    = 50    # per character: min years between foundings

@@ -11,9 +11,15 @@ public static class SimConfigLoader
 
     /// <summary>
     /// When true, unknown TOML keys throw an exception instead of logging a warning.
-    /// Set to true in tests and (after the TOML is clean) in DEBUG builds.
+    /// Defaults to true in DEBUG builds (enforces strict config hygiene during development).
+    /// Release builds warn only. Tests may set this explicitly.
     /// </summary>
-    public static bool StrictMode { get; set; } = false;
+    public static bool StrictMode { get; set; }
+#if DEBUG
+        = true;
+#else
+        = false;
+#endif
 
     public static SimConfig LoadOrCreateDefault(string? path = null)
     {
@@ -146,6 +152,10 @@ public static class SimConfigLoader
 
     private static string PascalToSnakeCase(string name)
     {
-        return Regex.Replace(name, "(?<=[a-zA-Z])([A-Z])", "_$1").ToLowerInvariant();
+        // Insert underscore before uppercase letters preceded by a lowercase/uppercase letter.
+        var s = Regex.Replace(name, "(?<=[a-zA-Z])([A-Z])", "_$1");
+        // Also insert underscore before uppercase letters preceded by a digit (handles Tier2Notable, etc.)
+        s = Regex.Replace(s, @"(?<=[0-9])([A-Z])", "_$1");
+        return s.ToLowerInvariant();
     }
 }
