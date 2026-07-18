@@ -29,11 +29,29 @@ public static class CharacterSpawner
 
         long entitySeq = 10_000; // start well above beast range
         int placed = 0;
+        // Two passes: pass 0 applies biome-weighted acceptance (S3 — harsh biomes are
+        // rejected proportionally to their spawn weight); pass 1 relaxes the filter so
+        // the full count is always placed even on weight-starved maps.
+        for (int pass = 0; pass < 2 && placed < count; pass++)
         foreach (var tile in candidates)
         {
             if (placed >= count) break;
 
             var biome = (BiomeType)world.TileGrid.GetTile(tile).BiomeType;
+
+            if (pass == 0)
+            {
+                // Weighted acceptance: roll deterministic RNG against the biome weight
+                // (normalized to the max configured weight so top biomes always pass).
+                float weight = config.Character.BiomeSpawnWeight(biome);
+                float accept = weight / MaxSpawnWeight(config.Character);
+                float roll = WorldRng.FloatAt(world.WorldSeed, 1, tile.X, tile.Y, SaltCharTile);
+                if (roll >= accept) continue;
+            }
+            else if (world.GetEntitiesAt(tile).Any())
+            {
+                continue; // pass 1: skip tiles that already received a spawn
+            }
             var character = CharacterFactory.Spawn(
                 location:  tile,
                 biome:     biome,
@@ -54,6 +72,15 @@ public static class CharacterSpawner
         }
 
         return pending;
+    }
+
+    /// <summary>Largest configured biome spawn weight — used to normalize acceptance rolls.</summary>
+    private static float MaxSpawnWeight(Config.CharacterSimConfig cfg)
+    {
+        float max = cfg.SpawnWeightDefault;
+        foreach (BiomeType b in Enum.GetValues<BiomeType>())
+            max = Math.Max(max, cfg.BiomeSpawnWeight(b));
+        return Math.Max(max, 1e-6f);
     }
 
     private static List<TileCoord> CollectCandidateTiles(WorldState world, int minFertility)

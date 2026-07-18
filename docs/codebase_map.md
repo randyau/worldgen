@@ -172,6 +172,7 @@ One-line description of every non-trivial source file. Check here before running
 - `Integration/SignificanceScoringTests.cs` — M3.2: ComputeSignificanceScore, SignificanceRescoringPass tier upgrades and score population
 - `Integration/NarrativeUIDataTests.cs` — M3.3: GetCausalChain, GetAllCivSummaries, GetEventCountByDecade, GetCharacterHistory ordering
 - `Integration/SaveLoadTests.cs` — M3.6: WorldStateSaver round-trip tests (8 tests: files created, year, settlements, entities, territory, round-trip, meta, empty world)
+- `Unit/BiomeSpawnWeightTests.cs` — S3: biome spawn-weight lookup, harsh-biome under-representation on a generated world, spawn reproducibility
 - `Integration/UnrestSecessionTests.cs` — S2: unrest accrual math, forced-splinter integration, capital immunity, reproducibility
 - `Integration/TileInspectTests.cs` — M3.4: TileInspectorData territory/improvement population, unclaimed tile returns null
 - `Unit/AncestryConfigTests.cs` — M3.5: AncestryConfig field loading, ApplyCulturalSettlementName, GetCivNameSuffix, BuildCulturalProfile

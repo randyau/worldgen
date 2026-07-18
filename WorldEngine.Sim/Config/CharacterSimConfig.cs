@@ -193,6 +193,48 @@ public sealed class CharacterSimConfig
     // Minimum tile distance from any existing settlement for a floor-spawn tile.
     public int   CivFloorMinDist     { get; set; } = 20;
 
+    // ─── Biome spawn weights (S3) ─────────────────────────────────────────────
+    // Relative weights multiplied into spawn-site selection for initial character
+    // spawns (CharacterSpawner) and civ floor spawns (RunCivFloorSpawns).
+    // Harsh biomes are heavily down-weighted so civs stop spawning in tundra/desert
+    // where they struggle and leave ruins. HighMountain is excluded outright elsewhere.
+    public float SpawnWeightTundra             { get; set; } = 0.05f;
+    public float SpawnWeightBorealForest       { get; set; } = 0.40f;
+    public float SpawnWeightTemperateForest    { get; set; } = 1.00f;
+    public float SpawnWeightTropicalRainforest { get; set; } = 0.50f;
+    public float SpawnWeightGrassland          { get; set; } = 1.50f;
+    public float SpawnWeightSavanna            { get; set; } = 0.80f;
+    public float SpawnWeightDesert             { get; set; } = 0.05f;
+    public float SpawnWeightSwamp              { get; set; } = 0.30f;
+    public float SpawnWeightMountain           { get; set; } = 0.15f;
+    public float SpawnWeightHills              { get; set; } = 0.80f;
+    public float SpawnWeightPlains             { get; set; } = 1.50f;
+    public float SpawnWeightBeach              { get; set; } = 0.70f;
+    public float SpawnWeightDefault            { get; set; } = 0.30f;  // volcanic and anything else
+
+    // Civ floor spawn spacing: prefer sites within this distance of an existing settlement
+    // (moderate distance — far enough to be viable, close enough that civs eventually meet).
+    // Falls back to any qualifying site when none are within range.
+    public int   CivFloorPreferredMaxDist      { get; set; } = 80;
+
+    /// <summary>Returns the spawn-site weight for a biome (S3 biome-weighted placement).</summary>
+    public float BiomeSpawnWeight(Core.BiomeType biome) => biome switch
+    {
+        Core.BiomeType.Tundra             => SpawnWeightTundra,
+        Core.BiomeType.BorealForest       => SpawnWeightBorealForest,
+        Core.BiomeType.TemperateForest    => SpawnWeightTemperateForest,
+        Core.BiomeType.TropicalRainforest => SpawnWeightTropicalRainforest,
+        Core.BiomeType.Grassland          => SpawnWeightGrassland,
+        Core.BiomeType.Savanna            => SpawnWeightSavanna,
+        Core.BiomeType.Desert             => SpawnWeightDesert,
+        Core.BiomeType.Swamp              => SpawnWeightSwamp,
+        Core.BiomeType.Mountain           => SpawnWeightMountain,
+        Core.BiomeType.Hills              => SpawnWeightHills,
+        Core.BiomeType.Plains             => SpawnWeightPlains,
+        Core.BiomeType.Beach              => SpawnWeightBeach,
+        _                                 => SpawnWeightDefault,
+    };
+
     // ─── Succession crisis ────────────────────────────────────────────────────
     // How many years distant settlements suffer increased decay after the founding ruler dies.
     public int   SuccessionCrisisYears     { get; set; } = 10;

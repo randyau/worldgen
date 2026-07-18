@@ -286,31 +286,55 @@ public static partial class CivTracker
         int w = world.TileGrid.TileWidth;
         int h = world.TileGrid.TileHeight;
 
-        var candidates = new List<TileCoord>();
+        // S3: prefer sites within CivFloorPreferredMaxDist of an existing settlement so new
+        // civs spawn at moderate spacing (they eventually meet neighbours instead of being
+        // isolated forever). Falls back to any qualifying site when none are in range.
+        int prefMax   = cfg.Character.CivFloorPreferredMaxDist;
+        int prefMaxSq = prefMax * prefMax;
+
+        var candidates = new List<(TileCoord Coord, float Weight)>();
+        var fallback   = new List<(TileCoord Coord, float Weight)>();
         for (int y = 1; y < h - 1; y++)
         for (int x = 0; x < w; x++)
         {
             var coord = new TileCoord(x, y);
             if (!world.IsLand(coord)) continue;
             var tile = world.TileGrid.GetTile(coord);
-            if ((BiomeType)tile.BiomeType == BiomeType.HighMountain) continue;
+            var biome = (BiomeType)tile.BiomeType;
+            if (biome == BiomeType.HighMountain) continue;
             if (tile.Fertility < minFertility) continue;
 
-            bool tooClose = false;
+            bool tooClose  = false;
+            bool preferred = world.Settlements.Count == 0; // empty world: all sites equal
             foreach (var s in world.Settlements.Keys)
             {
                 int dx = coord.X - s.X, dy = coord.Y - s.Y;
-                if (dx * dx + dy * dy < minDistSq) { tooClose = true; break; }
+                int d2 = dx * dx + dy * dy;
+                if (d2 < minDistSq) { tooClose = true; break; }
+                if (d2 <= prefMaxSq) preferred = true;
             }
             if (tooClose) continue;
 
-            candidates.Add(coord);
+            // S3: biome-weighted spawn placement — harsh biomes get proportionally less likely
+            float weight = cfg.Character.BiomeSpawnWeight(biome);
+            if (weight <= 0f) continue;
+            if (preferred) candidates.Add((coord, weight));
+            else           fallback.Add((coord, weight));
         }
 
-        if (candidates.Count == 0) return null;
+        var pool = candidates.Count > 0 ? candidates : fallback;
+        if (pool.Count == 0) return null;
 
-        int idx = (int)(WorldRng.FloatAt(world.WorldSeed, world.CurrentYear, 0, 1, SaltCivFloor) * candidates.Count);
-        return candidates[Math.Clamp(idx, 0, candidates.Count - 1)];
+        // Weighted roulette selection, deterministic via WorldRng
+        double totalWeight = 0;
+        foreach (var (_, wt) in pool) totalWeight += wt;
+        double pick = WorldRng.FloatAt(world.WorldSeed, world.CurrentYear, 0, 1, SaltCivFloor) * totalWeight;
+        foreach (var (coord, wt) in pool)
+        {
+            pick -= wt;
+            if (pick <= 0) return coord;
+        }
+        return pool[^1].Coord;
     }
 
     /// <summary>

@@ -409,6 +409,27 @@ war_aggression_threshold     = 0.5   # minimum Aggression to consider DeclareWar
 civ_floor_count        = 5     # minimum active civs; floor kicks in below this
 civ_floor_spawn_chance = 0.3   # annual probability per missing civ slot to spawn a founder
 civ_floor_min_dist     = 20    # minimum tile distance from existing settlements for the spawn tile
+civ_floor_preferred_max_dist = 80  # S3: prefer floor-spawn sites within this distance of an existing
+                                   # settlement (moderate spacing — new civs eventually meet neighbours);
+                                   # falls back to any site when none qualify
+
+# Biome spawn weights (S3) — multiplied into spawn-site selection for both initial
+# character spawns (CharacterSpawner) and civ floor spawns (RunCivFloorSpawns).
+# Down-weight harsh biomes (tundra/desert/mountain) so civs stop spawning where
+# they struggle and leave ruins; favor grassland/plains/temperate/coast.
+spawn_weight_tundra              = 0.05
+spawn_weight_boreal_forest       = 0.4
+spawn_weight_temperate_forest    = 1.0
+spawn_weight_tropical_rainforest = 0.5
+spawn_weight_grassland           = 1.5
+spawn_weight_savanna             = 0.8
+spawn_weight_desert              = 0.05
+spawn_weight_swamp               = 0.3
+spawn_weight_mountain            = 0.15
+spawn_weight_hills               = 0.8
+spawn_weight_plains              = 1.5
+spawn_weight_beach               = 0.7
+spawn_weight_default             = 0.3   # volcanic and anything unlisted
 
 # Succession crisis — when the founding ruler dies, distant settlements enter instability
 succession_crisis_years      = 10    # how long the crisis lasts after founder death
