@@ -1,0 +1,91 @@
+# Balance Invariants — WorldEngine Sim
+#
+# This file defines expected world-health bands for the regression harness
+# (WorldEngine.Tests/Balance/BalanceRegressionTests.cs). It is NOT part of SimConfig
+# and does NOT affect simulation behavior. It describes what a healthy run looks like
+# so regressions are caught automatically.
+#
+# How to interpret bands:
+#   [min, max] = "observed healthy ± ~40% margin"
+#   If a metric falls outside these bounds something structural has likely changed.
+#   Widen a band consciously when a mechanic change (e.g. D1 pop-ceiling unification)
+#   legitimately shifts world outcomes. Never widen just to make a test green without
+#   understanding why the number moved.
+#
+# Calibration run (2026-07-18):
+#   Seeds: 42, 777, 9999  |  Years: 300  |  Wall time: ~58s/seed (Release build)
+#   World: default (sim_config.toml, no profile)
+#   Commit: C0 (post-determinism fix)
+#
+# See docs/balance_invariants.md for philosophy and update procedure.
+
+# ── Checkpoint: Year 300 ─────────────────────────────────────────────────────
+#
+# Observed: active_civs = 5 (exactly, across all 3 seeds)
+# Band uses a floor of 2 so a civ-collapse cascade causes failure,
+# and a ceiling of 12 to catch runaway civ spawning from floor mechanics.
+# The tight observed range (5–5) reflects the current civ-floor config; if that
+# changes the band should be re-anchored.
+[year_300]
+
+  [year_300.active_civs]
+  min = 2
+  max = 12
+  rationale = "Observed 5/5/5 across 3 seeds. Floor catches collapse cascade, ceiling catches floor-spawn runaway."
+
+  # Observed: 7939–18184 across 3 seeds (2.3× spread). ±40% margin applied to observed min/max.
+  # D1 (pop-ceiling unification) will shift this significantly — re-anchor after D1.
+  [year_300.world_population]
+  min = 4500
+  max = 26000
+  rationale = "Observed 7939–18184 (mean 12319). Wide margin because pop has high seed variance. Re-anchor post-D1."
+
+  # Observed: 5–11 settlements. Generous margin for small-world variance.
+  [year_300.settlements_total]
+  min = 3
+  max = 18
+  rationale = "Observed 5–11 settlements. Margin accounts for world-size variance."
+
+  # Observed: 36.0–58.7 (mean ~44). Min set to 1.5 (crisis threshold × 3) to catch food collapse.
+  # Maximum of 100 is unconstrained in practice (theoretically unlimited ratio).
+  [year_300.mean_food_ratio]
+  min = 1.5
+  max = 200.0
+  rationale = "Observed 36–59 food ratio. Min=1.5 catches food collapse (crisis=0.5). Very high ratio is also suspicious."
+
+  # Observed: -0.30 to -0.08. Negative wellbeing is the current baseline — characters
+  # struggle to meet needs in early-medieval tile scale. Band allows up to +0.5 (thriving)
+  # and down to -0.6 (deeply miserable, likely a needs-decay bug).
+  [year_300.mean_wellbeing]
+  min = -0.6
+  max = 0.5
+  rationale = "Observed -0.30 to -0.08. Negative is normal at current scale. Tighten when needs model improves."
+
+  # Observed: 0 active diseases in all 3 seeds at year 300.
+  # Max of 8 allows disease activity without flagging as broken.
+  # D4 (structural disease model) will change this — re-anchor after D4.
+  [year_300.active_diseases_max]
+  value = 8
+  rationale = "Observed 0 at year 300. Disease is functional but rare at default density. Re-anchor post-D4."
+
+  # Observed: 7–17 goals formed at year 300 (annual rate). Min=1 guards observation-A5
+  # regression (emotional events never firing). Max=100 is a sanity cap.
+  [year_300.goals_formed_ytd]
+  min = 1
+  max = 100
+  rationale = "Observed 7–17 goals/year at year 300. Min=1 guards goal-formation regression (observation A5)."
+
+  # Observed: 0 wars across all 300 years for all 3 seeds. The war system exists but
+  # border tension rarely crosses the declaration threshold with the current population
+  # distribution. This band does NOT assert wars_active > 0 (that would fail immediately).
+  # Instead it guards against wars going infinite (> 5 simultaneous wars is anomalous).
+  # Phase D5 (war consolidation + opportunistic causes) will make wars more common.
+  [year_300.wars_active_max]
+  value = 5
+  rationale = "Observed 0 wars at year 300. Wars exist but are rare at current tension thresholds. Max=5 caps runaway war state. Re-anchor post-D5."
+
+  # Observed: goals_formed_ytd cumulative over 300 years ranges 2241–3145.
+  # This guards the A5-class regression where goal formation silently drops to 0.
+  [year_300.goals_formed_cumulative_min]
+  value = 500
+  rationale = "Observed 2241–3145 cumulative goals formed by year 300. Min=500 catches formation regression."

@@ -185,7 +185,10 @@ One-line description of every non-trivial source file. Check here before running
 ## config/profiles/
 - `fast_history.toml` — 1 tick/season (4× faster); halved disease_base_chance; for multi-seed sweeps
 - `small_world.toml` — A3: 1 tick/season + halved disease for fast smoke tests (sub-minute runs)
+- `balance_invariants.toml` — C1: expected world-health bands at checkpoint years; loaded by BalanceRegressionTests, NOT part of SimConfig
 
 ## docs/
 - `config_future.md` — TOML sections removed from sim_config.toml during B2 purge; preserved as design intent for unimplemented systems ([admin_distance], [spatial_buffer], [specialists], [artifacts], [cultural_modifiers], [civilization.settler_seeding]); includes dead-vs-live disagreement table
 - `tuning_balance_review_2026-07-18.md` — tuning/balance review and Phase A–D improvement plan
+- `balance_invariants.md` — C1: philosophy for balance bands (observed-healthy ± margin), update procedure, Phase D migration notes
+- `sim_tuning.md` — C3: sim knob reference (knob / current / safe range / too-low / too-high / metric to watch)
