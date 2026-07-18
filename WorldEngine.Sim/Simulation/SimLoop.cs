@@ -64,6 +64,20 @@ public sealed class SimLoop
         _phaseRunner.FlushPendingEvents(_world);
     }
 
+    /// <summary>
+    /// Runs exactly <paramref name="ticks"/> simulation ticks synchronously on the calling thread.
+    /// No threading, no throttle, no snapshot commits — intended for headless batch runs.
+    /// Caller is responsible for flushing events after the loop via <see cref="PhaseRunner.FlushPendingEvents"/>.
+    /// </summary>
+    public void RunSynchronous(int ticks)
+    {
+        for (int i = 0; i < ticks; i++)
+        {
+            _phaseRunner.RunTick(_world);
+            AdvanceTime();
+        }
+    }
+
     private void Run()
     {
         try
