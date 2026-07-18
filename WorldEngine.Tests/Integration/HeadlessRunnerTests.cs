@@ -88,17 +88,11 @@ public class HeadlessRunnerTests
 
     // ─── A1: same seed twice → world gen is reproducible ──────────────────────
     //
-    // DECISION: Full sim reproducibility (identical population across two headless runs
-    // in the same process) is blocked by EntityId.New() using a process-global counter
-    // (IdGenerator._counter in EntityId.cs). CharacterFactory.Spawn() receives an entitySeq
-    // parameter for RNG purposes but still assigns IDs via EntityId.New(), so two runs in
-    // the same process get different EntityIds → different WorldRng outputs → diverging outcomes.
-    // Fixing this requires making CharacterFactory use entitySeq as the EntityId (not just RNG
-    // input) — a cross-cutting change deferred to Phase C or a dedicated cleanup.
-    //
-    // What IS deterministic: world gen (tile layout), which is tested here via settlement
-    // site selection (CivTracker uses tile fertility which is fully seed-determined at gen time).
-    // The number of civs founded at year 0 (before any entity RNG diverges) is stable.
+    // C0a: Full in-process sim reproducibility is now achieved: CharacterFactory,
+    // BeastFactory, Tier2Spawner, and PopulationDynamicsPhase all derive EntityId
+    // from the deterministic entitySeq parameter rather than EntityId.New()
+    // (which used a process-global counter). See ReproducibilityTests.SameSeedProducesIdenticalSimMetrics_InProcess
+    // for the strengthened assertion.
 
     [Fact]
     public void HeadlessRun_SameSeedProducesIdenticalWorldGen()

@@ -99,16 +99,6 @@ public static class MetricsCollector
         int settAbandonedYtd = acc.SettlementsAbandonedYtd;
         int settConqueredYtd = acc.SettlementsConqueredYtd;
 
-        // ── Deaths YTD — DECISION ─────────────────────────────────────────────
-        // Deaths-by-cause (starvation, disease, war, other) are not currently
-        // tracked as discrete fields on WorldState or accumulated per tick.
-        // CharacterDied events carry a cause string in PayloadJson, but reading
-        // the event log per year would require a DB query on the sim thread
-        // (expensive, couples metrics to the gated event log).
-        // Omitted: deaths_starvation, deaths_disease, deaths_war, deaths_other.
-        // To add: accumulate death counts by cause in MetricsAccumulator when
-        // CharacterBehaviorPhase emits CharacterDied pending events.
-
         store.WriteMetricsRow(new YearlyMetricsRow(
             year:                    world.CurrentYear,
             worldPopulation:         worldPop,
@@ -118,10 +108,10 @@ public static class MetricsCollector
             settlementsFoundedYtd:   settFoundedYtd,
             settlementsAbandonedYtd: settAbandonedYtd,
             settlementsConqueredYtd: settConqueredYtd,
-            deathsStarvation:        0, // DECISION: see above — not tracked
-            deathsDisease:           0, // DECISION: see above — not tracked
-            deathsWar:               0, // DECISION: see above — not tracked
-            deathsOther:             0, // DECISION: see above — not tracked
+            deathsStarvation:        acc.DeathsStarvationYtd,
+            deathsDisease:           acc.DeathsDiseaseYtd,
+            deathsWar:               acc.DeathsWarYtd,
+            deathsOther:             acc.DeathsOtherYtd,
             meanFoodRatio:           meanFoodRatio,
             minFoodRatio:            settTotal > 0 ? foodRatioMin : 1.0f,
             settlementsInShortage:   settInShortage,
@@ -158,6 +148,47 @@ public sealed class MetricsAccumulator
     public int GoalsFormedYtd          { get; set; }
     public int GoalsResolvedYtd        { get; set; }
 
+    // Death-by-cause counters — incremented from CharacterDeathPayload.Cause string.
+    // Cause strings are set in CharacterBehaviorPhase.KillCharacter; this is the
+    // authoritative mapping from cause string to metric bucket.
+    public int DeathsStarvationYtd { get; set; }
+    public int DeathsDiseaseYtd    { get; set; }
+    public int DeathsWarYtd        { get; set; }
+    public int DeathsOtherYtd      { get; set; }
+
+    /// <summary>
+    /// Extracts the "Cause" value from a CharacterDeathPayload JSON string and increments
+    /// the appropriate death-cause counter.  Uses string search rather than JSON deserialization
+    /// to avoid reflection on the internal payload record type.
+    /// Cause strings defined in CharacterBehaviorPhase.KillCharacter:
+    ///   "starvation"   → DeathsStarvation
+    ///   "disease"      → DeathsDisease
+    ///   "war", "violence", "killed by …" → DeathsWar
+    ///   "old age", "wounds", anything else → DeathsOther
+    /// </summary>
+    public void IncrementDeathCauseFromJson(string payloadJson)
+    {
+        // Locate "Cause":"<value>" in the JSON — fast path, avoids full parse.
+        const string marker = "\"Cause\":\"";
+        int start = payloadJson.IndexOf(marker, StringComparison.Ordinal);
+        if (start < 0) { DeathsOtherYtd++; return; }
+        start += marker.Length;
+        int end = payloadJson.IndexOf('"', start);
+        if (end <= start) { DeathsOtherYtd++; return; }
+
+        var cause = payloadJson.AsSpan(start, end - start);
+        if (cause.Equals("starvation", StringComparison.OrdinalIgnoreCase))
+            DeathsStarvationYtd++;
+        else if (cause.Equals("disease", StringComparison.OrdinalIgnoreCase))
+            DeathsDiseaseYtd++;
+        else if (cause.Equals("war", StringComparison.OrdinalIgnoreCase)
+              || cause.Equals("violence", StringComparison.OrdinalIgnoreCase)
+              || cause.StartsWith("killed by", StringComparison.OrdinalIgnoreCase))
+            DeathsWarYtd++;
+        else
+            DeathsOtherYtd++;  // "old age", "wounds", and anything else
+    }
+
     /// <summary>Resets all YTD fields to zero. Called by MetricsCollector after sampling.</summary>
     public void ResetYtd()
     {
@@ -169,6 +200,10 @@ public sealed class MetricsAccumulator
         WarsEndedConquestYtd    = 0;
         GoalsFormedYtd          = 0;
         GoalsResolvedYtd        = 0;
+        DeathsStarvationYtd     = 0;
+        DeathsDiseaseYtd        = 0;
+        DeathsWarYtd            = 0;
+        DeathsOtherYtd          = 0;
     }
 }
 

@@ -48,7 +48,7 @@ public static class Tier2Spawner
                     IncomeLevel:    0.3f + personality.Diligence * 0.4f);
 
                 var c = new Tier2Character(
-                    id:            EntityId.New(),
+                    id:            new EntityId(seq),  // deterministic from seq for reproducibility
                     location:      tile,
                     name:          name,
                     personality:   personality,

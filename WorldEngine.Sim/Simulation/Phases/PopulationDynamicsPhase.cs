@@ -192,8 +192,10 @@ public sealed class PopulationDynamicsPhase
             int ageRange = _simCfg.Character.Tier2MaxAgeSeasonsMax - _simCfg.Character.Tier2MaxAgeSeasonsMin;
             int maxAge   = _simCfg.Character.Tier2MaxAgeSeasonsMin
                          + (int)(WorldRng.FloatAt(world.WorldSeed, world.CurrentYear, threshold, 0, S.PopCrystallise) * ageRange);
+            // DECISION: EntityId derived deterministically from tile+threshold+year for reproducibility.
+            long crystalSeq = (400_000L + (long)tile.X * 9973 + tile.Y * 1009 + threshold + world.CurrentYear * 1997L) & 0x7FFFFFFF_FFFFFFFFL;
             var specialist = new Tier2Character(
-                EntityId.New(), tile, name,
+                new EntityId(crystalSeq), tile, name,
                 personality, livelihood,
                 maxHealth: _simCfg.Character.MaxHealth,
                 maxAgeSeason: maxAge);

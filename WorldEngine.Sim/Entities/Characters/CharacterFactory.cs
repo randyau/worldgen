@@ -23,7 +23,10 @@ public static class CharacterFactory
         SimConfig config,
         int birthYear)
     {
-        var id  = EntityId.New();
+        // DECISION: EntityId value is derived from entitySeq so that two runs with the
+        // same seed produce identical IDs (in-process reproducibility). entitySeq must be
+        // unique per spawn site; all callers derive it deterministically from tick/tile/year.
+        var id  = new EntityId(entitySeq);
         var seq = (int)(entitySeq & 0x7FFFFFFF);
 
         var registry  = config.AncestryRegistry;

@@ -13,6 +13,13 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
 {
     private readonly SqliteConnection _conn;
 
+    static EventStore()
+    {
+        // Enable snake_case → PascalCase column mapping globally for Dapper.
+        // This maps DB columns like "world_population" to C# properties like "WorldPopulation".
+        DefaultTypeMap.MatchNamesWithUnderscores = true;
+    }
+
     public EventStore(string dbPath = ":memory:")
     {
         var connString = new SqliteConnectionStringBuilder
@@ -305,6 +312,20 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
     /// </summary>
     public int GetMetricsRowCount() =>
         _conn.ExecuteScalar<int>("SELECT COUNT(*) FROM yearly_metrics;");
+
+    /// <summary>
+    /// Returns all rows in <c>yearly_metrics</c> ordered by year ascending.
+    /// Used by tests and the balance regression harness.
+    /// </summary>
+    public IReadOnlyList<YearlyMetricsRow> GetAllMetricsRows() =>
+        _conn.Query<YearlyMetricsRow>("SELECT * FROM yearly_metrics ORDER BY year;").ToList();
+
+    /// <summary>
+    /// Returns the number of events with the given TypeName string. Used by tests.
+    /// </summary>
+    public int CountEventsOfType(string typeName) =>
+        _conn.ExecuteScalar<int>("SELECT COUNT(*) FROM Events WHERE TypeName=@typeName;",
+            new { typeName });
 
     /// <summary>
     /// Returns a <see cref="IHistoryQuery"/> backed by the current database connection.

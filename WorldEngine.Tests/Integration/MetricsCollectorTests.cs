@@ -161,4 +161,35 @@ public class MetricsCollectorTests
 
         eventStore.Dispose();
     }
+
+    // ─── C0b: death-cause counters are populated ──────────────────────────────
+
+    [Fact]
+    public void MetricsCollector_DeathCausesAreNonZeroAfterLongRun()
+    {
+        // Run long enough for characters to die of old age, disease, etc.
+        // At 16 ticks/year, Tier1 max age is 80–200 seasons (~5–13 sim-years).
+        // Use a slightly larger world (300×300) to ensure enough fertile tiles
+        // for initial character placement and civ floor spawns.
+        var cfg    = new WorldConfig { Seed = 42, WidthKm = 300, HeightKm = 300, TileWidthKm = 10 };
+        var simCfg = TestSimConfig.Default();
+        var world  = new WorldGenPipeline().RunFullAsync(cfg, simCfg).GetAwaiter().GetResult();
+
+        var (simLoop, phaseRunner, eventStore) = BuildHeadlessStack(world);
+
+        int yearsToRun = 40; // well past first-generation die-off; civ floor re-spawns keep chars coming
+        simLoop.RunSynchronous(yearsToRun * world.SimConfig.SimLoop.TicksPerYear);
+        phaseRunner.FlushPendingEvents(world);
+
+        var allRows = eventStore.GetAllMetricsRows();
+        int totalDeaths = allRows.Sum(r => r.DeathsStarvation + r.DeathsDisease + r.DeathsWar + r.DeathsOther);
+        int totalCharactersDied = eventStore.CountEventsOfType("CharacterDied");
+
+        totalDeaths.Should().BeGreaterThan(0,
+            $"after {yearsToRun} years characters should have died and death-cause counters should be non-zero " +
+            $"(CharacterDied events in DB: {totalCharactersDied}, " +
+            $"alive Tier1: {world.Entities.Characters.Count(c => c.IsAlive)})");
+
+        eventStore.Dispose();
+    }
 }

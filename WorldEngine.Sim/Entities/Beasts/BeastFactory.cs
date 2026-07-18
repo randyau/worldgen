@@ -45,7 +45,9 @@ public static class BeastFactory
 
         string name = GenerateName(species, worldSeed, entitySeq, isLegendary || species.IsMythological);
 
-        var id = EntityId.New();
+        // DECISION: EntityId value is derived from entitySeq for in-process reproducibility.
+        // Callers derive entitySeq deterministically from world state (tick, tile, counter).
+        var id = new EntityId(entitySeq);
         return new LegendaryBeast(
             id:                       id,
             speciesId:                species.Id,

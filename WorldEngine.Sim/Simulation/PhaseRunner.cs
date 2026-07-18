@@ -216,6 +216,13 @@ public sealed class PhaseRunner
             case EventType.WarDeclared:          _metricsAcc.WarsDeclaredYtd++;          break;
             case EventType.GoalFormed:           _metricsAcc.GoalsFormedYtd++;           break;
             case EventType.GoalResolved:         _metricsAcc.GoalsResolvedYtd++;         break;
+            case EventType.CharacterDied:
+                // Extract cause from CharacterDeathPayload JSON.
+                // DECISION: rather than deserializing the full payload (requires reflection on
+                // an internal type), extract the "Cause" field via string search.
+                // Format: {"CharacterId":..., "CharacterName":"...", "Cause":"<value>", "AgeSeason":...}
+                _metricsAcc.IncrementDeathCauseFromJson(pe.PayloadJson);
+                break;
             case EventType.WarEnded:
                 // Classify by outcome string in the payload.
                 // Null outcome = conquest (see CivTracker.Diplomacy.cs).
