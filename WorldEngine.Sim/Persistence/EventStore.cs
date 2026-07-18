@@ -34,6 +34,7 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
     public void Reset()
     {
         _conn.Execute("PRAGMA foreign_keys=OFF;");
+        _conn.Execute("DROP TABLE IF EXISTS yearly_metrics;");
         _conn.Execute("DROP TABLE IF EXISTS CivTraits;");
         _conn.Execute("DROP TABLE IF EXISTS Dynasties;");
         _conn.Execute("DROP TABLE IF EXISTS SuccessionChain;");
@@ -69,6 +70,7 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
         _conn.Execute(DatabaseSchema.CreateSuccessionChain);
         _conn.Execute(DatabaseSchema.CreateDynasties);
         _conn.Execute(DatabaseSchema.CreateCivTraits);
+        _conn.Execute(DatabaseSchema.CreateYearlyMetrics);
         _conn.Execute(DatabaseSchema.CreateViewReadable);
         _conn.Execute(DatabaseSchema.CreateIndexYear);
         _conn.Execute(DatabaseSchema.CreateIndexType);
@@ -257,6 +259,52 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
             VALUES (@CivId, @Trait, @Year);
             """, new { CivId = civId, Trait = trait, Year = year });
     }
+
+    /// <summary>
+    /// Writes one row to the <c>yearly_metrics</c> table. Called once per in-game year by
+    /// <see cref="WorldEngine.Sim.Simulation.MetricsCollector"/>. Uses INSERT OR REPLACE so
+    /// re-running metrics on the same year (e.g. after a load) is idempotent.
+    /// </summary>
+    public void WriteMetricsRow(YearlyMetricsRow row)
+    {
+        _conn.Execute("""
+            INSERT OR REPLACE INTO yearly_metrics (
+                year, world_population, active_civs, collapsed_civs,
+                settlements_total, settlements_founded_ytd, settlements_abandoned_ytd,
+                settlements_conquered_ytd, deaths_starvation, deaths_disease,
+                deaths_war, deaths_other, mean_food_ratio, min_food_ratio,
+                settlements_in_shortage, settlements_in_crisis, active_diseases,
+                wars_active, wars_declared_ytd, wars_ended_truce_ytd,
+                wars_ended_conquest_ytd, tier1_count, tier2_count,
+                goals_formed_ytd, goals_resolved_ytd, mean_wellbeing
+            ) VALUES (
+                @Year, @WorldPopulation, @ActiveCivs, @CollapsedCivs,
+                @SettlementsTotal, @SettlementsFoundedYtd, @SettlementsAbandonedYtd,
+                @SettlementsConqueredYtd, @DeathsStarvation, @DeathsDisease,
+                @DeathsWar, @DeathsOther, @MeanFoodRatio, @MinFoodRatio,
+                @SettlementsInShortage, @SettlementsInCrisis, @ActiveDiseases,
+                @WarsActive, @WarsDeclaredYtd, @WarsEndedTruceYtd,
+                @WarsEndedConquestYtd, @Tier1Count, @Tier2Count,
+                @GoalsFormedYtd, @GoalsResolvedYtd, @MeanWellbeing
+            );
+            """, row);
+    }
+
+    /// <summary>
+    /// Returns the final row in <c>yearly_metrics</c> (highest year), or null if no rows exist.
+    /// Used by the headless runner summary to read final-year metrics.
+    /// </summary>
+    public YearlyMetricsRow? GetLastMetricsRow()
+    {
+        return _conn.QuerySingleOrDefault<YearlyMetricsRow>(
+            "SELECT * FROM yearly_metrics ORDER BY year DESC LIMIT 1;");
+    }
+
+    /// <summary>
+    /// Returns the number of rows in <c>yearly_metrics</c>. Used by tests.
+    /// </summary>
+    public int GetMetricsRowCount() =>
+        _conn.ExecuteScalar<int>("SELECT COUNT(*) FROM yearly_metrics;");
 
     /// <summary>
     /// Returns a <see cref="IHistoryQuery"/> backed by the current database connection.

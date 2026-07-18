@@ -35,6 +35,9 @@ public sealed class PhaseRunner
     private readonly List<(PendingEvent Pe, SimEvent Ev)> _pendingEventBatch = new();
     private long _ticksSinceLastWrite = 0;
 
+    // Metrics: accumulates YTD counters; sampled once per year when metrics_enabled = true.
+    private readonly MetricsAccumulator _metricsAcc = new();
+
     public PhaseRunner(
         SimConfig config,
         EventStore eventStore,
@@ -90,6 +93,11 @@ public sealed class PhaseRunner
         RunPhaseStub(world, SimPhase.ConflictResolution);
         RunEventGeneration(world, pending);
 
+        // Sample world health metrics once per year, after all phases and event generation.
+        // Must run AFTER RunEventGeneration so YTD event-type counters include this tick's events.
+        if (isAnnualTick && _config.SimLoop.MetricsEnabled)
+            MetricsCollector.Sample(world, _metricsAcc, _eventStore);
+
         world.CurrentTick++;
     }
 
@@ -143,6 +151,10 @@ public sealed class PhaseRunner
         var classifiedBatch = new List<(PendingEvent pe, SimEvent ev)>();
         foreach (var pe in pending)
         {
+            // Update YTD metrics accumulator from raw pending events (before gating).
+            // This ensures metrics are gate-independent — suppressed events still count.
+            UpdateMetricsAccumulator(pe);
+
             bool isFirst = !_eventCache.ContainsType(pe.Type);
             var (tier, impact) = SignificanceClassifier.Classify(pe.Type, pe.PayloadJson, isFirst);
             if (!_gate.ShouldRecord(pe.Type, tier)) continue;
@@ -187,6 +199,33 @@ public sealed class PhaseRunner
 
             if (_ticksSinceLastWrite >= _config.SimLoop.EventWriteBatchIntervalTicks)
                 FlushPendingEvents(world);
+        }
+    }
+
+    /// <summary>
+    /// Increments YTD metrics counters for events that drive balance-relevant aggregates.
+    /// Called from RunEventGeneration before gate filtering so metrics are gate-independent.
+    /// </summary>
+    private void UpdateMetricsAccumulator(PendingEvent pe)
+    {
+        switch (pe.Type)
+        {
+            case EventType.SettlementFounded:    _metricsAcc.SettlementsFoundedYtd++;    break;
+            case EventType.SettlementAbandoned:  _metricsAcc.SettlementsAbandonedYtd++; break;
+            case EventType.SettlementConquered:  _metricsAcc.SettlementsConqueredYtd++; break;
+            case EventType.WarDeclared:          _metricsAcc.WarsDeclaredYtd++;          break;
+            case EventType.GoalFormed:           _metricsAcc.GoalsFormedYtd++;           break;
+            case EventType.GoalResolved:         _metricsAcc.GoalsResolvedYtd++;         break;
+            case EventType.WarEnded:
+                // Classify by outcome string in the payload.
+                // Null outcome = conquest (see CivTracker.Diplomacy.cs).
+                // "truce", "surrender", "destruction" = non-conquest endings.
+                if (pe.PayloadJson.Contains("\"Outcome\":null")
+                    || !pe.PayloadJson.Contains("\"Outcome\":"))
+                    _metricsAcc.WarsEndedConquestYtd++;
+                else
+                    _metricsAcc.WarsEndedTruceYtd++;
+                break;
         }
     }
 

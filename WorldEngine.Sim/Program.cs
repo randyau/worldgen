@@ -96,12 +96,14 @@ var wallEnd   = DateTime.UtcNow;
 
 // ─── Collect summary stats ────────────────────────────────────────────────────
 
-double wallSec = (wallEnd - wallStart).TotalSeconds;
+double wallSec    = (wallEnd - wallStart).TotalSeconds;
 double ticksPerSec = wallSec > 0 ? totalTicks / wallSec : 0;
 
-int worldPop      = world.Settlements.Values.Sum(s => s.Population);
-int activeCivs    = world.Civilizations.Values.Count(c => !c.IsCollapsed);
-int collapsedCivs = world.Civilizations.Values.Count(c => c.IsCollapsed);
+// Prefer final metrics row (A2) for population/civ counts; fall back to WorldState direct reads.
+var lastMetrics   = simConfig.SimLoop.MetricsEnabled ? eventStore.GetLastMetricsRow() : null;
+int worldPop      = lastMetrics?.WorldPopulation ?? world.Settlements.Values.Sum(s => s.Population);
+int activeCivs    = lastMetrics?.ActiveCivs       ?? world.Civilizations.Values.Count(c => !c.IsCollapsed);
+int collapsedCivs = lastMetrics?.CollapsedCivs    ?? world.Civilizations.Values.Count(c => c.IsCollapsed);
 
 // Event-based aggregates from the DB (after flush, all events are committed)
 int settFounded  = 0, settAbandoned = 0, settConquered = 0;
@@ -149,6 +151,15 @@ Console.WriteLine($"  Active civs:        {activeCivs}");
 Console.WriteLine($"  Collapsed civs:     {collapsedCivs}");
 Console.WriteLine($"  Settlements total:  {world.Settlements.Count}");
 Console.WriteLine($"  Ruins total:        {world.Ruins.Count}");
+if (lastMetrics is not null)
+{
+    Console.WriteLine($"  Food ratio (mean):  {lastMetrics.MeanFoodRatio:F2}");
+    Console.WriteLine($"  Food ratio (min):   {lastMetrics.MinFoodRatio:F2}");
+    Console.WriteLine($"  Setts in shortage:  {lastMetrics.SettlementsInShortage}");
+    Console.WriteLine($"  Active diseases:    {lastMetrics.ActiveDiseases}");
+    Console.WriteLine($"  Mean wellbeing:     {lastMetrics.MeanWellbeing:F3}");
+    Console.WriteLine($"  Metrics rows:       {years} (yearly_metrics table)");
+}
 Console.WriteLine();
 Console.WriteLine($"  Settlements founded:  {settFounded}");
 Console.WriteLine($"  Settlements abandoned:{settAbandoned}");

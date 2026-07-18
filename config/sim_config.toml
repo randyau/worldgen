@@ -77,6 +77,8 @@ fast_ticks_per_second        = 10.0   # seasonal ticks per real second at Fast s
 ultrafast_snapshot_interval_ticks = 160  # push UI snapshot every N ticks in Ultrafast (160 = 10 years)
 # Persistence (moved from dead [sim_loop.persistence] sub-table)
 event_write_batch_interval_ticks = 20    # batch event writes every N ticks; ~1 year at Normal speed; 0=every tick
+# Metrics: sample world health once per in-game year into yearly_metrics table (Phase A2)
+metrics_enabled              = true   # false only for micro-benchmarks where DB writes must be minimized
 
 # =============================================================================
 # EVENTS AND HISTORY

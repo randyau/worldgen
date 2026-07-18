@@ -18,6 +18,13 @@ public class SimLoopConfig
     public int AutoSaveIntervalTicks          { get; set; } = 960; // ~60 years at default 16 ticks/year
     public string AutoSaveDir { get; set; } = "worldsave";
 
+    /// <summary>
+    /// When true, MetricsCollector samples world state once per in-game year and writes
+    /// a row to the yearly_metrics table in world.db. Safe to enable in all modes.
+    /// Default: true. Disable only for micro-benchmarks where DB writes must be minimized.
+    /// </summary>
+    public bool MetricsEnabled { get; set; } = true;
+
     // ─── Derived time-scale helpers ───────────────────────────────────────────
 
     /// <summary>Ticks per season (same as TicksPerSeasonalChange — more readable alias).</summary>

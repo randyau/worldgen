@@ -171,6 +171,41 @@ public static class DatabaseSchema
         );
         """;
 
+    /// <summary>
+    /// Per-year world health metrics table. One row per in-game year when metrics_enabled = true.
+    /// Written by MetricsCollector on the sim thread; independent of the event gate.
+    /// </summary>
+    public const string CreateYearlyMetrics = """
+        CREATE TABLE IF NOT EXISTS yearly_metrics (
+            year                     INTEGER PRIMARY KEY,
+            world_population         INTEGER NOT NULL DEFAULT 0,
+            active_civs              INTEGER NOT NULL DEFAULT 0,
+            collapsed_civs           INTEGER NOT NULL DEFAULT 0,
+            settlements_total        INTEGER NOT NULL DEFAULT 0,
+            settlements_founded_ytd  INTEGER NOT NULL DEFAULT 0,
+            settlements_abandoned_ytd INTEGER NOT NULL DEFAULT 0,
+            settlements_conquered_ytd INTEGER NOT NULL DEFAULT 0,
+            deaths_starvation        INTEGER NOT NULL DEFAULT 0,
+            deaths_disease           INTEGER NOT NULL DEFAULT 0,
+            deaths_war               INTEGER NOT NULL DEFAULT 0,
+            deaths_other             INTEGER NOT NULL DEFAULT 0,
+            mean_food_ratio          REAL    NOT NULL DEFAULT 1.0,
+            min_food_ratio           REAL    NOT NULL DEFAULT 1.0,
+            settlements_in_shortage  INTEGER NOT NULL DEFAULT 0,
+            settlements_in_crisis    INTEGER NOT NULL DEFAULT 0,
+            active_diseases          INTEGER NOT NULL DEFAULT 0,
+            wars_active              INTEGER NOT NULL DEFAULT 0,
+            wars_declared_ytd        INTEGER NOT NULL DEFAULT 0,
+            wars_ended_truce_ytd     INTEGER NOT NULL DEFAULT 0,
+            wars_ended_conquest_ytd  INTEGER NOT NULL DEFAULT 0,
+            tier1_count              INTEGER NOT NULL DEFAULT 0,
+            tier2_count              INTEGER NOT NULL DEFAULT 0,
+            goals_formed_ytd         INTEGER NOT NULL DEFAULT 0,
+            goals_resolved_ytd       INTEGER NOT NULL DEFAULT 0,
+            mean_wellbeing           REAL    NOT NULL DEFAULT 0.0
+        );
+        """;
+
     // Indexes
     public const string CreateIndexYear     = "CREATE INDEX IF NOT EXISTS idx_events_year     ON Events(Year);";
     public const string CreateIndexType     = "CREATE INDEX IF NOT EXISTS idx_events_type     ON Events(Type);";
