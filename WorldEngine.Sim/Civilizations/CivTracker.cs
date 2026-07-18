@@ -114,10 +114,11 @@ public static partial class CivTracker
         // Claim initial territory around the new city
         ClaimInitialTerritory(cmd.Tile, civId, world, pending);
 
-        // Mark goal as progressed for FoundCity delegated founders
+        // Mark FoundCity goal as fully complete on successful founding (one city = done).
+        // Setting to 1.0 lets GoalManager fire GoalResolved(completed) and remove the goal cleanly.
         foreach (var g in founder.Goals)
             if (g.Type == GoalType.FoundCity)
-                g.Progress = Math.Min(1f, g.Progress + 0.5f);
+                g.Progress = 1f;
 
         FireSettlementFounded(stub, founder, world, pending);
 

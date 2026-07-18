@@ -163,18 +163,16 @@ public static partial class CivTracker
             int totalCities = civ.SettlementCount + civ.ColonyCount;
             if (totalCities >= cfg.MaxCitiesPerCiv) continue;
 
-            // Skip if any member already has a FoundCity goal (avoid duplicate delegates)
-            bool alreadyDelegated = false;
+            // Allow at most 2 concurrent delegates per civ — one active delegate often takes many
+            // years to find a qualifying tile; a second increases throughput without flooding.
+            int activeFoundCityDelegates = 0;
             foreach (var memberId in civ.Members)
             {
                 if (world.GetEntity(memberId) is Tier1Character mc && mc.IsAlive
                     && mc.Goals.Any(g => g.Type == GoalType.FoundCity))
-                {
-                    alreadyDelegated = true;
-                    break;
-                }
+                    activeFoundCityDelegates++;
             }
-            if (alreadyDelegated) continue;
+            if (activeFoundCityDelegates >= 2) continue;
 
             // Pick the most ambitious non-ruler, non-founder living member.
             // Use the same effective-cooldown formula as InCivFoundingCooldown so delegation
@@ -192,6 +190,7 @@ public static partial class CivTracker
                 if (world.GetEntity(memberId) is not Tier1Character m || !m.IsAlive) continue;
                 if (m.Id == civ.RulerId) continue;     // ruler doesn't self-delegate
                 if (world.ActiveFounders.Contains(m.Id)) continue; // already a founder
+                if (m.Goals.Any(g => g.Type == GoalType.FoundCity)) continue; // already has goal
                 if (m.Personality.Ambition > bestAmbition)
                 {
                     bestAmbition = m.Personality.Ambition;

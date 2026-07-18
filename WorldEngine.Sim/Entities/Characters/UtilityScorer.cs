@@ -260,11 +260,33 @@ public static class UtilityScorer
         {
             var tileFert = world.GetTile(c.Location);
             bool hasTerritory = world.TerritoryMap.ContainsKey(c.Location);
-            // Score is highest on unowned high-fertility tiles (prime city-founding candidates)
-            float foundProb = (tileFert.Fertility / 255f) * c.Aptitude.Diligence
-                            * (hasTerritory ? 0.3f : 1.0f); // penalty for already-claimed land
-            if (!InCivFoundingCooldown(c, world, cfg) && tileFert.Fertility > 0
-                && tileFert.BaseMoisture >= cfg.MinBaseMoistureToSettle)
+            // foundProb: blended fertility + Diligence (sum not product — avoids near-zero values
+            // when either component is small; delegate always gets at least 0.4 on a viable tile).
+            float fertFrac = tileFert.Fertility / 255f;
+            float foundProb = (0.6f * fertFrac + 0.4f * c.Aptitude.Diligence)
+                            * (hasTerritory ? 0.4f : 1.0f); // softer penalty for already-claimed land
+            // Pre-check: reject if too close to any settlement — avoids emitting an action
+            // the resolver will silently discard (GlobalSettlementMinDist enforcement).
+            bool tooCloseToSettle = false;
+            if (cfg.GlobalSettlementMinDist > 0)
+            {
+                int gmd = cfg.GlobalSettlementMinDist;
+                int gmdSq = gmd * gmd;
+                foreach (var s in world.Settlements.Values)
+                {
+                    int dx = c.Location.X - s.Tile.X, dy = c.Location.Y - s.Tile.Y;
+                    if (dx * dx + dy * dy < gmdSq) { tooCloseToSettle = true; break; }
+                }
+            }
+
+            // FoundCity delegates bypass the founding cooldown — they are explicitly assigned
+            // to found a city and the civ has already decided it wants expansion.
+            // The civ-level delegation check (RunCityExpansionDecisions) already enforces cooldown
+            // at delegation time; double-checking here blocks delegates who were assigned
+            // before the last founding and prevents all their work from bearing fruit.
+            if (tileFert.Fertility >= cfg.MinFertilityToSettle
+                && tileFert.BaseMoisture >= cfg.MinBaseMoistureToSettle
+                && !tooCloseToSettle)
             {
                 actions.Add(new(new EstablishSettlement(c.Id, c.Location),
                     Score(c, ActionType.FoundCity, foundProb, world, cfg)));

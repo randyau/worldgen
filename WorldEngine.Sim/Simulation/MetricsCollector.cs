@@ -60,12 +60,20 @@ public static class MetricsCollector
             : 1.0f;
 
         // ── Civilizations ─────────────────────────────────────────────────────
-        int warsActive = 0;
+        int warsActive           = 0;
+        int maxCitiesPerCiv      = 0;
+        int totalCitiesAllCivs   = 0;
 
         foreach (var civ in civs.Values)
         {
             if (civ.IsCollapsed) collapsedCivs++;
-            else                 activeCivs++;
+            else
+            {
+                activeCivs++;
+                int civCities = civ.SettlementCount + civ.ColonyCount;
+                totalCitiesAllCivs += civCities;
+                if (civCities > maxCitiesPerCiv) maxCitiesPerCiv = civCities;
+            }
 
             // Count each war pair once: only count from the civ that has a higher
             // numeric ID to avoid double-counting.
@@ -73,6 +81,8 @@ public static class MetricsCollector
                 if (civ.Id.Value > enemy.Value)
                     warsActive++;
         }
+
+        float meanCitiesPerCiv = activeCivs > 0 ? (float)totalCitiesAllCivs / activeCivs : 0f;
 
         // ── Characters ────────────────────────────────────────────────────────
         int tier1Count      = world.Entities.Characters.Count;
@@ -125,7 +135,9 @@ public static class MetricsCollector
             tier2Count:              tier2Count,
             goalsFormedYtd:          goalsFormedYtd,
             goalsResolvedYtd:        goalsResolvedYtd,
-            meanWellbeing:           meanWellbeing));
+            meanWellbeing:           meanWellbeing,
+            maxCitiesPerCivActual:   maxCitiesPerCiv,
+            meanCitiesPerCiv:        meanCitiesPerCiv));
 
         // Reset YTD counters for the next year
         acc.ResetYtd();

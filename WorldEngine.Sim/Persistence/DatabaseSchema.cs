@@ -31,6 +31,12 @@ public static class DatabaseSchema
     public const string MigrateEventsAddSignificanceScore =
         "ALTER TABLE Events ADD COLUMN SignificanceScore REAL NOT NULL DEFAULT 0;";
 
+    /// <summary>Migration: adds per-civ city count columns to yearly_metrics (S1 growth overhaul).</summary>
+    public const string MigrateYearlyMetricsAddCityColumns =
+        "ALTER TABLE yearly_metrics ADD COLUMN max_cities_per_civ_actual INTEGER NOT NULL DEFAULT 0;";
+    public const string MigrateYearlyMetricsAddMeanCities =
+        "ALTER TABLE yearly_metrics ADD COLUMN mean_cities_per_civ REAL NOT NULL DEFAULT 0.0;";
+
     public const string CreateEventEntities = """
         CREATE TABLE IF NOT EXISTS EventEntities (
             EventId    INTEGER NOT NULL REFERENCES Events(Id),
@@ -202,7 +208,9 @@ public static class DatabaseSchema
             tier2_count              INTEGER NOT NULL DEFAULT 0,
             goals_formed_ytd         INTEGER NOT NULL DEFAULT 0,
             goals_resolved_ytd       INTEGER NOT NULL DEFAULT 0,
-            mean_wellbeing           REAL    NOT NULL DEFAULT 0.0
+            mean_wellbeing           REAL    NOT NULL DEFAULT 0.0,
+            max_cities_per_civ_actual INTEGER NOT NULL DEFAULT 0,
+            mean_cities_per_civ       REAL    NOT NULL DEFAULT 0.0
         );
         """;
 

@@ -91,6 +91,12 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
         // SQLite does not support ALTER TABLE ADD COLUMN IF NOT EXISTS, so we catch the error.
         try { _conn.Execute(DatabaseSchema.MigrateEventsAddSignificanceScore); }
         catch (Microsoft.Data.Sqlite.SqliteException) { /* column already exists */ }
+
+        // Migration: add per-civ city count columns to yearly_metrics (S1 growth overhaul).
+        try { _conn.Execute(DatabaseSchema.MigrateYearlyMetricsAddCityColumns); }
+        catch (Microsoft.Data.Sqlite.SqliteException) { /* column already exists */ }
+        try { _conn.Execute(DatabaseSchema.MigrateYearlyMetricsAddMeanCities); }
+        catch (Microsoft.Data.Sqlite.SqliteException) { /* column already exists */ }
     }
 
     /// <summary>
@@ -283,7 +289,8 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
                 settlements_in_shortage, settlements_in_crisis, active_diseases,
                 wars_active, wars_declared_ytd, wars_ended_truce_ytd,
                 wars_ended_conquest_ytd, tier1_count, tier2_count,
-                goals_formed_ytd, goals_resolved_ytd, mean_wellbeing
+                goals_formed_ytd, goals_resolved_ytd, mean_wellbeing,
+                max_cities_per_civ_actual, mean_cities_per_civ
             ) VALUES (
                 @Year, @WorldPopulation, @ActiveCivs, @CollapsedCivs,
                 @SettlementsTotal, @SettlementsFoundedYtd, @SettlementsAbandonedYtd,
@@ -292,7 +299,8 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
                 @SettlementsInShortage, @SettlementsInCrisis, @ActiveDiseases,
                 @WarsActive, @WarsDeclaredYtd, @WarsEndedTruceYtd,
                 @WarsEndedConquestYtd, @Tier1Count, @Tier2Count,
-                @GoalsFormedYtd, @GoalsResolvedYtd, @MeanWellbeing
+                @GoalsFormedYtd, @GoalsResolvedYtd, @MeanWellbeing,
+                @MaxCitiesPerCivActual, @MeanCitiesPerCiv
             );
             """, row);
     }

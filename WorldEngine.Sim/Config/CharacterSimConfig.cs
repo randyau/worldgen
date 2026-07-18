@@ -32,21 +32,21 @@ public sealed class CharacterSimConfig
 
     // Colonization: separate goal type for long-range settlement founding
     // Minimum tile distance from any same-civ settlement for a tile to count as "frontier"
-    public int   ColonyMinDistance         { get; set; } = 25;
+    public int   ColonyMinDistance         { get; set; } = 10;
     // Minimum tile distance from ANY settlement (any civ) to prevent clustering across factions
-    public int   GlobalSettlementMinDist   { get; set; } = 8;
+    public int   GlobalSettlementMinDist   { get; set; } = 4;
     // Score bonus when a tile is beyond ColonyMinDistance from all same-civ settlements
     public int   ColonyFrontierBonus       { get; set; } = 120;
     // Ambition threshold to form a Colonize goal (higher than regular expansion)
-    public float ColonizeAmbitionThreshold { get; set; } = 0.72f;
+    public float ColonizeAmbitionThreshold { get; set; } = 0.5f;
     // Hard cap on live colonies per civ; Colonize goals stop forming beyond this
-    public int   MaxColoniesPerCiv         { get; set; } = 3;
+    public int   MaxColoniesPerCiv         { get; set; } = 5;
 
     // City-State model (M3 Phase 3.0): ruler-delegated city founding
     // Total city cap per civ (settlements + colonies combined)
-    public int   MaxCitiesPerCiv               { get; set; } = 8;
+    public int   MaxCitiesPerCiv               { get; set; } = 15;
     // Minimum Ambition for a civ member to be selected as a city delegate
-    public float CityFoundingAmbitionThreshold { get; set; } = 0.5f;
+    public float CityFoundingAmbitionThreshold { get; set; } = 0.3f;
 
     // When shelter drops below this threshold, characters actively prefer tiles with natural cover
     public float ShelterSeekThreshold   { get; set; } = 0.35f;
@@ -79,7 +79,7 @@ public sealed class CharacterSimConfig
     public int   PerceptionRadius       { get; set; } = 3;
     public int   HealthPerSeasonHeal    { get; set; } = 5;
     public int   CombatDamageBase       { get; set; } = 20;
-    public int   MinFertilityToSettle    { get; set; } = 60;
+    public int   MinFertilityToSettle    { get; set; } = 30;
     // Minimum base moisture (0-255) required to found a settlement.
     // Prevents founding on tiles that are climatically too dry to sustain a population.
     // Deposit-rich founding is still allowed below this threshold (miners live there anyway).
@@ -239,7 +239,7 @@ public sealed class CharacterSimConfig
 
     // ─── Border tension (civ-level war trigger) ───────────────────────────────
     // Settlements within this tile radius accumulate tension toward their neighbour civ each year.
-    public int   WarProximityRadius         { get; set; } = 15;
+    public int   WarProximityRadius         { get; set; } = 40;
     // Base tension accrued per close settlement pair per year; multiplied by proximity (0–1)
     // and the ruler's Aggression, so aggressive civs with many border settlements escalate fast.
     public float TensionAccrualPerPair      { get; set; } = 0.12f;

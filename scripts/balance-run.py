@@ -49,7 +49,8 @@ from pathlib import Path
 # Columns to show in the cross-seed summary table
 SUMMARY_COLS = [
     "world_population", "active_civs", "collapsed_civs",
-    "settlements_total", "settlements_in_shortage", "settlements_in_crisis",
+    "settlements_total", "max_cities_per_civ_actual", "mean_cities_per_civ",
+    "settlements_in_shortage", "settlements_in_crisis",
     "active_diseases", "wars_active", "mean_food_ratio", "min_food_ratio",
     "mean_wellbeing", "tier1_count", "tier2_count",
 ]

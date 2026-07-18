@@ -38,7 +38,9 @@ public sealed class YearlyMetricsRow
         int   tier2Count,
         int   goalsFormedYtd,
         int   goalsResolvedYtd,
-        float meanWellbeing)
+        float meanWellbeing,
+        int   maxCitiesPerCivActual,
+        float meanCitiesPerCiv)
     {
         Year                   = year;
         WorldPopulation        = worldPopulation;
@@ -66,6 +68,8 @@ public sealed class YearlyMetricsRow
         GoalsFormedYtd         = goalsFormedYtd;
         GoalsResolvedYtd       = goalsResolvedYtd;
         MeanWellbeing          = meanWellbeing;
+        MaxCitiesPerCivActual  = maxCitiesPerCivActual;
+        MeanCitiesPerCiv       = meanCitiesPerCiv;
     }
 
     // ── Properties (snake_case aliases handled by Dapper column mapping) ──────
@@ -95,4 +99,8 @@ public sealed class YearlyMetricsRow
     public int   GoalsFormedYtd          { get; set; }
     public int   GoalsResolvedYtd        { get; set; }
     public float MeanWellbeing           { get; set; }
+    /// <summary>Maximum number of cities (settlements + colonies) owned by any single active civ this year.</summary>
+    public int   MaxCitiesPerCivActual   { get; set; }
+    /// <summary>Mean cities per active civ this year (settlements_total / active_civs).</summary>
+    public float MeanCitiesPerCiv        { get; set; }
 }

@@ -273,16 +273,19 @@ expansion_home_penalty    = 120   # tile score penalty applied to own-civ settle
 expansion_empty_tile_bonus = 80   # tile score bonus for tiles outside every settlement's hinterland when Expansion goal is active
 expansion_compactness_radius = 8  # max tile distance from a same-civ settlement that earns the compactness bonus
 expansion_compactness_bonus  = 60 # bonus added when an unclaimed tile is near an existing same-civ settlement (encourages blob growth)
-max_settlements_per_civ      = 5  # hard cap on local settlements per civ; at 10 sq km/tile civs are city-states, not village networks
+max_settlements_per_civ      = 15  # generous backstop; splinter mechanic (S2) is the real soft cap at ~3–7 cities
+                                   # (was 5 — primary limiter, removed; S1 growth overhaul 2026-07-18)
 
 # Colonization — separate long-range founding goal
-colony_min_distance         = 25   # tiles from nearest same-civ settlement for a tile to be "frontier"
-global_settlement_min_dist  = 8    # minimum tiles from ANY existing settlement (any civ) — prevents clustering
+colony_min_distance         = 10   # tiles from nearest same-civ settlement for a tile to be "frontier"
+                                   # (was 25→15→10; S1 growth overhaul 2026-07-18)
+global_settlement_min_dist  = 4    # minimum tiles from ANY existing settlement (any civ) — prevents clustering
+                                   # (was 8→6→4; S1 growth overhaul 2026-07-18)
 colony_frontier_bonus       = 120  # tile score bonus for candidate tiles in frontier territory
-colonize_ambition_threshold = 0.72 # min Ambition to form a Colonize goal (higher than expansion)
-max_colonies_per_civ        = 3    # hard cap on live colonies; Colonize goals stop forming once reached
-max_cities_per_civ          = 8    # M3: total city cap per civ (settlements + colonies combined); ruler stops delegating once reached
-city_founding_ambition_threshold = 0.5  # M3: minimum Ambition for a civ member to be selected as city-founding delegate
+colonize_ambition_threshold = 0.5  # min Ambition to form a Colonize goal (was 0.72 — too restrictive; S1 2026-07-18)
+max_colonies_per_civ        = 5    # hard cap on live colonies (was 3; S1 growth overhaul 2026-07-18)
+max_cities_per_civ          = 15   # total city cap per civ (was 8; soft backstop, splinter is real limiter; S1 2026-07-18)
+city_founding_ambition_threshold = 0.3  # min Ambition for delegation (was 0.5 — blocked ~60% of chars; S1 2026-07-18)
 shelter_seek_threshold    = 0.35  # below this shelter level, characters prefer terrain with natural cover when choosing where to move
 shelter_seek_tile_bonus   = 80    # max tile-score bonus for a perfect-shelter biome (forest/mountain) when shelter-seeking
                                    # scales by desperation: bonus × BiomeShelterScore × (1 - shelter)
@@ -304,7 +307,8 @@ softmax_temp_max          = 2.0
 perception_radius         = 3
 health_per_season_heal    = 5
 combat_damage_base        = 20
-min_fertility_to_settle      = 90   # only genuinely fertile land gets settled; prevents every mediocre tile from being claimed
+min_fertility_to_settle      = 30   # allow marginal land to be settled; only truly barren tiles excluded
+                                   # (was 90→50→30; S1 growth overhaul 2026-07-18)
 min_base_moisture_to_settle  = 15     # minimum BaseMoisture (0-255) required to found a settlement; prevents founding in climatically arid tiles
 deposit_settle_threshold     = 0.5    # min deposit value to settle despite low fertility
 deposit_score_multiplier     = 0.5    # how much deposit value boosts establish score
@@ -341,8 +345,10 @@ bond_max_base                 = 1
 bond_max_per_compassion       = 2
 
 hinterland_drain_factor          = 0.5   # effective fertility multiplier inside same-civ hinterland (0.5 = half claimed)
-base_founding_cooldown_years     = 4     # base cooldown between same-civ settlements; halves with population
-min_founding_cooldown_years      = 2     # floor — even large civs can't expand faster than once per 2 years
+base_founding_cooldown_years     = 2     # base cooldown between same-civ settlements; halves with population
+                                         # (was 4; S1 growth overhaul 2026-07-18)
+min_founding_cooldown_years      = 1     # floor — even large civs can't expand faster than once per year
+                                         # (was 2; S1 growth overhaul 2026-07-18)
 founding_cooldown_pop_scale      = 2000  # civ pop at which cooldown halves (4y→2y at 2k pop)
 civ_birth_min_pop            = 20   # lowered from 30; settlements reach this faster with improved farming
 civ_birth_chance_per_season = 0.01  # 1% per year at min-pop; keeps character count manageable for performance
@@ -409,7 +415,8 @@ succession_crisis_decay_mult = 2.5   # decay rate multiplier for settlements bey
 succession_stable_radius     = 15    # tile radius from capital immune to succession instability
 
 # Border tension — civ-level territorial pressure that triggers war without ruler proximity
-war_proximity_radius        = 15    # tile radius within which settlements build tension toward each other
+war_proximity_radius        = 40    # tile radius within which settlements build tension toward each other
+                                    # (was 15 — too small for 400×300 tile world; S1 growth overhaul 2026-07-18)
 tension_accrual_per_pair    = 0.12  # tension added per close settlement pair per year (× proximity factor × ruler Aggression)
 tension_decay_rate          = 0.15  # fraction of tension lost each year when no proximate settlements exist
 tension_war_threshold       = 1.0   # accumulated tension at which war is declared (if ruler Aggression ≥ war_aggression_threshold)
@@ -576,10 +583,13 @@ store_raid_destruction_per_damage  = 0.008  # fraction of ALL stores destroyed p
 [territory]
 claim_tiles_per_person    = 8    # 1 tile per N people; city of 800 → 100 tiles (~radius 5)
 min_city_tiles            = 7    # radius-1 circle, always retained
-max_city_tiles            = 120  # absolute upper bound on tile count regardless of radius
-max_territory_radius      = 10   # hard Euclidean radius cap from city center; territory never expands beyond this
+max_city_tiles            = 700  # absolute upper bound on tile count (~radius-15 circle)
+                                  # (was 120/radius-6; S1 growth overhaul 2026-07-18)
+max_territory_radius      = 20   # hard Euclidean radius cap from city center; territory never expands beyond this
+                                  # (was 10; S1 growth overhaul 2026-07-18 — larger territories aid contact)
                                   # (TOML was territory_max_radius — renamed to match C# property max_territory_radius)
-territory_growth_per_year = 4    # max tiles claimed per city per year (prevents instant snowball)
+territory_growth_per_year = 8    # max tiles claimed per city per year (prevents instant snowball)
+                                  # (was 4; S1 growth overhaul 2026-07-18 — faster expansion to reach contact)
 initial_city_claim_radius = 2    # tiles claimed at founding (~13 tiles)
 
 # =============================================================================
