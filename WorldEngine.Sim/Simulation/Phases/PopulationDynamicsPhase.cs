@@ -20,12 +20,17 @@ public sealed class PopulationDynamicsPhase
     private readonly SimConfig _simCfg;
     private readonly int _ticksPerYear;
 
+    // Pre-baked per-biome wildlife risk multipliers, indexed by (int)BiomeType.
+    // Built once at construction from WildlifeRiskConfig (same pattern as ResourcePressurePhase._foodTable).
+    private readonly float[] _wildlifeRiskTable;
+
     public PopulationDynamicsPhase(SimConfig cfg)
     {
-        _simCfg      = cfg;
-        _cfg         = cfg.Settlement;
+        _simCfg           = cfg;
+        _cfg              = cfg.Settlement;
         // Derive from SimLoopConfig so the rate scales if TicksPerSeasonalChange is changed.
-        _ticksPerYear = cfg.SimLoop.TicksPerYear;
+        _ticksPerYear      = cfg.SimLoop.TicksPerYear;
+        _wildlifeRiskTable = cfg.WildlifeRisk.BuildTable();
     }
 
     public List<PendingEvent> Execute(WorldState world, bool isAnnualTick = false)
@@ -310,7 +315,10 @@ public sealed class PopulationDynamicsPhase
             if (stub.Population <= 0) continue;
 
             var biome         = (BiomeType)world.TileGrid.GetTile(coord).BiomeType;
-            float biomeMult   = BiomeWildlifeRisk(biome);
+            int  biomeIdx     = (int)biome;
+            float biomeMult   = (biomeIdx >= 0 && biomeIdx < _wildlifeRiskTable.Length)
+                              ? _wildlifeRiskTable[biomeIdx]
+                              : _simCfg.WildlifeRisk.DefaultRisk;
             float sizeDefense = Math.Min(1f, (float)stub.Population / _cfg.WildlifeDefensePopScale);
             float attackChance = _cfg.WildlifeAttackBaseChance * biomeMult * (1f - sizeDefense * 0.8f);
             float roll = WorldRng.FloatAt(world.WorldSeed, year, coord.X * 31 + coord.Y, 0, S.PopWildlife);
@@ -347,26 +355,6 @@ public sealed class PopulationDynamicsPhase
     }
 
     // ─── Helper ───────────────────────────────────────────────────────────────
-
-    // Open terrain (plains/savanna/desert) offers visibility — raiding predators prefer dense cover.
-    // Forest/jungle/swamp multipliers are above 1.0; open biomes below 1.0.
-    private static float BiomeWildlifeRisk(BiomeType biome) => biome switch
-    {
-        BiomeType.TropicalRainforest => 2.0f,
-        BiomeType.BorealForest       => 1.6f,
-        BiomeType.TemperateForest    => 1.4f,
-        BiomeType.Swamp              => 1.5f,
-        BiomeType.Grassland          => 1.0f,
-        BiomeType.Hills              => 0.9f,
-        BiomeType.Mountain           => 0.8f,
-        BiomeType.Savanna            => 0.6f,
-        BiomeType.Plains             => 0.5f,
-        BiomeType.Desert             => 0.4f,
-        BiomeType.Tundra             => 0.5f,
-        BiomeType.HighMountain       => 0.3f,
-        BiomeType.Volcanic           => 0.4f,
-        _                            => 0.6f
-    };
 
     private static PendingEvent MakePopEvent(EventType type, SettlementStub stub, TileCoord tile, int newPop)
     {

@@ -838,3 +838,32 @@ found_city       = { shelter = 0.50, status = 0.50, _default = 0.0 }
 # _default = 0.1 matches the original _ => 0.1f fallback for all unlisted actions
 create           = { _default = 0.1 }
 flee             = { _default = 0.1 }
+
+# ─── Wildlife raid risk by biome (D3) ─────────────────────────────────────────
+# Per-biome multiplier applied to settlement.wildlife_attack_base_chance.
+# Extracted from BiomeWildlifeRisk() in PopulationDynamicsPhase.cs.
+# All values identical to the previous hardcoded C# switch.
+#
+# Design: dense cover gives predators ambush advantage (>1.0);
+#         open terrain gives defenders visibility (<1.0).
+# default_risk: fallback for any biome not listed here (was _ => 0.6f).
+# Tune individual biomes to shift where wildlife raids concentrate.
+# Note: ocean/coastal_water/beach are never settlement tiles but are listed
+#       with default values so the table is complete for reference.
+[wildlife_risk]
+default_risk = 0.6   # fallback for unlisted biomes; matches original _ => 0.6f
+
+[wildlife_risk.biome_risk]
+tropical_rainforest = 2.0   # dense jungle canopy — hardest to defend; predator's home turf
+swamp               = 1.5   # murky terrain, poor visibility, many ambush points
+boreal_forest       = 1.6   # northern conifer forest; wolves/bears are apex threats
+temperate_forest    = 1.4   # mixed woodland; moderate ambush risk
+grassland           = 1.0   # open but with enough grass cover for ambush (baseline)
+hills               = 0.9   # rolling terrain; some cover, some visibility
+mountain            = 0.8   # sparse vegetation; predators visible at range
+savanna             = 0.6   # sparse trees; good long-range visibility for defenders
+plains              = 0.5   # open farmland; predators easily spotted
+tundra              = 0.5   # sparse cover; cold limits predator density
+desert              = 0.4   # near-barren; limited wildlife population to threaten settlers
+high_mountain       = 0.3   # alpine — too inhospitable for most large predators
+volcanic            = 0.4   # hostile terrain limits wildlife population

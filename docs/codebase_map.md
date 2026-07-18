@@ -27,6 +27,8 @@ One-line description of every non-trivial source file. Check here before running
 - `BeastsSimConfig.cs / BeastSpawnConfig.cs / CombatConfig.cs` — beast behavior constants
 - `CulturalTraitsConfig.cs` — M3.2: thresholds for assigning CulturalTrait values (Militaristic/Expansionist/etc.)
 - `UnrestConfig.cs` — S2: [unrest] section — unrest drivers, decay, secession threshold/chance/cluster knobs
+- `UtilityAffinityConfig.cs` — D3: [utility_affinity] section — goal→action affinity matrix and action need-weight table (UtilityAffinityTables pre-bakes both into float arrays at construction)
+- `WildlifeRiskConfig.cs` — D3: [wildlife_risk] section — per-biome wildlife raid multipliers; BuildTable() returns a float[16] indexed by (int)BiomeType
 - Other `*Config.cs` — per-system TOML sections (Climate, Elevation, Tectonic, etc.)
 
 ## WorldEngine.Sim/Tiles/
