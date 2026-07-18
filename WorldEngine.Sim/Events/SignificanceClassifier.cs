@@ -88,6 +88,8 @@ public static class SignificanceClassifier
             EventType.CharacterCrystallized   => PopulationImpact.Minor,
             EventType.ArtisanCrafted          => PopulationImpact.None,
             EventType.CivTraitAcquired        => PopulationImpact.None,
+            // S2 splinter — Regional minimum; Headline when 3+ settlements secede
+            EventType.CivSplintered           => PopulationImpact.Major,
             // M4 Phase 1 emissary events
             EventType.EmissaryDispatched       => PopulationImpact.None,
             EventType.EmissaryLost             => PopulationImpact.None,   // Destruction verb → Regional floor

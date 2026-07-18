@@ -148,6 +148,7 @@ public enum EventType
     TerritoryLost           = 3209,
     ImprovementBuilt        = 3210,
     CivTraitAcquired        = 3211,   // civ crossed a threshold and earned a cultural trait
+    CivSplintered           = 3212,   // settlement(s) seceded and formed a new civilization (S2 splinter mechanic)
 
     // M2+ population events (3400-range)
     SettlementGrew          = 3401,
@@ -259,6 +260,7 @@ public static class VerbClassification
         EventType.TerritoryLost      => VerbClass.Destruction,
         EventType.ImprovementBuilt   => VerbClass.Creation,
         EventType.CivTraitAcquired   => VerbClass.Transformation,
+        EventType.CivSplintered      => VerbClass.Transformation,
         // M4 Phase 1 emissary events
         EventType.EmissaryDispatched       => VerbClass.Transfer,
         EventType.EmissaryLost             => VerbClass.Destruction,

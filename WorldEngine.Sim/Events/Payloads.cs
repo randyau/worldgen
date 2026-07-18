@@ -204,3 +204,18 @@ internal sealed record ReligionFoundedPayload(
     long   FounderId, string FounderName,
     int    Year,
     int    TileX, int TileY);
+
+// ─── S2 Splinter / Secession ─────────────────────────────────────────────────
+
+/// <summary>
+/// Fired when one or more settlements secede from a parent civ and form a new one.
+/// Tier ≥ Regional; Headline if secession is large (≥3 settlements).
+/// </summary>
+internal sealed record CivSplinteredPayload(
+    long   ParentCivId,   string ParentCivName,
+    long   NewCivId,      string NewCivName,
+    long   NewRulerId,    string NewRulerName,
+    int    SettlementsSeceded,
+    int    PopulationTransferred,
+    float  LeaderUnrest,
+    int    TileX, int TileY);

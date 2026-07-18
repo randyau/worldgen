@@ -24,3 +24,4 @@ scripts/__pycache__/
 publish/
 world.db
 .claude/
+sweeps/

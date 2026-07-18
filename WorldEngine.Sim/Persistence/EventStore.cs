@@ -97,6 +97,12 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
         catch (Microsoft.Data.Sqlite.SqliteException) { /* column already exists */ }
         try { _conn.Execute(DatabaseSchema.MigrateYearlyMetricsAddMeanCities); }
         catch (Microsoft.Data.Sqlite.SqliteException) { /* column already exists */ }
+
+        // Migration: add unrest/secession columns to yearly_metrics (S2 splinter mechanic).
+        try { _conn.Execute(DatabaseSchema.MigrateYearlyMetricsAddSecessions); }
+        catch (Microsoft.Data.Sqlite.SqliteException) { /* column already exists */ }
+        try { _conn.Execute(DatabaseSchema.MigrateYearlyMetricsAddMeanUnrest); }
+        catch (Microsoft.Data.Sqlite.SqliteException) { /* column already exists */ }
     }
 
     /// <summary>
@@ -290,7 +296,8 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
                 wars_active, wars_declared_ytd, wars_ended_truce_ytd,
                 wars_ended_conquest_ytd, tier1_count, tier2_count,
                 goals_formed_ytd, goals_resolved_ytd, mean_wellbeing,
-                max_cities_per_civ_actual, mean_cities_per_civ
+                max_cities_per_civ_actual, mean_cities_per_civ,
+                secessions_ytd, mean_unrest
             ) VALUES (
                 @Year, @WorldPopulation, @ActiveCivs, @CollapsedCivs,
                 @SettlementsTotal, @SettlementsFoundedYtd, @SettlementsAbandonedYtd,
@@ -300,7 +307,8 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
                 @WarsActive, @WarsDeclaredYtd, @WarsEndedTruceYtd,
                 @WarsEndedConquestYtd, @Tier1Count, @Tier2Count,
                 @GoalsFormedYtd, @GoalsResolvedYtd, @MeanWellbeing,
-                @MaxCitiesPerCivActual, @MeanCitiesPerCiv
+                @MaxCitiesPerCivActual, @MeanCitiesPerCiv,
+                @SecessionsYtd, @MeanUnrest
             );
             """, row);
     }

@@ -28,7 +28,8 @@ public sealed record SettlementStub(
     float SmoothedCapacity = 50_000f,                          // EMA of raw food-derived capacity; used by logistic suppression to damp oscillation
     bool IsColony = false,                                       // true when founded beyond ColonyMinDistance from all same-civ settlements
     bool IsInfected = false,                                    // currently suffering a disease outbreak
-    int  InfectedSinceYear = 0)                                 // year the current infection started
+    int  InfectedSinceYear = 0,                                 // year the current infection started
+    float Unrest = 0f)                                          // S2: 0=content, 1=fully rebellious; drives secession
                                            // vital (food, water): measured in seasons of supply; draws during deficit
                                            // wealth (gold, minerals, timber): raw accumulated units; no demand draw
 {

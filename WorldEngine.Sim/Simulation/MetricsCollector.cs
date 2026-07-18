@@ -39,9 +39,12 @@ public static class MetricsCollector
         double foodRatioSum = 0.0;
         float  foodRatioMin = 1.0f;
 
+        double unrestSum = 0.0;
+
         foreach (var s in settlements.Values)
         {
             worldPop      += s.Population;
+            unrestSum     += s.Unrest;
             float fr       = s.FoodPressureRatio;
             foodRatioSum  += fr;
             if (fr < foodRatioMin) foodRatioMin = fr;
@@ -137,7 +140,9 @@ public static class MetricsCollector
             goalsResolvedYtd:        goalsResolvedYtd,
             meanWellbeing:           meanWellbeing,
             maxCitiesPerCivActual:   maxCitiesPerCiv,
-            meanCitiesPerCiv:        meanCitiesPerCiv));
+            meanCitiesPerCiv:        meanCitiesPerCiv,
+            secessionsYtd:           acc.SecessionsYtd,
+            meanUnrest:              settTotal > 0 ? (float)(unrestSum / settTotal) : 0f));
 
         // Reset YTD counters for the next year
         acc.ResetYtd();
@@ -159,6 +164,8 @@ public sealed class MetricsAccumulator
     public int WarsEndedConquestYtd    { get; set; }
     public int GoalsFormedYtd          { get; set; }
     public int GoalsResolvedYtd        { get; set; }
+    /// <summary>Count of CivSplintered events this year (S2 splinter mechanic).</summary>
+    public int SecessionsYtd           { get; set; }
 
     // Death-by-cause counters — incremented from CharacterDeathPayload.Cause string.
     // Cause strings are set in CharacterBehaviorPhase.KillCharacter; this is the
@@ -212,6 +219,7 @@ public sealed class MetricsAccumulator
         WarsEndedConquestYtd    = 0;
         GoalsFormedYtd          = 0;
         GoalsResolvedYtd        = 0;
+        SecessionsYtd           = 0;
         DeathsStarvationYtd     = 0;
         DeathsDiseaseYtd        = 0;
         DeathsWarYtd            = 0;

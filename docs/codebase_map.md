@@ -26,6 +26,7 @@ One-line description of every non-trivial source file. Check here before running
 - `SettlementConfig.cs` — population growth rates, carrying capacity config
 - `BeastsSimConfig.cs / BeastSpawnConfig.cs / CombatConfig.cs` — beast behavior constants
 - `CulturalTraitsConfig.cs` — M3.2: thresholds for assigning CulturalTrait values (Militaristic/Expansionist/etc.)
+- `UnrestConfig.cs` — S2: [unrest] section — unrest drivers, decay, secession threshold/chance/cluster knobs
 - Other `*Config.cs` — per-system TOML sections (Climate, Elevation, Tectonic, etc.)
 
 ## WorldEngine.Sim/Tiles/
@@ -55,6 +56,7 @@ One-line description of every non-trivial source file. Check here before running
 - `CivTracker.cs` — `Resolve()` dispatcher + EstablishSettlement, AllyWith, DeclareRivalry, RegisterRuin
 - `CivTracker.War.cs` — ResolveWar, StartWarBetween, ResolveRaid, ResolveNegotiate
 - `CivTracker.Diplomacy.cs` — RunAnnualDiplomacy, RunBorderTension, RunCivFloorSpawns, EndWarBetween, FireAllianceBroken
+- `CivTracker.Unrest.cs` — S2: annual unrest accrual (distance/size/famine/succession drivers) + secession — settlements splinter into new civs
 - `CivTracker.Naming.cs` — GenerateSettlementName, GenerateFertilityMultiplier, BiasedIndex, FireCivFounded, FireSettlementFounded; M3.5: ApplyCulturalSettlementName, GetCivNameSuffix, BuildCulturalProfile
 - `CulturalProfile.cs` — M3.5: immutable record (AncestryId, ArchitecturalStyle, SettlementDescriptor, ArtisticTraditions, ActiveTraits, DominantBiome)
 - `Civilization.cs` — mutable civ class: ruler, members, war state, border tension; M3.5: CulturalProfile?
@@ -170,6 +172,7 @@ One-line description of every non-trivial source file. Check here before running
 - `Integration/SignificanceScoringTests.cs` — M3.2: ComputeSignificanceScore, SignificanceRescoringPass tier upgrades and score population
 - `Integration/NarrativeUIDataTests.cs` — M3.3: GetCausalChain, GetAllCivSummaries, GetEventCountByDecade, GetCharacterHistory ordering
 - `Integration/SaveLoadTests.cs` — M3.6: WorldStateSaver round-trip tests (8 tests: files created, year, settlements, entities, territory, round-trip, meta, empty world)
+- `Integration/UnrestSecessionTests.cs` — S2: unrest accrual math, forced-splinter integration, capital immunity, reproducibility
 - `Integration/TileInspectTests.cs` — M3.4: TileInspectorData territory/improvement population, unclaimed tile returns null
 - `Unit/AncestryConfigTests.cs` — M3.5: AncestryConfig field loading, ApplyCulturalSettlementName, GetCivNameSuffix, BuildCulturalProfile
 - `Balance/BalanceRegressionTests.cs` — C2: world-health regression harness; 2 seeds × 300 years; [Trait("Category","Balance")]; run via scripts/test-balance.sh

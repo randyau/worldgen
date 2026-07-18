@@ -224,6 +224,7 @@ public sealed class PhaseRunner
             case EventType.SettlementAbandoned:  _metricsAcc.SettlementsAbandonedYtd++; break;
             case EventType.SettlementConquered:  _metricsAcc.SettlementsConqueredYtd++; break;
             case EventType.WarDeclared:          _metricsAcc.WarsDeclaredYtd++;          break;
+            case EventType.CivSplintered:        _metricsAcc.SecessionsYtd++;            break;
             case EventType.GoalFormed:           _metricsAcc.GoalsFormedYtd++;           break;
             case EventType.GoalResolved:         _metricsAcc.GoalsResolvedYtd++;         break;
             case EventType.CharacterDied:

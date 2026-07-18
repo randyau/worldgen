@@ -111,6 +111,7 @@ always_record_types = [
     "GodModeCharacterCreated",
     "GodModeArtifactPlaced",
     "GodModeCivilizationForced",
+    "CivSplintered",
 ]
 
 # Event types always suppressed regardless of other gate settings
@@ -707,3 +708,34 @@ piety_founding_threshold         = 0.50  # Piety skill floor to qualify as a fou
 wonder_founding_threshold        = 0.60  # Wonder personality trait floor
 religion_founding_progress_per_year = 0.35  # progress per year; ~3 years to complete
 religion_founding_cooldown_years    = 50    # per character: min years between foundings
+
+# =============================================================================
+# UNREST / SECESSION (S2 splinter mechanic)
+# =============================================================================
+
+[unrest]
+# Distance driver: settlements beyond this radius from the capital accumulate unrest
+unrest_comfort_radius        = 20     # tiles; within this range, distance driver is zero
+unrest_distance_per_tile     = 0.003  # unrest/tile/year beyond comfort_radius
+                                      # at 30 tiles excess → +0.09/yr; crosses 0.7 threshold in ~8 years
+
+# Size driver: empire-scale unrest; fires above soft city threshold
+unrest_soft_city_threshold   = 5     # cities before size-driver kicks in
+unrest_per_excess_city       = 0.02  # unrest/yr per excess city above threshold
+                                     # at 8 cities (3 excess) → +0.06/yr to distant settlements
+
+# Famine driver: food crisis accelerates unrest
+unrest_famine_bonus          = 0.15  # extra unrest/yr when settlement is in food crisis
+
+# Succession crisis multiplier (integrates with existing SuccessionCrisisEndYear)
+unrest_succession_mult       = 1.5   # multiplier on all unrest sources during crisis
+
+# Decay: unrest drops when no drivers apply
+unrest_decay_rate            = 0.10  # fraction decayed per year (10%/yr → half-life ~7 years)
+
+# Secession trigger
+unrest_secession_threshold   = 0.70  # unrest level that makes a settlement eligible to secede
+unrest_secession_chance      = 0.40  # annual probability of secession when above threshold
+unrest_cluster_radius        = 15    # tile radius; nearby same-civ high-unrest settlements may join
+unrest_cluster_min_unrest    = 0.50  # min unrest for a neighbour to join the seceding cluster
+splinter_initial_tension     = 0.60  # initial BorderTension the new civ has toward its parent

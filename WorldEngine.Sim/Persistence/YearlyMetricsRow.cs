@@ -40,7 +40,9 @@ public sealed class YearlyMetricsRow
         int   goalsResolvedYtd,
         float meanWellbeing,
         int   maxCitiesPerCivActual,
-        float meanCitiesPerCiv)
+        float meanCitiesPerCiv,
+        int   secessionsYtd,
+        float meanUnrest)
     {
         Year                   = year;
         WorldPopulation        = worldPopulation;
@@ -70,6 +72,8 @@ public sealed class YearlyMetricsRow
         MeanWellbeing          = meanWellbeing;
         MaxCitiesPerCivActual  = maxCitiesPerCivActual;
         MeanCitiesPerCiv       = meanCitiesPerCiv;
+        SecessionsYtd          = secessionsYtd;
+        MeanUnrest             = meanUnrest;
     }
 
     // ── Properties (snake_case aliases handled by Dapper column mapping) ──────
@@ -103,4 +107,8 @@ public sealed class YearlyMetricsRow
     public int   MaxCitiesPerCivActual   { get; set; }
     /// <summary>Mean cities per active civ this year (settlements_total / active_civs).</summary>
     public float MeanCitiesPerCiv        { get; set; }
+    /// <summary>Number of secession events this year (new civs splintered from parent).</summary>
+    public int   SecessionsYtd           { get; set; }
+    /// <summary>Mean unrest across all settlements this year (0=content, 1=fully rebellious).</summary>
+    public float MeanUnrest              { get; set; }
 }

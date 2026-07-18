@@ -82,6 +82,10 @@ public static partial class CivTracker
         // 5b. City expansion decisions: rulers delegate FoundCity goals to ambitious members.
         RunCityExpansionDecisions(world, pending);
 
+        // 5b2. Unrest + secession: distant/oversized-empire settlements accumulate unrest;
+        //      settlements over the threshold may splinter into a new civilization (S2).
+        RunUnrestAndSecession(world, pending);
+
         // 5c. Cultural trait evaluation: assign permanent traits when thresholds are crossed.
         EvaluateCulturalTraits(world, pending);
 
