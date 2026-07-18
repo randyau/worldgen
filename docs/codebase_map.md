@@ -13,7 +13,8 @@ One-line description of every non-trivial source file. Check here before running
 
 ## WorldEngine.Sim/Config/
 - `SimConfig.cs` — root config container; all subsections loaded from sim_config.toml
-- `SimConfigLoader.cs` — Tomlyn-based TOML loader
+- `SimConfigLoader.cs` — Tomlyn-based TOML loader; B1 strict mode detects unbound keys; B3 Validate() wired
+- `SimConfigValidator.cs` — B3: validates ranges (probabilities in [0,1]), cross-field invariants (weight sums, threshold orderings, min≤max pairs); throws SimConfigValidationException
 - `CharacterSimConfig.cs` (~300 lines) — all character behavior constants: needs decay, skill growth, diplomacy, war thresholds
 - `AncestryConfig.cs` — per-ancestry personality/aptitude biases, name pools, spawn weights; M3.5: cultural descriptors (ArchitecturalStyle, SettlementDescriptor, BiomeAdaptations, ImprovementDescriptors, ArtisticTraditions, CivNameSuffix)
 - `AncestryRegistry.cs` — collection of AncestryConfig; biome-weighted sampling
