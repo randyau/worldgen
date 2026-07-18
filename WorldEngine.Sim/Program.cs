@@ -17,17 +17,19 @@ int years      = 100;
 string? configPath   = null;
 string? profileName  = null;
 string? outDir  = null;
+string? auditFood    = null;   // null = no audit; "all" = all settlements; "x,y" = specific tile
 var overrides   = new List<KeyValuePair<string, string>>();
 
 for (int i = 0; i < args.Length; i++)
 {
     switch (args[i])
     {
-        case "--seed"    when i + 1 < args.Length: seed        = int.Parse(args[++i]); break;
-        case "--years"   when i + 1 < args.Length: years       = int.Parse(args[++i]); break;
-        case "--config"  when i + 1 < args.Length: configPath  = args[++i];            break;
-        case "--profile" when i + 1 < args.Length: profileName = args[++i];            break;
-        case "--out"     when i + 1 < args.Length: outDir      = args[++i];            break;
+        case "--seed"       when i + 1 < args.Length: seed        = int.Parse(args[++i]); break;
+        case "--years"      when i + 1 < args.Length: years       = int.Parse(args[++i]); break;
+        case "--config"     when i + 1 < args.Length: configPath  = args[++i];            break;
+        case "--profile"    when i + 1 < args.Length: profileName = args[++i];            break;
+        case "--out"        when i + 1 < args.Length: outDir      = args[++i];            break;
+        case "--audit-food" when i + 1 < args.Length: auditFood   = args[++i];            break;
         case "--set"     when i + 1 < args.Length:
             var kv = args[++i].Split('=', 2);
             if (kv.Length == 2) overrides.Add(new KeyValuePair<string, string>(kv[0], kv[1]));
@@ -129,6 +131,32 @@ try
 catch (Exception ex)
 {
     logger.LogWarning("Could not read event counts from DB: {Msg}", ex.Message);
+}
+
+// ─── Food audit (--audit-food) ────────────────────────────────────────────────
+
+if (auditFood is not null)
+{
+    WorldEngine.Sim.Simulation.FoodAuditSink sink;
+    if (auditFood.Equals("all", StringComparison.OrdinalIgnoreCase))
+    {
+        sink = new WorldEngine.Sim.Simulation.FoodAuditSink { AuditAll = true };
+    }
+    else
+    {
+        // Parse "x,y" coordinate
+        sink = new WorldEngine.Sim.Simulation.FoodAuditSink { AuditAll = false };
+        var parts = auditFood.Split(',');
+        if (parts.Length == 2 && int.TryParse(parts[0], out int ax) && int.TryParse(parts[1], out int ay))
+            sink.TargetCoords.Add(new WorldEngine.Sim.Core.TileCoord(ax, ay));
+        else
+        {
+            logger.LogWarning("--audit-food value '{V}' not recognized; expected 'all' or 'x,y'. Auditing all.", auditFood);
+            sink = new WorldEngine.Sim.Simulation.FoodAuditSink { AuditAll = true };
+        }
+    }
+    phaseRunner.RunFoodAudit(world, sink);
+    sink.Print();
 }
 
 // ─── Dispose EventStore (flushes WAL, closes file) ────────────────────────────

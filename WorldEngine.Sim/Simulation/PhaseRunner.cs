@@ -68,6 +68,16 @@ public sealed class PhaseRunner
     /// </summary>
     public void InjectPendingEvent(PendingEvent pending) => _injectedEvents.Add(pending);
 
+    /// <summary>
+    /// Run a food audit against the current world state, capturing per-tile factor breakdowns
+    /// for the settlements matched by <paramref name="sink"/>. Does NOT mutate world state.
+    /// Called by Program.cs when <c>--audit-food</c> is specified, after the sim completes.
+    /// The ResourcePressurePhase is re-invoked read-only-style: it writes to stub fields but
+    /// since we're post-run the values are immediately discarded (world isn't ticked further).
+    /// </summary>
+    public void RunFoodAudit(WorldState world, FoodAuditSink sink)
+        => _pressurePhase.Execute(world, world.CurrentTick, sink);
+
     public void RunTick(WorldState world)
     {
         bool isAnnualTick = world.CurrentSeason == Season.Spring

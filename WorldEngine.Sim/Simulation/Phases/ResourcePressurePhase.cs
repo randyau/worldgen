@@ -4,6 +4,7 @@ using WorldEngine.Sim.Config;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities.Characters;
 using WorldEngine.Sim.Events;
+using WorldEngine.Sim.Simulation;
 using WorldEngine.Sim.Tiles;
 using WorldEngine.Sim.World;
 using ImpType = WorldEngine.Sim.World.ImprovementType;
@@ -57,7 +58,12 @@ public sealed class ResourcePressurePhase
     // Timber contribution per forest reach tile (normalized supply unit)
     private const float TimberPerForestTile = 0.5f;
 
-    public List<PendingEvent> Execute(WorldState world, long tick)
+    /// <summary>
+    /// Run the resource pressure phase for all settlements.
+    /// If <paramref name="audit"/> is non-null, per-tile food factors are captured for the settlements
+    /// matched by the sink (audit path only — zero overhead on the hot path when null).
+    /// </summary>
+    public List<PendingEvent> Execute(WorldState world, long tick, FoodAuditSink? audit = null)
     {
         var pending = new List<PendingEvent>();
 
@@ -71,7 +77,8 @@ public sealed class ResourcePressurePhase
             {
                 territoryTiles = owned;
             }
-            var (ledger, carryingCapacity, smoothedCapacity) = BuildLedger(coord, stub, territoryTiles, world);
+            var (ledger, carryingCapacity, smoothedCapacity) = BuildLedger(coord, stub, territoryTiles, world,
+                audit?.Captures(coord) == true ? audit : null);
 
             // ─── Update resource stores ──────────────────────────────────────
             // Build new stores dict from existing stores, applying spoilage and accumulating
@@ -138,7 +145,8 @@ public sealed class ResourcePressurePhase
     // ─── Ledger construction ──────────────────────────────────────────────────
 
     private (Dictionary<string, float> Ledger, int CarryingCapacity, float SmoothedCapacity) BuildLedger(
-        TileCoord center, SettlementStub stub, IReadOnlyCollection<TileCoord> territoryTiles, WorldState world)
+        TileCoord center, SettlementStub stub, IReadOnlyCollection<TileCoord> territoryTiles, WorldState world,
+        FoodAuditSink? audit = null)
     {
         var supply = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);
         int tileCount = 0;
@@ -186,7 +194,25 @@ public sealed class ResourcePressurePhase
                 }
             }
 
-            Accumulate(supply, "food", tileCapacity * foodMult);
+            float foodContrib = tileCapacity * foodMult;
+            Accumulate(supply, "food", foodContrib);
+
+            // Audit capture: record per-tile factors if an audit sink is attached.
+            // This branch is only taken when --audit-food is active; zero overhead on normal path.
+            if (audit is not null)
+            {
+                audit.AddTile(center, new FoodAuditSink.TileFactors(
+                    Coord:                coord,
+                    Biome:                biome,
+                    FertilityRaw:         tile.Fertility / 255f,
+                    MoistureRaw:          tile.CurrentMoisture / 255f,
+                    MoistureEffective:    effectiveMoisture,
+                    GrowingSeasonFactor:  _gsTable[effTemp],
+                    BiomeFoodMultiplier:  _foodTable[biomeIdx],
+                    ImprovementMultiplier: foodMult,
+                    TileCapacity:         tileCapacity,
+                    FoodContribution:     foodContrib));
+            }
 
             // Water: moisture alone (wells, streams, rainfall access)
             Accumulate(supply, "water", tile.CurrentMoisture / 255f);
@@ -238,6 +264,20 @@ public sealed class ResourcePressurePhase
         if (supply.TryGetValue("food",  out float fs)) supply["food"]  = fs / population;
         if (supply.TryGetValue("water", out float ws)) supply["water"] = ws / population;
         // Minerals: leave as absolute supply (surplus if > 0, demand driven by artisans)
+
+        // Audit rollup: record settlement totals after normalization.
+        if (audit is not null)
+        {
+            audit.AddRollup(center, new FoodAuditSink.SettlementRollup(
+                Coord:            center,
+                Name:             stub.Name,
+                Population:       stub.Population,
+                RawFoodSupply:    rawCapacity,   // before normalization = people the territory can support
+                SmoothedCapacity: smoothed,
+                FoodRatio:        supply.GetValueOrDefault("food", 1f),
+                StoreDepth:       stub.GetStore("food"),
+                TileCount:        tileCount));
+        }
 
         return (supply, capacity, smoothed);
     }

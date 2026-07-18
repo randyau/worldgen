@@ -90,8 +90,9 @@ One-line description of every non-trivial source file. Check here before running
 
 ## WorldEngine.Sim/Simulation/
 - `SimLoop.cs` — main tick loop: emit→resolve→commit cycle, speed control; A1: RunSynchronous(ticks) for headless batch runs
-- `PhaseRunner.cs` (~224 lines) — runs all 7 phases in order per tick; writes events to DB; A2: drives MetricsAccumulator YTD counts + calls MetricsCollector.Sample on annual tick
+- `PhaseRunner.cs` (~224 lines) — runs all 7 phases in order per tick; writes events to DB; A2: drives MetricsAccumulator YTD counts + calls MetricsCollector.Sample on annual tick; D2: RunFoodAudit() for --audit-food
 - `MetricsCollector.cs` — A2: samples WorldState once/year → writes yearly_metrics row; also defines MetricsAccumulator (YTD event counters) and YearlyMetricsRow moved to Persistence/
+- `FoodAuditSink.cs` — D2: captures per-tile food factors (fertility, moisture, growing_season, biome_mult, improvement) and per-settlement rollup; passed to ResourcePressurePhase.Execute() for --audit-food diagnostic; null on hot path
 - `SimRngSalts.cs` — integer salt constants used with WorldRng for reproducibility
 - `EventCache.cs` — in-memory ring buffer of recent SimEvents for snapshot
 - **Phases/** — one file per sim phase:
