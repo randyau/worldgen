@@ -18,14 +18,14 @@ public sealed class PopulationDynamicsPhase
 {
     private readonly SettlementConfig _cfg;
     private readonly SimConfig _simCfg;
-
-    // 4 seasons × 4 ticks per season = 16 ticks per in-game year
-    private const int TicksPerYear = 16;
+    private readonly int _ticksPerYear;
 
     public PopulationDynamicsPhase(SimConfig cfg)
     {
-        _simCfg = cfg;
-        _cfg    = cfg.Settlement;
+        _simCfg      = cfg;
+        _cfg         = cfg.Settlement;
+        // Derive from SimLoopConfig so the rate scales if TicksPerSeasonalChange is changed.
+        _ticksPerYear = cfg.SimLoop.TicksPerYear;
     }
 
     public List<PendingEvent> Execute(WorldState world, bool isAnnualTick = false)
@@ -129,7 +129,7 @@ public sealed class PopulationDynamicsPhase
         // Disease: proportional per-tick mortality while settlement is infected
         if (stub.IsInfected && newPop > 0)
         {
-            int diseaseDrain = Math.Max(1, (int)(newPop * _cfg.DiseaseMortalityPerYear / TicksPerYear));
+            int diseaseDrain = Math.Max(1, (int)(newPop * _cfg.DiseaseMortalityPerYear / _ticksPerYear));
             newPop = Math.Max(0, newPop - diseaseDrain);
         }
 

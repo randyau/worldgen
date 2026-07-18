@@ -15,6 +15,7 @@ One-line description of every non-trivial source file. Check here before running
 - `SimConfig.cs` — root config container; all subsections loaded from sim_config.toml
 - `SimConfigLoader.cs` — Tomlyn-based TOML loader; B1 strict mode detects unbound keys; B3 Validate() wired; B4 Load(profileName?, overrides?) merges profiles and --set overrides
 - `SimConfigValidator.cs` — B3: validates ranges (probabilities in [0,1]), cross-field invariants (weight sums, threshold orderings, min≤max pairs); throws SimConfigValidationException
+- `SimLoopConfig.cs` — B5: adds TicksPerSeason (alias) and TicksPerYear (= TicksPerSeasonalChange × 4) derived properties; use these everywhere instead of hardcoded 16
 - `CharacterSimConfig.cs` (~300 lines) — all character behavior constants: needs decay, skill growth, diplomacy, war thresholds
 - `AncestryConfig.cs` — per-ancestry personality/aptitude biases, name pools, spawn weights; M3.5: cultural descriptors (ArchitecturalStyle, SettlementDescriptor, BiomeAdaptations, ImprovementDescriptors, ArtisticTraditions, CivNameSuffix)
 - `AncestryRegistry.cs` — collection of AncestryConfig; biome-weighted sampling
