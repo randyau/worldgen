@@ -8,19 +8,29 @@ namespace WorldEngine.Sim.Entities.Characters;
 
 /// <summary>
 /// Scores candidate actions for a Tier 1 character and selects one via softmax.
+/// Holds pre-baked lookup tables (goal→action affinity, action need-weights) built
+/// once at construction from <see cref="UtilityAffinityConfig"/>.
 /// </summary>
-public static class UtilityScorer
+public sealed class UtilityScorer
 {
     // Salt for softmax random selection
     private const int SaltSoftmax = 600;
 
+    // Pre-baked affinity and need-weight tables, indexed by (int)GoalType and (int)ActionType.
+    private readonly UtilityAffinityTables _tables;
+
     // ─── Settlement-invalidated caches ────────────────────────────────────────
     // _routeCache keyed by tile coord. Cleared whenever settlement count changes.
-    // The sim is single-threaded so static fields are safe.
-    private static int _cacheVersion = -1;
-    private static readonly Dictionary<TileCoord, float> _routeCache = new();
+    // The sim is single-threaded so instance fields are safe.
+    private int _cacheVersion = -1;
+    private readonly Dictionary<TileCoord, float> _routeCache = new();
 
-    private static void SyncCaches(IWorldStateReadOnly world)
+    public UtilityScorer(SimConfig cfg)
+    {
+        _tables = new UtilityAffinityTables(cfg.UtilityAffinity);
+    }
+
+    private void SyncCaches(IWorldStateReadOnly world)
     {
         int count = world.Settlements.Count;
         if (count == _cacheVersion) return;
@@ -31,7 +41,7 @@ public static class UtilityScorer
     public sealed record ScoredAction(ICommand Command, float Score);
 
     /// <summary>Score all available actions and return a softmax-weighted selection.</summary>
-    public static ICommand? SelectAction(
+    public ICommand? SelectAction(
         Tier1Character c,
         IWorldStateReadOnly world,
         CharacterSimConfig cfg)
@@ -60,7 +70,7 @@ public static class UtilityScorer
         return candidates[^1].Command;
     }
 
-    private static List<ScoredAction> BuildCandidates(
+    private List<ScoredAction> BuildCandidates(
         Tier1Character c,
         IWorldStateReadOnly world,
         CharacterSimConfig cfg)
@@ -306,9 +316,12 @@ public static class UtilityScorer
         return actions;
     }
 
+    // DECISION: ActionType is a private enum keeping the same integer indices as before.
+    // UtilityAffinityTables.TryParseAction maps TOML names to these integer indices directly,
+    // so adding a new ActionType requires updating both here and in TryParseAction.
     private enum ActionType { Rest, Travel, Establish, Ally, Negotiate, Rivalry, War, Raid, Create, Flee, BuildImprovement, FoundCity }
 
-    private static float Score(
+    private float Score(
         Tier1Character c,
         ActionType action,
         float successProb,
@@ -343,57 +356,52 @@ public static class UtilityScorer
         return base_;
     }
 
-    private static float NeedsSatisfaction(Tier1Character c, ActionType a) => a switch
+    /// <summary>
+    /// Returns the need-satisfaction score for an action, driven by the character's current needs.
+    /// Formula: sum of (1 - need_value) * coefficient over all need entries in the config table.
+    /// The Rest action is special: its safety+food contribution is expressed as two separate
+    /// coefficients on safety and food (equivalent to the original (2 - safety - food) * 0.2f).
+    /// Actions not listed in the table return the _default value (0.1f).
+    /// </summary>
+    private float NeedsSatisfaction(Tier1Character c, ActionType a)
     {
-        // Rest scores higher when safety, food, OR shelter is depleted — camping is a valid shelter strategy
-        ActionType.Rest             => (2f - c.Needs.Safety - c.Needs.Food) * 0.2f + (1f - c.Needs.Shelter) * 0.15f,
-        ActionType.Establish        => (1f - c.Needs.Shelter) * 0.7f + (1f - c.Needs.Status) * 0.3f,
-        ActionType.Ally             => (1f - c.Needs.Belonging) * 0.6f + (1f - c.Needs.Safety) * 0.4f,
-        ActionType.Negotiate        => (1f - c.Needs.Belonging) * 0.5f,
-        ActionType.War              => (1f - c.Needs.Status) * 0.7f,
-        ActionType.Raid             => (1f - c.Needs.Status) * 0.5f,
-        ActionType.Travel           => (1f - c.Needs.Safety) * 0.3f,
-        ActionType.Rivalry          => (1f - c.Needs.Status) * 0.4f,
-        ActionType.BuildImprovement => (1f - c.Needs.Purpose) * 0.5f + (1f - c.Needs.Status) * 0.2f,
-        ActionType.FoundCity        => (1f - c.Needs.Shelter) * 0.5f + (1f - c.Needs.Status) * 0.5f,
-        _                           => 0.1f
-    };
+        int ai = (int)a;
+        float[] needs =
+        {
+            c.Needs.Food, c.Needs.Safety, c.Needs.Shelter,
+            c.Needs.Belonging, c.Needs.Status, c.Needs.Purpose, c.Needs.Spiritual
+        };
 
-    private static float GoalAdvancement(Tier1Character c, ActionType a)
+        float sum = 0f;
+        bool hasAnyCoeff = false;
+        for (int ni = 0; ni < UtilityAffinityTables.NeedCount; ni++)
+        {
+            float coeff = _tables.ActionNeedsCoeff[ai, ni];
+            if (coeff == 0f) continue;
+            hasAnyCoeff = true;
+            sum += (1f - needs[ni]) * coeff;
+        }
+        return hasAnyCoeff ? sum : _tables.ActionNeedsDefault[ai];
+    }
+
+    /// <summary>
+    /// Returns the goal-advancement score for an action against the character's active goals.
+    /// Uses the pre-baked affinity table indexed by (int)GoalType × (int)ActionType.
+    /// Unmapped (goal, action) pairs have weight 0.0 — same as the original _ => 0f case.
+    /// The best-matching goal (weight × priority) wins.
+    /// </summary>
+    private float GoalAdvancement(Tier1Character c, ActionType a)
     {
         if (c.Goals.Count == 0) return 0f;
+        int ai = (int)a;
         float best = 0f;
         foreach (var g in c.Goals)
         {
-            float match = (g.Type, a) switch
-            {
-                (GoalType.Survive,   ActionType.Rest)      => 0.8f,
-                (GoalType.Survive,   ActionType.Travel)    => 0.4f,
-                (GoalType.Dominance, ActionType.War)       => 1.0f,
-                (GoalType.Dominance, ActionType.Raid)      => 0.8f,
-                (GoalType.Alliance,  ActionType.Ally)      => 1.0f,
-                (GoalType.Alliance,  ActionType.Negotiate) => 0.5f,
-                // New goal types
-                (GoalType.Create,    ActionType.Create)    => 1.0f,
-                (GoalType.Bond,      ActionType.Ally)      => 1.0f,
-                (GoalType.Bond,      ActionType.Negotiate) => 0.4f,
-                (GoalType.Avenge,    ActionType.Raid)      => 0.9f,
-                (GoalType.Avenge,    ActionType.War)       => 0.8f,
-                (GoalType.Acquire,   ActionType.Raid)      => 0.7f,
-                (GoalType.Acquire,   ActionType.Travel)    => 0.5f,
-                (GoalType.Flee,      ActionType.Flee)      => 1.0f,
-                (GoalType.Flee,      ActionType.Travel)    => 0.6f,
-                (GoalType.Grieve,    ActionType.Rest)      => 0.7f,  // withdrawn, stays put
-                (GoalType.Endure,    ActionType.Rest)      => 0.9f,
-                (GoalType.Protect,   ActionType.Travel)    => 0.4f,  // move toward protected
-                // M3 city-state goals
-                (GoalType.BuildImprovement, ActionType.BuildImprovement) => 1.0f,
-                (GoalType.BuildImprovement, ActionType.Rest)             => 0.3f, // stay put = progress
-                (GoalType.FoundCity,        ActionType.FoundCity)        => 1.0f,
-                (GoalType.FoundCity,        ActionType.Travel)           => 0.8f, // travel to find good site
-                _                                          => 0f
-            };
-            best = Math.Max(best, match * g.Priority);
+            int gi = (int)g.Type;
+            if (gi < 0 || gi >= 16) continue; // guard against future enum additions
+            float match = _tables.GoalAffinity[gi, ai];
+            if (match > 0f)
+                best = Math.Max(best, match * g.Priority);
         }
         return best;
     }
@@ -434,7 +442,7 @@ public static class UtilityScorer
         return roleBase * curiosityScale;
     }
 
-    private static TileCoord? BestAdjacentTile(Tier1Character c, IWorldStateReadOnly world, CharacterSimConfig cfg)
+    private TileCoord? BestAdjacentTile(Tier1Character c, IWorldStateReadOnly world, CharacterSimConfig cfg)
     {
         TileCoord? best = null;
         int bestScore = -1;
@@ -576,7 +584,7 @@ public static class UtilityScorer
     /// Returns 0 when there are fewer than two settlements.
     /// </summary>
     private const int RouteMaxSettlements = 8;
-    private static float ComputeRouteBonus(TileCoord coord, IWorldStateReadOnly world)
+    private float ComputeRouteBonus(TileCoord coord, IWorldStateReadOnly world)
     {
         if (_routeCache.TryGetValue(coord, out float cached)) return cached;
         if (world.Settlements.Count < 2) { _routeCache[coord] = 0f; return 0f; }

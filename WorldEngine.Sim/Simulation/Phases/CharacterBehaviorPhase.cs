@@ -20,12 +20,14 @@ public sealed class CharacterBehaviorPhase
     private readonly CharacterSimConfig _cfg;
     private readonly SettlementConfig   _settleCfg;
     private readonly SimConfig _simCfg;
+    private readonly UtilityScorer      _scorer;
 
     public CharacterBehaviorPhase(SimConfig cfg)
     {
         _simCfg    = cfg;
         _cfg       = cfg.Character;
         _settleCfg = cfg.Settlement;
+        _scorer    = new UtilityScorer(cfg);
     }
 
     public List<PendingEvent> Execute(WorldState world, long tick, bool isAnnualTick = false)
@@ -73,7 +75,7 @@ public sealed class CharacterBehaviorPhase
                 deathsThisTick.Add((c.Id, c.Identity.Name));
             }
             if (!c.IsAlive) continue;
-            var cmd = UtilityScorer.SelectAction(c, world, _cfg);
+            var cmd = _scorer.SelectAction(c, world, _cfg);
             if (cmd != null)
                 ResolveCommand(cmd, c, world, pending, tick);
         }

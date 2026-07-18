@@ -764,3 +764,77 @@ unrest_cluster_radius        = 25    # tile radius; nearby same-civ high-unrest 
                                      # bigger clusters mean seceded civs start with 2-3 cities, not 1)
 unrest_cluster_min_unrest    = 0.30  # min unrest for a neighbour to join the seceding cluster (was 0.50; S4)
 splinter_initial_tension     = 0.60  # initial BorderTension the new civ has toward its parent
+
+# ─── Utility scorer — behavior tables (D3) ────────────────────────────────────
+# Two tables extracted from UtilityScorer.cs to make character AI tunable without recompiling.
+# All values are identical to the previous hardcoded C# literals.
+#
+# [utility_affinity.goal_affinity]
+#   goal-name = { action-name = weight, ... }
+#   weight: how well the action advances the goal (0.0 = no match, 1.0 = perfect match).
+#   Unmapped (goal, action) pairs default to 0.0.
+#
+# [utility_affinity.action_needs]
+#   action-name = { need-name = coefficient, _default = fallback }
+#   Score contribution = sum of (1 - need_value) * coefficient over listed needs.
+#   _default: returned when no needs are listed for the action (replaces _ => 0.1f).
+#   Need names: food, safety, shelter, belonging, status, purpose, spiritual.
+#   Rest uses separate food + safety coefficients (each 0.2) matching the original
+#   (2 - safety - food) * 0.2f decomposition, plus shelter * 0.15f.
+
+[utility_affinity.goal_affinity]
+# Survive goal: rest is core survival, travel can find food/safety
+survive         = { rest = 0.8, travel = 0.4 }
+# Dominance goal: war is the primary expression; raid is an alternative
+dominance       = { war = 1.0, raid = 0.8 }
+# Alliance goal: formal ally pact is ideal; negotiation builds toward it
+alliance        = { ally = 1.0, negotiate = 0.5 }
+# Create goal: creation action is the only outlet
+create          = { create = 1.0 }
+# Bond goal: allying with a specific person is the goal; negotiation also builds bond
+bond            = { ally = 1.0, negotiate = 0.4 }
+# Avenge goal: raid is primary vengeance; war is the larger-scale option
+avenge          = { raid = 0.9, war = 0.8 }
+# Acquire goal: raid to take; travel to find
+acquire         = { raid = 0.7, travel = 0.5 }
+# Flee goal: fleeing is direct; travel moves toward safety
+flee            = { flee = 1.0, travel = 0.6 }
+# Grieve goal: rest and withdrawal (stays put, processes loss)
+grieve          = { rest = 0.7 }
+# Endure goal: rest heavily (hunker down through hardship)
+endure          = { rest = 0.9 }
+# Protect goal: travel toward the protected person or settlement
+protect         = { travel = 0.4 }
+# BuildImprovement goal: build directly; rest also advances (staying put counts as progress)
+build_improvement = { build_improvement = 1.0, rest = 0.3 }
+# FoundCity goal: founding directly; travel to find a good site
+found_city      = { found_city = 1.0, travel = 0.8 }
+# Goals with no affinity entries (security, unify, found_religion) default to 0.0 for all actions.
+
+[utility_affinity.action_needs]
+# Rest: depleted safety or food drives camping; depleted shelter also pushes rest/camp.
+# Original: (2 - safety - food) * 0.2 + (1 - shelter) * 0.15
+# Decomposed: safety * 0.2 + food * 0.2 + shelter * 0.15 (each need contributes independently).
+rest             = { safety = 0.20, food = 0.20, shelter = 0.15, _default = 0.0 }
+# Establish: build a settlement when homeless (shelter) or seeking status
+establish        = { shelter = 0.70, status = 0.30, _default = 0.0 }
+# Ally: form bond when lonely (belonging) or unsafe
+ally             = { belonging = 0.60, safety = 0.40, _default = 0.0 }
+# Negotiate: primarily a belonging action (meet needs through talking)
+negotiate        = { belonging = 0.50, _default = 0.0 }
+# War: status-driven; fighting for dominance satisfies the status need
+war              = { status = 0.70, _default = 0.0 }
+# Raid: status-driven like war, but smaller-scale (lower coefficient)
+raid             = { status = 0.50, _default = 0.0 }
+# Travel: safety-driven; moving away from danger satisfies safety need
+travel           = { safety = 0.30, _default = 0.0 }
+# Rivalry: status-driven; establishing dominance over a specific rival
+rivalry          = { status = 0.40, _default = 0.0 }
+# BuildImprovement: purpose-driven with a status bonus (craftwork has social recognition)
+build_improvement = { purpose = 0.50, status = 0.20, _default = 0.0 }
+# FoundCity: shelter + status (city-founding is the ultimate expression of both)
+found_city       = { shelter = 0.50, status = 0.50, _default = 0.0 }
+# create, flee: no need-based score — rely on goal advancement and personality only
+# _default = 0.1 matches the original _ => 0.1f fallback for all unlisted actions
+create           = { _default = 0.1 }
+flee             = { _default = 0.1 }

@@ -20,6 +20,7 @@ public class SimConfig
     public WarConfig             War             { get; set; } = new();
     public ReligionConfig        Religion        { get; set; } = new();
     public UnrestConfig          Unrest          { get; set; } = new();
+    public UtilityAffinityConfig UtilityAffinity { get; set; } = new();
 
     // Loaded separately by AncestryLoader — not from sim_config.toml
     public AncestryRegistry AncestryRegistry { get; set; } = AncestryRegistry.Empty;

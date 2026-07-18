@@ -219,8 +219,13 @@ public static class SimConfigLoader
 
             if (kvp.Value is TomlTable nested)
             {
-                // It's a sub-table: recurse into it using the property's declared type (if found)
+                // If the property's declared type is a Dictionary<,>, it absorbs all sub-keys
+                // by design — don't recurse, no unbound errors for its children.
                 var childType = prop?.PropertyType;
+                if (childType is not null && IsGenericDictionary(childType))
+                    continue; // Dictionary absorbs everything beneath it
+
+                // It's a sub-table: recurse into it using the property's declared type (if found)
                 WalkTable(nested, childType, dotPath, unbound);
             }
             else if (kvp.Value is TomlTableArray)
@@ -238,6 +243,14 @@ public static class SimConfigLoader
             }
         }
     }
+
+    /// <summary>
+    /// Returns true if <paramref name="type"/> is a generic Dictionary (e.g. Dictionary&lt;string, float&gt;
+    /// or Dictionary&lt;string, Dictionary&lt;string, float&gt;&gt;). Used to short-circuit key validation
+    /// for config properties that intentionally act as open-ended maps.
+    /// </summary>
+    private static bool IsGenericDictionary(Type type)
+        => type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Dictionary<,>);
 
     /// <summary>
     /// Find a property on <paramref name="type"/> whose snake_case name matches <paramref name="tomlKey"/>.
