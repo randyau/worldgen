@@ -14,5 +14,6 @@ public static class LayerSeeds
     public const int Climate   = 0x6F7A8B;
     public const int Biome     = 0x7A8B9C;
     public const int Resource  = 0x8B9CAD;
-    public const int Poi       = 0x9CADBE;
+    public const int Poi            = 0x9CADBE;
+    public const int MicroVariation = 0xADBECF;
 }

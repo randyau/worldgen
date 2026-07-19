@@ -70,6 +70,72 @@ public sealed class ResourceLayer : IWorldGenLayer<ResourceResult>
                     else if (roll < 0.3f)
                         AddDeposit(result, coord, "Stone", seed, x, y, 11);
                 }
+
+                // --- Surface organic resources: per-tile variation within biome patches ---
+                // Herbs — medicinal plants; common in fertile, moist biomes
+                {
+                    float herbDensity = biome.Biomes[idx] switch
+                    {
+                        BiomeType.Swamp             => cfg.Resources.HerbDensity * 1.6f,
+                        BiomeType.TropicalRainforest => cfg.Resources.HerbDensity * 1.4f,
+                        BiomeType.TemperateForest   => cfg.Resources.HerbDensity * 1.2f,
+                        BiomeType.BorealForest      => cfg.Resources.HerbDensity * 0.6f,
+                        BiomeType.Grassland         => cfg.Resources.HerbDensity * 0.8f,
+                        BiomeType.Plains            => cfg.Resources.HerbDensity * 0.7f,
+                        BiomeType.Hills             => cfg.Resources.HerbDensity * 0.5f,
+                        _                           => 0f,
+                    };
+                    if (herbDensity > 0f && WorldRng.FloatAt(seed, 3, x, y, 12) < herbDensity)
+                        AddDeposit(result, coord, "Herbs", seed, x, y, 13);
+                }
+
+                // Wild Game — huntable wildlife; tied to open and forested terrain
+                {
+                    float gameDensity = biome.Biomes[idx] switch
+                    {
+                        BiomeType.TemperateForest   => cfg.Resources.WildGameDensity * 1.3f,
+                        BiomeType.BorealForest      => cfg.Resources.WildGameDensity * 1.1f,
+                        BiomeType.Grassland         => cfg.Resources.WildGameDensity * 1.2f,
+                        BiomeType.Savanna           => cfg.Resources.WildGameDensity * 1.0f,
+                        BiomeType.Plains            => cfg.Resources.WildGameDensity * 0.9f,
+                        BiomeType.Tundra            => cfg.Resources.WildGameDensity * 0.5f,
+                        BiomeType.Swamp             => cfg.Resources.WildGameDensity * 0.4f,
+                        _                           => 0f,
+                    };
+                    if (gameDensity > 0f && WorldRng.FloatAt(seed, 3, x, y, 14) < gameDensity)
+                        AddDeposit(result, coord, "Wild_Game", seed, x, y, 15);
+                }
+
+                // Clay — ceramics and construction; swamps, river edges, hills
+                {
+                    bool hasRiver = ctx.River is { } r && r.HasRiver[idx];
+                    float clayDensity = biome.Biomes[idx] switch
+                    {
+                        BiomeType.Swamp  => cfg.Resources.ClayDensity * 1.8f,
+                        BiomeType.Hills  => cfg.Resources.ClayDensity * 0.8f,
+                        BiomeType.Plains => cfg.Resources.ClayDensity * 0.5f,
+                        BiomeType.Grassland => cfg.Resources.ClayDensity * 0.4f,
+                        _                => 0f,
+                    };
+                    if (hasRiver) clayDensity += cfg.Resources.ClayDensity * 1.2f;
+                    if (clayDensity > 0f && WorldRng.FloatAt(seed, 3, x, y, 16) < clayDensity)
+                        AddDeposit(result, coord, "Clay", seed, x, y, 17);
+                }
+
+                // Flint — tools and early weapons; arid and rocky terrain
+                {
+                    float flintDensity = biome.Biomes[idx] switch
+                    {
+                        BiomeType.Desert   => cfg.Resources.FlintDensity * 1.3f,
+                        BiomeType.Hills    => cfg.Resources.FlintDensity * 1.2f,
+                        BiomeType.Mountain => cfg.Resources.FlintDensity * 0.9f,
+                        BiomeType.Beach    => cfg.Resources.FlintDensity * 0.6f,
+                        BiomeType.Tundra   => cfg.Resources.FlintDensity * 0.4f,
+                        _                  => 0f,
+                    };
+                    if (flintDensity > 0f && WorldRng.FloatAt(seed, 3, x, y, 18) < flintDensity)
+                        AddDeposit(result, coord, "Flint", seed, x, y, 19);
+                }
             }
 
             if (y % 50 == 0)

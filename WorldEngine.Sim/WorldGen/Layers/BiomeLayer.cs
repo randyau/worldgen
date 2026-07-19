@@ -40,53 +40,71 @@ public sealed class BiomeLayer : IWorldGenLayer<BiomeResult>
         var ocean   = ctx.Ocean!;
         var climate = ctx.Climate!;
         var cfg     = ctx.SimConfig;
+        int w = ctx.TileWidth, h = ctx.TileHeight;
         int n = ctx.TileCount;
+
+        // High-frequency noise for per-tile fertility micro-variation.
+        // Small patches of variation break tile homogeneity within biomes so characters
+        // naturally prefer some tiles over others rather than picking the first one they walk to.
+        var microNoise = new FastNoiseLite(ctx.Config.Seed ^ LayerSeeds.MicroVariation);
+        microNoise.SetNoiseType(FastNoiseLite.NoiseType.OpenSimplex2);
+        microNoise.SetFrequency(0.07f);
+        microNoise.SetFractalType(FastNoiseLite.FractalType.FBm);
+        microNoise.SetFractalOctaves(3);
+        int microVariance = cfg.WorldGen.FertilityMicroVariance;
 
         var result = new BiomeResult(n);
 
-        for (int i = 0; i < n; i++)
+        for (int y = 0; y < h; y++)
         {
-            if (ocean.IsOcean[i])
+            for (int x = 0; x < w; x++)
             {
-                result.Biomes[i]   = BiomeType.Ocean;
-                result.Fertility[i] = 0;
-                continue;
+                int i = ctx.IndexOf(x, y);
+
+                if (ocean.IsOcean[i])
+                {
+                    result.Biomes[i]    = BiomeType.Ocean;
+                    result.Fertility[i] = 0;
+                    continue;
+                }
+
+                // Build flags from prior layer results
+                TileStaticFlags flags = TileStaticFlags.None;
+                if (tec.IsVolcanic[i])          flags |= TileStaticFlags.IsVolcanic;
+                if (tec.IsFaultLine[i])         flags |= TileStaticFlags.IsFaultLine;
+                if (ocean.IsCoastal[i])         flags |= TileStaticFlags.IsCoastal;
+                if (climate.IsStormCorridor[i]) flags |= TileStaticFlags.IsStormCorridor;
+                if (ctx.River is { } river)
+                {
+                    if (river.IsLake[i])  flags |= TileStaticFlags.IsLake;
+                    if (river.HasRiver[i]) flags |= TileStaticFlags.HasRiver;
+                }
+
+                var biome = BiomeClassifier.Classify(
+                    climate.BaseTemperature[i],
+                    climate.BaseMoisture[i],
+                    elev.Elevation[i],
+                    flags,
+                    cfg);
+
+                result.Biomes[i] = biome;
+
+                // Fertility = biome base + moisture bonus + per-tile micro-variation noise.
+                // The noise is in [-1, 1]; scaling by microVariance gives ±variance swing.
+                float moistureBonus = climate.BaseMoisture[i] / 255f * 30f;
+                float micro         = microNoise.GetNoise(x, y) * microVariance;
+                byte  baseFert      = BaseFertility.TryGetValue(biome, out byte bv) ? bv : (byte)50;
+                result.Fertility[i] = (byte)Math.Clamp(baseFert + moistureBonus + micro, 0, 255);
             }
 
-            // Build flags from prior layer results
-            TileStaticFlags flags = TileStaticFlags.None;
-            if (tec.IsVolcanic[i])     flags |= TileStaticFlags.IsVolcanic;
-            if (tec.IsFaultLine[i])    flags |= TileStaticFlags.IsFaultLine;
-            if (ocean.IsCoastal[i])    flags |= TileStaticFlags.IsCoastal;
-            if (climate.IsStormCorridor[i]) flags |= TileStaticFlags.IsStormCorridor;
-            // River/lake flags are set from RiverResult if it's available
-            if (ctx.River is { } river)
+            if (y % 50 == 0)
             {
-                if (river.IsLake[i])    flags |= TileStaticFlags.IsLake;
-                if (river.HasRiver[i])  flags |= TileStaticFlags.HasRiver;
+                ct.ThrowIfCancellationRequested();
+                progress?.Report((float)y / h);
             }
-
-            var biome = BiomeClassifier.Classify(
-                climate.BaseTemperature[i],
-                climate.BaseMoisture[i],
-                elev.Elevation[i],
-                flags,
-                cfg);
-
-            result.Biomes[i] = biome;
-
-            // Fertility = base + moisture bonus
-            float moistureBonus = climate.BaseMoisture[i] / 255f * 30f;
-            byte baseFert = BaseFertility.TryGetValue(biome, out byte bv) ? bv : (byte)50;
-            result.Fertility[i] = (byte)Math.Clamp(baseFert + moistureBonus, 0, 255);
         }
 
-        if (n > 0)
-        {
-            ct.ThrowIfCancellationRequested();
-            progress?.Report(1.0f);
-        }
-
+        progress?.Report(1.0f);
         return result;
     }
 }

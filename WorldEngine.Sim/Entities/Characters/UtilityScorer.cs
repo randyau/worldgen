@@ -289,6 +289,20 @@ public sealed class UtilityScorer
                 }
             }
 
+            // Ruin check: mirror the hard block in ResolveEstablish so delegates don't waste
+            // seasons on a tile they'll be silently rejected from. After the cooldown, reduce
+            // founding probability proportional to TimesSettled — repeatedly-destroyed sites
+            // stay unattractive without being permanently blocked.
+            bool ruinBlocked = false;
+            float ruinPenalty = 0f;
+            if (world.Ruins.TryGetValue(c.Location, out var localRuin))
+            {
+                int effectiveCooldown = cfg.RuinCooldownYears * Math.Max(1, localRuin.TimesSettled);
+                ruinBlocked = world.CurrentYear - localRuin.DestroyedYear < effectiveCooldown;
+                if (!ruinBlocked)
+                    ruinPenalty = RuinFoundingPenalty(c.Location, world, cfg) * localRuin.TimesSettled;
+            }
+
             // FoundCity delegates bypass the founding cooldown — they are explicitly assigned
             // to found a city and the civ has already decided it wants expansion.
             // The civ-level delegation check (RunCityExpansionDecisions) already enforces cooldown
@@ -296,10 +310,12 @@ public sealed class UtilityScorer
             // before the last founding and prevents all their work from bearing fruit.
             if (tileFert.Fertility >= cfg.MinFertilityToSettle
                 && tileFert.BaseMoisture >= cfg.MinBaseMoistureToSettle
-                && !tooCloseToSettle)
+                && !tooCloseToSettle
+                && !ruinBlocked)
             {
+                float adjustedProb = Math.Max(0.05f, foundProb - ruinPenalty);
                 actions.Add(new(new EstablishSettlement(c.Id, c.Location),
-                    Score(c, ActionType.FoundCity, foundProb, world, cfg)));
+                    Score(c, ActionType.FoundCity, adjustedProb, world, cfg)));
             }
         }
 
@@ -466,6 +482,17 @@ public sealed class UtilityScorer
         int[] dx = { -1, 1, 0, 0 };
         int[] dy = { 0, 0, -1, 1 };
 
+        // Shuffle direction evaluation order per-character so tied scores don't always break
+        // toward East/West. Uses character ID (stable per character) as a deterministic key.
+        int[] ord = { 0, 1, 2, 3 };
+        int idInt = (int)(c.Id.Value & 0x7FFFFFFF);
+        for (int k = 3; k > 0; k--)
+        {
+            int j = (int)(WorldRng.FloatAt(world.Config.Seed, idInt, c.Location.X + k, c.Location.Y, 888) * (k + 1));
+            j = Math.Clamp(j, 0, k);
+            (ord[k], ord[j]) = (ord[j], ord[k]);
+        }
+
         // Count non-ocean adjacent tiles of current position — penalise "dead-end" tiles
         // (beaches/peninsulas with only 1–2 exits) so characters don't get trapped there.
         int currentExits = 0;
@@ -480,8 +507,8 @@ public sealed class UtilityScorer
 
         for (int i = 0; i < 4; i++)
         {
-            int nx = ((c.Location.X + dx[i]) % w + w) % w;
-            int ny = Math.Clamp(c.Location.Y + dy[i], 0, h - 1);
+            int nx = ((c.Location.X + dx[ord[i]]) % w + w) % w;
+            int ny = Math.Clamp(c.Location.Y + dy[ord[i]], 0, h - 1);
             var coord = new TileCoord(nx, ny);
             if (!world.IsLand(coord)) continue;
             if ((BiomeType)world.GetTile(coord).BiomeType == BiomeType.HighMountain) continue;
@@ -534,6 +561,11 @@ public sealed class UtilityScorer
                              * cfg.ShelterSeekTileBonus
                              * (1f - c.Needs.Shelter)); // bonus scales with how desperate they are
             }
+
+            // Ruin deterrent: FoundCity delegates avoid moving toward recently destroyed sites.
+            // Penalty scales with TimesSettled — a tile destroyed multiple times is strongly avoided.
+            if (isFoundCityChar && world.Ruins.TryGetValue(coord, out var travelRuin))
+                score -= (int)(RuinFoundingPenalty(coord, world, cfg) * 150f * Math.Max(1, travelRuin.TimesSettled));
 
             if (score > bestScore) { bestScore = score; best = coord; }
         }

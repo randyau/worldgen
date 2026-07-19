@@ -9,6 +9,12 @@ public class ResourcesConfig
     public float PreciousMetalDensity { get; set; } = 0.005f;
     public float RareResourceDensity  { get; set; } = 0.003f;
 
+    // Surface organic resources — create per-tile variation within biome patches
+    public float HerbDensity          { get; set; } = 0.35f;
+    public float WildGameDensity      { get; set; } = 0.30f;
+    public float ClayDensity          { get; set; } = 0.25f;
+    public float FlintDensity         { get; set; } = 0.20f;
+
     // Phase 5 — resource dynamics
     public byte FertilityRecoveryPerYear           { get; set; } = 3;   // was 1; faster recovery reduces drought's long tail
     public byte PostFireFertilityBoost             { get; set; } = 30;

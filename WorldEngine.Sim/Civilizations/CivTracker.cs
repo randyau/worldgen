@@ -55,6 +55,17 @@ public static partial class CivTracker
             Math.Sqrt(Math.Pow(s.Tile.X - cmd.Tile.X, 2) + Math.Pow(s.Tile.Y - cmd.Tile.Y, 2)) < globalMinDist))
             return;
 
+        // Hard ruin cooldown: recently destroyed sites cannot be immediately resettled.
+        // Cooldown scales with TimesSettled so repeatedly contested tiles grow progressively harder
+        // to reclaim — a tile destroyed 3× needs 3× the base cooldown to rebuild.
+        if (world.Ruins.TryGetValue(cmd.Tile, out var ruin))
+        {
+            int effectiveCooldown = world.SimConfig.Character.RuinCooldownYears
+                                  * Math.Max(1, ruin.TimesSettled);
+            if (world.CurrentYear - ruin.DestroyedYear < effectiveCooldown)
+                return;
+        }
+
         // Create settlement
         var civId = founder.Identity.CivId;
         bool newCiv = !civId.IsValid;

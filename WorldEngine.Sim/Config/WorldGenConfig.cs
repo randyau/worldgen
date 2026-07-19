@@ -11,6 +11,12 @@ public class WorldGenConfig
     /// <summary>Multiplier on magic intensity peaks (V2 stub).</summary>
     public float MagicIntensityScale { get; set; } = 1.0f;
 
+    /// <summary>
+    /// Half-amplitude of the per-tile high-frequency noise applied to fertility during world gen.
+    /// Creates organic variation within biome patches so characters don't all pick the same tile.
+    /// </summary>
+    public int FertilityMicroVariance { get; set; } = 20;
+
     public TectonicsConfig Tectonics { get; set; } = new();
     public ElevationConfig Elevation { get; set; } = new();
     public OceanConfig Ocean { get; set; } = new();

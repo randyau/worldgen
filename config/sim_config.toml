@@ -31,7 +31,9 @@ default_tile_size_km    = 10      # Real-world km per world-scale tile
 default_width_km        = 4000    # Default world width (Europe-scale)
 default_height_km       = 3000    # Default world height (Europe-scale)
 chunk_size              = 16      # Tile grid chunk dimensions (16×16 tiles per chunk)
-magic_intensity_scale   = 1.0     # Multiplier on magic intensity peaks (V2 stub)
+magic_intensity_scale       = 1.0  # Multiplier on magic intensity peaks (V2 stub)
+fertility_micro_variance    = 20   # ±range of high-freq noise applied to tile fertility at world gen;
+                                   # breaks intra-biome tile homogeneity so characters prefer specific tiles
 
 [world_gen.elevation]
 noise_scale             = 0.3     # How much noise varies elevation around tectonic baseline
@@ -53,6 +55,12 @@ copper_density          = 0.04    # Fraction of volcanic-adjacent tiles with cop
 tin_density             = 0.015   # Fraction of eligible tiles with tin (rare by design)
 precious_metal_density  = 0.005   # Fraction of volcanic tiles with precious metals
 rare_resource_density   = 0.003   # Fraction of tiles with rare/magical resources
+
+# Surface organic resource densities (biome-multiplied per tile; create intra-biome variation)
+herb_density            = 0.35    # Base fraction of eligible tiles with Herbs (forests/grassland/swamp)
+wild_game_density       = 0.30    # Base fraction of eligible tiles with Wild_Game (forest/grassland/savanna)
+clay_density            = 0.25    # Base fraction of eligible tiles with Clay (swamp/river/hills)
+flint_density           = 0.20    # Base fraction of eligible tiles with Flint (desert/hills/beach)
 
 # Runtime fertility dynamics (Phase 5) — previously in dead [resources] section
 # DECISION: kept in [world_gen.resources] alongside density keys because ResourcesConfig
