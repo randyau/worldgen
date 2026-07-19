@@ -1,5 +1,6 @@
 namespace WorldEngine.Sim.World;
 
+/// <summary>Per-tile border sampling data (North/South/East/West edges, 64 samples each) for civ contact detection.</summary>
 public sealed class BorderManifest
 {
     public const int SampleCount = 64;

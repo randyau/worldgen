@@ -1,5 +1,6 @@
 namespace WorldEngine.Sim.Core;
 
+/// <summary>World generation parameters: seed, tile dimensions, and world size in km.</summary>
 public sealed class WorldConfig
 {
     public int Seed { get; init; }

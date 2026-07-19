@@ -1,5 +1,6 @@
 namespace WorldEngine.Sim.Config;
 
+/// <summary>Root config container; all subsections loaded from sim_config.toml.</summary>
 public class SimConfig
 {
     public WorldGenConfig WorldGen { get; set; } = new();

@@ -1,5 +1,6 @@
 namespace WorldEngine.Sim.Config;
 
+/// <summary>Temperature/moisture gradients, storm corridors, and climate drift constants.</summary>
 public class ClimateConfig
 {
     // World-state multipliers (used at sim runtime)

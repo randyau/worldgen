@@ -1,5 +1,6 @@
 namespace WorldEngine.Sim.Config;
 
+/// <summary>Disaster probability and damage constants (wildfire, flood, eruption, earthquake, drought).</summary>
 public class DisasterConfig
 {
     public float WildfireIgnitionProbabilityPerTick { get; set; } = 0.0003f;

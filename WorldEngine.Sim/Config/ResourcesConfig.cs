@@ -1,5 +1,6 @@
 namespace WorldEngine.Sim.Config;
 
+/// <summary>Per-resource deposit density fractions used during world generation (iron, copper, tin, precious metals).</summary>
 public class ResourcesConfig
 {
     public float IronDensity          { get; set; } = 0.08f;

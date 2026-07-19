@@ -4,6 +4,7 @@ using WorldEngine.Sim.Core;
 
 namespace WorldEngine.UI.Rendering;
 
+// MAP: Pan/zoom camera for the tile map.
 public sealed class Camera2D
 {
     public Vector2 Position { get; private set; } = Vector2.Zero;

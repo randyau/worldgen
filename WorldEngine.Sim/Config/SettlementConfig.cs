@@ -1,5 +1,6 @@
 namespace WorldEngine.Sim.Config;
 
+/// <summary>Population growth rates, carrying capacity, and crystallisation threshold constants.</summary>
 public sealed class SettlementConfig
 {
     // Starting population for every newly founded settlement (capital or colony).

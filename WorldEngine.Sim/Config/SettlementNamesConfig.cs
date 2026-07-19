@@ -1,5 +1,6 @@
 namespace WorldEngine.Sim.Config;
 
+/// <summary>Prefix/suffix pools for procedural settlement name generation.</summary>
 public sealed class SettlementNamesConfig
 {
     public string[] Prefixes { get; set; } =

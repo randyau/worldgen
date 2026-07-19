@@ -2,6 +2,7 @@ using Myra.Graphics2D.UI;
 
 namespace WorldEngine.UI.UI;
 
+// MAP: Full-screen world-gen progress overlay.
 public sealed class WorldGenScreen
 {
     public readonly Panel Root;

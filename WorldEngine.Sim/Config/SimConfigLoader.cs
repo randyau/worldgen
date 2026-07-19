@@ -5,6 +5,7 @@ using Tomlyn.Model;
 
 namespace WorldEngine.Sim.Config;
 
+/// <summary>Tomlyn-based TOML loader; strict mode detects unbound keys; supports profile overlays and --set overrides.</summary>
 public static class SimConfigLoader
 {
     private static readonly string DefaultConfigPath = Path.Combine("config", "sim_config.toml");

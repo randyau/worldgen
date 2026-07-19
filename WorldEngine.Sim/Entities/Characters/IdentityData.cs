@@ -2,6 +2,7 @@ using WorldEngine.Sim.Core;
 
 namespace WorldEngine.Sim.Entities.Characters;
 
+/// <summary>Immutable identity record for a character: name, epithet, ancestry, and birth/death metadata.</summary>
 public sealed record IdentityData(
     string     Name,
     string     Epithet,

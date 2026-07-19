@@ -1,5 +1,6 @@
 namespace WorldEngine.Sim.Config;
 
+/// <summary>Tile improvement food/production multipliers and build-cost constants.</summary>
 public sealed class ImprovementsConfig
 {
     public float FarmFoodMultiplier     { get; set; } = 2.0f;

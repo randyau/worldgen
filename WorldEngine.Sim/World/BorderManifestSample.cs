@@ -1,5 +1,6 @@
 namespace WorldEngine.Sim.World;
 
+/// <summary>5-byte border sample struct: elevation, moisture, river/road crossing flags, and ownership.</summary>
 public struct BorderManifestSample  // 5 bytes × 64 × 4 edges = 1,280 bytes per tile
 {
     public byte Elevation;

@@ -5,6 +5,7 @@ using WorldEngine.Sim.World;
 
 namespace WorldEngine.Sim.Entities.Characters;
 
+/// <summary>Applies per-tick need decay and environmental boosts to character NeedsVector.</summary>
 public static class NeedsUpdater
 {
     public static void Update(Tier1Character c, IWorldStateReadOnly world, CharacterSimConfig cfg)

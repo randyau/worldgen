@@ -1,5 +1,6 @@
 namespace WorldEngine.Sim.Config;
 
+/// <summary>Elevation, temperature, and moisture thresholds for biome classification.</summary>
 public class BiomeThresholdConfig
 {
     // Elevation thresholds (byte, 0-255)

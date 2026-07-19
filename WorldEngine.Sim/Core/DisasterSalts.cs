@@ -1,5 +1,6 @@
 namespace WorldEngine.Sim.Core;
 
+/// <summary>RNG salt constants for disaster phase; keeps disaster rolls reproducible and independent.</summary>
 public static class DisasterSalts
 {
     public const int Wildfire = 1;

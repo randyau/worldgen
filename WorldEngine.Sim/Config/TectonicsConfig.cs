@@ -1,5 +1,6 @@
 namespace WorldEngine.Sim.Config;
 
+/// <summary>Tectonic plate count, separation, and continental/oceanic ratio constants for world generation.</summary>
 public class TectonicsConfig
 {
     public int PlateCount { get; set; } = 15;

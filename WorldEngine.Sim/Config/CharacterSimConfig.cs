@@ -1,5 +1,6 @@
 namespace WorldEngine.Sim.Config;
 
+/// <summary>Character behavior constants: needs decay, skill growth, diplomacy (war knobs in WarConfig).</summary>
 public sealed class CharacterSimConfig
 {
     public int   InitialCount           { get; set; } = 20;

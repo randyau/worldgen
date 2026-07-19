@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 
 namespace WorldEngine.Sim.Tiles;
 
+/// <summary>14-byte tile struct with static (worldgen) and dynamic (sim) fields; see interface_contracts_tiles.md.</summary>
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 public struct TileData  // exactly 14 bytes — asserted at startup
 {

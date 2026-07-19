@@ -1,5 +1,6 @@
 namespace WorldEngine.Sim.Tiles;
 
+/// <summary>Static tile flags set during world generation (IsVolcanic, IsFaultLine, HasRiver, etc.).</summary>
 [Flags]
 public enum TileStaticFlags : ushort
 {

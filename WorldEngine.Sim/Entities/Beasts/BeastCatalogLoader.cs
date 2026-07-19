@@ -3,6 +3,7 @@ using Tomlyn;
 
 namespace WorldEngine.Sim.Entities.Beasts;
 
+/// <summary>Loads beasts.toml into BeastCatalog instances.</summary>
 public static class BeastCatalogLoader
 {
     private static readonly string DefaultPath = Path.Combine("config", "beasts.toml");

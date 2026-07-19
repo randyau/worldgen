@@ -1,5 +1,6 @@
 namespace WorldEngine.Sim.Config;
 
+/// <summary>Food/water/resource pressure constants: shortage threshold, famine onset, and carrying-capacity weights.</summary>
 public sealed class ResourcePressureConfig
 {
     public float ShortageThreshold     { get; set; } = 0.6f;  // food ratio below this = shortage

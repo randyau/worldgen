@@ -6,6 +6,7 @@ using WorldEngine.Sim.World;
 
 namespace WorldEngine.UI.Rendering;
 
+// MAP: Draws tiles + entity/settlement/ruin markers; M3.4: territory civ-color tint + improvement icons.
 public sealed class TileMapRenderer(GraphicsDevice gd, Camera2D camera)
 {
     private readonly Texture2D _pixel = CreatePixel(gd);

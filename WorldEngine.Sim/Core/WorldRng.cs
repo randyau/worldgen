@@ -3,6 +3,7 @@ using System.IO.Hashing;
 
 namespace WorldEngine.Sim.Core;
 
+/// <summary>Deterministic RNG: FloatAt(seed, tick, x, y, salt) — use salts from SimRngSalts.</summary>
 public static class WorldRng
 {
     public static float FloatAt(int worldSeed, long tick, int x, int y, int salt)

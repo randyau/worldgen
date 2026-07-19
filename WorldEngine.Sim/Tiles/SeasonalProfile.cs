@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 
 namespace WorldEngine.Sim.Tiles;
 
+/// <summary>8-byte per-tile seasonal climate deltas (temperature + moisture delta per season).</summary>
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 public struct SeasonalProfile  // 8 bytes
 {

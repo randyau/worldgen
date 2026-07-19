@@ -1,5 +1,6 @@
 namespace WorldEngine.Sim.Core;
 
+/// <summary>All enums: BiomeType, Season, SimPhase, EntityKind, EventType, EventTier, VerbClass, etc.</summary>
 public enum DiscoveryType
 {
     Agriculture    = 0,

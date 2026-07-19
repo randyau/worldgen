@@ -1,5 +1,6 @@
 namespace WorldEngine.Sim.Config;
 
+/// <summary>FastNoiseLite terrain noise and mountain/tectonic thresholds for world generation.</summary>
 public class ElevationConfig
 {
     /// <summary>FastNoiseLite frequency for base elevation noise.</summary>

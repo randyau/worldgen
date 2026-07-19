@@ -3,6 +3,9 @@ using WorldEngine.Sim.World;
 
 namespace WorldEngine.Sim.Commands;
 
+/// <summary>
+/// UI-to-sim command records: SetSimSpeed, PauseToggle, StepOneTick, SetViewport (no-op); routed via CommandQueue.
+/// </summary>
 public sealed record SetSimSpeed(SimSpeed Speed) : ICommand;
 public sealed record PauseToggle : ICommand;
 public sealed record StepOneTick : ICommand;

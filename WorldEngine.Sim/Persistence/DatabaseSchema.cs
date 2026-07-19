@@ -1,5 +1,6 @@
 namespace WorldEngine.Sim.Persistence;
 
+/// <summary>Schema DDL for SQLite: Events, SignificanceScore, CausalEdges, CharacterSummaries, CivSummaries, Eras, SuccessionChain, Dynasties, CivTraits, yearly_metrics.</summary>
 public static class DatabaseSchema
 {
     public const string CreateEvents = """

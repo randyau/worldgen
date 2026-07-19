@@ -7,6 +7,7 @@ namespace WorldEngine.Sim.Entities;
 // No callbacks, delegates, or mutable object references (CLAUDE.md Mandatory Pattern #4).
 
 // Beast commands
+/// <summary>All entity ICommand records (MoveTo, Rest, etc.) in one file; sealed records with value-type fields only.</summary>
 public sealed record MoveToTile(EntityId EntityId, TileCoord Destination) : ICommand;
 public sealed record Graze(EntityId EntityId) : ICommand;
 public sealed record Rest(EntityId EntityId) : ICommand;

@@ -3,6 +3,7 @@ using Tomlyn;
 
 namespace WorldEngine.Sim.Config;
 
+/// <summary>Loads ancestries.toml into AncestryConfig instances.</summary>
 public static class AncestryLoader
 {
     private const string DefaultFile = "config/ancestries.toml";

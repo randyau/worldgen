@@ -1,5 +1,6 @@
 namespace WorldEngine.Sim.Entities.Characters;
 
+/// <summary>Specialist role enum for Tier2 characters: General, Governor, Merchant, Scholar, Physician, Artisan.</summary>
 public enum Tier2Role
 {
     General   = 0,

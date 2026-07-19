@@ -5,6 +5,7 @@ using WorldEngine.Sim.World;
 
 namespace WorldEngine.UI.UI;
 
+// MAP: Sidebar tile inspector; territory/improvement/history sections; [Watch] buttons per character (M3.4).
 public sealed class TileInspectorPanel
 {
     public readonly Panel Root;

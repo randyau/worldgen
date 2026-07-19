@@ -5,6 +5,7 @@ using WorldEngine.Sim.World;
 
 namespace WorldEngine.UI.UI;
 
+// MAP: Top toolbar: speed buttons, year/season label.
 public sealed class TimeControlsPanel
 {
     public readonly HorizontalStackPanel Root;

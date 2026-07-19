@@ -1,5 +1,6 @@
 namespace WorldEngine.Sim.Tiles;
 
+/// <summary>Dynamic tile state flags set during simulation (HasActiveDisaster, RecentlyBurned, etc.).</summary>
 [Flags]
 public enum TileDynFlags : byte
 {

@@ -1,5 +1,6 @@
 namespace WorldEngine.Sim.Tiles;
 
+/// <summary>Chunk-level summary flags for disaster skip optimisation (HasVolcanicTile, HasRiverTile, etc.).</summary>
 [Flags]
 public enum ChunkSummaryFlags : byte
 {

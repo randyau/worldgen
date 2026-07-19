@@ -2,6 +2,7 @@ using WorldEngine.Sim.Core;
 
 namespace WorldEngine.Sim.Entities.Characters;
 
+/// <summary>GoalType enum and GoalData record: type, target, priority, staleness, and resolution tracking.</summary>
 public enum GoalType
 {
     // Survival

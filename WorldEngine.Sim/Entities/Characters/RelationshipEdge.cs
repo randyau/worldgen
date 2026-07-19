@@ -2,6 +2,7 @@ using WorldEngine.Sim.Core;
 
 namespace WorldEngine.Sim.Entities.Characters;
 
+/// <summary>RelationshipFlags (ally/rival/etc.) and RelationshipEdge record tracking character-to-character bonds.</summary>
 [Flags]
 public enum RelationshipFlags
 {

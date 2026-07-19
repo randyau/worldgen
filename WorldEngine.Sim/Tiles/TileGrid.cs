@@ -2,6 +2,7 @@ using WorldEngine.Sim.Core;
 
 namespace WorldEngine.Sim.Tiles;
 
+/// <summary>Flat array + chunk indexing; handles east-west cylinder wrapping.</summary>
 public sealed class TileGrid
 {
     private readonly TileChunk?[,] _chunks;

@@ -3,6 +3,9 @@ using WorldEngine.Sim.World;
 
 namespace WorldEngine.Sim.Civilizations;
 
+/// <summary>
+/// Mutable civ class: ruler, members, war state, border tension; M3.5: CulturalProfile.
+/// </summary>
 public sealed class Civilization
 {
     public CivId      Id          { get; }

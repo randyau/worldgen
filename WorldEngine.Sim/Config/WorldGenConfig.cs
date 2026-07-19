@@ -1,5 +1,6 @@
 namespace WorldEngine.Sim.Config;
 
+/// <summary>World generation parameters: tile size, world dimensions, chunk size, and per-subsystem generation configs.</summary>
 public class WorldGenConfig
 {
     public int DefaultTileSizeKm { get; set; } = 10;

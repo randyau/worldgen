@@ -1,5 +1,6 @@
 namespace WorldEngine.Sim.Config;
 
+/// <summary>Name pools for procedurally naming characters (first and last names).</summary>
 public sealed class CharacterNamesConfig
 {
     public string[] FirstNames { get; set; } =

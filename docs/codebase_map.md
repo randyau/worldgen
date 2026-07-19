@@ -1,177 +1,203 @@
 # Codebase Map
+<!-- GENERATED from <summary> XML docs — edit the source <summary>, not this file. -->
+<!-- Regenerate: python3 scripts/gen-map.py -->
 One-line description of every non-trivial source file. Check here before running `find`. Updated when files are added/removed.
 
-## WorldEngine.Sim/Core/
-- `ICommand.cs` — marker interface; all commands are sealed records implementing this
-- `EntityId.cs / CivId.cs / EventId.cs / ModifierId.cs / ArtifactId.cs` — strongly-typed ID wrappers (never use raw ints)
-- `Enumerations.cs` — all enums: BiomeType, Season, SimPhase, EntityKind, EventType, EventTier, VerbClass, etc.; D5: WarOutcome static class (Truce/Conquest/Surrender/Destruction) and WarCause static class (CharacterEncounter/BorderTension/SuccessionCrisis/WeakNeighbor/ResourceShortage)
-- `WorldConfig.cs` — world gen params: seed, tile dimensions
-- `WorldRng.cs` — deterministic RNG: `FloatAt(seed, tick, x, y, salt)` — use salts from SimRngSalts
-- `CommandQueue.cs` — thread-safe queue for UI→sim commands (SetInspectedTile, etc.)
-- `TileCoord.cs` — 2D tile coordinate; X wraps east-west, Y clamps
-- `DisasterSalts.cs` — RNG salt constants for disaster phase
-
-## WorldEngine.Sim/Config/
-- `SimConfig.cs` — root config container; all subsections loaded from sim_config.toml
-- `SimConfigLoader.cs` — Tomlyn-based TOML loader; B1 strict mode detects unbound keys; B3 Validate() wired; B4 Load(profileName?, overrides?) merges profiles and --set overrides
-- `SimConfigValidator.cs` — B3: validates ranges (probabilities in [0,1]), cross-field invariants (weight sums, threshold orderings, min≤max pairs); throws SimConfigValidationException
-- `SimLoopConfig.cs` — B5: adds TicksPerSeason (alias) and TicksPerYear (= TicksPerSeasonalChange × 4) derived properties; use these everywhere instead of hardcoded 16
-- `CharacterSimConfig.cs` (~300 lines) — character behavior constants: needs decay, skill growth, diplomacy (war knobs moved to WarConfig D5)
-- `AncestryConfig.cs` — per-ancestry personality/aptitude biases, name pools, spawn weights; M3.5: cultural descriptors (ArchitecturalStyle, SettlementDescriptor, BiomeAdaptations, ImprovementDescriptors, ArtisticTraditions, CivNameSuffix)
-- `AncestryRegistry.cs` — collection of AncestryConfig; biome-weighted sampling
-- `AncestryLoader.cs` — loads ancestries.toml
-- `SettlementNamesConfig.cs` — prefix/suffix pools for procedural settlement names
-- `EventsConfig.cs` — significance thresholds, headline gate settings
-- `ResourcePressureConfig.cs` — food/water/resource pressure constants
-- `SettlementConfig.cs` — population growth rates, carrying capacity config
-- `BeastsSimConfig.cs / BeastSpawnConfig.cs / CombatConfig.cs` — beast behavior constants
-- `CulturalTraitsConfig.cs` — M3.2: thresholds for assigning CulturalTrait values (Militaristic/Expansionist/etc.)
-- `UnrestConfig.cs` — S2: [unrest] section — unrest drivers, decay, secession threshold/chance/cluster knobs
-- `UtilityAffinityConfig.cs` — D3: [utility_affinity] section — goal→action affinity matrix and action need-weight table (UtilityAffinityTables pre-bakes both into float arrays at construction)
-- `WildlifeRiskConfig.cs` — D3: [wildlife_risk] section — per-biome wildlife raid multipliers; BuildTable() returns a float[16] indexed by (int)BiomeType
-- `WarConfig.cs` — D5: [war] section — all war knobs consolidated here (tension, duration, raid damage, opportunistic cause thresholds, WarOutcome/WarCause typed constants); previously split between WarConfig and CharacterSimConfig
-- Other `*Config.cs` — per-system TOML sections (Climate, Elevation, Tectonic, etc.)
-
-## WorldEngine.Sim/Tiles/
-- `TileData.cs` — 14-byte tile struct (static+dynamic fields; see interface_contracts_tiles.md)
-- `TileGrid.cs` — flat array + chunk indexing; handles east-west cylinder wrapping
-- `TileChunk.cs` — chunk struct for disaster skip optimisation (ChunkSummaryFlags)
-- `TileStaticFlags.cs / TileDynFlags.cs / ChunkSummaryFlags.cs` — flag enums
-- `SeasonalProfile.cs` — 8-byte per-tile seasonal climate deltas
-- `TileTemperature.cs` — temperature utility helpers
-
-## WorldEngine.Sim/WorldGen/
-- `WorldGenPipeline.cs` — orchestrates all layers in order, returns populated WorldState
-- `WorldGenContext.cs` — mutable context passed through the pipeline
-- `IWorldGenLayer.cs` — layer interface: stateless, all state in WorldGenContext
-- `TileGridAssembler.cs` — converts layer results into the final TileGrid
-- `LayerSeeds.cs` — deterministic per-layer seed derivation
-- `BiomeClassifier.cs` — classifies tiles from climate+elevation into BiomeType
-- **Result types** (one per layer; plain data): `ElevationResult`, `ClimateResult`, `BiomeResult`, `TectonicResult`, `RiverResult`, `OceanResult`, `ResourceResult`, `MagicResult`, `PoiResult`
-- **Layers/** — one file per generation layer:
-  - `ElevationLayer.cs` — FastNoiseLite terrain noise
-  - `TectonicLayer.cs` — plate assignment and fault lines (~220 lines)
-  - `ClimateLayer.cs` — temperature/moisture gradients and storm corridors (~448 lines)
-  - `RiverLayer.cs` — flow accumulation and lake detection (~298 lines)
-  - `BiomeLayer.cs / OceanLayer.cs / ResourceLayer.cs / MagicLayer.cs / PoiCandidateLayer.cs`
-
 ## WorldEngine.Sim/Civilizations/
-- `CivTracker.cs` — `Resolve()` dispatcher + EstablishSettlement, AllyWith, DeclareRivalry, RegisterRuin
-- `CivTracker.War.cs` — ResolveWar, StartWarBetween, ResolveRaid, ResolveNegotiate, RunWarCampaigns
-- `EmissaryTypes.cs` — CivContactSource enum (Rumor/Encounter/EmissaryExchange/Trade/Spy); CivKnowledgeRecord
-- `CivTracker.Diplomacy.cs` — RunAnnualDiplomacy, RunBorderTension, RunCivFloorSpawns, EndWarBetween, FireAllianceBroken
-- `CivTracker.Unrest.cs` — S2: annual unrest accrual (distance/size/famine/succession drivers) + secession — settlements splinter into new civs
-- `CivTracker.Naming.cs` — GenerateSettlementName, GenerateFertilityMultiplier, BiasedIndex, FireCivFounded, FireSettlementFounded; M3.5: ApplyCulturalSettlementName, GetCivNameSuffix, BuildCulturalProfile
-- `CulturalProfile.cs` — M3.5: immutable record (AncestryId, ArchitecturalStyle, SettlementDescriptor, ArtisticTraditions, ActiveTraits, DominantBiome)
-- `Civilization.cs` — mutable civ class: ruler, members, war state, border tension; M3.5: CulturalProfile?
-- `SettlementStub.cs` — live settlement record on sim thread
+- `CivTracker.Diplomacy.cs` — Resolves character commands that affect civilizations, settlements, and relationships. Split across: CivTracker.War.cs, CivTracker.Diplomacy.cs, CivTracker.Naming.cs
+- `CivTracker.Naming.cs` — Resolves character commands that affect civilizations, settlements, and relationships. Split across: CivTracker.War.cs, CivTracker.Diplomacy.cs, CivTracker.Naming.cs
+- `CivTracker.Unrest.cs` — Resolves character commands that affect civilizations, settlements, and relationships. Split across: CivTracker.War.cs, CivTracker.Diplomacy.cs, CivTracker.Naming.cs
+- `CivTracker.War.cs` — Resolves character commands that affect civilizations, settlements, and relationships. Split across: CivTracker.War.cs, CivTracker.Diplomacy.cs, CivTracker.Naming.cs
+- `CivTracker.cs` — Resolves character commands that affect civilizations, settlements, and relationships. Split across: CivTracker.War.cs, CivTracker.Diplomacy.cs, CivTracker.Naming.cs
+- `Civilization.cs` — Mutable civ class: ruler, members, war state, border tension; M3.5: CulturalProfile.
+- `CulturalProfile.cs` — Immutable cultural snapshot for a civilization, derived from its founding ancestry and any acquired cultural traits (Phase 3.2). Computed once at civ founding and updated when new traits are acquired via CivTracker.BuildCulturalProfile.
+- `EmissaryTypes.cs` — How one civilization learned of another — ranked by fidelity (higher = better known).
+- `SettlementStub.cs` — Lightweight settlement record. Population is dynamic from Phase 2.4 onward.
 
 ## WorldEngine.Sim/Commands/
-- `PlayerCommands.cs` — UI→sim command records: SetSimSpeed, PauseToggle, StepOneTick, SetViewport (no-op); routed via CommandQueue
+- `PlayerCommands.cs` — UI-to-sim command records: SetSimSpeed, PauseToggle, StepOneTick, SetViewport (no-op); routed via CommandQueue.
+
+## WorldEngine.Sim/Config/
+- `AncestryConfig.cs` — All data for one ancestry, loaded from config/ancestries.toml. Personality and aptitude fields are bias offsets added to the Gaussian mean (base 0.5).
+- `AncestryLoader.cs` — Loads ancestries.toml into AncestryConfig instances.
+- `AncestryRegistry.cs` — Loaded set of all ancestry configs. Accessible via world.SimConfig.AncestryRegistry. Provides biome-weighted ancestry sampling and cross-ancestry trust lookups.
+- `BeastsSimConfig.cs` — Beast lifecycle constants from the [beasts] section of sim_config.toml. Species-specific values (health, strength, etc.) live in config/beasts.toml.
+- `BiomeThresholdConfig.cs` — Elevation, temperature, and moisture thresholds for biome classification.
+- `CharacterNamesConfig.cs` — Name pools for procedurally naming characters (first and last names).
+- `CharacterSimConfig.cs` — Character behavior constants: needs decay, skill growth, diplomacy (war knobs in WarConfig).
+- `ClimateConfig.cs` — Temperature/moisture gradients, storm corridors, and climate drift constants.
+- `CulturalTraitsConfig.cs` — Thresholds that govern when a civilization acquires a permanent cultural trait. All constants loaded from [cultural_traits] section in sim_config.toml.
+- `DisasterConfig.cs` — Disaster probability and damage constants (wildfire, flood, eruption, earthquake, drought).
+- `ElevationConfig.cs` — FastNoiseLite terrain noise and mountain/tectonic thresholds for world generation.
+- `EmissaryConfig.cs` — All constants governing the civ awareness and emissary system (M4.1). Loaded from the [emissary] section of sim_config.toml.
+- `EventsConfig.cs` — Nested config under [events.gate] in sim_config.toml. Controls which event types are always or never recorded, independent of tier.
+- `ImprovementsConfig.cs` — Tile improvement food/production multipliers and build-cost constants.
+- `ResourcePressureConfig.cs` — Food/water/resource pressure constants: shortage threshold, famine onset, and carrying-capacity weights.
+- `ResourcesConfig.cs` — Per-resource deposit density fractions used during world generation (iron, copper, tin, precious metals).
+- `RiversConfig.cs` — River flow accumulation threshold and lake detection constants for world generation.
+- `SettlementConfig.cs` — Population growth rates, carrying capacity, and crystallisation threshold constants.
+- `SettlementNamesConfig.cs` — Prefix/suffix pools for procedural settlement name generation.
+- `SimConfig.cs` — Root config container; all subsections loaded from sim_config.toml.
+- `SimConfigLoader.cs` — Tomlyn-based TOML loader; strict mode detects unbound keys; supports profile overlays and --set overrides.
+- `SimConfigValidator.cs` — Validates a loaded SimConfig for range, ordering, and cross-field invariants. Called automatically by SimConfigLoader after deserialization. Throws
+- `SimLoopConfig.cs` — Adds TicksPerSeason (alias) and TicksPerYear (= TicksPerSeasonalChange × 4) derived properties; use these everywhere instead of hardcoded 16.
+- `TectonicsConfig.cs` — Tectonic plate count, separation, and continental/oceanic ratio constants for world generation.
+- `UnrestConfig.cs` — Configuration for the settlement unrest / secession mechanic (S2 splinter). All tunable constants for unrest accumulation, decay, and the secession trigger. Bound from the
+- `UtilityAffinityConfig.cs` — Configures the two UtilityScorer lookup tables: 1. Goal → action affinity weights (how well each action advances each goal type). 2. Action base-score need-weights (how much each need's deficit drives each action). TOML section: [utility_affinity] Sub-tables: [utility_affinity.goal_affinity] — goal-name → { action-name = weight } [utility_affinity.action_needs] — action-name → { need-name = coefficient, _default = fallback } Unmapped (goal, action) pairs default to 0.0. Unmapped action need-weights use _default (0.1 for the original fallback, 0.0 for unlisted actions).
+- `WarConfig.cs` — All war-system configuration — consolidated from [character] + [war] in D5. Loaded from the [war] section of sim_config.toml.
+- `WildlifeRiskConfig.cs` — Per-biome wildlife-raid risk multiplier table (D3 extraction from PopulationDynamicsPhase). TOML section: [wildlife_risk] Each key is a BiomeType name in snake_case (e.g. tropical_rainforest, boreal_forest). The value is a float multiplier applied to
+- `WorldGenConfig.cs` — World generation parameters: tile size, world dimensions, chunk size, and per-subsystem generation configs.
+
+## WorldEngine.Sim/Core/
+- `CommandQueue.cs` — Unbounded channel connecting the UI thread (Enqueue) to the sim thread (DrainAll). Thread-safe by Channel design — no additional locking needed.
+- `DisasterSalts.cs` — RNG salt constants for disaster phase; keeps disaster rolls reproducible and independent.
+- `Enumerations.cs` — All enums: BiomeType, Season, SimPhase, EntityKind, EventType, EventTier, VerbClass, etc.
+- `ICommand.cs` — Marker interface for simulation commands. All implementations must be sealed records with value-type fields only. No callbacks, delegates, or mutable object references.
+- `WorldConfig.cs` — World generation parameters: seed, tile dimensions, and world size in km.
+- `WorldRng.cs` — Deterministic RNG: FloatAt(seed, tick, x, y, salt) — use salts from SimRngSalts.
 
 ## WorldEngine.Sim/Entities/
-- `IEntity.cs` — base entity interface (EmitCommands, ToSnapshot)
-- `SimEntity.cs` — abstract base class for entities
-- `EntityRegistry.cs` — flat entity list + coord-bucketed lookup
-- `EntityCommands.cs` — all entity ICommand records (MoveTo, Rest, etc.) in one file
-- `EntitySnapshot.cs` — immutable UI-facing entity summary
-- **Characters/**
-  - `Tier1Character.cs` — named character: full personality, needs, skills, goals, relationships
-  - `Tier2Character.cs` — background specialist: simplified needs/personality, role-based behavior
-  - `UtilityScorer.cs` (~680 lines) — static action selection for Tier1: scores all candidate actions, selects best
-  - `GoalManager.cs` (~357 lines) — goal formation, priority, staleness, resolution
-  - `CharacterFactory.cs` — creates Tier1Character with seeded-random traits
-  - `CharacterSpawner.cs` — world-spawn logic (initial population seeding)
-  - `Tier2Spawner.cs` — crystallisation: spawns Tier2 when settlement hits population threshold
-  - `NeedsVector.cs` — 7 dynamic needs (Tier1); decay each season, restored by actions
-  - `NeedsVector4.cs` — 4-need subset (Tier2)
-  - `PersonalityVector.cs` — 12 stable personality traits (Tier1)
-  - `PersonalityVector6.cs` — 6-trait personality (Tier2)
-  - `SkillVector.cs` — 8 dynamic skills; grow through use, cap at 1.0
-  - `AptitudeVector.cs` — 6 stable aptitude traits; set at spawn
-  - `NeedsUpdater.cs` — applies per-tick need decay and environmental boosts
-  - `GoalData.cs / Tier2Role.cs / LivelihoodData.cs / IdentityData.cs / RelationshipEdge.cs / RelationshipGraph.cs / CharacterSnapshot.cs / AptitudeVector.cs`
-- **Beasts/**
-  - `LegendaryBeast.cs` (~252 lines) — beast entity with HP, aging, territorial behavior
-  - `BeastFactory.cs / BeastSpawner.cs` — beast creation and world seeding
-  - `BeastCatalog.cs / BeastCatalogLoader.cs / BeastCatalogFile.cs` — loads beasts.toml
-  - `BeastSpeciesConfig.cs / BeastSpawnConfig.cs / CombatConfig.cs`
+- `EntityCommands.cs` — All entity ICommand records (MoveTo, Rest, etc.) in one file; sealed records with value-type fields only.
+- `EntityRegistry.cs` — Canonical store for all live entities. Owned by the sim thread. Maintains a spatial index (tile → entity set) for fast proximity lookups.
+- `EntitySnapshot.cs` — Immutable UI-facing summary of one entity. Read by the UI thread from WorldSnapshot. Heavy entity data stays on the sim thread inside EntityRegistry.
+- `IEntity.cs` — The core simulation entity interface. Every simulated object implements this. Entities NEVER mutate world state directly. They emit ICommand instances during the EMIT step which are resolved by CommandResolver in the RESOLVE step.
+- `SimEntity.cs` — Abstract base for all named, tracked simulation entities. Holds the fields shared across Tier1Character, Tier2Character, and LegendaryBeast — Id, Location, lifecycle state, and health/aging — so subclasses own only their tier-specific behaviour.
 
-## WorldEngine.Sim/
-- `Program.cs` — A1: headless entry point; parses --seed, --years, --profile, --set, --audit-food; calls WorldGenPipeline then SimLoop.RunSynchronous; writes world.db
+## WorldEngine.Sim/Entities/Beasts/
+- `BeastCatalog.cs` — Queryable, in-memory view of the beast species catalog loaded from config/beasts.toml.
+- `BeastCatalogFile.cs` — Top-level wrapper for beasts.toml deserialization. Tomlyn maps [[beasts]] arrays to the Beasts list via snake_case conversion.
+- `BeastCatalogLoader.cs` — Loads beasts.toml into BeastCatalog instances.
+- `BeastFactory.cs` — Creates LegendaryBeast instances from a species config and placement parameters. All randomness is seeded via WorldRng for reproducibility.
+- `BeastSpawnConfig.cs` — Global beast spawn settings from the [beast_spawn] section of config/beasts.toml.
+- `BeastSpawner.cs` — Populates EntityRegistry with initial beasts and builds the BeastEmergenceSchedule for deferred mythological creature spawns. Called once, after world gen, before the first sim tick.
+- `BeastSpeciesConfig.cs` — Configuration for one beast species loaded from config/beasts.toml.
+- `CombatConfig.cs` — Combat resolution parameters from the [combat] section of config/beasts.toml.
+- `LegendaryBeast.cs` — A named, tracked beast entity. "Legendary" refers to the entity tier (named, historically significant), not necessarily to IsLegendary which marks a legendary specimen. All beasts — from a common wolf to a Dragon — are instances of this class.
 
-## WorldEngine.Sim/Simulation/
-- `SimLoop.cs` — main tick loop: emit→resolve→commit cycle, speed control; A1: RunSynchronous(ticks) for headless batch runs
-- `PhaseRunner.cs` (~340 lines) — runs all 7 phases in order per tick; writes events to DB; A2: drives MetricsAccumulator YTD counts + calls MetricsCollector.Sample on annual tick; D2: RunFoodAudit() for --audit-food
-- `MetricsCollector.cs` — A2: samples WorldState once/year → writes yearly_metrics row; also defines MetricsAccumulator (YTD event counters) and YearlyMetricsRow moved to Persistence/
-- `FoodAuditSink.cs` — D2: captures per-tile food factors (fertility, moisture, growing_season, biome_mult, improvement) and per-settlement rollup; passed to ResourcePressurePhase.Execute() for --audit-food diagnostic; null on hot path
-- `SimRngSalts.cs` — integer salt constants used with WorldRng for reproducibility
-- `EventCache.cs` — in-memory ring buffer of recent SimEvents for snapshot
-- **Phases/** — one file per sim phase:
-  - `EnvironmentalPhase.cs` (~611 lines) — disasters, climate drift, sea level, wildfire/flood/eruption/drought
-  - `CharacterBehaviorPhase.cs` (~580 lines) — Tier1 AI: emit commands via UtilityScorer
-  - `EntityBehaviorPhase.cs` (~391 lines) — beast and generic entity behavior
-  - `Tier2BehaviorPhase.cs` (~409 lines) — specialist NPC behavior by role
-  - `PopulationDynamicsPhase.cs` (~362 lines) — settlement growth, death, crystallisation, collapse
-  - `ResourcePressurePhase.cs` (~361 lines) — food/water/resource ledger per settlement (territory-based since M3.0)
-  - `TerritoryPhase.cs` — M3.0: annual city territory expansion/contraction
-  - `KnowledgePropagationPhase.cs` — annual pass spreading technology/knowledge between settlements in contact
+## WorldEngine.Sim/Entities/Characters/
+- `CharacterFactory.cs` — Creates Tier1Character instances with seeded-random traits.
+- `CharacterSnapshot.cs` — Immutable UI-facing summary of a Tier 1 character. Carried in WorldSnapshot; only key fields for display purposes.
+- `CharacterSpawner.cs` — Populates the world with initial Tier 1 characters at world start. Characters are placed on fertile land tiles, one per tile.
+- `GoalData.cs` — GoalType enum and GoalData record: type, target, priority, staleness, and resolution tracking.
+- `GoalManager.cs` — Goal formation, priority, staleness, and resolution for Tier1 characters (~357 lines).
+- `IdentityData.cs` — Immutable identity record for a character: name, epithet, ancestry, and birth/death metadata.
+- `LivelihoodData.cs` — Describes a Tier 2 character's role, affiliation, and economic position.
+- `NeedsUpdater.cs` — Applies per-tick need decay and environmental boosts to character NeedsVector.
+- `RelationshipEdge.cs` — RelationshipFlags (ally/rival/etc.) and RelationshipEdge record tracking character-to-character bonds.
+- `RelationshipGraph.cs` — Centralized relationship store. NOT on entity objects. Canonical key: (Min(a,b), Max(a,b)) — independent of query direction. Maintains a per-entity adjacency index so GetAll/CountAlliances are O(degree) rather than O(all edges), preventing the O(n²) scan that accumulates as the graph grows over long simulations.
+- `Tier1Character.cs` — A named Tier 1 character — hero, warlord, or ruler. Makes utility-scored decisions each season via EmitCommands.
+- `Tier2Character.cs` — A named Tier 2 character — specialist or authority figure below hero/ruler status. Uses simplified 4-need model and fixed role behaviors instead of utility scoring.
+- `Tier2Role.cs` — Specialist role enum for Tier2 characters: General, Governor, Merchant, Scholar, Physician, Artisan.
+- `Tier2Spawner.cs` — Populates the world with Tier 2 characters proportional to settlement population at world start.
+- `UtilityScorer.cs` — Scores candidate actions for a Tier 1 character and selects one via softmax. Holds pre-baked lookup tables (goal→action affinity, action need-weights) built once at construction from
 
 ## WorldEngine.Sim/Events/
-- `Payloads.cs` — all event payload records (one per EventType); serialised to JSON for storage
-- `EventGate.cs` — significance filter: decides what makes it into the event log
-- `SignificanceClassifier.cs` — scores events for Tier, VerbClass, PopulationImpact
-
-## WorldEngine.Sim/World/
-- `WorldState.cs` — mutable world state; sim thread only; source of truth during sim
-- `IWorldStateReadOnly.cs` — read-only interface passed to entity logic
-- `IHistoryGraphReadOnly.cs` — history query interface (see interface_contracts_events.md)
-- `IHistoryQuery.cs` — M3.1: pre-indexed structured query API (GetCivSummary, GetRulersOfCiv, etc.); M3.4: adds GetTileHistory
-- `HistoryTypes.cs` — M3.1: CharacterSummary, CivSummary, ConflictRecord record types
-- `WorldSnapshot.cs` — immutable UI-facing projection; M3.4 adds CharacterWatchSnapshot + GoalWatchEntry
-- `StateCache.cs` — thread-safe snapshot bridge between sim and UI threads
-- `SnapshotBuilder.cs` — builds WorldSnapshot from WorldState each tick; M3.4: populates tile inspector territory/improvement/history + CharacterWatchSnapshot
-- `SimEvent.cs` — history log event record (immutable once written)
-- `PendingEvent.cs` — pre-commit event emitted by phases; enriched by Phase 7
-- `TileDisplayData.cs` — UI tile display struct
-- `TileInspectorData.cs` — tile inspect panel data; M3.4 adds territory/improvement/history fields
-- `TileImprovement.cs` — M3.0: ImprovementType enum + TileImprovement record (Farm/Mine/etc.)
-- `ActiveDisaster.cs / ActiveDrought.cs / BorderManifest.cs / BorderManifestStore.cs / BorderManifestSample.cs`
-- `RuinRecord.cs / ResourceDeposit.cs`
+- `EventGate.cs` — Pre-write gate deciding whether an event is recorded to the history log. God Mode events are always recorded; otherwise suppressed types and sub-minimum-tier events are dropped.
+- `SignificanceClassifier.cs` — Maps a (type, payload, isFirstOfKind) tuple to an
 
 ## WorldEngine.Sim/Persistence/
-- `EventStore.cs` — SQLite writes: events, entities, causal edges; BuildSummaries() + GetHistoryQuery(); WriteCivTrait(); A2: WriteMetricsRow/GetLastMetricsRow/GetMetricsRowCount for yearly_metrics
-- `DatabaseSchema.cs` — schema DDL (Events+SignificanceScore, CausalEdges, CharacterSummaries, CivSummaries, Eras, SuccessionChain, Dynasties, CivTraits, yearly_metrics)
-- `YearlyMetricsRow.cs` — A2: mutable class for one row of yearly_metrics; Dapper-friendly (parameterless constructor + settable properties)
-- `SummaryBuilder.cs` — M3.1: post-sim pass building CharacterSummaries, CivSummaries (with CulturalTraits), SuccessionChain, Dynasties, Eras
-- `CausalEdgeBuilder.cs` — M3.1: infers and writes causal edges from event patterns (war chains, disease→abandonment, etc.)
-- `HistoryQueryService.cs` — M3.1: IHistoryQuery implementation backed by SQLite summary tables; small LRU cache
-- `SignificanceRescoringPass.cs` — M3.2: retroactive significance pass; upgrades tiers for long-lived settlements/conquests; populates SignificanceScore float column
-- `WorldStateDto.cs` — M3.6: DTO record tree mirroring WorldState; all fields JSON-serializable; WorldStateSerializerContext source-gen
-- `WorldStateMapper.cs` — M3.6: ToDto/FromDto conversion; FromDto regenerates TileGrid from seed + advances EntityId counter
-- `WorldStateSaver.cs` — M3.6: Save/Load/HasSave/ReadMeta/DeleteSave; Save writes meta.json + state.bin + config_snapshot/
+- `CausalEdgeBuilder.cs` — Post-sim pass that infers causal relationships between events and writes them to the CausalEdges table with typed EdgeType labels.
+- `DatabaseSchema.cs` — Schema DDL for SQLite: Events, SignificanceScore, CausalEdges, CharacterSummaries, CivSummaries, Eras, SuccessionChain, Dynasties, CivTraits, yearly_metrics.
+- `EventStore.cs` — SQLite-backed event store. Holds a single persistent connection (required so that an in-memory database survives between calls). Implements
+- `HistoryQueryService.cs` — SQLite-backed implementation of
+- `SignificanceRescoringPass.cs` — Post-sim pass: upgrades event tiers based on downstream outcomes and computes final SignificanceScore for all events. Run once after the simulation ends (or on-demand before narrative generation) via
+- `SummaryBuilder.cs` — Post-sim pass that scans the event log and populates pre-aggregated summary tables: CharacterSummaries, CivSummaries, SuccessionChain, Dynasties, and Eras. Call via
+- `WorldStateDto.cs` — Lightweight save metadata written to meta.json. Checked on load for version compat.
+- `WorldStateSaver.cs` — Saves and loads WorldState to/from a save directory. Format: meta.json (version/summary), state.bin (full world state JSON), config_snapshot/.
+- `YearlyMetricsRow.cs` — One row of the
 
-## WorldEngine.Sim/Vendor/
-- `FastNoiseLite.cs` (~2505 lines) — **do not read or edit** — vendored noise library
+## WorldEngine.Sim/Simulation/
+- `EventCache.cs` — Fixed-capacity ring buffer of recent SimEvents. Add() and GetRecent() are sim-thread-only. Thread safety via StateCache wrapping snapshots.
+- `FoodAuditSink.cs` — Optional audit sink for per-tile food factor breakdowns. Passed to ResourcePressurePhase when
+- `MetricsCollector.cs` — Samples world state once per in-game year and writes a row to the
+- `PhaseRunner.cs` — Runs the 7 simulation phases in order each tick. Phase 1 (Environmental) produces PendingEvents consumed by Phase 7 (EventGeneration). All other phases are stubs in M1.
+- `SimLoop.cs` — Background simulation thread. Ticks WorldState, builds snapshots, commits to StateCache. Only the background thread touches WorldState. UI thread only reads StateCache.
+
+## WorldEngine.Sim/Simulation/Phases/
+- `CharacterBehaviorPhase.cs` — Phase 5 — updates all Tier 1 characters each tick: needs decay, goal management, action selection (utility scoring), lifecycle (aging, death), command resolution (settlement, war, etc.).
+- `EntityBehaviorPhase.cs` — SimPhase 4 — EntityBehavior. Each season tick: update beast needs/lifecycle, emit commands, resolve them. Beast emergence schedule is checked annually.
+- `EnvironmentalPhase.cs` — Phase 1 — Environmental: seasonal climate, annual drift, disaster system, resource dynamics, sea level changes. Direct mutator — never called from UI thread.
+- `KnowledgePropagationPhase.cs` — Annual phase (Spring) that fills Civilization.KnownCivs via three mechanisms: 1. Proximity rumor — civs with settlements within knowledge_spread_radius gain contact 2. Decay — existing contacts lose confidence each year without a refresh mechanism 3. Rumor chaining — one-hop indirect propagation of non-Rumor contacts Character-encounter seeding (mechanism 4) is wired in CharacterBehaviorPhase via CivTracker.SeedCivContact at the cross-civ encounter point.
+- `PopulationDynamicsPhase.cs` — Phase 3 — per-season settlement population growth/decay, specialist crystallization, and abandonment. Replaces the PopulationDynamics stub.
+- `ResourcePressurePhase.cs` — Each tick: 1. Computes each settlement's "reach" — the set of tiles it can exploit. 2. Builds an extensible resource ledger (Dictionary keyed by resource type string) from reach tiles: food (fertility × moisture), timber (forest biomes), and any mineral deposits. New resource types added to config flow through automatically without code changes. 3. Seeds Acquire / Flee goals on resident characters when ledger shows deficits. 4. Emits SettlementStraining events (rate-limited) for significant shortages.
+- `TerritoryPhase.cs` — Annual phase (Spring only): grows or contracts each city's territory based on population. Expansion: claims the highest-fertility unclaimed adjacent tile, up to TerritoryGrowthPerYear per city. Contraction: releases the tiles farthest from the city center when population has dropped.
+- `Tier2BehaviorPhase.cs` — Phase 5b — updates Tier 2 characters each tick. Needs decay, role behavior (fixed per Tier2Role), lifecycle, crystallization.
+
+## WorldEngine.Sim/Tiles/
+- `ChunkSummaryFlags.cs` — Chunk-level summary flags for disaster skip optimisation (HasVolcanicTile, HasRiverTile, etc.).
+- `SeasonalProfile.cs` — 8-byte per-tile seasonal climate deltas (temperature + moisture delta per season).
+- `TileChunk.cs` — Chunk struct for disaster skip optimisation (16×16 tiles, ChunkSummaryFlags).
+- `TileData.cs` — 14-byte tile struct with static (worldgen) and dynamic (sim) fields; see interface_contracts_tiles.md.
+- `TileDynFlags.cs` — Dynamic tile state flags set during simulation (HasActiveDisaster, RecentlyBurned, etc.).
+- `TileGrid.cs` — Flat array + chunk indexing; handles east-west cylinder wrapping.
+- `TileStaticFlags.cs` — Static tile flags set during world generation (IsVolcanic, IsFaultLine, HasRiver, etc.).
+- `TileTemperature.cs` — Computes the effective temperature for a tile at a given simulation moment, combining static base temperature, seasonal delta, and global anomaly. Shared by all phases that need per-tile climate conditions.
+
+## WorldEngine.Sim/World/
+- `ActiveDisaster.cs` — An ongoing disaster affecting a specific tile. Created by Phase 1 (Environmental). Cleared by Phase 1 when resolved. OriginEventId links to the SimEvent that started this disaster for causal graph.
+- `ActiveDrought.cs` — A drought affecting all tiles in a (LatitudeBand, Biome) region. Membership is computed at runtime: ActiveDroughts.Any(d => tile matches d). No per-tile registry entry — the region can contain thousands of tiles.
+- `BorderManifest.cs` — Per-tile border sampling data (North/South/East/West edges, 64 samples each) for civ contact detection.
+- `BorderManifestSample.cs` — 5-byte border sample struct: elevation, moisture, river/road crossing flags, and ownership.
+- `HistoryTypes.cs` — Pre-aggregated profile of a historical character, built by SummaryBuilder.
+- `IHistoryGraphReadOnly.cs` — Read-only query surface over the persisted history graph (SQLite Events + CausalEdges).
+- `IHistoryQuery.cs` — Pre-indexed historical query API. Backed by SQLite summary tables built by
+- `IWorldStateReadOnly.cs` — Read-only view of world state for entity decision-making (M2+). In M1, the Environmental phase reads WorldState directly as a mutator.
+- `PendingEvent.cs` — Lightweight event record produced during simulation phases. Phase 7 assigns Id, Year, Season, Tick, runs significance classification, applies the event gate, and writes to SQLite + EventCache.
+- `ResourceDeposit.cs` — A mineral or resource deposit at a tile. Multiple deposits can stack at one location (e.g., quarry slate over a placer gold seam). List ordered by depth (surface first).
+- `RuinRecord.cs` — Records the history of a tile that once held a settlement. Persists when a settlement is destroyed or abandoned; accumulates each time the same tile cycles.
+- `SimEvent.cs` — An event in the simulation history log. Immutable once written. Created by Phase 7 (EventGeneration) after enriching a PendingEvent.
+- `SnapshotBuilder.cs` — Constructs a WorldSnapshot from WorldState. Called by the sim thread at the end of each tick. Only touches WorldState — never called from the UI thread.
+- `StateCache.cs` — Thread-safe snapshot bridge. Sim thread calls Commit() after each tick. UI thread calls Read() every frame. Lock held for microseconds only.
+- `TileDisplayData.cs` — Per-tile rendering data in WorldSnapshot.AllTiles (index: y * WorldTileWidth + x). Contains effective (current) values, not genesis base values. Created by the sim thread for the full world grid each tick. HasActiveDisaster is computed from ActiveTileDisasters registry.
+- `TileImprovement.cs` — ImprovementType enum (Farm/Mine/etc.) and TileImprovement record for territory-based improvements (M3.0).
+- `TileInspectorData.cs` — Complete tile data for the inspector panel. Created by sim thread on demand. Contains base values, seasonal profiles, and all registry data for the tile.
+- `WorldSnapshot.cs` — Snapshot entry for one territory tile: which city owns it and which civ that city belongs to. Keyed by tile coord in WorldSnapshot.TerritoryMap.
+- `WorldState.cs` — The complete mutable world state. Owned by the sim thread — never accessed from the UI thread. The UI reads WorldSnapshot via StateCache.
+
+## WorldEngine.Sim/WorldGen/
+- `BiomeClassifier.cs` — Pure static function that maps (temperature, moisture, elevation, flags) → BiomeType. Priority rules applied top-to-bottom; first match wins. All thresholds come from SimConfig.WorldGen.BiomeThresholds.
+- `BiomeResult.cs` — Per-tile biome classification and fertility produced by BiomeLayer.
+- `ClimateResult.cs` — Per-tile climate data produced by ClimateLayer.
+- `ElevationResult.cs` — Per-tile elevation data (0–255) produced by ElevationLayer.
+- `LayerSeeds.cs` — Per-layer seed constants XOR'd with worldSeed when initializing FastNoiseLite. All values must be unique — LayerSeeds_AllValuesAreUnique test enforces this.
+- `MagicResult.cs` — Per-tile magic intensity data produced by MagicLayer.
+- `OceanResult.cs` — Per-tile ocean and coast flags produced by OceanLayer.
+- `PoiResult.cs` — POI candidate flags produced by PoiCandidateLayer.
+- `ResourceResult.cs` — Resource deposit registry produced by ResourceLayer.
+- `RiverResult.cs` — Per-tile river and lake data produced by RiverLayer.
+- `TectonicResult.cs` — Per-tile tectonic plate data produced by TectonicLayer.
+- `TileGridAssembler.cs` — Assembles all layer results into a fully populated WorldState. Runs Parallel.For over Y rows for throughput on large worlds.
+- `WorldGenContext.cs` — Accumulates layer results as world generation progresses. Layers read only from completed predecessors — never from layers that haven't run yet.
+- `WorldGenPipeline.cs` — Runs the full world generation pipeline and returns a populated WorldState. Each layer receives the WorldGenContext (read-only access to previous results). Progress is reported as (LayerName, fraction) per layer step.
+
+## WorldEngine.Sim/WorldGen/Layers/
+- `BiomeLayer.cs` — Classifies each tile's biome using BiomeClassifier and computes Fertility from biome and climate inputs.
+- `ClimateLayer.cs` — Generates base temperature and moisture for every tile. Temperature: latitude cosine curve + elevation lapse rate. Moisture: two-band wind sweep — Tropical band: East-to-West sweep (trade winds blow toward equator). Mid-lat + polar: West-to-East sweep (westerlies). Rain shadow: leeward tiles of mountain lose RainShadowLossFraction moisture. Also sets storm corridor flag and computes per-tile SeasonalProfiles.
+- `ElevationLayer.cs` — Generates per-tile elevation using FastNoiseLite Simplex noise combined with tectonic contributions: mountain ridges at continental collisions, trenches at subduction zones, and a continental highland bias. Output normalized to byte range 0–255.
+- `MagicLayer.cs` — Generates magic intensity using Simplex noise with a volcanic zone weighting. Volcanic tiles get ×2 multiplier. High-magic tiles near volcanic zones are flagged as IsPOICandidate. M1: generates and stores data only — no behavioral effects until M2+.
+- `OceanLayer.cs` — Thresholds elevation into ocean/land using DefaultSeaLevel (fraction of tiles that are ocean). Then marks land tiles adjacent to any ocean tile as IsCoastal.
+- `PoiCandidateLayer.cs` — Identifies candidate tiles for Points of Interest: river mouths, high-magic volcanic sites, coastal resource tiles, and tectonic fault/junction tiles with high deposit potential. POI selection from candidates happens in a later pass during sim initialization.
+- `ResourceLayer.cs` — Assigns mineral and rare resource deposits to tiles based on tectonic and biome context. Writes to ResourceResult.Deposits; HasDeposit/HasRareResource flags applied during assembly.
+- `RiverLayer.cs` — Computes drainage networks using D8 flow direction + Priority Flood sink filling (Barnes 2014 algorithm), then accumulates flow to identify rivers and lakes. Cylinder-aware throughout (X wraps, Y clamped).
+- `TectonicLayer.cs` — Generates tectonic plate assignments, fault lines, and volcanic zones. Algorithm: Poisson disc plate center sampling → cylinder-aware Voronoi → subduction detection.
 
 ## WorldEngine.UI/
-- `Game1.cs` — MonoGame entry: update/draw loop, StateCache reads, input routing; H=civ history, W=watch panel, T=territory overlay
-
-## WorldEngine.UI/UI/
-- `EventLogPanel.cs` — sidebar event log; FocusLensState dimming, cause-chain buttons, character name clickthrough (M3.3)
-- `TileInspectorPanel.cs` — sidebar tile inspector; territory/improvement/history sections; [Watch] buttons per character (M3.4)
-- `TimeControlsPanel.cs` — top toolbar: speed buttons, year/season label
-- `WorldGenScreen.cs` — full-screen world-gen progress overlay
-- `CharacterProfilePanel.cs` — M3.3: character name/ancestry/life events/relationships; V2 narrative hook stub
-- `CivHistoryPanel.cs` — M3.3: civ arc (rulers, wars, major events, cultural traits); ComboBox civ selector; H key toggle
-- `TimelineBar.cs` — M3.3: SpriteBatch timeline scrubber; event-density heatmap per decade, scrub handle
-- `FocusLensState.cs` — M3.3: focus target (character or civ); pre-fetches FocusedEventIds for event log filtering
-- `CharacterWatchPanel.cs` — M3.4: live character watch panel; needs bars, goals, personality; W key toggle
+- `Game1.cs` — MonoGame entry: update/draw loop, StateCache reads, input routing; H=civ history, W=watch panel, T=territory overlay.
 
 ## WorldEngine.UI/Rendering/
-- `TileMapRenderer.cs` — draws tiles + entity/settlement/ruin markers; M3.4: territory civ-color tint + improvement icons
-- `OverlayRenderer.cs` — per-tile color for each OverlayType (Biome/Elevation/Temp/Moisture/Resources/Magic/Territory)
-- `Camera2D.cs` — pan/zoom camera for the tile map
+- `Camera2D.cs` — Pan/zoom camera for the tile map.
+- `OverlayRenderer.cs` — Per-tile color for each OverlayType (Biome/Elevation/Temp/Moisture/Resources/Magic/Territory).
+- `TileMapRenderer.cs` — Draws tiles + entity/settlement/ruin markers; M3.4: territory civ-color tint + improvement icons.
+
+## WorldEngine.UI/UI/
+- `CharacterProfilePanel.cs` — Myra panel showing a structured character profile card. Populated entirely from IHistoryQuery — no prose generation.
+- `CharacterWatchPanel.cs` — Read-only live panel tracking a single named character's current state. Updated each tick from WorldSnapshot.WatchedCharacter. Precursor to M4 Spotlight — everything read-only, no sim commands except WatchCharacter.
+- `CivHistoryPanel.cs` — Myra panel showing the full arc of a civilization — rulers, key wars, major events, traits. Includes a civ selector ComboBox at the top.
+- `EventLogPanel.cs` — Sidebar panel showing recent simulation events. Supports focus lens filtering (dimming events not involving the focus target) and exposes pending requests for the character profile card and causal chain dialog.
+- `TileInspectorPanel.cs` — Sidebar tile inspector; territory/improvement/history sections; [Watch] buttons per character (M3.4).
+- `TimeControlsPanel.cs` — Top toolbar: speed buttons, year/season label.
+- `TimelineBar.cs` — Timeline scrubber bar drawn via SpriteBatch at the bottom of the map area. Shows event density heatmap and allows scrubbing to any historical year. The ScrubLabel is a Myra Label — add it to the root overlay panel in Game1.
+- `WorldGenScreen.cs` — Full-screen world-gen progress overlay.
 
 ## WorldEngine.Tests/
 - xUnit test suite; mirrors Sim folder structure
@@ -189,8 +215,20 @@ One-line description of every non-trivial source file. Check here before running
 - `Unit/AncestryConfigTests.cs` — M3.5: AncestryConfig field loading, ApplyCulturalSettlementName, GetCivNameSuffix, BuildCulturalProfile
 - `Balance/BalanceRegressionTests.cs` — C2: world-health regression harness; 2 seeds × 300 years; [Trait("Category","Balance")]; run via scripts/test-balance.sh
 
+
+
+
+
+
+
 ## docs/perf/
 - `notes_m3.md` — M3 performance profiling notes and gate status
+
+
+
+
+
+
 
 ## scripts/
 - `balance-run.py` — A3: multi-seed headless sweep; fans out sim subprocesses, reads yearly_metrics, prints cross-seed mean/min/max table, exports merged CSV; --compare mode diffs two sweep dirs
@@ -199,16 +237,34 @@ One-line description of every non-trivial source file. Check here before running
 - `civ-history.py` — civ summary queries
 - `scip-query.py` — SCIP code navigation (defs, refs, types, impls, stats)
 
+
+
+
+
+
+
 ## config/profiles/
 - `fast_history.toml` — 1 tick/season (4× faster); halved disease_base_chance; for multi-seed sweeps
 - `small_world.toml` — A3: 1 tick/season + halved disease for fast smoke tests (sub-minute runs)
 - `balance_invariants.toml` — C1: expected world-health bands at checkpoint years; loaded by BalanceRegressionTests, NOT part of SimConfig
+
+
+
+
+
+
 
 ## docs/
 - `config_future.md` — TOML sections removed from sim_config.toml during B2 purge; preserved as design intent for unimplemented systems ([admin_distance], [spatial_buffer], [specialists], [artifacts], [cultural_modifiers], [civilization.settler_seeding]); includes dead-vs-live disagreement table
 - `tuning_balance_review_2026-07-18.md` — tuning/balance review and Phase A–D improvement plan; Status: IMPLEMENTED
 - `balance_invariants.md` — C1: philosophy for balance bands (observed-healthy ± margin), update procedure, Phase D migration notes
 - `sim_tuning.md` — C3: sim knob reference (knob / current / safe range / too-low / too-high / metric to watch)
+
+
+
+
+
+
 
 ## docs/archive/
 - `sim_observations_and_proposals.txt` — archived 2026-07-18; 5876-year run analysis with per-item resolution status for A1–A6 and B1–B7

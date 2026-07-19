@@ -8,6 +8,7 @@ using ImpType = WorldEngine.Sim.World.ImprovementType;
 
 namespace WorldEngine.Sim.Entities.Characters;
 
+/// <summary>Goal formation, priority, staleness, and resolution for Tier1 characters (~357 lines).</summary>
 public static class GoalManager
 {
     // Goal types worth logging as narrative events when formed or resolved.

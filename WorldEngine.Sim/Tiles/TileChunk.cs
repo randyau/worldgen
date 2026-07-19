@@ -2,6 +2,7 @@ using WorldEngine.Sim.Core;
 
 namespace WorldEngine.Sim.Tiles;
 
+/// <summary>Chunk struct for disaster skip optimisation (16×16 tiles, ChunkSummaryFlags).</summary>
 public sealed class TileChunk
 {
     public const int Size = 16;

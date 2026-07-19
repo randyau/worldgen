@@ -8,6 +8,13 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <OutputType>Exe</OutputType>
+    <!-- XML doc generation for gen-map.py. CS1591 (missing summary) is suppressed on members;
+         only the PRIMARY public type of each file is required to have a <summary> (enforced by
+         scripts/doc-check.py, not the compiler). This avoids 3114 CS1591 errors from members/fields.
+         DECISION: scoped enforcement via script rather than compiler because 3114 missing-member
+         docs would require ~3 weeks of mechanical annotation with minimal value. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

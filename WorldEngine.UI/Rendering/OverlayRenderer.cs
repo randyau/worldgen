@@ -4,6 +4,7 @@ using WorldEngine.Sim.World;
 
 namespace WorldEngine.UI.Rendering;
 
+// MAP: Per-tile color for each OverlayType (Biome/Elevation/Temp/Moisture/Resources/Magic/Territory).
 public static class OverlayRenderer
 {
     public static Color GetColor(TileDisplayData tile, OverlayType overlay) => overlay switch
