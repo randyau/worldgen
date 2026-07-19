@@ -35,6 +35,14 @@ public static class GoalManager
 
         // Inner-life goals (Bond, Create) get a much longer stale window than tactical goals.
         long innerLifeLimit = cfg.GoalStaleSeasonLimit * 20L;
+
+        // FoundCity: refresh StaleSince whenever the character is on unclaimed frontier land,
+        // signalling active progress. Without this, a delegate wandering the frontier for 40+
+        // years times out even while doing exactly what the goal asks.
+        var foundCityGoal = c.Goals.FirstOrDefault(g => g.Type == GoalType.FoundCity);
+        if (foundCityGoal != null && !world.TerritoryMap.ContainsKey(c.Location))
+            foundCityGoal.StaleSince = (int)currentTick;
+
         var goalsToRemove = c.Goals.Where(g => g.IsComplete
             || (g.Type != GoalType.Grieve
                 && g.Type != GoalType.Bond

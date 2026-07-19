@@ -271,11 +271,10 @@ public sealed class UtilityScorer
         {
             var tileFert = world.GetTile(c.Location);
             bool hasTerritory = world.TerritoryMap.ContainsKey(c.Location);
-            // foundProb: blended fertility + Diligence (sum not product — avoids near-zero values
-            // when either component is small; delegate always gets at least 0.4 on a viable tile).
-            float fertFrac = tileFert.Fertility / 255f;
-            float foundProb = (0.6f * fertFrac + 0.4f * c.Aptitude.Diligence)
-                            * (hasTerritory ? 0.4f : 1.0f); // softer penalty for already-claimed land
+            // foundProb for FoundCity delegates: use high base (0.8) so founding beats Travel once a
+            // valid tile is found. The delegate was explicitly assigned; they should commit when ready,
+            // not perpetually seek a better tile. Fertility still modulates within territory (0.4 penalty).
+            float foundProb = hasTerritory ? 0.32f : 0.8f;
             // Pre-check: reject if too close to any settlement — avoids emitting an action
             // the resolver will silently discard (GlobalSettlementMinDist enforcement).
             bool tooCloseToSettle = false;
