@@ -119,13 +119,13 @@ public sealed class UtilityScorer
 
             ICommand? cmd;
             float score;
-            if (!atAllianceCap && rel?.Trust >= 0.4f)
+            if (!atAllianceCap && rel?.Trust >= cfg.AllyTrustThreshold)
             {
                 float sp = (c.Skills.Diplomacy + c.Personality.Sociability) * 0.5f;
                 score = Score(c, ActionType.Ally, sp, world, cfg);
                 cmd   = new AllyWith(c.Id, other.Id);
             }
-            else if ((rel?.Trust ?? 0f) < 0.7f)
+            else if ((rel?.Trust ?? 0f) < cfg.NegotiateMaxTrust)
             {
                 score = Score(c, ActionType.Negotiate, 0.8f, world, cfg);
                 cmd   = new Negotiate(c.Id, other.Id);
@@ -192,7 +192,7 @@ public sealed class UtilityScorer
                     }
                     if (!hostileEnough)
                         hostileEnough = myCiv.BorderTension.GetValueOrDefault(nearSettle.CivId, 0f)
-                                      >= wCfg.TensionWarThreshold * 0.6f;
+                                      >= wCfg.TensionWarThreshold * wCfg.PersonalWarTensionFraction;
 
                     if (hostileEnough)
                     {

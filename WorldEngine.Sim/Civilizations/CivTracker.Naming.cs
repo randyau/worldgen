@@ -56,9 +56,7 @@ public static partial class CivTracker
     private static float GenerateFertilityMultiplier(TileCoord tile, WorldState world)
     {
         float r = WorldRng.FloatAt(world.WorldSeed, 0, tile.X, tile.Y, SaltFertilityVariance);
-        // DECISION: variance range is hardcoded here; SettlementConfig.FertilityVariance is the
-        // intended range, but injecting SimConfig into CivTracker adds coupling we avoid for now.
-        const float variance = 0.15f;
+        float variance = world.SimConfig.Settlement.FertilityVariance;
         return 1f - variance + r * (variance * 2f);
     }
 

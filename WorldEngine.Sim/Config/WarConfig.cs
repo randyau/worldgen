@@ -116,6 +116,13 @@ public sealed class WarConfig
     public float SuccessionCrisisWarTensionMult { get; set; } = 2.0f;
 
     /// <summary>
+    /// Fraction of TensionWarThreshold at which a character (without border-tension data)
+    /// considers a civ "hostile enough" to justify a personal war declaration.
+    /// Lower values make personal encounters trigger war more easily.
+    /// </summary>
+    public float PersonalWarTensionFraction { get; set; } = 0.6f;
+
+    /// <summary>
     /// A neighbor civ is considered "weak" if it has at least this fraction of its settlements
     /// currently infected OR in food shortage (FoodPressureRatio &lt; WarWeakNeighborFoodThreshold).
     /// Weak-neighbor status adds tension against that civ.

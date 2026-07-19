@@ -340,7 +340,6 @@ rivalry_trust_threshold       = -0.4  # trust must fall below this before Declar
 bond_max_base                 = 1
 bond_max_per_compassion       = 2
 
-hinterland_drain_factor          = 0.5   # effective fertility multiplier inside same-civ hinterland (0.5 = half claimed)
 base_founding_cooldown_years     = 2     # base cooldown between same-civ settlements; halves with population
                                          # (was 4; S1 growth overhaul 2026-07-18)
 min_founding_cooldown_years      = 1     # floor — even large civs can't expand faster than once per year
@@ -382,8 +381,10 @@ wanderlust_curiosity_floor      = 0.3  # even the least curious chars have 30% o
 # Ancestry / cultural passive drains — applied per-tick when different-civ chars share a tile
 personality_mismatch_drain_rate = 0.003  # drain × |stability diff| per tick
 cultural_distance_drain_rate    = 0.002  # drain × cultural_distance (0–1) per tick
+# Social action trust thresholds used by UtilityScorer
+ally_trust_threshold         = 0.4   # trust ≥ this → offer alliance (otherwise fall back to negotiation)
+negotiate_max_trust          = 0.7   # trust < this → negotiation available (no need to negotiate once already warm)
 # Goal formation — personality trait thresholds below which a character won't form that goal type
-goal_ambition_threshold      = 0.55  # minimum Ambition to generate Expansion goal
 goal_aggression_threshold    = 0.6   # minimum Aggression to generate Dominance goal
 goal_sociability_threshold   = 0.5   # minimum Sociability to generate Alliance goal
 goal_compassion_threshold    = 0.5   # minimum Compassion to generate Bond goal
@@ -722,6 +723,7 @@ war_proximity_radius          = 40    # tile radius within which settlements acc
 tension_accrual_per_pair      = 0.12  # tension per close settlement pair per year (× proximity × ruler Aggression)
 tension_decay_rate            = 0.15  # fraction of tension lost when no proximate settlements exist
 tension_war_threshold         = 1.0   # accumulated tension that triggers war when ruler is aggressive enough
+personal_war_tension_fraction = 0.6   # fraction of tension_war_threshold at which a personal encounter justifies war
 
 # ==========================================================================
 # Campaign battles (M4 Phase 2)

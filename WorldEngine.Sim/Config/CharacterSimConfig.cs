@@ -127,9 +127,6 @@ public sealed class CharacterSimConfig
     public int   BondMaxBase              { get; set; } = 1;
     public int   BondMaxPerCompassion     { get; set; } = 2;  // Compassion=1.0 → 1+2=3 bonds max
 
-    // ─── Effective fertility multiplier for tiles already inside a same-civ settlement's hinterland.
-    // 0.5 = "half the resources are claimed" — discourages but doesn't block high-fertility tiles.
-    public float HinterlandDrainFactor       { get; set; } = 0.5f;
     // Base cooldown years between same-civ settlements; scales down with civ population
     public int   BaseFoundingCooldownYears   { get; set; } = 4;
     // Minimum cooldown years regardless of population (a civ can't expand instantly even if huge)
@@ -227,7 +224,6 @@ public sealed class CharacterSimConfig
     // ─── Goal formation thresholds ────────────────────────────────────────────
     // Minimum personality trait value required to generate each goal type.
     // Tuning these shifts how common each goal is across the population.
-    public float GoalAmbitionThreshold      { get; set; } = 0.55f; // Expansion goal
     public float GoalAggressionThreshold    { get; set; } = 0.6f;  // Dominance goal
     public float GoalSociabilityThreshold   { get; set; } = 0.5f;  // Alliance goal
     public float GoalCompassionThreshold    { get; set; } = 0.5f;  // Bond goal
@@ -258,6 +254,12 @@ public sealed class CharacterSimConfig
     public float WellbeingFleeMultiplier    { get; set; } = 0.4f;  // Flee: flight stress
 
     // Border tension / war trigger / DeclareWar threshold: moved to WarConfig (D5 consolidation).
+
+    // ─── Social action thresholds ──────────────────────────────────────────────
+    // Trust floor to offer an alliance (otherwise fall back to negotiation)
+    public float AllyTrustThreshold         { get; set; } = 0.4f;
+    // Trust ceiling below which negotiation is offered (≥ this and no ally offer → skip)
+    public float NegotiateMaxTrust          { get; set; } = 0.7f;
 
     // ─── Wanderlust — travel urge that builds the longer a character stays in one place
     public int   WanderlustMaxTicks          { get; set; } = 8;   // full bonus after 2 seasons stationary

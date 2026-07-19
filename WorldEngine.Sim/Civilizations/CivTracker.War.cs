@@ -146,7 +146,7 @@ public static partial class CivTracker
                 }
 
                 float attackerStr = bestAttacker?.Skills.Combat ?? wCfg.CampaignBattleBaseStrength;
-                float defenderStr = 0.3f + (target.Health / (float)SettlementStartHealth) * 0.5f;
+                float defenderStr = 0.3f + (target.Health / (float)world.SimConfig.Settlement.MaxHealth) * 0.5f;
 
                 // Deterministic roll seeded by world seed, year, and the pair
                 float roll = WorldRng.FloatAt(world.WorldSeed, world.CurrentYear,
@@ -178,7 +178,7 @@ public static partial class CivTracker
                         world.Settlements[targetTile] = target with
                         {
                             CivId              = civA.Id,
-                            Health             = SettlementStartHealth / 2,
+                            Health             = world.SimConfig.Settlement.MaxHealth / 2,
                             Population         = conqueredPop,
                             PopulationF        = 0f,
                             ConqueredYear      = world.CurrentYear,
@@ -306,7 +306,7 @@ public static partial class CivTracker
                 world.Settlements[cmd.SettlementTile] = settlement with
                 {
                     CivId              = raider.Identity.CivId,
-                    Health             = SettlementStartHealth / 2,
+                    Health             = world.SimConfig.Settlement.MaxHealth / 2,
                     Population         = conqueredPop,
                     PopulationF        = 0f,
                     ConqueredYear      = world.CurrentYear,

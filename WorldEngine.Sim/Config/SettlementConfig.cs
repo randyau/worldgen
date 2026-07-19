@@ -19,8 +19,6 @@ public sealed class SettlementConfig
     public int   PopMax                   { get; set; } = 50_000;
     // Per-settlement variance drawn at founding: effective fertility = fertility × [1 ± FertilityVariance]
     public float FertilityVariance        { get; set; } = 0.15f;
-    // Effective fertility multiplier applied to tiles already in a same-civ settlement's hinterland
-    public float HinterlandDrainFactor    { get; set; } = 0.15f;
     // Minimum carrying capacity regardless of territory conditions (prevents instant abandonment on
     // newly-founded settlements with tiny territory).
     // DECISION: Only the minimum floor is kept here; biome differentiation lives in the food model

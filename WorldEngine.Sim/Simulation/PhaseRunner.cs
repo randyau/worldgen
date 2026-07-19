@@ -143,6 +143,23 @@ public sealed class PhaseRunner
         _phaseObserver?.Invoke(phase);
     }
 
+    /// <summary>
+    /// Extracts a single integer field value from a JSON payload string using fast string search.
+    /// Returns 0 if the field is absent or unparseable.
+    /// </summary>
+    private static int ExtractIntFromJson(string json, string fieldName)
+    {
+        string marker = $"\"{fieldName}\":";
+        int start = json.IndexOf(marker, StringComparison.Ordinal);
+        if (start < 0) return 0;
+        start += marker.Length;
+        // Skip any whitespace
+        while (start < json.Length && json[start] == ' ') start++;
+        int end = start;
+        while (end < json.Length && (char.IsDigit(json[end]) || json[end] == '-')) end++;
+        return int.TryParse(json.AsSpan(start, end - start), out int v) ? v : 0;
+    }
+
     private static string GetEventDomain(EventType type) => (int)type switch
     {
         >= 1000 and < 2000 => "Environmental",
@@ -222,7 +239,13 @@ public sealed class PhaseRunner
         {
             case EventType.SettlementFounded:    _metricsAcc.SettlementsFoundedYtd++;    break;
             case EventType.SettlementAbandoned:  _metricsAcc.SettlementsAbandonedYtd++; break;
-            case EventType.SettlementConquered:  _metricsAcc.SettlementsConqueredYtd++; break;
+            case EventType.SettlementConquered:
+                _metricsAcc.SettlementsConqueredYtd++;
+                // Population-level war deaths: surviving pop ≈ pre-conquest pop / 2,
+                // so deaths ≈ surviving_pop. Extract "SurvivingPop" from the payload JSON.
+                // Format: {"ConquererId":..., ..., "SurvivingPop":<int>}
+                _metricsAcc.DeathsWarYtd += ExtractIntFromJson(pe.PayloadJson, "SurvivingPop");
+                break;
             case EventType.WarDeclared:          _metricsAcc.WarsDeclaredYtd++;          break;
             case EventType.CivSplintered:        _metricsAcc.SecessionsYtd++;            break;
             case EventType.GoalFormed:           _metricsAcc.GoalsFormedYtd++;           break;

@@ -15,8 +15,6 @@ namespace WorldEngine.Sim.Civilizations;
 /// </summary>
 public static partial class CivTracker
 {
-    private const int SettlementStartHealth = 100;
-
     public static void Resolve(
         ICommand cmd,
         WorldState world,
@@ -99,7 +97,7 @@ public static partial class CivTracker
             Tile:                cmd.Tile,
             FoundedYear:         world.CurrentYear,
             Population:          world.SimConfig.Settlement.SettlementStartPop,
-            Health:              SettlementStartHealth,
+            Health:              world.SimConfig.Settlement.MaxHealth,
             Name:                settlementName,
             FertilityMultiplier: fertilityVariance,
             IsColony:            isColony);
