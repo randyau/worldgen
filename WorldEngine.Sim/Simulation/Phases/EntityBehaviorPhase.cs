@@ -137,11 +137,7 @@ public sealed class EntityBehaviorPhase
         var child = BeastFactory.Spawn(species, parent.HomeTile, world.WorldSeed, seq);
         world.Entities.Add(child);
 
-        var payload = JsonSerializer.Serialize(new BeastReproducedPayload(
-            parent.Id.Value, parent.Name, child.Id.Value, child.Name, child.SpeciesId));
-        pending.Add(new PendingEvent(EventType.BeastReproduced, parent.HomeTile, null, payload,
-            new[] { child.Id.Value }, new[] { parent.Id.Value },
-            ActorId: child.Id.Value, ActorName: child.Name));
+        // BeastReproduced events are not recorded — population-level animal lifecycle, not history.
     }
 
     // ─── Command emit + resolve ───────────────────────────────────────────────
@@ -333,6 +329,10 @@ public sealed class EntityBehaviorPhase
     {
         beast.IsAlive = false;
         beast.Health  = 0;
+
+        // Only record notable deaths: legendary beasts or combat-caused kills.
+        // Background species dying of age/starvation is animal lifecycle, not history.
+        if (!beast.IsLegendary && cause != "Combat") return;
 
         var eventType = killer != null ? EventType.BeastSlain : EventType.BeastDied;
         var payload = JsonSerializer.Serialize(new BeastDeathPayload(

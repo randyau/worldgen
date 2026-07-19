@@ -17,7 +17,8 @@ public static class GoalManager
     [
         GoalType.Bond, GoalType.Avenge, GoalType.Create,
         GoalType.Dominance, GoalType.Alliance,
-        GoalType.FoundCity, GoalType.BuildImprovement
+        GoalType.FoundCity, GoalType.BuildImprovement,
+        GoalType.SlayBeast
     ];
 
     public static void UpdateGoals(
@@ -43,14 +44,28 @@ public static class GoalManager
         if (foundCityGoal != null && !world.TerritoryMap.ContainsKey(c.Location))
             foundCityGoal.StaleSince = (int)currentTick;
 
+        // SlayBeast: complete immediately if target died; otherwise let staleness accumulate naturally.
+        // Capped by innerLifeLimit (~40 years) — prevents indefinite hunting expeditions.
+        var slayGoal = c.Goals.FirstOrDefault(g => g.Type == GoalType.SlayBeast);
+        if (slayGoal != null)
+        {
+            var targetBeast = slayGoal.TargetEntityId.HasValue
+                ? world.GetEntity(slayGoal.TargetEntityId.Value) : null;
+            if (targetBeast == null || !targetBeast.IsAlive)
+                slayGoal.IsComplete = true;
+            // StaleSince not refreshed — goal expires via innerLifeLimit if the beast eludes the hunter
+        }
+
         var goalsToRemove = c.Goals.Where(g => g.IsComplete
             || (g.Type != GoalType.Grieve
                 && g.Type != GoalType.Bond
                 && g.Type != GoalType.Create
                 && g.Type != GoalType.FoundCity   // FoundCity uses innerLifeLimit — travel takes years
+                && g.Type != GoalType.SlayBeast   // SlayBeast uses innerLifeLimit — hunts can take years
                 && currentTick - g.StaleSince > cfg.GoalStaleSeasonLimit
                 && g.Progress < 0.1f)
-            || ((g.Type == GoalType.Bond || g.Type == GoalType.Create || g.Type == GoalType.FoundCity)
+            || ((g.Type == GoalType.Bond || g.Type == GoalType.Create || g.Type == GoalType.FoundCity
+                 || g.Type == GoalType.SlayBeast)
                 && currentTick - g.StaleSince > innerLifeLimit
                 && g.Progress < 0.1f)).ToList();
 
@@ -207,6 +222,31 @@ public static class GoalManager
                         pending.Add(MakeGoalEvent(EventType.GoalFormed, c, buildGoal));
                     }
                 }
+            }
+        }
+
+        // SlayBeast goal: combat-capable, aggressive non-rulers hunt nearby legendary beasts.
+        bool hasSlayGoal = c.Goals.Any(g => g.Type == GoalType.SlayBeast);
+        bool isRuler     = myCiv?.RulerId == c.Id; // rulers govern settlements, not hunt beasts
+        if (!hasSlayGoal
+            && !isRuler
+            && c.Skills.Combat > cfg.SlayBeastCombatThreshold
+            && c.Personality.Aggression > cfg.SlayBeastAggressionThreshold)
+        {
+            var targetBeast = FindNearbyLegendaryBeast(c, world, cfg.SlayBeastSearchRadius);
+            if (targetBeast.HasValue)
+            {
+                var huntGoal = new GoalData
+                {
+                    Type           = GoalType.SlayBeast,
+                    Object         = GoalObject.Region,
+                    TargetEntityId = targetBeast,
+                    Priority       = (c.Personality.Aggression + c.Skills.Combat) * 0.5f,
+                    Intensity      = c.Personality.Aggression,
+                    StaleSince     = (int)currentTick, FormedTick = (int)currentTick
+                };
+                c.Goals.Add(huntGoal);
+                pending.Add(MakeGoalEvent(EventType.GoalFormed, c, huntGoal));
             }
         }
 
@@ -387,6 +427,16 @@ public static class GoalManager
         return new PendingEvent(type, c.Location, null, payload,
             new[] { c.Id.Value },
             ActorId: c.Id.Value, ActorName: c.Identity.Name);
+    }
+
+    private static EntityId? FindNearbyLegendaryBeast(Tier1Character c, IWorldStateReadOnly world, int radius)
+    {
+        foreach (var e in world.GetEntitiesInRadius(c.Location, radius))
+        {
+            if (e is Entities.Beasts.LegendaryBeast beast && beast.IsAlive && beast.IsLegendary)
+                return beast.Id;
+        }
+        return null;
     }
 
     private static EntityId? FindHighTrustCompanion(

@@ -1,5 +1,6 @@
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities;
+using WorldEngine.Sim.Entities.Characters;
 using WorldEngine.Sim.World;
 
 namespace WorldEngine.Sim.Entities.Beasts;
@@ -116,13 +117,16 @@ public sealed class LegendaryBeast : SimEntity
             yield break;
         }
 
-        // Priority 4: hunt — attack nearby huntable target
+        // Priority 4: hunt — attack or pursue nearby prey (beasts and characters)
         if (FoodNeed < 0.7f && Aggression > 0.4f)
         {
             var prey = FindPrey(world);
             if (prey.HasValue)
             {
-                yield return new Attack(Id, prey.Value);
+                if (prey.Value.Location == Location)
+                    yield return new Attack(Id, prey.Value.Id);  // character targets handled by CheckBeastEncounters
+                else
+                    yield return new MoveToTile(Id, StepToward(Location, prey.Value.Location, world));
                 yield break;
             }
         }
@@ -172,14 +176,18 @@ public sealed class LegendaryBeast : SimEntity
         return null;
     }
 
-    private EntityId? FindPrey(IWorldStateReadOnly world)
+    private (EntityId Id, TileCoord Location)? FindPrey(IWorldStateReadOnly world)
     {
         foreach (var coord in AdjacentAndSelf(world))
         foreach (var e in world.GetEntitiesAt(coord))
         {
             if (e.Id == Id || !e.IsAlive) continue;
             if (e is LegendaryBeast other && other.SpeciesId != SpeciesId)
-                return other.Id;
+                return (other.Id, coord);
+            // Only the most aggressive beasts actively pursue characters (Aggression > 0.70).
+            // Lower-aggression beasts still fight back via CheckBeastEncounters when sharing a tile.
+            if (Aggression > 0.70f && e is Tier1Character)
+                return (e.Id, coord);
         }
         return null;
     }

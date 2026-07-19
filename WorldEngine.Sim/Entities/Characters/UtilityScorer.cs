@@ -303,6 +303,21 @@ public sealed class UtilityScorer
             }
         }
 
+        // HuntBeast — move toward the target legendary beast when SlayBeast goal is active.
+        // When on the same tile, CheckBeastEncounters fires naturally; no command needed here.
+        var slayGoal = c.Goals.FirstOrDefault(g => g.Type == GoalType.SlayBeast && g.TargetEntityId.HasValue);
+        if (slayGoal != null)
+        {
+            var targetBeast = world.GetEntity(slayGoal.TargetEntityId!.Value);
+            if (targetBeast != null && targetBeast.IsAlive && targetBeast.Location != c.Location)
+            {
+                var step = StepToward(c.Location, targetBeast.Location, world);
+                if (step.HasValue)
+                    actions.Add(new(new MoveToTile(c.Id, step.Value),
+                        Score(c, ActionType.HuntBeast, c.Skills.Combat, world, cfg)));
+            }
+        }
+
         // FleeRegion — available when character has a Flee goal and Wellbeing < 0
         var fleeGoal = c.Goals.FirstOrDefault(g => g.Type == GoalType.Flee);
         if (fleeGoal != null && c.Wellbeing < 0f)
@@ -319,7 +334,7 @@ public sealed class UtilityScorer
     // DECISION: ActionType is a private enum keeping the same integer indices as before.
     // UtilityAffinityTables.TryParseAction maps TOML names to these integer indices directly,
     // so adding a new ActionType requires updating both here and in TryParseAction.
-    private enum ActionType { Rest, Travel, Establish, Ally, Negotiate, Rivalry, War, Raid, Create, Flee, BuildImprovement, FoundCity }
+    private enum ActionType { Rest, Travel, Establish, Ally, Negotiate, Rivalry, War, Raid, Create, Flee, BuildImprovement, FoundCity, HuntBeast }
 
     private float Score(
         Tier1Character c,
@@ -398,7 +413,7 @@ public sealed class UtilityScorer
         foreach (var g in c.Goals)
         {
             int gi = (int)g.Type;
-            if (gi < 0 || gi >= 16) continue; // guard against future enum additions
+            if (gi < 0 || gi >= _tables.GoalAffinity.GetLength(0)) continue;
             float match = _tables.GoalAffinity[gi, ai];
             if (match > 0f)
                 best = Math.Max(best, match * g.Priority);
@@ -420,6 +435,7 @@ public sealed class UtilityScorer
         ActionType.Flee             => (1f - c.Personality.Stability) * 0.8f,
         ActionType.BuildImprovement => c.Aptitude.Diligence,
         ActionType.FoundCity        => c.Personality.Ambition * 0.9f,
+        ActionType.HuntBeast        => c.Personality.Aggression * 0.7f + c.Skills.Combat * 0.3f,
         _                           => 0.2f
     };
 
@@ -520,6 +536,28 @@ public sealed class UtilityScorer
             }
 
             if (score > bestScore) { bestScore = score; best = coord; }
+        }
+        return best;
+    }
+
+    // ─── Beast hunting ────────────────────────────────────────────────────────
+
+    private static TileCoord? StepToward(TileCoord from, TileCoord to, IWorldStateReadOnly world)
+    {
+        int w = world.Config.TileWidth, h = world.Config.TileHeight;
+        int[] dx = { -1, 1, 0, 0 };
+        int[] dy = { 0, 0, -1, 1 };
+        TileCoord? best = null;
+        int bestDistSq = int.MaxValue;
+        for (int i = 0; i < 4; i++)
+        {
+            int nx = ((from.X + dx[i]) % w + w) % w;
+            int ny = Math.Clamp(from.Y + dy[i], 0, h - 1);
+            var cand = new TileCoord(nx, ny);
+            if (!world.IsLand(cand)) continue;
+            int ddx = cand.X - to.X, ddy = cand.Y - to.Y;
+            int distSq = ddx * ddx + ddy * ddy;
+            if (distSq < bestDistSq) { bestDistSq = distSq; best = cand; }
         }
         return best;
     }

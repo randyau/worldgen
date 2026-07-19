@@ -37,9 +37,9 @@ public sealed class UtilityAffinityConfig
 public sealed class UtilityAffinityTables
 {
     // Number of GoalType enum values. Increase if new values are added.
-    private const int GoalCount   = 16;
+    private const int GoalCount   = 17;
     // Number of ActionType values in UtilityScorer's private enum.
-    private const int ActionCount = 12;
+    private const int ActionCount = 13;
     // Need index constants (must match UtilityScorer.NeedIndex).
     internal const int NI_Food      = 0;
     internal const int NI_Safety    = 1;
@@ -131,6 +131,7 @@ public sealed class UtilityAffinityTables
             "found_city"        => (int)GoalType.FoundCity,
             "build_improvement" => (int)GoalType.BuildImprovement,
             "found_religion"    => (int)GoalType.FoundReligion,
+            "slay_beast"        => (int)GoalType.SlayBeast,
             _                   => -1,
         };
         return index >= 0;
@@ -154,6 +155,7 @@ public sealed class UtilityAffinityTables
             "flee"              => 9,
             "build_improvement" => 10,
             "found_city"        => 11,
+            "hunt_beast"        => 12,
             _                   => -1,
         };
         return index >= 0;

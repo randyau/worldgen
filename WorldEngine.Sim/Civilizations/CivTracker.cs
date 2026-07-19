@@ -392,32 +392,30 @@ public static partial class CivTracker
 
         losingCiv.CityTerritories.Remove(conqueredCityTile);
 
-        // Find the nearest winning-civ city to absorb these tiles
-        TileCoord? nearestCity = null;
-        float nearestDist = float.MaxValue;
-        foreach (var cityTile in winningCiv.CityTerritories.Keys)
-        {
-            int dx = cityTile.X - conqueredCityTile.X, dy = cityTile.Y - conqueredCityTile.Y;
-            float dist = MathF.Sqrt(dx * dx + dy * dy);
-            if (dist < nearestDist) { nearestDist = dist; nearestCity = cityTile; }
-        }
+        // Register the conquered city as its own entry in the winner civ so TerritoryPhase
+        // continues managing expansion from the conquered center rather than orphaning tiles.
+        if (!winningCiv.CityTerritories.TryGetValue(conqueredCityTile, out var winnerTiles))
+            winningCiv.CityTerritories[conqueredCityTile] = winnerTiles = new HashSet<TileCoord>();
 
-        // If no existing city found, let the conquered tile become its own city entry
-        var targetCity = nearestCity ?? conqueredCityTile;
-        if (!winningCiv.CityTerritories.TryGetValue(targetCity, out var winnerTiles))
-            winningCiv.CityTerritories[targetCity] = winnerTiles = new HashSet<TileCoord>();
-
+        int maxR = world.SimConfig.Territory.MaxTerritoryRadius;
         foreach (var t in tiles)
         {
-            world.TerritoryMap[t] = targetCity;
+            // Release tiles beyond the radius cap — TerritoryPhase will re-expand naturally.
+            int dx = t.X - conqueredCityTile.X, dy = t.Y - conqueredCityTile.Y;
+            if (dx * dx + dy * dy > maxR * maxR)
+            {
+                world.TerritoryMap.Remove(t);
+                continue;
+            }
+            world.TerritoryMap[t] = conqueredCityTile;
             winnerTiles.Add(t);
         }
 
         // Update improvements to reflect new city ownership
-        foreach (var t in tiles)
+        foreach (var t in winnerTiles)
         {
             if (world.ImprovementMap.TryGetValue(t, out var imp))
-                world.ImprovementMap[t] = imp with { CityTile = targetCity };
+                world.ImprovementMap[t] = imp with { CityTile = conqueredCityTile };
         }
     }
 }

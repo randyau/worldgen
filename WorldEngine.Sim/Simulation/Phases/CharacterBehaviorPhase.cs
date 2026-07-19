@@ -708,6 +708,16 @@ public sealed class CharacterBehaviorPhase
                 pending.Add(new PendingEvent(EventType.BeastSlain, c.Location, null, slainPayload,
                     new[] { beast.Id.Value }, new[] { c.Id.Value },
                     ActorId: c.Id.Value, ActorName: c.Identity.Name));
+
+                // Complete any SlayBeast goal targeting this beast across all characters
+                foreach (var hunter in world.Entities.Characters)
+                {
+                    var huntGoal = hunter.Goals
+                        .FirstOrDefault(g => g.Type == Entities.Characters.GoalType.SlayBeast
+                                          && g.TargetEntityId == beast.Id);
+                    if (huntGoal != null)
+                        huntGoal.IsComplete = true;
+                }
             }
 
             if (c.Health <= 0)

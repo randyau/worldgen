@@ -356,6 +356,11 @@ beast_encounter_chance         = 0.15 # probability of attack per shared tick (~
 beast_damage_multiplier        = 0.3  # beast.Strength × this = damage dealt to character
 char_counter_damage_multiplier = 0.4  # c.Skills.Combat × MaxHealth × this = counter-damage dealt to beast per exchange
 
+# SlayBeast goal — characters hunt legendary beasts they detect nearby
+slay_beast_combat_threshold     = 0.55 # minimum Combat skill to form SlayBeast goal (dedicated fighters only)
+slay_beast_aggression_threshold = 0.65 # minimum Aggression to form SlayBeast goal (truly aggressive)
+slay_beast_search_radius        = 5    # tile radius for legendary beast detection
+
 # Character disease — named characters can catch disease from infected settlements
 character_disease_exposure_chance  = 0.10  # annual probability of contracting disease while at an infected settlement
 character_disease_health_drain     = 20    # HP drained per year while infected (suppresses natural healing)
@@ -841,6 +846,7 @@ protect         = { travel = 0.4 }
 build_improvement = { build_improvement = 1.0, rest = 0.3 }
 # FoundCity goal: founding directly; travel to find a good site
 found_city      = { found_city = 1.0, travel = 0.8 }
+slay_beast      = { hunt_beast = 1.0, travel = 0.3 }
 # Goals with no affinity entries (security, unify, found_religion) default to 0.0 for all actions.
 
 [utility_affinity.action_needs]
@@ -866,6 +872,7 @@ rivalry          = { status = 0.40, _default = 0.0 }
 build_improvement = { purpose = 0.50, status = 0.20, _default = 0.0 }
 # FoundCity: shelter + status (city-founding is the ultimate expression of both)
 found_city       = { shelter = 0.50, status = 0.50, _default = 0.0 }
+hunt_beast       = { purpose = 0.40, status = 0.30, _default = 0.1 }
 # create, flee: no need-based score — rely on goal advancement and personality only
 # _default = 0.1 matches the original _ => 0.1f fallback for all unlisted actions
 create           = { _default = 0.1 }

@@ -32,6 +32,9 @@ public enum GoalType
 
     // M4 Phase 3 — religion
     FoundReligion,     // high-spiritual character founds a religious movement
+
+    // Beast interaction
+    SlayBeast,         // hunt and kill a specific legendary beast
 }
 
 public enum GoalObject

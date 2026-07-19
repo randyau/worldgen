@@ -149,6 +149,11 @@ public sealed class CharacterSimConfig
     public float BeastDamageMultiplier       { get; set; } = 0.3f;  // beast.Strength × this = damage to char
     public float CharCounterDamageMultiplier { get; set; } = 0.4f;  // c.Skills.Combat × MaxHealth × this = counter-damage to beast
 
+    // SlayBeast goal — characters hunt legendary beasts they detect nearby
+    public float SlayBeastCombatThreshold     { get; set; } = 0.55f; // minimum Combat skill to form goal
+    public float SlayBeastAggressionThreshold { get; set; } = 0.65f; // minimum Aggression to form goal
+    public int   SlayBeastSearchRadius        { get; set; } = 8;    // tile radius to detect legendary beasts
+
     // Character disease — named characters can contract disease from infected settlements
     public float CharacterDiseaseExposureChance  { get; set; } = 0.10f; // annual chance of catching disease at infected settlement
     public int   CharacterDiseaseHealthDrain     { get; set; } = 15;    // HP lost per year while infected (suppresses healing)

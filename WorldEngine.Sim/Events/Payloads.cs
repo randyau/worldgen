@@ -143,8 +143,6 @@ internal sealed record BeastDeathPayload(
     bool IsLegendary, int AgeSeason, string Cause,
     long KillerId = 0, string? KillerName = null);
 
-internal sealed record BeastReproducedPayload(
-    long ParentId, string ParentName, long OffspringId, string OffspringName, string SpeciesId);
 
 internal sealed record BeastEncounterPayload(
     long AttackerId, string AttackerName, long TargetId, string TargetName);
