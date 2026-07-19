@@ -9,17 +9,71 @@
 
 The `Type` column stores integer values. Use these constants in WHERE clauses:
 
+<!-- GENERATED:enums — DO NOT EDIT BELOW THIS LINE; run python3 scripts/gen-enum-tables.py -->
 ```
--- M1 Environmental events (1001–1010)
-1001 = VolcanicEruption      1002 = EarthquakeOccurred
-1003 = WildfireOccurred      1004 = FloodOccurred
-1005 = DroughtBegan          1006 = DroughtEnded
-1007 = SeaLevelChanged       1008 = BiomeChanged
-1009 = ClimateShifted        1010 = ResourceRecovered
+-- Environmental (1000–1099)
+  1001 = VolcanicEruption      1002 = EarthquakeOccurred  
+  1003 = WildfireOccurred      1004 = FloodOccurred       
+  1005 = DroughtBegan          1006 = DroughtEnded        
+  1007 = SeaLevelChanged       1008 = BiomeChanged        
+  1009 = ClimateShifted        1010 = ResourceRecovered   
+
+-- Beast events (2000–2099)
+  2001 = BeastSpawned         2002 = BeastAwakened      
+  2003 = BeastDied            2004 = BeastSlain         
+  2005 = BeastReproduced      2006 = BeastEncountered   
+  2007 = BeastAttackedChar  
+
+-- Character lifecycle (3000–3099)
+  3001 = CharacterBorn           3002 = CharacterDied         
+  3003 = CharacterMarried        3004 = CharacterExiled       
+  3005 = CharacterGrieved        3006 = CharacterFlourishing  
+  3007 = CharacterSpiraling    
+
+-- Character actions (3100–3199)
+  3101 = AllianceFormed    3102 = AllianceBroken  
+  3103 = WarDeclared       3104 = WarEnded        
+  3105 = BattleOccurred    3106 = RivalryFormed   
+  3107 = Negotiated        3108 = ArtworkCreated  
+  3109 = GoalFormed        3110 = GoalResolved    
+
+-- Civilization/Settlement (3200–3299)
+  3201 = CivilizationFounded      3202 = CivilizationCollapsed  
+  3203 = SettlementFounded        3204 = SettlementDestroyed    
+  3205 = SuccessionOccurred       3206 = SettlementStraining    
+  3207 = SettlementConquered      3208 = TerritoryExpanded      
+  3209 = TerritoryLost            3210 = ImprovementBuilt       
+  3211 = CivTraitAcquired         3212 = CivSplintered          
+
+-- Population events (3400–3499)
+  3401 = SettlementGrew         3402 = SettlementShrank     
+  3403 = SettlementAbandoned    3404 = DiseaseOutbreak      
+  3405 = DiseaseRecovered       3406 = WildlifeRaid         
+  3407 = SuccessionCrisis     
+
+-- Tier 2 character events (3300–3399)
+  3301 = AppointedToRole           3302 = DismissedFromRole       
+  3303 = MerchantTradeCompleted    3304 = ScholarDiscovery        
+  3305 = PhysicianHealed           3306 = CharacterCrystallized   
+  3307 = ArtisanCrafted          
+
+-- Artifact (6000–6999)
+  6001 = ArtifactCreated      6002 = ArtifactDestroyed  
+
+-- Artifacts/Religion (4000–4999)
+  4003 = ReligionFounded    4004 = ReligionExtinct  
+
+-- God Mode (9000+)
+  9001 = GodModeDisasterTriggered     9002 = GodModeEntitySpawned       
+  9003 = GodModeCharacterCreated      9004 = GodModeArtifactPlaced      
+  9005 = GodModeCivilizationForced  
+
+-- Emissary/Diplomatic (5000–5999)
+  5001 = EmissaryDispatched          5002 = EmissaryLost              
+  5003 = ReligiousEmissaryArrived    5004 = CivIntelGathered          
 
 -- VerbClass integers
-0 = Creation    1 = Destruction    2 = Transformation
-3 = Transfer    4 = Conflict       5 = Maintenance
+0 = Creation    1 = Destruction    2 = Transformation    3 = Transfer    4 = Conflict    5 = Maintenance    6 = Interaction
 
 -- TierInvolvement integers
 0 = Background    1 = Character    2 = Regional    3 = Headline
@@ -30,6 +84,7 @@ The `Type` column stores integer values. Use these constants in WHERE clauses:
 -- Season integers
 0 = Spring    1 = Summer    2 = Autumn    3 = Winter
 ```
+<!-- GENERATED:enums END -->
 
 ---
 
