@@ -12,7 +12,19 @@
 #   legitimately shifts world outcomes. Never widen just to make a test green without
 #   understanding why the number moved.
 #
-# Calibration run (2026-07-18, post-S4 growth/splinter overhaul):
+# Calibration run (2026-07-18, post-D4/D5 disease + war tuning):
+#   Seeds: 42, 777, 9999  |  Years: 300  |  default config (no profile)
+#   Observed @300: pop 8728-10879, active_civs 5-8, settlements 14-24,
+#     max_cities_per_civ 3-5, food 9.5-14.2, wellbeing -0.07..+0.09,
+#     wars_active 3-5, active_diseases 0-3 (mean ~1), secessions cum 2-5,
+#     wars declared cum 18-38, war causes: border_tension dominant,
+#     weak_neighbor in all seeds, character_encounter in all seeds,
+#     resource_shortage in seed 777.
+#   D4 changes: structural disease model (density × contact × famine factors).
+#   D5 changes: war knob consolidation [character]→[war]; WarOutcome/WarCause typed
+#     constants; 3 opportunistic war causes (SuccessionCrisis/WeakNeighbor/ResourceShortage).
+#
+# Previous calibration (2026-07-18, post-S4 growth/splinter overhaul):
 #   Seeds: 42, 777, 9999  |  Years: 300  |  default config (no profile)
 #   Observed @300: pop 8728-10879, active_civs 5-8, settlements 14-24,
 #     max_cities_per_civ 3-5, food 9.5-14.2, wellbeing -0.07..+0.09,
@@ -76,12 +88,12 @@
   max = 0.5
   rationale = "Observed -0.30 to -0.08. Negative is normal at current scale. Tighten when needs model improves."
 
-  # Post-D1 observed: 0–1 active diseases at year 300.
-  # Max of 8 allows disease activity without flagging as broken.
-  # D4 (structural disease model) will change this — re-anchor after D4.
+  # Post-D4 observed: 0–3 active diseases at year 300 (mean ~1, seeds 42/777/9999).
+  # D4 structural model made disease visible; density × contact × famine factors fire.
+  # Max of 10 allows disease bursts without flagging as broken.
   [year_300.active_diseases_max]
-  value = 8
-  rationale = "Observed 0–1 at year 300. Disease is functional but rare at default density. Re-anchor post-D4."
+  value = 10
+  rationale = "Post-D4 observed 0–3 active diseases at year 300 (mean ~1). Disease is now structural (density × contact × famine); max=10 guards runaway outbreak cascade."
 
   # Observed: 7–17 goals formed at year 300 (annual rate). Min=1 guards observation-A5
   # regression (emotional events never firing). Max=100 is a sanity cap.
@@ -97,7 +109,7 @@
   # Phase D5 (war consolidation + opportunistic causes) will make wars more common.
   [year_300.wars_active_max]
   value = 8
-  rationale = "Post-S4 observed 3-5 simultaneous wars at year 300 (was 0 pre-S1 — territorial contact now exists). Max=8 caps runaway war state. Re-anchor post-D5."
+  rationale = "Post-D5 observed 3-5 simultaneous wars at year 300 (opportunistic causes add weak_neighbor + resource_shortage triggers). Max=8 caps runaway war state."
 
   # Observed: goals_formed_ytd cumulative over 300 years ranges 2241–3145.
   # This guards the A5-class regression where goal formation silently drops to 0.

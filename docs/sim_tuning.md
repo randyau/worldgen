@@ -55,10 +55,17 @@ To diagnose why a settlement's population is capped, use `--audit-food` (see D2 
 | `disease_spread_chance` | 0.08 | 0.01–0.5 | Outbreaks self-contained; no regional spread | One outbreak infects the entire world | `active_diseases` |
 | `disease_recovery_chance` | 0.30 | 0.05–0.8 | Outbreaks last 8 years (hit max duration); chronic disease | Disease resolves in a single year; no lasting impact | `active_diseases`, `deaths_disease` |
 | `disease_max_duration_years` | 8 | 3–20 | untested | untested | `active_diseases` |
+| `disease_contact_mult` | 1.5 | 1.0–3.0 | No extra outbreak risk from trade/war contact | Disease spreads explosively when civs are in contact | `active_diseases`, `deaths_disease` |
+| `disease_famine_mult` | 2.0 | 1.0–5.0 | Famine doesn't increase disease vulnerability | Famine always triggers immediate outbreak | `active_diseases`, `deaths_disease` |
+| `disease_famine_threshold` | 0.7 | 0.3–0.9 | "Famine" triggers too late (only severe shortages count) | Any food dip counts as famine; contact/famine factors always active | `active_diseases`, `mean_food_ratio` |
+
+**D4 completed 2026-07-18.** Outbreak probability = `base_chance × density_factor × contact_factor × famine_factor`.
+Contact factor fires when the civ has EmissaryExchange+ contact or is at war.
+Famine factor fires when `food_pressure_ratio < disease_famine_threshold`.
 
 ---
 
-## War / Tension (character + war sections)
+## War / Tension ([war] section — D5 consolidated)
 
 | Knob | Current | Safe range | Too-low symptom | Too-high symptom | Metric to watch |
 |---|---|---|---|---|---|
@@ -70,6 +77,18 @@ To diagnose why a settlement's population is capped, use `--audit-food` (see D2 
 | `peace_cooldown_years` | 10 | 2–50 | Same civs cycle in/out of war every few years | Civs that fought once can never fight again | `wars_declared_ytd` |
 | `raid_damage_min` / `raid_damage_max` | 15 / 40 | 5–20 / 10–80 | Raids do no damage; siege is pointless | Raids destroy settlements in one hit | `settlements_in_crisis`, settlement health |
 | `war_proximity_radius` | 15 | 5–30 | Only immediate neighbors ever build war tension | Far-apart civs get tension from irrelevant neighbors | `wars_active` |
+| `opportunistic_war_aggression_threshold` | 0.55 | 0.3–0.9 | Passive civs never launch opportunistic wars | High-aggression civs always declare on any weak neighbor | `wars_declared_ytd`, `war_causes` |
+| `succession_crisis_war_tension_mult` | 2.0 | 1.0–5.0 | Succession crises confer no diplomatic vulnerability | Succession crisis immediately causes war with every neighbor | `wars_declared_ytd` |
+| `weak_neighbor_settlement_fraction` | 0.4 | 0.1–0.9 | Very few settlements must be sick/starving before triggering | Any single sick settlement makes a civ a "weak neighbor" | `wars_declared_ytd`, `active_diseases` |
+| `war_weak_neighbor_food_threshold` | 0.70 | 0.3–0.9 | Only near-famine settlements count as "starving" | Any below-peak food ratio triggers weak-neighbor flag | `settlements_in_crisis` |
+| `weak_neighbor_tension_bonus` | 0.25 | 0.0–1.0 | Weak-neighbor condition doesn't accelerate war | Opportunistic wars fire constantly whenever a neighbor has any illness | `wars_declared_ytd` |
+| `resource_shortage_war_food_threshold` | 0.75 | 0.3–0.9 | Aggressor must be severely starving to get shortage bonus | Any food dip triggers resource-shortage war cause | `wars_declared_ytd`, `mean_food_ratio` |
+| `resource_shortage_tension_bonus` | 0.20 | 0.0–1.0 | Food shortage doesn't push civs to war | Civs go to war any time food dips | `wars_declared_ytd` |
+
+**D5 completed 2026-07-18.** All war knobs consolidated from `[character]` → `[war]`.
+Typed `WarOutcome` constants (Truce/Conquest/Surrender/Destruction) replace the old `"Outcome":null` JSON pattern.
+Typed `WarCause` constants added; opportunistic causes fire as tension bonuses in `RunBorderTension`.
+Observed war cause distribution (3 seeds × 300y): `border_tension` dominant; `weak_neighbor` in all seeds; `character_encounter` in all seeds; `resource_shortage` in seed 777.
 
 ---
 
@@ -169,5 +188,5 @@ Unrest accumulates on settlements annually from three independent drivers (dista
   - `[wildlife_risk.biome_risk]` — per-biome wildlife raid multipliers (× `wildlife_attack_base_chance`). Dense cover biomes (forest 1.4–2.0×) vs. open terrain (plains 0.5×). Tune `default_risk` for the fallback on unlisted biomes.
   All values are identical to the previous hardcoded C# literals — no balance change. 39 regression-pin tests added.
 - **S1–S4 expansion/splinter arc complete (2026-07-18):** Growth throttles opened, splinter mechanic added, biome spawn weights added, border-pair metric added. World is now multipolar with active secession/war. Balance bands re-anchored post-S4. Key 600-year observations: active_civs stabilises at 7–8 by Y600; 4–15 cumulative secessions per seed; `civ_border_pairs` 1–10 at Y600 (sustained territorial contact). War system fires regularly (3–5 wars active at Y300).
-- **D4 (structural disease model):** Disease outbreak probability should be `f(pop / carrying_capacity, trade_contact, famine_active)`. The `stub.CarryingCapacity` and `stub.Population` fields are available per-tick; the density fraction is already computed in `RunAnnualDiseaseChecks` as `density = pop / CarryingCapacity`. D4 should add contact-link and famine terms to this existing calculation. Re-calibrate `active_diseases` and `deaths_disease` bands after D4.
-- **D5 (war consolidation):** After D5, consolidate all `[character]` war keys (`tension_accrual_per_pair`, `tension_war_threshold`, `tension_decay_rate`, `max_war_duration_years`, `peace_cooldown_years`, `raid_damage_*`) into `[war]` section alongside the territory tension keys. Re-calibrate `wars_active` bands from 0 baseline. **`civ_border_pairs` metric** (added S4) is the prerequisite signal for opportunistic war causes — query `yearly_metrics.civ_border_pairs` to find which years have sustained territorial contact. The metric counts distinct civ-pair adjacencies in the territory map (east+south neighbor scan, each edge examined once). Non-zero means the war system's territory-tension driver has active input. Observed at Y600: mean=5, max=10.
+- **D4 complete (2026-07-18):** Structural disease model — outbreak probability = `base_chance × density_factor × contact_factor × famine_factor`. Contact factor (1.5×) fires when civ has EmissaryExchange+ or is at war. Famine factor (2.0×) fires when `food_pressure_ratio < 0.7`. Balance: `active_diseases` now reaches 1–3 in 300-year runs; `deaths_disease` non-zero. See Disease section above for new knobs.
+- **D5 complete (2026-07-18):** All war knobs consolidated from `[character]` into `[war]`. Typed `WarOutcome`/`WarCause` constants. Three opportunistic war causes: `SuccessionCrisis`, `WeakNeighbor`, `ResourceShortage` fire as tension bonuses. Observed: all three appear in 3-seed × 300y balance sweep. See War/Tension section above for new knobs.

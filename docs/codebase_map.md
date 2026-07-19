@@ -4,7 +4,7 @@ One-line description of every non-trivial source file. Check here before running
 ## WorldEngine.Sim/Core/
 - `ICommand.cs` — marker interface; all commands are sealed records implementing this
 - `EntityId.cs / CivId.cs / EventId.cs / ModifierId.cs / ArtifactId.cs` — strongly-typed ID wrappers (never use raw ints)
-- `Enumerations.cs` — all enums: BiomeType, Season, SimPhase, EntityKind, EventType, EventTier, VerbClass, etc.
+- `Enumerations.cs` — all enums: BiomeType, Season, SimPhase, EntityKind, EventType, EventTier, VerbClass, etc.; D5: WarOutcome static class (Truce/Conquest/Surrender/Destruction) and WarCause static class (CharacterEncounter/BorderTension/SuccessionCrisis/WeakNeighbor/ResourceShortage)
 - `WorldConfig.cs` — world gen params: seed, tile dimensions
 - `WorldRng.cs` — deterministic RNG: `FloatAt(seed, tick, x, y, salt)` — use salts from SimRngSalts
 - `CommandQueue.cs` — thread-safe queue for UI→sim commands (SetInspectedTile, etc.)
@@ -16,7 +16,7 @@ One-line description of every non-trivial source file. Check here before running
 - `SimConfigLoader.cs` — Tomlyn-based TOML loader; B1 strict mode detects unbound keys; B3 Validate() wired; B4 Load(profileName?, overrides?) merges profiles and --set overrides
 - `SimConfigValidator.cs` — B3: validates ranges (probabilities in [0,1]), cross-field invariants (weight sums, threshold orderings, min≤max pairs); throws SimConfigValidationException
 - `SimLoopConfig.cs` — B5: adds TicksPerSeason (alias) and TicksPerYear (= TicksPerSeasonalChange × 4) derived properties; use these everywhere instead of hardcoded 16
-- `CharacterSimConfig.cs` (~300 lines) — all character behavior constants: needs decay, skill growth, diplomacy, war thresholds
+- `CharacterSimConfig.cs` (~300 lines) — character behavior constants: needs decay, skill growth, diplomacy (war knobs moved to WarConfig D5)
 - `AncestryConfig.cs` — per-ancestry personality/aptitude biases, name pools, spawn weights; M3.5: cultural descriptors (ArchitecturalStyle, SettlementDescriptor, BiomeAdaptations, ImprovementDescriptors, ArtisticTraditions, CivNameSuffix)
 - `AncestryRegistry.cs` — collection of AncestryConfig; biome-weighted sampling
 - `AncestryLoader.cs` — loads ancestries.toml
@@ -29,6 +29,7 @@ One-line description of every non-trivial source file. Check here before running
 - `UnrestConfig.cs` — S2: [unrest] section — unrest drivers, decay, secession threshold/chance/cluster knobs
 - `UtilityAffinityConfig.cs` — D3: [utility_affinity] section — goal→action affinity matrix and action need-weight table (UtilityAffinityTables pre-bakes both into float arrays at construction)
 - `WildlifeRiskConfig.cs` — D3: [wildlife_risk] section — per-biome wildlife raid multipliers; BuildTable() returns a float[16] indexed by (int)BiomeType
+- `WarConfig.cs` — D5: [war] section — all war knobs consolidated here (tension, duration, raid damage, opportunistic cause thresholds, WarOutcome/WarCause typed constants); previously split between WarConfig and CharacterSimConfig
 - Other `*Config.cs` — per-system TOML sections (Climate, Elevation, Tectonic, etc.)
 
 ## WorldEngine.Sim/Tiles/
