@@ -6,8 +6,10 @@
 # Usage: scripts/test-fast.sh [extra dotnet test args]
 set -e
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+# pwd -P resolves symlinks — MSBuild treats /home/agi/e (symlink) and /mnt/e as
+# different projects and corrupts incremental state if the spelling varies between runs
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd -P)"
 
 echo "Running doc-check (docs lint + generated-doc freshness gate)..."
 python3 "$SCRIPT_DIR/doc-check.py"

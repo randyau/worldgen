@@ -8,8 +8,10 @@
 # Usage: scripts/test-balance.sh [extra dotnet test args]
 set -e
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+# pwd -P resolves symlinks — MSBuild treats /home/agi/e (symlink) and /mnt/e as
+# different projects and corrupts incremental state if the spelling varies between runs
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd -P)"
 
 echo "Running balance regression harness (Category=Balance)..."
 echo "Expected runtime: ~4-5 minutes (2 seeds × 300 years, default world)"
