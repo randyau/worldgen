@@ -1,5 +1,5 @@
 <!-- AUTO-GENERATED — do not edit. Run: python3 scripts/gen-interface-contracts.py -->
-<!-- Generated: 2026-07-19T18:46:05Z -->
+<!-- Generated: 2026-07-19T18:46:38Z -->
 
 # Interface Contracts Snapshot — tiles
 
@@ -28,4 +28,4 @@ public struct TileData  // exactly 14 bytes — asserted at startup
 }
 ```
 
-<!-- content-hash: 5d3a1c06e86b6188 -->
+<!-- content-hash: 650c9b9183040160 -->

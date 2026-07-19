@@ -1,5 +1,5 @@
 <!-- AUTO-GENERATED — do not edit. Run: python3 scripts/gen-interface-contracts.py -->
-<!-- Generated: 2026-07-19T18:46:01Z -->
+<!-- Generated: 2026-07-19T18:46:35Z -->
 
 # Interface Contracts Snapshot — core
 
@@ -113,4 +113,4 @@ public sealed class StateCache
 }
 ```
 
-<!-- content-hash: 4a3a3174fe60bcb6 -->
+<!-- content-hash: 33d837b0ee0a40a3 -->

@@ -1,5 +1,5 @@
 <!-- AUTO-GENERATED — do not edit. Run: python3 scripts/gen-interface-contracts.py -->
-<!-- Generated: 2026-07-19T18:46:03Z -->
+<!-- Generated: 2026-07-19T18:46:36Z -->
 
 # Interface Contracts Snapshot — snapshot
 
@@ -253,4 +253,4 @@ public sealed record CharacterWatchSnapshot(
     IReadOnlyList<GoalWatchEntry> Goals);
 ```
 
-<!-- content-hash: 79990b7c923aa96a -->
+<!-- content-hash: 618d21b75d0fbf23 -->
