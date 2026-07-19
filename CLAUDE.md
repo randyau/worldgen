@@ -46,6 +46,15 @@ find . -name "*.cs" ! -path "*worktrees*" ! -path "*/obj/*" ! -path "*/Vendor/*"
 grep -r "Symbol" --include="*.cs" . --exclude-dir=obj --exclude-dir=Vendor --exclude-dir=worktrees
 ```
 
+### Generated docs — trust without re-checking
+The post-commit hook regenerates three docs automatically after every commit:
+- `docs/codebase_map.md` — derived from XML doc summaries; every source file listed with description
+- `docs/config_reference.md` — derived from `sim_config.toml`; all 200 config keys with C# paths
+- Enum tables inside `docs/queries/event_log_queries.md` — derived from `WorldEngine.Sim` source
+
+These are always current after any commit. Read them directly — do not grep or re-derive by hand.
+`scripts/doc-check.py` enforces freshness; drift fails `scripts/test-fast.sh`.
+
 ### Codebase map
 Before running `find`, check `docs/codebase_map.md` — every source file is listed with a one-line description. Often you can skip the filesystem scan entirely.
 
@@ -218,6 +227,8 @@ Every Epic must have tests before it is considered complete. Minimum requirement
 
 The reproducibility test is the most important test in the suite. Any change that breaks it is a regression.
 
+**Architecture tests** live in `WorldEngine.Tests/Architecture/ArchitectureRuleTests.cs` and are enforced on every run. They check: ICommand sealed records, no delegate fields, no async outside Persistence/WorldGen, interface naming, Config namespace naming, and UI panel isolation. Do not add code that breaks these — they will fail `scripts/test-fast.sh`.
+
 ```csharp
 [Fact]
 public void SameSeedProducesSameWorld()
@@ -254,7 +265,7 @@ At the start of each session:
 1. Read this file
 2. Run `python3 scripts/scip-query.py stats` — confirms the SCIP index is fresh and tells you the document/symbol counts. If missing, run `scip-dotnet index WorldEngine.sln --skip-dotnet-restore` first.
 3. Read the active phase doc from `docs/phases/` (whichever phase is in progress). If `docs/phases/` is empty, check `docs/mvp_spec.md` for the M3 scope summary before starting.
-4. Use `docs/codebase_map.md` to orient yourself — one-line description of every source file; skip filesystem scans when possible.
+4. Use `docs/codebase_map.md` to orient yourself — one-line description of every source file; skip filesystem scans when possible. This file is generated per-commit and is current.
 5. Check only the relevant `docs/interface_contracts_*.md` split file for interfaces you'll be implementing against.
 6. Use `python3 scripts/scip-query.py defs <TypeName>` to locate types before reading files.
 7. Load `docs/snippets/patterns.md` when you need code boilerplate.
@@ -269,7 +280,8 @@ Do not assume continuity from a previous session. Read the code to understand wh
 
 A story is done when:
 - Code compiles with zero warnings
-- All tests pass
+- All tests pass (including the 6 architecture rule tests in `ArchitectureRuleTests.cs`)
+- `scripts/doc-check.py` exits 0 (run via `scripts/test-fast.sh` — generated-doc freshness gate)
 - The feature works as described in the story definition
 - Any `// DECISION:` comments have been added for non-obvious choices
 - SimConfig has entries for any new tunable constants
