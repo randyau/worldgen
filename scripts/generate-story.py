@@ -2,15 +2,14 @@
 """
 generate-story.py — Extract character history from world.db and generate narrative via Ollama.
 
-Connects to a local Ollama instance (default http://localhost:11434).
-Picks notable characters, builds a focused life-summary prompt, and asks the model
-to write a short prose story or biography.
+Connects to a local Ollama instance. When running inside WSL2 with Ollama on the
+Windows host, use --host with the WSL2 gateway IP (see docs/story-generation.md).
 
 Usage:
     python3 scripts/generate-story.py world.db [options]
 
 Options:
-    --model MODEL        Ollama model name (default: gemma3:4b)
+    --model MODEL        Ollama model name (default: gemma4:e4b)
     --host  HOST         Ollama base URL (default: http://localhost:11434)
     --top   N            Pick the N most event-rich characters (default: 3)
     --id    CHAR_ID      Process a specific character ID
@@ -18,9 +17,10 @@ Options:
     --out   DIR          Write story files to DIR (default: stdout)
     --style STYLE        Story style: biography | legend | epic (default: biography)
 
-Examples:
-    python3 scripts/generate-story.py publish/win-x64/world.db --top 5
-    python3 scripts/generate-story.py world.db --id 6641948 --model gemma3:12b
+Examples (WSL2 with Ollama on Windows):
+    HOST=$(ip route show default | awk '{print $3}')
+    python3 scripts/generate-story.py publish/win-x64/world.db --host http://$HOST:11434 --top 5
+    python3 scripts/generate-story.py world.db --host http://$HOST:11434 --id 6641948
     python3 scripts/generate-story.py world.db --prompt-only --top 1
 """
 
@@ -456,7 +456,7 @@ def call_ollama(prompt: str, model: str, host: str) -> str:
     req  = urllib.request.Request(url, data=body,
                                   headers={"Content-Type": "application/json"})
     try:
-        with urllib.request.urlopen(req, timeout=120) as resp:
+        with urllib.request.urlopen(req, timeout=600) as resp:
             data = json.loads(resp.read())
             return data.get("response", "").strip()
     except urllib.error.URLError as e:
@@ -471,7 +471,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("db", help="Path to world.db")
-    ap.add_argument("--model",       default="gemma3:4b")
+    ap.add_argument("--model",       default="gemma4:e4b")
     ap.add_argument("--host",        default="http://localhost:11434")
     ap.add_argument("--top",         type=int, default=3)
     ap.add_argument("--id",          type=int, default=None)
