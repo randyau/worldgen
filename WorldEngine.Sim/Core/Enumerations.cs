@@ -269,3 +269,29 @@ public static class VerbClassification
         _ => throw new ArgumentOutOfRangeException(nameof(type), type, "No VerbClass mapping")
     };
 }
+
+/// <summary>
+/// Typed war outcome values used in WarEndedPayload and MetricsCollector (D5).
+/// String constants preserve JSON backward compatibility (old rows are unaffected).
+/// </summary>
+public static class WarOutcome
+{
+    public const string Truce      = "truce";
+    public const string Conquest   = "conquest";
+    public const string Surrender  = "surrender";
+    public const string Destruction = "destruction";
+}
+
+/// <summary>
+/// War cause string constants for WarDeclaredPayload (D5 — opportunistic causes added).
+/// String form keeps the history log human-readable and backward compatible.
+/// </summary>
+public static class WarCause
+{
+    public const string CharacterEncounter = "character_encounter";
+    public const string BorderTension      = "border_tension";
+    // D5 opportunistic causes:
+    public const string SuccessionCrisis   = "succession_crisis";  // target civ in power vacuum
+    public const string WeakNeighbor       = "weak_neighbor";      // target has disease/famine
+    public const string ResourceShortage   = "resource_shortage";  // aggressor is starving
+}

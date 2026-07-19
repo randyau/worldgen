@@ -1,4 +1,5 @@
 using WorldEngine.Sim.Civilizations;
+using WorldEngine.Sim.Config;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities;
 using WorldEngine.Sim.Entities.Characters;
@@ -186,13 +187,17 @@ public class TerritoryWarTests
         Thread.Sleep(300);
         loop.Stop();
 
-        // After at least one spring tick, tension should have accrued for adjacent territory pairs
+        // After at least one spring tick, tension should have accrued for adjacent territory pairs.
+        // D5: opportunistic war causes (resource shortage / weak neighbor) may push tension above the
+        // threshold immediately, causing war to be declared and tension reset to 0 in the same pass.
+        // Accept either "tension > 0" OR "war was declared" as proof that the border tension system fired.
         float tensionAfterA = ca.BorderTension.GetValueOrDefault(civB, 0f);
         float tensionAfterB = cb.BorderTension.GetValueOrDefault(civA, 0f);
+        bool warDeclared    = ca.IsAtWarWith(civB) || cb.IsAtWarWith(civA);
 
-        Assert.True(tensionAfterA > tensionBefore || tensionAfterB > 0f,
+        Assert.True(tensionAfterA > tensionBefore || tensionAfterB > 0f || warDeclared,
             "Territory-adjacency border tension should have accrued between civs with adjacent tile pairs. " +
-            $"civA BorderTension[civB]={tensionAfterA}, civB BorderTension[civA]={tensionAfterB}");
+            $"civA BorderTension[civB]={tensionAfterA}, civB BorderTension[civA]={tensionAfterB}, warDeclared={warDeclared}");
     }
 
     // ── Test 4: RunWarCampaigns fires BattleOccurred events ──────────────────
@@ -345,5 +350,84 @@ public class TerritoryWarTests
         {
             WorldStateSaver.DeleteSave(saveDir);
         }
+    }
+
+    // ── D5 War Consolidation + Opportunistic Causes ───────────────────────────
+
+    /// <summary>
+    /// D5: WarConfig now holds MaxWarDurationYears (previously in CharacterSimConfig).
+    /// Verifies the consolidation: reading from war config returns the expected value.
+    /// </summary>
+    [Fact]
+    public void D5_WarConfig_HoldsConsolidatedKeys()
+    {
+        var world   = WorldTestHelper.CreateSmallWorld(seed: 42);
+        var simCfg  = world.SimConfig;
+
+        // All war-lifecycle keys should be on WarConfig, not CharacterSimConfig
+        Assert.True(simCfg.War.MaxWarDurationYears > 0,
+            "MaxWarDurationYears should be bound in WarConfig (D5 consolidation).");
+        Assert.True(simCfg.War.MaxActiveWars > 0,
+            "MaxActiveWars should be bound in WarConfig.");
+        Assert.True(simCfg.War.PeaceCooldownYears >= 0,
+            "PeaceCooldownYears should be bound in WarConfig.");
+        Assert.True(simCfg.War.RaidDamageMin < simCfg.War.RaidDamageMax,
+            "RaidDamageMin must be < RaidDamageMax in WarConfig.");
+        Assert.True(simCfg.War.WarAggressionThreshold is >= 0f and <= 1f,
+            "WarAggressionThreshold should be a probability in WarConfig.");
+        Assert.True(simCfg.War.TensionWarThreshold > 0f,
+            "TensionWarThreshold should be positive in WarConfig.");
+    }
+
+    /// <summary>
+    /// D5: WarOutcome constants are typed strings; verify they distinguish conquest from truce.
+    /// MetricsCollector uses string matching so the strings must be stable.
+    /// </summary>
+    [Fact]
+    public void D5_WarOutcome_Constants_AreDistinct()
+    {
+        Assert.NotEqual(WarOutcome.Conquest, WarOutcome.Truce);
+        Assert.NotEqual(WarOutcome.Conquest, WarOutcome.Surrender);
+        Assert.NotEqual(WarOutcome.Conquest, WarOutcome.Destruction);
+    }
+
+    /// <summary>
+    /// D5: WarCause constants cover both original and opportunistic causes.
+    /// All values must be non-empty and distinct.
+    /// </summary>
+    [Fact]
+    public void D5_WarCause_Constants_AreDistinctNonEmpty()
+    {
+        var causes = new[]
+        {
+            WarCause.CharacterEncounter,
+            WarCause.BorderTension,
+            WarCause.SuccessionCrisis,
+            WarCause.WeakNeighbor,
+            WarCause.ResourceShortage,
+        };
+
+        Assert.All(causes, c => Assert.False(string.IsNullOrEmpty(c), "WarCause should not be empty."));
+        Assert.Equal(causes.Length, causes.Distinct().Count());
+    }
+
+    /// <summary>
+    /// D5: OpportunisticWarConfig keys load correctly from sim_config.toml.
+    /// Verifies the new D5 TOML keys bind to WarConfig properties.
+    /// </summary>
+    [Fact]
+    public void D5_OpportunisticWarConfig_KeysBound()
+    {
+        var world  = WorldTestHelper.CreateSmallWorld(seed: 42);
+        var wCfg   = world.SimConfig.War;
+
+        Assert.True(wCfg.SuccessionCrisisWarTensionMult > 1f,
+            "succession_crisis_war_tension_mult should be > 1 (amplifier).");
+        Assert.True(wCfg.WeakNeighborSettlementFraction is > 0f and <= 1f,
+            "weak_neighbor_settlement_fraction is a proportion; must be in (0, 1].");
+        Assert.True(wCfg.WeakNeighborTensionBonus >= 0f,
+            "weak_neighbor_tension_bonus must be non-negative.");
+        Assert.True(wCfg.ResourceShortageTensionBonus >= 0f,
+            "resource_shortage_tension_bonus must be non-negative.");
     }
 }

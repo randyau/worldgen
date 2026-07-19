@@ -163,15 +163,16 @@ public sealed class UtilityScorer
         {
             var myCiv = world.GetCivilization(c.Identity.CivId);
             bool isRuler = myCiv?.RulerId == c.Id;
-            if (isRuler && c.Personality.Aggression > cfg.WarAggressionThreshold
-                && myCiv!.WarsAgainst.Count < cfg.MaxActiveWars)
+            var wCfg = world.SimConfig.War;  // D5: war knobs consolidated in WarConfig
+            if (isRuler && c.Personality.Aggression > wCfg.WarAggressionThreshold
+                && myCiv!.WarsAgainst.Count < wCfg.MaxActiveWars)
             {
                 foreach (var coord in world.GetTilesInRadius(c.Location, cfg.PerceptionRadius))
                 {
                     if (!world.Settlements.TryGetValue(coord, out var nearSettle)) continue;
                     if (!nearSettle.CivId.IsValid || nearSettle.CivId == c.Identity.CivId) continue;
                     if (myCiv.IsAtWarWith(nearSettle.CivId)) continue;
-                    if (myCiv.InPeaceCooldownWith(nearSettle.CivId, world.CurrentYear, cfg.PeaceCooldownYears, cfg.WarExhaustionYearsPerWar)) continue;
+                    if (myCiv.InPeaceCooldownWith(nearSettle.CivId, world.CurrentYear, wCfg.PeaceCooldownYears, wCfg.WarExhaustionYearsPerWar)) continue;
                     var targetCiv = world.GetCivilization(nearSettle.CivId);
                     if (targetCiv == null) continue;
 
@@ -191,7 +192,7 @@ public sealed class UtilityScorer
                     }
                     if (!hostileEnough)
                         hostileEnough = myCiv.BorderTension.GetValueOrDefault(nearSettle.CivId, 0f)
-                                      >= cfg.TensionWarThreshold * 0.6f;
+                                      >= wCfg.TensionWarThreshold * 0.6f;
 
                     if (hostileEnough)
                     {

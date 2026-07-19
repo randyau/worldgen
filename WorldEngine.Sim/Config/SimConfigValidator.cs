@@ -56,8 +56,7 @@ public static class SimConfigValidator
             c.MaxAgeSeasonsMin, c.MaxAgeSeasonsMax, errors);
         CheckMinMax("character.tier2_max_age_seasons_min/max",
             c.Tier2MaxAgeSeasonsMin, c.Tier2MaxAgeSeasonsMax, errors);
-        CheckMinMax("character.raid_damage_min/max",
-            c.RaidDamageMin, c.RaidDamageMax, errors);
+        // raid_damage_min/max moved to WarConfig (D5) — validated in ValidateWar below
         CheckMinMax("character.softmax_temp_min/max",
             c.SoftmaxTempMin, c.SoftmaxTempMax, errors);
     }
@@ -148,11 +147,20 @@ public static class SimConfigValidator
     private static void ValidateWar(WarConfig w, List<string> errors)
     {
         CheckProbability("war.campaign_battle_base_strength", w.CampaignBattleBaseStrength, errors);
+        CheckProbability("war.war_aggression_threshold", w.WarAggressionThreshold, errors);
+        CheckProbability("war.opportunistic_war_aggression_threshold", w.OpportunisticWarAggressionThreshold, errors);
+        CheckProbability("war.weak_neighbor_settlement_fraction", w.WeakNeighborSettlementFraction, errors);
 
         if (w.TilesPerBattleWin < 0)
             errors.Add($"[war] tiles_per_battle_win must be ≥ 0 (got {w.TilesPerBattleWin})");
         if (w.MaxTilesTransferredPerWar < w.TilesPerBattleWin)
             errors.Add($"[war] max_tiles_transferred_per_war ({w.MaxTilesTransferredPerWar}) must be ≥ tiles_per_battle_win ({w.TilesPerBattleWin})");
+        // D5: raid damage min/max validation (consolidated from [character])
+        CheckMinMax("war.raid_damage_min/max", w.RaidDamageMin, w.RaidDamageMax, errors);
+        if (w.MaxWarDurationYears < 1)
+            errors.Add($"[war] max_war_duration_years must be ≥ 1 (got {w.MaxWarDurationYears})");
+        if (w.PeaceCooldownYears < 0)
+            errors.Add($"[war] peace_cooldown_years must be ≥ 0 (got {w.PeaceCooldownYears})");
     }
 
     // ─────────────────────────────────────────────────────────────────────────

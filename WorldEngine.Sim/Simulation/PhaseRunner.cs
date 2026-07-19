@@ -235,11 +235,9 @@ public sealed class PhaseRunner
                 _metricsAcc.IncrementDeathCauseFromJson(pe.PayloadJson);
                 break;
             case EventType.WarEnded:
-                // Classify by outcome string in the payload.
-                // Null outcome = conquest (see CivTracker.Diplomacy.cs).
-                // "truce", "surrender", "destruction" = non-conquest endings.
-                if (pe.PayloadJson.Contains("\"Outcome\":null")
-                    || !pe.PayloadJson.Contains("\"Outcome\":"))
+                // D5: use typed WarOutcome constants — no more "Outcome":null JSON sentinel.
+                // Conquest is now "conquest"; all others ("truce", "surrender", "destruction") are non-conquest.
+                if (pe.PayloadJson.Contains($"\"Outcome\":\"{WarOutcome.Conquest}\""))
                     _metricsAcc.WarsEndedConquestYtd++;
                 else
                     _metricsAcc.WarsEndedTruceYtd++;

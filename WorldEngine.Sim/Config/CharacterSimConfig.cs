@@ -114,26 +114,7 @@ public sealed class CharacterSimConfig
     // Years for the penalty to halve (exponential decay); 0 = penalty never decays
     public float RuinDecayHalfLifeYears   { get; set; } = 50f;
 
-    // ─── War ──────────────────────────────────────────────────────────────────
-    // Wars auto-expire after this many years if not resolved by surrender or truce.
-    public int MaxWarDurationYears        { get; set; } = 4;
-    // Hard cap on simultaneous active wars per civilization.
-    public int MaxActiveWars              { get; set; } = 2;
-    // After any war ends (expiry, surrender, or truce), neither side can declare war
-    // on the other for this many years. Prevents immediate re-declaration.
-    public int PeaceCooldownYears         { get; set; } = 10;
-    // Additional cooldown years added per prior war between the same pair (war exhaustion).
-    // 5 means: 1st war → 10 year cooldown, 2nd → 15, 3rd → 20, etc.
-    public int WarExhaustionYearsPerWar   { get; set; } = 5;
-    // Raid damage constants (moved from hardcoded to configurable)
-    public int RaidDamageMin              { get; set; } = 15;
-    public int RaidDamageMax              { get; set; } = 40;
-    // If a settlement's health is at or below this at war expiry, it can be conquered
-    // rather than returning to truce — models a siege that completes at war's end.
-    public int WarConquestHealthThreshold { get; set; } = 35;
-    // A civ whose total population falls below this threshold during a war sues for peace
-    // (surrender). The war ends immediately regardless of duration.
-    public int WarSurrenderPopThreshold   { get; set; } = 5;
+    // War knobs moved to WarConfig (D5 consolidation).
     // Rivalry cap scales with Aggression: floor(base + Aggression × perAggression).
     // A war-hungry character can sustain more rivalries; a peaceful one almost none.
     public int   RivalryMaxBase           { get; set; } = 1;
@@ -276,20 +257,7 @@ public sealed class CharacterSimConfig
     public float WellbeingSurviveMultiplier { get; set; } = 0.3f;  // Survive: urgent but temporary
     public float WellbeingFleeMultiplier    { get; set; } = 0.4f;  // Flee: flight stress
 
-    // Minimum aggression score required to consider War action against a rival
-    public float WarAggressionThreshold     { get; set; } = 0.5f;
-
-    // ─── Border tension (civ-level war trigger) ───────────────────────────────
-    // Settlements within this tile radius accumulate tension toward their neighbour civ each year.
-    public int   WarProximityRadius         { get; set; } = 40;
-    // Base tension accrued per close settlement pair per year; multiplied by proximity (0–1)
-    // and the ruler's Aggression, so aggressive civs with many border settlements escalate fast.
-    public float TensionAccrualPerPair      { get; set; } = 0.12f;
-    // Fraction of tension lost each year when a civ pair has no proximate settlements.
-    public float TensionDecayRate           { get; set; } = 0.15f;
-    // When a civ's accumulated tension toward an enemy crosses this value AND the ruler is
-    // aggressive enough (WarAggressionThreshold), war is declared without personal contact.
-    public float TensionWarThreshold        { get; set; } = 1.0f;
+    // Border tension / war trigger / DeclareWar threshold: moved to WarConfig (D5 consolidation).
 
     // ─── Wanderlust — travel urge that builds the longer a character stays in one place
     public int   WanderlustMaxTicks          { get; set; } = 8;   // full bonus after 2 seasons stationary

@@ -329,14 +329,7 @@ alliance_war_trust_drain      = 0.4   # trust drained from aggressor to target's
 enemy_of_ally_trust_drain     = 0.15  # trust drain on C when A allies B who is already allied with C's rival
 ally_protect_goal_intensity   = 0.6   # priority of the Protect goal seeded on allies when their ally is attacked
 ally_disaster_aid_intensity   = 0.3   # (reserved for future goal seeding; merchant routing handles aid currently)
-max_war_duration_years        = 15     # wars end by truce after this many years if not ended sooner by surrender/destruction
-max_active_wars               = 2     # hard cap: a civ cannot fight more than this many simultaneous wars
-peace_cooldown_years          = 10    # years after a war ends before the same two civs can declare war again
-war_exhaustion_years_per_war  = 5     # extra cooldown years per prior war between the same pair (1st=10yr, 2nd=15yr, 3rd=20yr...)
-raid_damage_min               = 15    # minimum HP damage to a settlement per raid (was hardcoded 10)
-raid_damage_max               = 40    # maximum HP damage to a settlement per raid (was hardcoded 30)
-war_conquest_health_threshold = 35    # if target settlement health ≤ this at war expiry → conquest instead of truce
-war_surrender_pop_threshold   = 5     # a civ with total population below this sues for peace (surrender)
+# War lifecycle keys moved to [war] section (D5 consolidation — see below)
 # Rivalry cap scales with Aggression: max = floor(base + Aggression × per_aggression)
 # Aggression=0 → 1 rival max; Aggression=1.0 → 4 rivals max
 rivalry_max_base              = 1
@@ -403,7 +396,7 @@ goal_stale_season_limit      = 8     # seasons (2 years) without progress before
 rival_search_radius          = 5     # tile radius when scanning for nearby rivals (Dominance goal)
 alliance_search_radius       = 4     # tile radius when scanning for nearby neutrals (Alliance goal)
 bond_search_radius           = 3     # tile radius when scanning for Bond companions
-war_aggression_threshold     = 0.5   # minimum Aggression to consider DeclareWar action
+# war_aggression_threshold moved to [war] section (D5 consolidation)
 
 # Civilisation floor — prevents the world from converging to one or zero civs
 # If active (non-collapsed) civ count drops below civ_floor_count, the annual pass
@@ -438,12 +431,7 @@ succession_crisis_years      = 10    # how long the crisis lasts after founder d
 succession_crisis_decay_mult = 2.5   # decay rate multiplier for settlements beyond stable radius during crisis
 succession_stable_radius     = 15    # tile radius from capital immune to succession instability
 
-# Border tension — civ-level territorial pressure that triggers war without ruler proximity
-war_proximity_radius        = 40    # tile radius within which settlements build tension toward each other
-                                    # (was 15 — too small for 400×300 tile world; S1 growth overhaul 2026-07-18)
-tension_accrual_per_pair    = 0.12  # tension added per close settlement pair per year (× proximity factor × ruler Aggression)
-tension_decay_rate          = 0.15  # fraction of tension lost each year when no proximate settlements exist
-tension_war_threshold       = 1.0   # accumulated tension at which war is declared (if ruler Aggression ≥ war_aggression_threshold)
+# Border tension keys moved to [war] section (D5 consolidation)
 
 # Wellbeing — emotional state dynamics (-1 spiraling … +1 flourishing)
 wellbeing_goal_gain_rate        = 0.015   # per tick when a goal is progressing (raised from 0.01 — allows positive equilibrium)
@@ -713,18 +701,56 @@ religious_spread_awe_boost      = 0.3    # awe modifier added to target-civ char
 # =============================================================================
 
 [war]
-# Border tension accrued per year for each adjacent territory tile pair between different civs.
-# At 0.015 per pair: 10 adjacent pairs → 0.15 tension/year → war threshold (1.0) in ~7 years.
-territory_tension_per_adjacent_pair = 0.015
+# ==========================================================================
+# War lifecycle (D5: consolidated from [character])
+# ==========================================================================
+max_war_duration_years        = 15    # wars end by truce after this many years (was in [character])
+max_active_wars               = 2     # hard cap: a civ cannot fight more than this many simultaneous wars
+peace_cooldown_years          = 10    # years of non-aggression after a war ends
+war_exhaustion_years_per_war  = 5     # extra cooldown per prior war (1st=10yr, 2nd=15yr, 3rd=20yr)
+raid_damage_min               = 15    # min HP damage to a settlement per character raid
+raid_damage_max               = 40    # max HP damage to a settlement per character raid
+war_conquest_health_threshold = 35    # settlement health ≤ this at war expiry → conquest not truce
+war_surrender_pop_threshold   = 5     # civ total population below this → sue for peace (surrender)
 
-# Campaign battle: abstract annual engagement for each active war.
-# One battle attempt per war per year; winner determined by attacker vs defender strength roll.
+# Declaration thresholds
+war_aggression_threshold      = 0.5   # minimum ruler Aggression to consider DeclareWar (was in [character])
+
+# Border tension (civ-level trigger — moved from [character])
+war_proximity_radius          = 40    # tile radius within which settlements accumulate tension
+                                      # (was 15 — too small for 400×300 tile world; raised S1 2026-07-18)
+tension_accrual_per_pair      = 0.12  # tension per close settlement pair per year (× proximity × ruler Aggression)
+tension_decay_rate            = 0.15  # fraction of tension lost when no proximate settlements exist
+tension_war_threshold         = 1.0   # accumulated tension that triggers war when ruler is aggressive enough
+
+# ==========================================================================
+# Campaign battles (M4 Phase 2)
+# ==========================================================================
+# Border tension accrued per year for each adjacent territory tile pair between different civs.
+territory_tension_per_adjacent_pair = 0.015
 campaign_battle_damage        = 15    # health damage dealt to target settlement per campaign victory
 campaign_battle_base_strength = 0.5   # attacker strength when no character combatant is available
-
-# War end territory transfer: winner gains border tiles proportional to battle advantage.
 tiles_per_battle_win          = 2     # tiles transferred per net battle victory (aWins - bWins)
 max_tiles_transferred_per_war = 12    # cap; prevents one decisive war from reshaping the world
+
+# ==========================================================================
+# Opportunistic war causes (D5)
+# ==========================================================================
+# These add extra tension on top of normal border tension when special conditions apply,
+# producing war declarations labeled with richer causes in the history log.
+opportunistic_war_aggression_threshold = 0.55  # slightly higher bar for opportunistic wars
+
+# SuccessionCrisis: neighbors exploit a civ in power vacuum
+succession_crisis_war_tension_mult = 2.0  # tension accrual × this when target is in succession crisis
+
+# WeakNeighbor: target has disease/famine → bonus tension
+weak_neighbor_settlement_fraction = 0.4   # fraction of target settlements that must be infected/starving
+war_weak_neighbor_food_threshold  = 0.70  # FoodPressureRatio below which a settlement counts as "weak"
+weak_neighbor_tension_bonus       = 0.25  # extra tension/year when target qualifies as weak neighbor
+
+# ResourceShortage: aggressor is hungry → it presses harder on neighbors
+resource_shortage_war_food_threshold = 0.75  # aggressor mean food ratio below this → it gains bonus tension
+resource_shortage_tension_bonus      = 0.20  # extra tension/year when aggressor is in food shortage
 
 # =============================================================================
 # RELIGION (M4 Phase 3 — Religion founding via character goal)

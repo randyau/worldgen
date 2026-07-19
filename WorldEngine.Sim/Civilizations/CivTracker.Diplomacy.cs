@@ -21,6 +21,7 @@ public static partial class CivTracker
     public static void RunAnnualDiplomacy(WorldState world, List<PendingEvent> pending)
     {
         var cfg       = world.SimConfig.Character;
+        var wCfg      = world.SimConfig.War;  // D5: war knobs live here now
         var toProcess = world.Relationships.AllEdges.ToList(); // snapshot before mutations
 
         foreach (var edge in toProcess)
@@ -109,12 +110,12 @@ public static partial class CivTracker
 
                 // Truce by expiry — but if the defender's capital is critically damaged, the
                 // attacker can force a conquest rather than accepting a mere truce.
-                if (world.CurrentYear - yearDeclared >= cfg.MaxWarDurationYears)
+                if (world.CurrentYear - yearDeclared >= wCfg.MaxWarDurationYears)
                 {
                     bool conquestForced = false;
                     if (world.Civilizations.TryGetValue(enemyCivId, out var enemyCiv)
                         && world.Settlements.TryGetValue(enemyCiv.CapitalTile, out var capitalStub)
-                        && capitalStub.Health <= cfg.WarConquestHealthThreshold
+                        && capitalStub.Health <= wCfg.WarConquestHealthThreshold
                         && civ.RulerId.Value != 0)
                     {
                         var attacker = world.GetEntity(civ.RulerId) as Tier1Character;
@@ -126,15 +127,16 @@ public static partial class CivTracker
                             conquestForced = true;
                         }
                     }
-                    reason = conquestForced ? null : "truce";
+                    // D5: use typed WarOutcome constants; "conquest" replaces the previous null sentinel
+                    reason = conquestForced ? WarOutcome.Conquest : WarOutcome.Truce;
                 }
 
                 if (reason == null)
                 {
                     int popA = CivTotalPop(civ.Id, world);
                     int popB = CivTotalPop(enemyCivId, world);
-                    if (popA < cfg.WarSurrenderPopThreshold || popB < cfg.WarSurrenderPopThreshold)
-                        reason = "surrender";
+                    if (popA < wCfg.WarSurrenderPopThreshold || popB < wCfg.WarSurrenderPopThreshold)
+                        reason = WarOutcome.Surrender;
                 }
 
                 if (reason == null)
@@ -142,7 +144,7 @@ public static partial class CivTracker
                     bool aGone = civ.IsCollapsed;
                     bool bGone = world.Civilizations.TryGetValue(enemyCivId, out var ec) && ec.IsCollapsed;
                     if (aGone || bGone)
-                        reason = "destruction";
+                        reason = WarOutcome.Destruction;
                 }
 
                 if (reason != null)
@@ -405,8 +407,9 @@ public static partial class CivTracker
     /// </summary>
     private static void RunBorderTension(WorldState world, List<PendingEvent> pending)
     {
-        var cfg = world.SimConfig.Character;
-        int r   = cfg.WarProximityRadius;
+        var cfg  = world.SimConfig.Character;
+        var wCfg = world.SimConfig.War;  // D5: war knobs consolidated here
+        int r    = wCfg.WarProximityRadius;
 
         var byCiv = new Dictionary<CivId, List<TileCoord>>();
         foreach (var (coord, stub) in world.Settlements)
@@ -427,7 +430,7 @@ public static partial class CivTracker
             var b = activeCivs[j];
 
             if (a.IsAtWarWith(b.Id)) continue;
-            if (a.InPeaceCooldownWith(b.Id, world.CurrentYear, cfg.PeaceCooldownYears, cfg.WarExhaustionYearsPerWar)) continue;
+            if (a.InPeaceCooldownWith(b.Id, world.CurrentYear, wCfg.PeaceCooldownYears, wCfg.WarExhaustionYearsPerWar)) continue;
 
             float proximity = 0f;
             foreach (var ca in byCiv[a.Id])
@@ -440,37 +443,125 @@ public static partial class CivTracker
 
             if (proximity <= 0f)
             {
-                Decay(a.BorderTension, b.Id, cfg.TensionDecayRate);
-                Decay(b.BorderTension, a.Id, cfg.TensionDecayRate);
+                Decay(a.BorderTension, b.Id, wCfg.TensionDecayRate);
+                Decay(b.BorderTension, a.Id, wCfg.TensionDecayRate);
                 continue;
             }
 
             float aggrA = (world.GetEntity(a.RulerId) as Tier1Character)?.Personality.Aggression ?? 0.5f;
             float aggrB = (world.GetEntity(b.RulerId) as Tier1Character)?.Personality.Aggression ?? 0.5f;
 
-            a.BorderTension[b.Id] = a.BorderTension.GetValueOrDefault(b.Id, 0f) + proximity * aggrA * cfg.TensionAccrualPerPair;
-            b.BorderTension[a.Id] = b.BorderTension.GetValueOrDefault(a.Id, 0f) + proximity * aggrB * cfg.TensionAccrualPerPair;
+            // ── Opportunistic tension modifiers (D5) ────────────────────────────
+            // Succession crisis: neighbors exploit a power vacuum — double tension accrual
+            // against a civ in crisis.
+            float crisisMult = 1f;
+            if (b.SuccessionCrisisEndYear != int.MinValue && world.CurrentYear < b.SuccessionCrisisEndYear)
+                crisisMult = wCfg.SuccessionCrisisWarTensionMult;
+
+            // Weak-neighbor: target civ has infected/starving settlements → bonus tension from a
+            float weakNeighborBonusA = ComputeWeakNeighborTension(b, world, wCfg);
+            // Weak-neighbor: aggressor civ is resource-short → it becomes more aggressive
+            float resourceShortBonusA = ComputeResourceShortageTension(a, world, wCfg);
+
+            a.BorderTension[b.Id] = a.BorderTension.GetValueOrDefault(b.Id, 0f)
+                + proximity * aggrA * wCfg.TensionAccrualPerPair * crisisMult
+                + weakNeighborBonusA + resourceShortBonusA;
+
+            // Symmetric: A may also be in crisis; B accrues tension against A
+            float crisisMultB     = 1f;
+            if (a.SuccessionCrisisEndYear != int.MinValue && world.CurrentYear < a.SuccessionCrisisEndYear)
+                crisisMultB = wCfg.SuccessionCrisisWarTensionMult;
+            float weakNeighborBonusB   = ComputeWeakNeighborTension(a, world, wCfg);
+            float resourceShortBonusB  = ComputeResourceShortageTension(b, world, wCfg);
+            b.BorderTension[a.Id] = b.BorderTension.GetValueOrDefault(a.Id, 0f)
+                + proximity * aggrB * wCfg.TensionAccrualPerPair * crisisMultB
+                + weakNeighborBonusB + resourceShortBonusB;
         }
 
         foreach (var civ in activeCivs)
         {
-            if (civ.WarsAgainst.Count >= cfg.MaxActiveWars) continue;
+            if (civ.WarsAgainst.Count >= wCfg.MaxActiveWars) continue;
             float rulerAggr = (world.GetEntity(civ.RulerId) as Tier1Character)?.Personality.Aggression ?? 0f;
-            if (rulerAggr < cfg.WarAggressionThreshold) continue;
+            if (rulerAggr < wCfg.WarAggressionThreshold) continue;
 
             foreach (var (enemyCivId, tension) in civ.BorderTension.ToList())
             {
-                if (tension < cfg.TensionWarThreshold) continue;
+                if (tension < wCfg.TensionWarThreshold) continue;
                 if (civ.IsAtWarWith(enemyCivId)) continue;
-                if (civ.InPeaceCooldownWith(enemyCivId, world.CurrentYear, cfg.PeaceCooldownYears, cfg.WarExhaustionYearsPerWar)) continue;
+                if (civ.InPeaceCooldownWith(enemyCivId, world.CurrentYear, wCfg.PeaceCooldownYears, wCfg.WarExhaustionYearsPerWar)) continue;
                 if (!world.Civilizations.TryGetValue(enemyCivId, out var enemy) || enemy.IsCollapsed) continue;
 
-                StartWarBetween(civ, enemy, "border_tension", world, pending);
+                // Determine the opportunistic cause for the payload
+                string cause = DetermineOpportunisticCause(civ, enemy, world, wCfg);
+                StartWarBetween(civ, enemy, cause, world, pending);
                 civ.BorderTension.Remove(enemyCivId);
                 enemy.BorderTension.Remove(civ.Id);
                 break;
             }
         }
+    }
+
+    /// <summary>
+    /// Returns extra tension added against a "weak" neighbor — one with infected or
+    /// starving settlements exceeding WeakNeighborSettlementFraction of their total.
+    /// </summary>
+    private static float ComputeWeakNeighborTension(Civilization target, WorldState world, WarConfig wCfg)
+    {
+        var targetSettlements = world.Settlements.Values
+            .Where(s => s.CivId == target.Id)
+            .ToList();
+        if (targetSettlements.Count == 0) return 0f;
+
+        int weakCount = targetSettlements.Count(s =>
+            s.IsInfected || s.FoodPressureRatio < wCfg.WarWeakNeighborFoodThreshold);
+        float fraction = (float)weakCount / targetSettlements.Count;
+        return fraction >= wCfg.WeakNeighborSettlementFraction ? wCfg.WeakNeighborTensionBonus : 0f;
+    }
+
+    /// <summary>
+    /// Returns extra tension generated by an aggressor civ that is itself in food shortage.
+    /// Hungry civs push harder to acquire neighbors' resources.
+    /// </summary>
+    private static float ComputeResourceShortageTension(Civilization aggressor, WorldState world, WarConfig wCfg)
+    {
+        var aggressorSettlements = world.Settlements.Values
+            .Where(s => s.CivId == aggressor.Id)
+            .ToList();
+        if (aggressorSettlements.Count == 0) return 0f;
+        float meanFood = aggressorSettlements.Average(s => s.FoodPressureRatio);
+        return meanFood < wCfg.ResourceShortageWarFoodThreshold ? wCfg.ResourceShortageTensionBonus : 0f;
+    }
+
+    /// <summary>
+    /// When tension crosses the war threshold, pick the most specific cause string
+    /// for the WarDeclared payload. Opportunistic causes from D5 take priority over
+    /// the generic "border_tension" if they were the dominant driver.
+    /// </summary>
+    private static string DetermineOpportunisticCause(
+        Civilization aggressor, Civilization target, WorldState world, WarConfig wCfg)
+    {
+        // SuccessionCrisis: target civ is in power vacuum
+        if (target.SuccessionCrisisEndYear != int.MinValue
+            && world.CurrentYear < target.SuccessionCrisisEndYear)
+            return WarCause.SuccessionCrisis;
+
+        // WeakNeighbor: target has many infected/starving settlements
+        var targetSettlements = world.Settlements.Values.Where(s => s.CivId == target.Id).ToList();
+        if (targetSettlements.Count > 0)
+        {
+            int weakCount = targetSettlements.Count(s =>
+                s.IsInfected || s.FoodPressureRatio < wCfg.WarWeakNeighborFoodThreshold);
+            if ((float)weakCount / targetSettlements.Count >= wCfg.WeakNeighborSettlementFraction)
+                return WarCause.WeakNeighbor;
+        }
+
+        // ResourceShortage: aggressor is hungry and needs land
+        var aggressorSettlements = world.Settlements.Values.Where(s => s.CivId == aggressor.Id).ToList();
+        if (aggressorSettlements.Count > 0
+            && aggressorSettlements.Average(s => s.FoodPressureRatio) < wCfg.ResourceShortageWarFoodThreshold)
+            return WarCause.ResourceShortage;
+
+        return WarCause.BorderTension;
     }
 
     private static void Decay(Dictionary<CivId, float> tension, CivId key, float rate)

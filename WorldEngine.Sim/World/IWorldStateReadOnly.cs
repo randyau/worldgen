@@ -1,4 +1,5 @@
 using WorldEngine.Sim.Civilizations;
+using WorldEngine.Sim.Config;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities;
 using WorldEngine.Sim.Entities.Characters;
@@ -26,6 +27,8 @@ public interface IWorldStateReadOnly
 
     // === WORLD CONFIG ===
     WorldConfig Config { get; }
+    /// <summary>Simulation configuration — all constants used by entity logic.</summary>
+    SimConfig SimConfig { get; }
 
     // === DETERMINISTIC RNG (for entity decisions in M2+) ===
     /// <summary>

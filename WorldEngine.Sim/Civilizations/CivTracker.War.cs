@@ -20,7 +20,7 @@ public static partial class CivTracker
         var declCiv = world.GetCivilization(c.Identity.CivId);
         var targCiv = world.GetCivilization(cmd.TargetCivId);
         if (declCiv == null || targCiv == null || declCiv.IsCollapsed || targCiv.IsCollapsed) return;
-        StartWarBetween(declCiv, targCiv, "character_encounter", world, pending);
+        StartWarBetween(declCiv, targCiv, WarCause.CharacterEncounter, world, pending);
     }
 
     /// <summary>
@@ -32,9 +32,9 @@ public static partial class CivTracker
         Civilization declCiv, Civilization targCiv, string cause,
         WorldState world, List<PendingEvent> pending)
     {
-        var cfg = world.SimConfig.Character;
+        var wCfg = world.SimConfig.War;  // D5: war knobs consolidated in WarConfig
         if (declCiv.IsAtWarWith(targCiv.Id)) return;
-        if (declCiv.InPeaceCooldownWith(targCiv.Id, world.CurrentYear, cfg.PeaceCooldownYears, cfg.WarExhaustionYearsPerWar)) return;
+        if (declCiv.InPeaceCooldownWith(targCiv.Id, world.CurrentYear, wCfg.PeaceCooldownYears, wCfg.WarExhaustionYearsPerWar)) return;
 
         declCiv.WarsAgainst[targCiv.Id] = world.CurrentYear;
         targCiv.WarsAgainst[declCiv.Id] = world.CurrentYear;
@@ -62,9 +62,12 @@ public static partial class CivTracker
         int warNumber = declCiv.WarHistory.GetValueOrDefault(targCiv.Id, 1);
         string causeDescription = cause switch
         {
-            "character_encounter" => "a hostile encounter between their rulers",
-            "border_tension"      => $"years of territorial friction ({warNumber} total war{(warNumber > 1 ? "s" : "")} between these civs)",
-            _                     => cause
+            WarCause.CharacterEncounter => "a hostile encounter between their rulers",
+            WarCause.BorderTension      => $"years of territorial friction ({warNumber} total war{(warNumber > 1 ? "s" : "")} between these civs)",
+            WarCause.SuccessionCrisis   => $"exploiting a succession crisis in {targCiv.Name}",
+            WarCause.WeakNeighbor       => $"opportunistic attack on disease- or famine-weakened {targCiv.Name}",
+            WarCause.ResourceShortage   => $"desperation raid to secure food and land for {declCiv.Name}",
+            _                           => cause
         };
         var eventTile = declRuler?.Location ?? declCiv.CapitalTile;
         string[]? declarerTraits = declCiv.CulturalTraits.Count > 0
@@ -230,7 +233,7 @@ public static partial class CivTracker
         if (world.GetEntity(cmd.CharacterId) is not Tier1Character raider) return;
         if (!world.Settlements.TryGetValue(cmd.SettlementTile, out var settlement)) return;
 
-        var raidCfg = world.SimConfig.Character;
+        var raidCfg = world.SimConfig.War;  // D5: raid knobs consolidated in WarConfig
         int damage = raidCfg.RaidDamageMin
             + (int)(world.GetRandomFloat(raider.Id, SaltRaidDamage)
                     * (raidCfg.RaidDamageMax - raidCfg.RaidDamageMin));
@@ -274,7 +277,7 @@ public static partial class CivTracker
         }
 
         bool raiderWounded = raider.Health < raider.MaxHealth / 2;
-        string raidOutcome = newHealth <= 0 ? "conquest" : newHealth < raidCfg.WarConquestHealthThreshold ? "critical_damage" : "damaged";
+        string raidOutcome = newHealth <= 0 ? "conquest" : newHealth < raidCfg.WarConquestHealthThreshold ? "critical_damage" : "damaged";  // raidCfg = WarConfig (D5)
         var payload = JsonSerializer.Serialize(new BattlePayload(
             raider.Id.Value, raider.Identity.Name, damage, newHealth,
             raidOutcome, raiderWounded, (int)(raider.Health * 100f / raider.MaxHealth)));

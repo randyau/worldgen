@@ -99,8 +99,9 @@ public class SimConfigValidationTests : IDisposable
     public void RaidDamage_MinAboveMax_Throws()
     {
         var config = SimConfig.Default();
-        config.Character.RaidDamageMin = 50;
-        config.Character.RaidDamageMax = 10; // min > max
+        // D5: raid_damage moved to WarConfig
+        config.War.RaidDamageMin = 50;
+        config.War.RaidDamageMax = 10; // min > max
 
         var act = () => SimConfigValidator.Validate(config);
 
