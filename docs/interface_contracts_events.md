@@ -1,5 +1,6 @@
+<!-- contract-snapshot-hash: a36dade9a65f976c -->
 # Interface Contracts — Events & Enumerations
-**Parent:** `interface_contracts.md` | **Version:** 0.8 | **Status:** M2 complete (schema refactored post-M2)
+**Parent:** `interface_contracts.md` | **Version:** 0.9 | **Status:** M3 complete (M4 Phase 1 emissary system included)
 
 Covers: Events table schema, EventEntities table, CausalEdges table, EventsReadable view, typed payloads, EventType ranges, SimEvent, IHistoryGraphReadOnly, key enumerations, ID wrappers.
 
@@ -214,8 +215,8 @@ Example: `SELECT TypeName, Year, SeasonName, Tier, ActorName FROM EventsReadable
 
 | EventType              | Payload record               | Key fields                                                                 |
 |------------------------|------------------------------|----------------------------------------------------------------------------|
-| `CharacterBorn`        | `CharacterBornPayload`       | `CharacterId`, `CharacterName`, `Epithet?`, `Ambition`, `Aggression`, `Role?`, `Source?` |
-| `CharacterDied`        | `CharacterDeathPayload`      | `CharacterId`, `CharacterName`, `Cause`, `AgeSeason`                       |
+| `CharacterBorn`        | `CharacterBornPayload`       | `CharacterId`, `CharacterName`, `Epithet?`, `Ambition`, `Aggression`, `Role?`, `Source?`, `AncestryId?` |
+| `CharacterDied`        | `CharacterDeathPayload`      | `CharacterId`, `CharacterName`, `Cause`, `AgeSeason`, `AncestryId?`, `MaxAgeSeason`       |
 | `CharacterFlourishing` | `CharacterWellbeingPayload`  | `CharacterId`, `CharacterName`, `Wellbeing`                                |
 | `CharacterSpiraling`   | `CharacterWellbeingPayload`  | `CharacterId`, `CharacterName`, `Wellbeing`                                |
 | `CharacterGrieved`     | `CharacterGriefPayload`      | `CharacterId`, `CharacterName`, `DeceasedId`, `DeceasedName`, `Intensity`, `Wellbeing`, `HasAvenge` |
@@ -231,7 +232,7 @@ Example: `SELECT TypeName, Year, SeasonName, Tier, ActorName FROM EventsReadable
 | `AllianceFormed`  | `AllianceFormedPayload`    | `DeclarerId`, `DeclarerName`, `TargetId`, `TargetName`, `DeclarerCivId`, `TargetCivId` |
 | `AllianceBroken`  | `AllianceBrokenPayload`    | `CharacterAId`, `CharacterAName`, `CharacterBId`, `CharacterBName`, `Reason` |
 | `RivalryFormed`   | `RivalryFormedPayload`     | `CharacterId`, `CharacterName`, `TargetId`, `TargetName`                    |
-| `WarDeclared`     | `WarDeclaredPayload`       | `DeclarerId`, `DeclarerName`, `DeclarerCivId`, `DeclarerCivName`, `TargetCivId`, `TargetCivName`, `Cause`, `CauseDescription`, `WarNumber` |
+| `WarDeclared`     | `WarDeclaredPayload`       | `DeclarerId`, `DeclarerName`, `DeclarerCivId`, `DeclarerCivName`, `TargetCivId`, `TargetCivName`, `Cause`, `CauseDescription`, `WarNumber`, `DeclarerTraits?` |
 | `WarEnded`        | `WarEndedPayload`          | `CivAId`, `CivAName`, `CivBId`, `CivBName`, `Outcome`, `WarNumber`          |
 | `Negotiated`      | `NegotiatedPayload`        | `CharacterId`, `CharacterName`, `TargetId`, `TrustGain`                     |
 | `BattleOccurred`  | `BattlePayload`            | `RaiderId`, `RaiderName`, `Damage`, `SettlementHealth`, `RaidOutcome`, `RaiderWounded`, `RaiderHealthPct` |
@@ -247,11 +248,11 @@ Example: `SELECT TypeName, Year, SeasonName, Tier, ActorName FROM EventsReadable
 | `SettlementConquered`    | `SettlementConqueredPayload`   | `ConquererId`, `ConquererName`, `ConquerorCivId`, `PreviousCivId`, `SurvivingPop` |
 | `SettlementAbandoned`    | `SettlementAbandonedPayload`   | `FounderId`, `FoundedYear`, `TimesSettled`, `Population`                    |
 | `SettlementStraining`    | `SettlementStrainPayload`      | `Resource`, `Ratio`, `Impact`                                               |
-| `SuccessionOccurred`     | `SuccessionPayload`            | `PredecessorId`, `PredecessorName`, `PredecessorOrdinal`, `SuccessorId`, `SuccessorName`, `SuccessorOrdinal` |
-| *(succession crisis)*    | `SuccessionCrisisPayload`      | `CivId`, `CivName`, `CrisisEndYear`                                         |
-| *(disease outbreak)*     | `DiseaseOutbreakPayload`       | `Population`                                                                |
-| *(disease recovery)*     | `DiseaseRecoveredPayload`      | `Population`, `DurationYears`                                               |
-| *(wildlife raid)*        | `WildlifeRaidPayload`          | `PopulationBefore`, `PopulationLost`, `DefenderId`, `DefenderName?`         |
+| `SuccessionOccurred`     | `SuccessionPayload`            | `PredecessorId`, `PredecessorName`, `PredecessorOrdinal`, `SuccessorId`, `SuccessorName`, `SuccessorOrdinal`, `CivTraits?` |
+| `SuccessionCrisis`       | `SuccessionCrisisPayload`      | `CivId`, `CivName`, `CrisisEndYear`                                         |
+| `DiseaseOutbreak`        | `DiseaseOutbreakPayload`       | `Population`, `DensityFactor`, `ContactFactor`, `FamineFactor`, `InWar`, `InFamine` |
+| `DiseaseRecovered`       | `DiseaseRecoveredPayload`      | `Population`, `DurationYears`                                               |
+| `WildlifeRaid`           | `WildlifeRaidPayload`          | `PopulationBefore`, `PopulationLost`, `DefenderId`, `DefenderName?`         |
 
 ### Tier 2 Specialist Domain
 
@@ -261,7 +262,8 @@ Example: `SELECT TypeName, Year, SeasonName, Tier, ActorName FROM EventsReadable
 | `MerchantTradeCompleted`| `MerchantTradePayload`       | `CharacterId`, `CharacterName`, `TradedResource`, `DestX`, `DestY`          |
 | `ScholarDiscovery`      | `ScholarDiscoveryPayload`    | `CharacterId`, `CharacterName`, `DiscoveryType`, `BonusKey`, `BonusAmount`  |
 | `PhysicianHealed`       | `PhysicianHealedPayload`     | `CharacterId`, `CharacterName`, `PatientId`, `PatientName`, `Healed`, `Critical` |
-| *(artisan crafted)*     | `ArtisanCraftedPayload`      | `CharacterId`, `CharacterName`, `GoodType`                                  |
+| `ArtisanCrafted`        | `ArtisanCraftedPayload`      | `CharacterId`, `CharacterName`, `GoodType`                                  |
+| `DismissedFromRole`     | `SpecialistDismissedPayload` | `CharacterId`, `CharacterName`, `Role`, `Reason`                            |
 
 ### Beast Domain
 
@@ -282,6 +284,31 @@ Example: `SELECT TypeName, Year, SeasonName, Tier, ActorName FROM EventsReadable
 | `SeaLevelChanged`  | `SeaLevelChangedPayload` | `PreviousLevel`, `NewLevel`, `Delta`                |
 | *(no data needed)* | `EmptyPayload`           | `{}` — used when no payload fields are meaningful   |
 
+### Territory / Improvement Domain
+
+| EventType           | Payload record              | Key fields                                                              |
+|---------------------|-----------------------------|-------------------------------------------------------------------------|
+| `TerritoryExpanded` | `TerritoryExpandedPayload`  | `CivId`, `CivName`, `CityTileX`, `CityTileY`, `TileCount`, `TotalOwned` |
+| `TerritoryLost`     | `TerritoryLostPayload`      | `CivId`, `CivName`, `CityTileX`, `CityTileY`, `TilesReleased`, `TotalOwned`, `Reason` |
+| `ImprovementBuilt`  | `ImprovementBuiltPayload`   | `BuilderId`, `BuilderName`, `CivId`, `TileX`, `TileY`, `ImprovementType` |
+| `CivTraitAcquired`  | `CivTraitAcquiredPayload`   | `CivId`, `CivName`, `Trait`, `Reason`                                   |
+| `CivSplintered`     | `CivSplinteredPayload`      | `ParentCivId`, `ParentCivName`, `NewCivId`, `NewCivName`, `NewRulerId`, `NewRulerName`, `SettlementsSeceded`, `PopulationTransferred`, `LeaderUnrest`, `TileX`, `TileY` |
+
+### Emissary Domain (M4 Phase 1)
+
+| EventType                    | Payload record                      | Key fields                                                                |
+|------------------------------|-------------------------------------|---------------------------------------------------------------------------|
+| `EmissaryDispatched`         | `EmissaryDispatchedPayload`         | `FromCivId`, `FromCivName`, `ToCivId`, `ToCivName`, `Purpose`, `ArrivalYear`, `SurvivalChance` |
+| `EmissaryLost`               | `EmissaryLostPayload`               | `FromCivId`, `FromCivName`, `ToCivId`, `ToCivName`, `Purpose`             |
+| `ReligiousEmissaryArrived`   | `ReligiousEmissaryArrivedPayload`   | `FromCivId`, `FromCivName`, `ToCivId`, `ToCivName`, `CharactersAffected`  |
+| `CivIntelGathered`           | `CivIntelGatheredPayload`           | `FromCivId`, `FromCivName`, `ToCivId`, `ToCivName`, `NewConfidence`       |
+
+### Religion Domain
+
+| EventType        | Payload record           | Key fields                                                           |
+|------------------|--------------------------|----------------------------------------------------------------------|
+| `ReligionFounded` | `ReligionFoundedPayload` | `FounderId`, `FounderName`, `Year`, `TileX`, `TileY`                |
+
 ---
 
 ## EventType Ranges
@@ -296,7 +323,7 @@ Environmental:   1001–1099
 
 Beast:           2001–2099
     BeastSpawned=2001, BeastAwakened=2002, BeastDied=2003, BeastSlain=2004,
-    BeastReproduced=2005, BeastEncountered=2006, BeastAttackedChar=2007
+    BeastReproduced=2005 (not recorded — lifecycle only), BeastEncountered=2006, BeastAttackedChar=2007
 
 Character lifecycle: 3001–3099
     CharacterBorn=3001, CharacterDied=3002, CharacterMarried=3003, CharacterExiled=3004,
@@ -310,23 +337,27 @@ Character/civ actions: 3101–3199
 Civilization/settlement: 3201–3299
     CivilizationFounded=3201, CivilizationCollapsed=3202, SettlementFounded=3203,
     SettlementDestroyed=3204, SuccessionOccurred=3205,
-    SettlementStraining=3206, SettlementConquered=3207
+    SettlementStraining=3206, SettlementConquered=3207,
+    TerritoryExpanded=3208, TerritoryLost=3209,
+    ImprovementBuilt=3210, CivTraitAcquired=3211, CivSplintered=3212
 
 Tier2 specialist: 3301–3399
     AppointedToRole=3301, DismissedFromRole=3302, MerchantTradeCompleted=3303,
-    ScholarDiscovery=3304, PhysicianHealed=3305, CharacterCrystallized=3306
+    ScholarDiscovery=3304, PhysicianHealed=3305, CharacterCrystallized=3306,
+    ArtisanCrafted=3307
 
 Population: 3401–3499
-    SettlementGrew=3401, SettlementShrank=3402, SettlementAbandoned=3403
+    SettlementGrew=3401, SettlementShrank=3402, SettlementAbandoned=3403,
+    DiseaseOutbreak=3404, DiseaseRecovered=3405, WildlifeRaid=3406, SuccessionCrisis=3407
 
-Religion:   4001–4099   (reserved; ReligionFounded=4003, ReligionExtinct=4004)
+Religion:   4001–4099   (ReligionFounded=4003, ReligionExtinct=4004)
+Emissary:   5001–5099   (EmissaryDispatched=5001, EmissaryLost=5002,
+                         ReligiousEmissaryArrived=5003, CivIntelGathered=5004)
 Artifacts:  6001–6099   (ArtifactCreated=6001, ArtifactDestroyed=6002)
 God Mode:   9001–9099   (GodModeDisasterTriggered=9001, GodModeEntitySpawned=9002,
                          GodModeCharacterCreated=9003, GodModeArtifactPlaced=9004,
                          GodModeCivilizationForced=9005)
 ```
-
-**Key events added in M2:** `CharacterGrieved/Flourishing/Spiraling`, `AllianceBroken`, `WarEnded`, `BattleOccurred`, `RivalryFormed`, `Negotiated`, `ArtworkCreated`, `GoalFormed`, `GoalResolved`, `SettlementStraining`, `SettlementConquered`
 
 ---
 
@@ -355,11 +386,16 @@ public sealed record SimEvent
     public required PopulationImpact PopulationImpact { get; init; }
     public required bool IsFirstOfKind { get; init; }
     public required bool IsGodMode { get; init; }
-    public long? ActorId { get; init; }                  // Denormalized primary actor
+    public long ActorId { get; init; }                   // Denormalized primary actor (0 if none)
     public string? ActorName { get; init; }              // Denormalized primary actor name
-    public long? CivId { get; init; }                    // Denormalized civ association
+    public long CivId { get; init; }                     // Denormalized civ association (0 if none)
     public string? SettlementName { get; init; }         // Denormalized settlement name
     public required string PayloadJson { get; init; }
+    /// <summary>
+    /// Float significance score (0.0–1.0). Populated by SignificanceRescoringPass after simulation.
+    /// Enables precise ranking of events within a tier (e.g. "top 10 events of a character's life").
+    /// </summary>
+    public float SignificanceScore { get; init; } = 0f;
     public string? GeneratedProse { get; init; }         // V2: LLM generation
 }
 ```
@@ -383,9 +419,39 @@ public interface IHistoryGraphReadOnly
     IEnumerable<SimEvent> GetEventsByTier(EventTier tier, int fromYear = 0, int toYear = int.MaxValue);
     IEnumerable<SimEvent> GetEventsByVerbClass(VerbClass verbClass, int fromYear = 0, int toYear = int.MaxValue);
     IEnumerable<SimEvent> GetFirstOfKindEvents(int fromYear = 0, int toYear = int.MaxValue);
-    // M2+: GetEventsByEntity, GetSharedHistory
 }
 ```
+
+---
+
+## IHistoryQuery
+
+Pre-indexed query API backed by SQLite summary tables built by `SummaryBuilder`. Obtained via `EventStore.GetHistoryQuery()`. Use for UI queries and story generation — avoids full-table scans.
+
+```csharp
+public interface IHistoryQuery
+{
+    CivSummary?     GetCivSummary(CivId civId);
+    CharacterSummary? GetCharacterSummary(EntityId charId);
+    IReadOnlyList<CharacterSummary> GetRulersOfCiv(CivId civId);
+    CharacterSummary? GetRulerAtYear(CivId civId, int year);
+    IReadOnlyList<SimEvent> GetCivHistory(CivId civId, int startYear, int endYear);
+    IReadOnlyList<SimEvent> GetCharacterHistory(EntityId charId);
+    IReadOnlyList<SimEvent> GetSignificantEvents(int startYear, int endYear, EventTier minTier);
+    IReadOnlyList<ConflictRecord> GetConflictHistory(CivId civA, CivId civB);
+    IReadOnlyList<CharacterSummary> FindCharactersByName(string name);
+    IReadOnlyList<CivSummary> GetAllCivSummaries();
+    IReadOnlyList<(long CauseEventId, SimEvent CauseEvent, string EdgeType)> GetCausalChain(long effectEventId, int maxDepth = 3);
+    Dictionary<int, int> GetEventCountByDecade(int startYear, int endYear);
+    IReadOnlyList<SimEvent> GetTileHistory(TileCoord coord, int maxEvents = 10);
+}
+```
+
+Pre-aggregated summary types live in `WorldEngine.Sim/World/HistoryTypes.cs`:
+
+- **`CharacterSummary`** — `CharacterId`, `Name`, `Epithet?`, `NameOrdinal`, `AncestryId?`, `CivId`, `CivName?`, `RulerOrdinal`, `BirthYear`, `DeathYear`, `DeathCause?`, `AgeSeasons`, `WarsInitiated`, `SettlementsFounded`, `ArtworksCreated`, `SignificantEventIds`
+- **`CivSummary`** — `CivId`, `Name`, `FoundedYear`, `CollapseYear`, `IsCollapsed`, `PeakSettlements`, `TotalRulers`, `TotalWarsInitiated`, `TotalWarsSuffered`, `TotalYearsAtWar`, `DominantAncestry?`, `CulturalTraits`, `FirstRulerName?`, `LastRulerName?`
+- **`ConflictRecord`** — `WarDeclarationEventId`, `CivAId`, `CivBId`, `DeclaredYear`, `EndedYear`, `Outcome`, `BattleCount`, `WarNumber`
 
 ---
 
@@ -394,7 +460,7 @@ public interface IHistoryGraphReadOnly
 ```csharp
 public enum Season { Spring = 0, Summer = 1, Autumn = 2, Winter = 3 }
 public enum SimSpeed { Paused, Slow, Normal, Fast, Ultrafast }
-public enum OverlayType { Biome, Elevation, Temperature, Moisture, Resources, MagicIntensity }
+public enum OverlayType { Biome, Elevation, Temperature, Moisture, Resources, MagicIntensity, Territory }
 
 public enum SimPhase
 {
@@ -443,21 +509,39 @@ public enum BiomeType
 
 ---
 
-## Strongly-Typed ID Wrappers
+## War Outcome and Cause Constants
+
+String constants used in `WarEndedPayload.Outcome` and `WarDeclaredPayload.Cause`. String form keeps the history log human-readable and backward-compatible.
 
 ```csharp
-public readonly record struct EntityId(long Value)
+public static class WarOutcome
 {
-    public static EntityId New() => new(IdGenerator.Next());
+    public const string Truce       = "truce";
+    public const string Conquest    = "conquest";
+    public const string Surrender   = "surrender";
+    public const string Destruction = "destruction";
 }
+
+public static class WarCause
+{
+    public const string CharacterEncounter = "character_encounter";
+    public const string BorderTension      = "border_tension";
+    public const string SuccessionCrisis   = "succession_crisis";  // target civ in power vacuum
+    public const string WeakNeighbor       = "weak_neighbor";      // target has disease/famine
+    public const string ResourceShortage   = "resource_shortage";  // aggressor is starving
+}
+```
+
+---
+
+## Strongly-Typed ID Wrappers
+
+See `interface_contracts_snapshot.md` for the full ID wrapper definitions. Summary:
+
+```csharp
+public readonly record struct EntityId(long Value);   // EntityId.New() / EnsureCounterExceeds()
 public readonly record struct EventId(long Value);
-public readonly record struct CivId(int Value);
-public readonly record struct ModifierId(Guid Value)
-{
-    public static ModifierId New() => new(Guid.NewGuid());
-}
-public readonly record struct ArtifactId(long Value)
-{
-    public static ArtifactId New() => new(IdGenerator.Next());
-}
+public readonly record struct CivId(int Value);       // CivId.None = CivId(0); IsValid => Value > 0
+public readonly record struct ModifierId(Guid Value); // ModifierId.New()
+public readonly record struct ArtifactId(long Value); // ArtifactId.New()
 ```

@@ -59,6 +59,9 @@ float spreadRoll = WorldRng.FloatAt(_worldSeed, _currentTick, coord.X, coord.Y, 
 // For an annual check (tick advances 4× per year — use year as tick to ensure stable per-year result):
 long yearTick = _currentYear * 4L;   // or derive from tick / 4
 float annualRoll = WorldRng.FloatAt(_worldSeed, yearTick, coord.X, coord.Y, DisasterSalts.DroughtCheck);
+
+// DisasterSalts constants available:
+//   Wildfire = 1, WildfireSpread = 2, Flood = 3, VolcanicEruption = 4, Earthquake = 5, DroughtCheck = 6
 ```
 
 ---
@@ -129,7 +132,8 @@ private void ProcessDisasters(WorldState world)
 
 ```csharp
 // Phase 1 creates PendingEvent records — never SimEvent directly
-private List<PendingEvent> _pendingEvents = new();
+// PendingEvent carries basic event data + optional entity/settlement context
+// Phase 7 assigns Id, Year, Season, Tick; runs classification; writes to DB
 
 private void IgniteWildfire(WorldState world, TileCoord coord, TileData tile)
 {
@@ -144,10 +148,16 @@ private void IgniteWildfire(WorldState world, TileCoord coord, TileData tile)
     world.TileGrid.GetChunk(coord)!.SummaryFlags |= ChunkSummaryFlags.HasActiveDisaster;
 
     _pendingEvents.Add(new PendingEvent(
-        EventType.WildfireOccurred,
+        Type: EventType.WildfireOccurred,
         Location: coord,
         CauseEventId: null,   // root event
-        PayloadJson: JsonSerializer.Serialize(new { Intensity = 0.5f, BiomeType = tile.BiomeType })
+        PayloadJson: JsonSerializer.Serialize(new { Intensity = 0.5f, BiomeType = tile.BiomeType }),
+        PrimaryEntityIds: null,     // optional: affected characters
+        SecondaryEntityIds: null,   // optional: related entities
+        ActorId: 0,                 // optional: primary actor character ID
+        ActorName: null,            // optional: cached actor name
+        CivId: 0,                   // optional: involved civilization
+        SettlementName: null        // optional: involved settlement name
     ));
 }
 ```

@@ -1,3 +1,5 @@
+> **Archived:** 2026-07-19 — M3 complete (2026-06-26). This performance gate was planned but superseded by Phase D5 implementation. Current performance is acceptable.
+
 # M3 Performance Notes
 
 ## Phase 3.1 Gate

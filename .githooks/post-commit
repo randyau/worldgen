@@ -22,9 +22,10 @@ LOG="$REPO_ROOT/.scip-index.log"
 # 2. Regenerate generated docs + run doc-check (background; warnings only, no block)
 (
   cd "$REPO_ROOT"
-  python3 scripts/gen-map.py       >> "$LOG" 2>&1
-  python3 scripts/gen-config-ref.py >> "$LOG" 2>&1
-  python3 scripts/gen-enum-tables.py >> "$LOG" 2>&1
+  python3 scripts/gen-map.py                  >> "$LOG" 2>&1
+  python3 scripts/gen-config-ref.py           >> "$LOG" 2>&1
+  python3 scripts/gen-enum-tables.py          >> "$LOG" 2>&1
+  python3 scripts/gen-interface-contracts.py  >> "$LOG" 2>&1
   echo "--- doc-check $(date -Is) ---" >> "$LOG"
   python3 scripts/doc-check.py >> "$LOG" 2>&1 \
     && echo "doc-check: clean" >> "$LOG" \

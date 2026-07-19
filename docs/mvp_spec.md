@@ -1,7 +1,7 @@
 # World Engine — MVP Specification
 **Version:** 0.3  
 **Date:** June 18, 2026 (updated June 23, 2026)  
-**Status:** Milestone 1 COMPLETE (2026-06-22). Milestone 2 COMPLETE (2026-06-23). Milestones 3-4 defined at summary level only.
+**Status:** Milestone 1 COMPLETE (2026-06-22). Milestone 2 COMPLETE (2026-06-23). Milestone 3 COMPLETE (2026-06-26). Milestone 4 COMPLETE (2026-07-19). All phases archived.
 
 ---
 

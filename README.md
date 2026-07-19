@@ -2,7 +2,7 @@
 
 A procedural world generation and history simulation engine. It generates a world, runs thousands of years of history forward, and produces a queryable event log. The simulation is headless — the UI layer observes it; it doesn't drive it.
 
-**Status: in active development (Milestone 2 complete, Milestone 3 in planning)**
+**Status: in active development (Milestones 1–4 complete, balance/tuning phase)**
 
 ---
 

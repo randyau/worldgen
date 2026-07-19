@@ -349,8 +349,6 @@ The `// V2: [feature name]` comment pattern marks intentional stubs. When you en
 Current known V2 stubs:
 - Magic as physical substrate (Layer 5 generates intensity data but has no behavioral effect)
 - LLM prose generation (`SimEvent.GeneratedProse` field exists but is always null)
-- Spotlight mode / player character control
-- God Mode authoring tools
 
 If a story seems to require V2 behavior: stop and confirm before implementing.
 
@@ -395,4 +393,4 @@ The sim has the highest silent failure risk: a generation error or routing bug p
 7. **`SimConfig` is read-only at runtime.** Never written during a sim tick.
 8. **`ICommand` records are plain data.** No callbacks, delegates, or mutable references.
 9. **Tests before implementation** for all sim core and generation layer changes.
-10. **V2 stubs, not implementations.** Magic behavior, LLM prose, Spotlight, and God Mode are V2.
+10. **V2 stubs, not implementations.** Magic behavior and LLM prose are V2.

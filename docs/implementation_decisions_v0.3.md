@@ -1,6 +1,6 @@
 # World Engine — Implementation Decisions
 **Version:** 0.3  
-**Date:** June 18, 2026  
+**Date:** June 18, 2026 (last updated July 19, 2026 — verified current through M4 completion)  
 **Status:** All Tier A and Tier B decisions complete  
 **Changes from v0.2:** Section 23 (B5 Significance Scoring) fully specced. Section 24 (Event Gate and Player Filters) added. "Decisions Pending" section removed — all decisions are now made.  
 **Companion document:** World Engine Design Specification v0.3

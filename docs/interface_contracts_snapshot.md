@@ -1,7 +1,8 @@
+<!-- contract-snapshot-hash: 79990b7c923aa96a -->
 # Interface Contracts — Snapshot & World Structures
-**Parent:** `interface_contracts.md` | **Version:** 0.7 | **Status:** M2 complete
+**Parent:** `interface_contracts.md` | **Version:** 0.9 | **Status:** M3 complete
 
-Covers: TileDisplayData, EntitySnapshot, IdentityData, AncestryConfig, AncestryRegistry, TileInspectorData, WorldSnapshot, SettlementStub, SettlementSnapshot, RuinRecord, Civilization, ID wrappers.
+Covers: TileDisplayData, EntitySnapshot, IdentityData, AncestryConfig, AncestryRegistry, TileInspectorData, WorldSnapshot, SettlementStub, SettlementSnapshot, RuinRecord, TerritorySnapshot, ImprovementSnapshot, CharacterWatchSnapshot, Civilization, ID wrappers.
 
 ---
 
@@ -45,8 +46,9 @@ public sealed record EntitySnapshot(
     float FoodFraction,      // 0.0–1.0; -1 if entity has no Food need
     int AgeSeason,           // age in seasons
     bool IsAlive,
-    string? CivName    = null,  // M2+: set for Tier1Character with a valid CivId
-    string AncestryId  = ""     // M2+: ancestry id from ancestries.toml; empty for non-character entities
+    string? CivName    = null,  // non-null for characters that belong to a civilization
+    string AncestryId  = "",    // ancestry id from ancestries.toml; empty for non-character entities
+    float  Wellbeing   = 0f    // -1 spiraling … +1 flourishing; 0 for non-character entities
 );
 ```
 
@@ -60,12 +62,14 @@ Immutable record on `Tier1Character`. All fields set at spawn; change only via r
 public sealed record IdentityData(
     string     Name,
     string     Epithet,
-    string     AncestryId,   // key into AncestryRegistry / ancestries.toml
+    string     AncestryId,    // key into AncestryRegistry / ancestries.toml
     EntityId?  MotherId,
     EntityId?  FatherId,
-    CivId      CivId,        // CivId.None if no civ; check .IsValid before use
+    CivId      CivId,         // CivId(0) if no civ; check .IsValid before use
     int        BirthYear,
-    int        BirthSeason);
+    int        BirthSeason,
+    int        NameOrdinal  = 0,   // 0 = first bearer of this name; 1 = II, 2 = III, etc.
+    int        RulerOrdinal = 0);  // Nth ruler of their civ (0 = founder / not yet a ruler)
 ```
 
 ---
@@ -166,29 +170,36 @@ All entity/civ/event IDs use readonly record structs, never raw ints or longs.
 ```csharp
 public readonly record struct EntityId(long Value)
 {
-    public static EntityId New() => new(Interlocked.Increment(ref _counter));
-    private static long _counter;
-    public bool IsValid => Value > 0;
+    public static EntityId New() => new(IdGenerator.Next());  // thread-safe global counter
+    public static void EnsureCounterExceeds(long minValue);  // call after loading saves
 }
 
 public readonly record struct CivId(int Value)
 {
-    public bool IsValid => Value > 0;   // unset CivId is CivId(0), not null
+    public static readonly CivId None = new(0);
+    public bool IsValid => Value > 0;   // unset CivId is CivId(0) / CivId.None, not null
 }
 
-public readonly record struct EventId(long Value)
+public readonly record struct EventId(long Value);
+
+public readonly record struct ModifierId(Guid Value)
 {
-    public bool IsValid => Value > 0;
+    public static ModifierId New() => new(Guid.NewGuid());
+}
+
+public readonly record struct ArtifactId(long Value)
+{
+    public static ArtifactId New() => new(IdGenerator.Next());
 }
 ```
 
-`CivId.IsValid` was added in M2. Always check `.IsValid` before using a CivId from character identity data.
+Always check `CivId.IsValid` before using a CivId from character identity data — the unset value is `CivId.None` (Value=0).
 
 ---
 
 ## WorldSnapshot
 
-Immutable projection of world state for the UI. Created after each tick. **v0.6:** Added `Ruins`, `EntitySnapshots`, expanded `SettlementSnapshot`.
+Immutable projection of world state for the UI. Created after each tick.
 
 ```csharp
 public sealed record WorldSnapshot(
@@ -211,19 +222,32 @@ public sealed record WorldSnapshot(
     // Tile inspector (null if no tile selected)
     TileInspectorData? InspectedTile,
 
-    // Entities — flat lookup by EntityId
+    // Entities — flat lookup by EntityId; used by inspector and map renderer
     IReadOnlyDictionary<EntityId, EntitySnapshot> EntitySnapshots,
 
-    // Settlements — keyed by tile coord
+    // Settlements — keyed by tile coord; used by inspector and map renderer
     IReadOnlyDictionary<TileCoord, SettlementSnapshot> Settlements,
 
-    // Ruins — keyed by tile coord
+    // Ruins — keyed by tile coord; displayed in inspector and map renderer
     IReadOnlyDictionary<TileCoord, RuinRecord> Ruins,
+
+    // Territory and improvements (M3 Phase 3.0)
+    // TerritoryMap: tile → (owning city tile, civ id). Absent = unclaimed.
+    IReadOnlyDictionary<TileCoord, TerritorySnapshot> TerritoryMap,
+    // ImprovementMap: tile → improvement snapshot. Absent = no improvement.
+    IReadOnlyDictionary<TileCoord, ImprovementSnapshot> ImprovementMap,
 
     // World-level drift parameters for UI status display
     float GlobalTemperatureAnomaly,
     float GlobalPrecipitationMultiplier,
-    float StormCorridorNormalizedLat
+    float StormCorridorNormalizedLat,
+
+    // Character watch panel (M3 Phase 3.4) — null when no character is being watched
+    CharacterWatchSnapshot? WatchedCharacter = null,
+
+    // Save state — used by UI to show "Saving..." overlay
+    bool IsSaving     = false,
+    long LastSaveTick = -1
 );
 ```
 
@@ -239,20 +263,25 @@ public sealed record SettlementStub(
     CivId     CivId,
     TileCoord Tile,
     int       FoundedYear,
-    int       Population,             // integer head count
-    int       Health,                 // 0–100; raids reduce it; 0 = destroyed
-    string    Name                = "Unknown",
-    float     PopulationF         = 0f,         // fractional accumulator for growth
-    int       LastCrystalThresh   = 0,          // highest population threshold already crystallized
-    float     FoodPressureRatio   = 1f,
-    float     WaterPressureRatio  = 1f,
-    int       LastStrainEventTick = 0,
-    IReadOnlyDictionary<string, float>? ResourceLedger   = null,
-    float     FertilityMultiplier = 1f,         // founding-time variance; permanent
-    int       ConqueredYear       = 0,          // 0 = never conquered
-    int       ConqueredFromCivId  = 0,
-    IReadOnlyDictionary<string, float>? ResourceStores   = null,
-    int       CarryingCapacity    = 50_000);    // biome-based ceiling; recomputed each tick
+    int       Population,              // integer head count
+    int       Health,                  // 0–100; raids reduce it; 0 = destroyed
+    string    Name                 = "Unknown",
+    float     PopulationF          = 0f,         // fractional accumulator for growth
+    int       LastCrystalThresh    = 0,          // population threshold already crystallized
+    float     FoodPressureRatio    = 1f,         // convenience accessor; mirrors ResourceLedger["food"]
+    float     WaterPressureRatio   = 1f,
+    int       LastStrainEventTick  = 0,          // tick of last SettlementStraining event (rate-limit)
+    IReadOnlyDictionary<string, float>? ResourceLedger  = null,
+    float     FertilityMultiplier  = 1f,         // per-settlement founding-time variance; permanent
+    int       ConqueredYear        = 0,          // year this settlement was last conquered (0 = never)
+    int       ConqueredFromCivId   = 0,          // CivId of previous owner at time of conquest (0 = never)
+    IReadOnlyDictionary<string, float>? ResourceStores  = null,
+    int       CarryingCapacity     = 50_000,     // food-ledger-derived population ceiling; recomputed each tick (EMA-smoothed)
+    float     SmoothedCapacity     = 50_000f,    // EMA of raw food-derived capacity; damps logistic oscillation
+    bool      IsColony             = false,      // true when founded beyond ColonyMinDistance from all same-civ settlements
+    bool      IsInfected           = false,      // currently suffering a disease outbreak
+    int       InfectedSinceYear    = 0,          // year the current infection started
+    float     Unrest               = 0f);        // 0=content, 1=fully rebellious; drives secession
 ```
 
 **ResourceLedger keys:** `"food"`, `"water"`, `"timber"`, lowercase deposit type names  
@@ -298,6 +327,55 @@ public sealed record RuinRecord(
 
 ---
 
+## TerritorySnapshot
+
+Per-tile territory entry in `WorldSnapshot.TerritoryMap`. Absent = tile is unclaimed.
+
+```csharp
+public sealed record TerritorySnapshot(
+    TileCoord CityTile,  // which city owns this tile
+    long      CivId);    // which civ that city belongs to
+```
+
+---
+
+## ImprovementSnapshot
+
+Per-tile improvement entry in `WorldSnapshot.ImprovementMap`. Absent = no improvement on tile.
+
+```csharp
+public sealed record ImprovementSnapshot(
+    string    ImprovementType,  // e.g. "Farm", "Mine", "LoggingCamp"
+    TileCoord CityTile,         // city this improvement belongs to
+    int       BuiltYear,
+    long      BuilderId);       // EntityId of the character who built it
+```
+
+---
+
+## CharacterWatchSnapshot
+
+Live snapshot of a watched character for the character watch panel. Populated by `SnapshotBuilder` when `WatchedCharacterId` is set. Available in `WorldSnapshot.WatchedCharacter` (null when no character is watched).
+
+```csharp
+public sealed record CharacterWatchSnapshot(
+    EntityId          Id,
+    string            Name,
+    string            Epithet,
+    string            CivName,
+    TileCoord         Location,
+    string            BiomeName,
+    int               AgeSeasons,
+    float             Wellbeing,
+    NeedsVector       Needs,
+    PersonalityVector Personality,
+    IReadOnlyList<GoalWatchEntry> Goals);
+
+public sealed record GoalWatchEntry(string Description, float Priority);
+```
+
+---
+
 ## Civilization
 
 Mutable class; only `CivTracker` mutates it. Read via `IWorldStateReadOnly.GetCivilization(civId)`.
@@ -305,21 +383,57 @@ Mutable class; only `CivTracker` mutates it. Read via `IWorldStateReadOnly.GetCi
 ```csharp
 public sealed class Civilization
 {
-    public CivId     Id              { get; }
-    public string    Name            { get; }
-    public EntityId  FounderId       { get; }
-    public TileCoord CapitalTile     { get; }
-    public int       FoundedYear     { get; }
+    // Identity
+    public CivId      Id          { get; }
+    public string     Name        { get; }
+    public EntityId   FounderId   { get; }
+    /// <summary>Current ruling character. Starts as FounderId; updated by succession.</summary>
+    public EntityId   RulerId     { get; set; }
+    public TileCoord  CapitalTile { get; set; }
+    public int        FoundedYear { get; }
+    public bool       IsCollapsed { get; set; }
+    public int        CollapseYear { get; set; }
+
+    // Members
     public HashSet<EntityId> Members { get; }
 
-    public Dictionary<CivId, int> WarsAgainst  { get; }   // enemyCivId → year declared
-    public Dictionary<CivId, int> PeaceTreaties { get; }  // enemyCivId → year peace made
+    // Settlement accounting
+    public int LastSettlementFoundedYear { get; set; }
+    public int SettlementCount  { get; set; }  // live local settlements
+    public int ColonyCount      { get; set; }  // live colony settlements
+    public int TotalPopulation  { get; set; }  // refreshed by PopulationDynamicsPhase
 
-    public int  LastSettlementFoundedYear { get; set; }
-    public bool IsCollapsed { get; set; }
+    // Succession
+    public int RulerCount           { get; set; }  // total rulers (founder = 1)
+    public int SuccessionCrisisEndYear { get; set; }  // int.MinValue = no active crisis
 
+    // Territory
+    /// <summary>Key = city tile; Value = all tiles that city owns (including itself).</summary>
+    public Dictionary<TileCoord, HashSet<TileCoord>> CityTerritories { get; }
+
+    // Diplomacy
+    public Dictionary<CivId, float> BorderTension  { get; }  // accumulates annually near borders
+    public Dictionary<CivId, int>   WarsAgainst    { get; }  // enemyCivId → year declared
+    public Dictionary<CivId, int>   PeaceTreaties  { get; }  // enemyCivId → year peace made
+    public Dictionary<CivId, int>   WarHistory     { get; }  // total wars ever declared per enemy
     public bool IsAtWarWith(CivId other) => WarsAgainst.ContainsKey(other);
-    public bool InPeaceCooldownWith(CivId other, int currentYear, int cooldownYears);
+    public bool InPeaceCooldownWith(CivId other, int currentYear, int cooldownYears, int warExhaustionPerWar = 0);
+
+    // War campaign tracking
+    public Dictionary<CivId, int> WarBattleWins { get; }  // wins this war; consumed by EndWarBetween
+
+    // Cultural traits
+    public int  TotalWarsInitiated      { get; set; }
+    public int  TotalSuccessions        { get; set; }
+    public int  TotalSettlementsFounded { get; set; }
+    public int  TotalScholarDiscoveries { get; set; }
+    public int  NearCollapseCount       { get; set; }
+    public HashSet<string> CulturalTraits { get; }
+    public CulturalProfile? CulturalProfile { get; set; }  // null until civ is fully initialized
+
+    // M4.1 awareness / emissary system
+    public Dictionary<CivId, CivContact> KnownCivs { get; }
+    public Dictionary<CivId, int> ActiveEmissaryCountByTarget { get; }
 }
 ```
 
@@ -328,4 +442,4 @@ public sealed class Civilization
 2. `CivTracker.ResolveDeclareWar` records in `WarsAgainst` on both sides
 3. `CivTracker.RunAnnualDiplomacy` (Spring tick) expires wars via truce / surrender / destruction
 4. `EndWarBetween` removes from `WarsAgainst`, writes `PeaceTreaties[enemy] = currentYear`
-5. `InPeaceCooldownWith` blocks re-declaration for `PeaceCooldownYears` after a treaty
+5. `InPeaceCooldownWith` blocks re-declaration; cooldown scales with `WarHistory` count × `warExhaustionPerWar`

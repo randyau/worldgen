@@ -321,4 +321,4 @@ For full rationale and detail, see `docs/implementation_decisions_v0.3.md`.
 ---
 
 *Document Version: 0.3*  
-*Last Updated: June 24, 2026 (M2 perf and doc cleanup)*
+*Last Updated: July 19, 2026 (verified current through M4 completion)*

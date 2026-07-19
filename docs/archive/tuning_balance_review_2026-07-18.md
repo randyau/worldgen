@@ -1,3 +1,5 @@
+> **Archived:** 2026-07-19 — Completed work; all Phases A-D implemented. Reference: docs/sim_tuning.md for active tuning guidance.
+
 # Tuning & Balance Review — Codebase Improvement Report and Plan
 
 **Date:** 2026-07-18

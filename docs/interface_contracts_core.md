@@ -1,5 +1,6 @@
+<!-- contract-snapshot-hash: 4a3a3174fe60bcb6 -->
 # Interface Contracts — Core Interfaces
-**Parent:** `interface_contracts.md` | **Version:** 0.7 | **Status:** M2 complete
+**Parent:** `interface_contracts.md` | **Version:** 0.9 | **Status:** M3 complete
 
 Covers: PendingEvent, IEntity, ICommand, IWorldStateReadOnly, IWorldGenLayer, StateCache.
 
@@ -11,18 +12,23 @@ Produced by any sim phase. Consumed by Phase 7 (EventGeneration) which enriches 
 
 ```csharp
 /// <summary>
-/// Lightweight event record produced by any sim phase.
+/// Lightweight event record produced during simulation phases.
 /// Phase 7 assigns Id, Year, Season, Tick, runs significance classification,
-/// applies EventGate, and writes to SQLite + EventCache.
-/// EntityIds (optional) — populated by character/civ phases; Phase 7 writes
-/// rows into the EventEntities cross-reference table for each ID.
+/// applies the event gate, and writes to SQLite + EventCache.
+/// PrimaryEntityIds / SecondaryEntityIds map to EventEntities rows with Role='Primary'/'Secondary'.
+/// ActorId, ActorName, CivId, SettlementName are written directly to denormalized Events columns.
 /// </summary>
 public sealed record PendingEvent(
     EventType Type,
     TileCoord? Location,
-    EventId? CauseEventId,       // null = root event; set = CausalEdge will be created
+    EventId? CauseEventId,                          // null = root event; set = CausalEdge will be created
     string PayloadJson,
-    IReadOnlyList<long>? EntityIds = null   // M2+: entity IDs involved in this event
+    IReadOnlyList<long>? PrimaryEntityIds   = null, // entity IDs with Role='Primary'
+    IReadOnlyList<long>? SecondaryEntityIds = null, // entity IDs with Role='Secondary'
+    long     ActorId        = 0,                    // denormalized primary actor ID
+    string?  ActorName      = null,                 // denormalized primary actor name
+    long     CivId          = 0,                    // denormalized civ association
+    string?  SettlementName = null                  // denormalized settlement name
 );
 ```
 
@@ -110,24 +116,27 @@ public interface IWorldStateReadOnly
     IEnumerable<IEntity> GetEntitiesAt(TileCoord coord);
     IEnumerable<IEntity> GetEntitiesInRadius(TileCoord center, int radius);
 
+    // === CIVILIZATION / SETTLEMENT ===
+    IReadOnlyDictionary<TileCoord, SettlementStub>  Settlements    { get; }
+    IReadOnlyDictionary<TileCoord, RuinRecord>      Ruins          { get; }
+    IReadOnlySet<EntityId>                          ActiveFounders { get; }  // O(1) isFounder lookup
+    IReadOnlyDictionary<TileCoord, IReadOnlyList<ResourceDeposit>> ResourceDeposits { get; }
+    /// <summary>Tile → owning city tile. Absent = unclaimed. City tiles map to themselves.</summary>
+    IReadOnlyDictionary<TileCoord, TileCoord>       TerritoryMap   { get; }
+    /// <summary>Tile → improvement record. One improvement per tile.</summary>
+    IReadOnlyDictionary<TileCoord, TileImprovement> ImprovementMap { get; }
+    Civilization? GetCivilization(CivId civId);
+
     // === RELATIONSHIPS ===
     RelationshipEdge? GetRelationship(EntityId a, EntityId b);   // null if no edge exists yet
     int CountAlliances(EntityId id);
     int CountRivals(EntityId id);
-
-    // === CIVILIZATION / SETTLEMENT ===
-    IReadOnlyDictionary<TileCoord, SettlementStub>  Settlements    { get; }
-    IReadOnlyDictionary<TileCoord, RuinRecord>      Ruins          { get; }
-    IReadOnlyDictionary<CivId, Civilization>        Civilizations  { get; }
-    IReadOnlySet<EntityId>                          ActiveFounders { get; }  // O(1) isFounder lookup
-    Civilization? GetCivilization(CivId civId);
-
-    // === RESOURCE DEPOSITS ===
-    IReadOnlyDictionary<TileCoord, IReadOnlyList<ResourceDeposit>> ResourceDeposits { get; }
 }
 ```
 
 **`ActiveFounders`** is a `HashSet<EntityId>` of characters who currently have a live settlement they founded. Maintained by `CivTracker`: added on `EstablishSettlement`, removed on `RegisterRuin`. Use `world.ActiveFounders.Contains(c.Id)` — O(1) vs O(n) scan.
+
+**Note:** There is no `Civilizations` dictionary on this interface. Use `GetCivilization(civId)` for individual lookups. Civ iteration is internal to sim phases only.
 
 ---
 

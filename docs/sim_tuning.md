@@ -1,8 +1,11 @@
 # Sim Tuning Reference
 
+**Status:** Current as of 2026-07-19 (Phases D1-D5 implemented, 2026-07-18 balance cleanup)
+
 **Format:** knob / current value / safe range / too-low symptom / too-high symptom / metric to watch
 **Verification tool:** `python3 scripts/balance-run.py --seed-list 42,777,9999 --years 300 --label my-test`
 **Target bands:** `config/balance_invariants.toml` (see `docs/balance_invariants.md`)
+**For context on the tuning work:** See archived `docs/archive/tuning_balance_review_2026-07-18.md` for detailed rationale.
 
 Ranges marked **untested** mean no calibration data exists; change carefully and measure.
 

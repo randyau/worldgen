@@ -38,6 +38,24 @@ GENERATED_DOCS = {
     DOCS_DIR / "queries" / "event_log_queries.md",
 }
 
+# Snapshot files — auto-generated, excluded from check (a) and checked in (d/e)
+SNAPSHOT_DOCS = {
+    DOCS_DIR / "interface_contracts_core.snapshot.md",
+    DOCS_DIR / "interface_contracts_events.snapshot.md",
+    DOCS_DIR / "interface_contracts_snapshot.snapshot.md",
+    DOCS_DIR / "interface_contracts_tiles.snapshot.md",
+}
+
+# Prose contract docs that must have a hash marker
+PROSE_CONTRACT_DOCS = [
+    DOCS_DIR / "interface_contracts_core.md",
+    DOCS_DIR / "interface_contracts_events.md",
+    DOCS_DIR / "interface_contracts_snapshot.md",
+    DOCS_DIR / "interface_contracts_tiles.md",
+]
+
+SNAPSHOT_DOMAINS = ["core", "events", "snapshot", "tiles"]
+
 # Directories under docs/ to skip entirely for check (a)
 SKIP_DIRS = {"archive", "design"}
 
@@ -288,15 +306,132 @@ def check_generated_in_sync() -> list[str]:
 
 def collect_authored_docs() -> list[Path]:
     """Collect authored (non-generated) .md files under docs/."""
+    skip_all = GENERATED_DOCS | SNAPSHOT_DOCS
     docs: list[Path] = []
     for root, dirs, files in os.walk(DOCS_DIR):
         dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
         for f in files:
             if f.endswith(".md"):
                 path = Path(root) / f
-                if path not in GENERATED_DOCS:
+                if path not in skip_all:
                     docs.append(path)
     return docs
+
+
+def check_snapshot_freshness() -> list[str]:
+    """Check (d): interface contract snapshot files match fresh regeneration."""
+    import hashlib
+    v: list[str] = []
+    gen_script = SCRIPTS / "gen-interface-contracts.py"
+
+    if not gen_script.exists():
+        v.append(f"Generator missing: {gen_script.relative_to(REPO_ROOT)}")
+        return v
+
+    # Check that all snapshot files exist
+    for domain in SNAPSHOT_DOMAINS:
+        snap = DOCS_DIR / f"interface_contracts_{domain}.snapshot.md"
+        if not snap.exists():
+            v.append(f"Snapshot file missing: {snap.relative_to(REPO_ROOT)} "
+                     f"(run python3 scripts/gen-interface-contracts.py)")
+
+    missing = [d for d in SNAPSHOT_DOMAINS
+               if not (DOCS_DIR / f"interface_contracts_{d}.snapshot.md").exists()]
+    if missing:
+        return v  # Can't regenerate for comparison if files are missing
+
+    # Save current content
+    current: dict[str, str] = {}
+    for domain in SNAPSHOT_DOMAINS:
+        snap = DOCS_DIR / f"interface_contracts_{domain}.snapshot.md"
+        current[domain] = snap.read_text(encoding="utf-8")
+
+    # Regenerate
+    result = subprocess.run(
+        [sys.executable, str(gen_script)],
+        capture_output=True, text=True, cwd=REPO_ROOT, timeout=120,
+    )
+
+    if result.returncode != 0:
+        # Restore originals
+        for domain in SNAPSHOT_DOMAINS:
+            snap = DOCS_DIR / f"interface_contracts_{domain}.snapshot.md"
+            snap.write_text(current[domain], encoding="utf-8")
+        v.append(f"gen-interface-contracts.py failed: {result.stderr.strip()[:200]}")
+        return v
+
+    # Compare; restore originals regardless
+    for domain in SNAPSHOT_DOMAINS:
+        snap = DOCS_DIR / f"interface_contracts_{domain}.snapshot.md"
+        fresh = snap.read_text(encoding="utf-8")
+        # Normalize the Generated timestamp line before comparing
+        ts_re = re.compile(r"<!-- Generated: [^>]+ -->")
+        fresh_norm = ts_re.sub("<!-- Generated: TS -->", fresh)
+        curr_norm  = ts_re.sub("<!-- Generated: TS -->", current[domain])
+        snap.write_text(current[domain], encoding="utf-8")  # restore
+        if fresh_norm != curr_norm:
+            v.append(
+                f"Drift: {snap.relative_to(REPO_ROOT)} differs from fresh generation "
+                f"(run python3 scripts/gen-interface-contracts.py)"
+            )
+
+    return v
+
+
+def check_prose_snapshot_hashes() -> list[str]:
+    """Check (e): prose contract docs have hash markers matching their snapshot files."""
+    import re as _re
+    v: list[str] = []
+    marker_re = _re.compile(r"<!--\s*contract-snapshot-hash:\s*([0-9a-f]*)\s*-->")
+    hash_re   = _re.compile(r"<!--\s*content-hash:\s*([0-9a-f]+)\s*-->")
+
+    for domain in SNAPSHOT_DOMAINS:
+        prose = DOCS_DIR / f"interface_contracts_{domain}.md"
+        snap  = DOCS_DIR / f"interface_contracts_{domain}.snapshot.md"
+        rel_prose = prose.relative_to(REPO_ROOT)
+
+        if not prose.exists():
+            continue  # Prose doc missing — not our job to flag here
+
+        prose_text = prose.read_text(encoding="utf-8")
+        first_line = prose_text.splitlines()[0].strip() if prose_text.strip() else ""
+
+        m_prose = marker_re.match(first_line)
+        if not m_prose:
+            v.append(
+                f"{rel_prose}: missing <!-- contract-snapshot-hash: --> on line 1 "
+                f"(run python3 scripts/sync-contract-hash.py)"
+            )
+            continue
+
+        prose_hash = m_prose.group(1)
+
+        if not snap.exists():
+            v.append(f"{rel_prose}: snapshot file missing, cannot verify hash")
+            continue
+
+        snap_text = snap.read_text(encoding="utf-8")
+        snap_hash = None
+        for line in reversed(snap_text.splitlines()):
+            line = line.strip()
+            if not line:
+                continue
+            m_snap = hash_re.search(line)
+            if m_snap:
+                snap_hash = m_snap.group(1)
+            break
+
+        if snap_hash is None:
+            v.append(f"{rel_prose}: snapshot has no content-hash — regenerate snapshots")
+            continue
+
+        if prose_hash != snap_hash:
+            v.append(
+                f"{rel_prose}: prose not reviewed since snapshot changed "
+                f"(run python3 scripts/sync-contract-hash.py after updating prose)"
+            )
+
+    return v
 
 
 def main() -> int:

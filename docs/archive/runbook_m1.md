@@ -1,3 +1,5 @@
+> **Archived:** 2026-07-19 — M1 complete (shipped many months ago). Kept as reference for regression testing patterns. M1 test cases no longer needed; current regression suite is in scripts/test-fast.sh and balance tests.
+
 # Milestone 1 Test Runbook
 
 This document covers everything needed to verify that all M1 work behaves as designed. The automated suite runs in WSL2. The UI runs on the Windows side.

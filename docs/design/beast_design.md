@@ -1,7 +1,8 @@
 # Beast System Design
 
-**Status:** Design complete, pending implementation in Phase 2.1  
-**Scope:** Normal predators, legendary variants, mythological creatures, abilities, combat, world effects
+**Status:** IMPLEMENTED (M2 Phase 2.1, shipped 2026-06-18)  
+**Scope:** Normal predators, legendary variants, mythological creatures (abilities system partially stubbed for V2), combat (M2.1 combat model), world effects (deferred M2.4)
+**Note:** This doc describes the current implementation. Abilities are parsed but inert (marked `// V2:` in code). Combat system uses multi-round resolution per DS-E5. Mythological creatures spawn partially at world gen, remainder emerge as `BeastAwakened` events per DS-E6.
 
 ---
 

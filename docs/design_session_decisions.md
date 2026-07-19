@@ -1,5 +1,5 @@
 # World Engine — Design Session Decisions
-**Date:** June 2026  
+**Date:** June 2026 (last updated July 19, 2026 — verified current through M4 completion)  
 **Status:** Five design sessions complete. Sessions A–D are M1 pre-implementation decisions. Session E covers post-M2 character behavior and ancestry (June 2026).  
 **Companion:** `implementation_decisions_v0.3.md` (architecture), `interface_contracts.md` (updated contracts)
 
@@ -211,11 +211,17 @@ public sealed record PendingEvent(
     EventType Type,
     TileCoord? Location,
     EventId? CauseEventId,
-    string PayloadJson
+    string PayloadJson,
+    IReadOnlyList<long>? PrimaryEntityIds = null,
+    IReadOnlyList<long>? SecondaryEntityIds = null,
+    long ActorId = 0,
+    string? ActorName = null,
+    long CivId = 0,
+    string? SettlementName = null
 );
 ```
 
-Phase 1 knows *what happened and why*. Phase 7 knows *how significant it was and whether to record it*.
+Phase 1 knows *what happened and why*. Phase 1 can populate optional entity/settlement fields for efficient event indexing. Phase 7 knows *how significant it was and whether to record it*, assigns Id/Year/Season/Tick, runs classifier, applies gate, and writes to DB.
 
 ### C5: Disaster sampling — iterate all tiles with chunk skip
 **Decision:** Iterate all tiles per tick. `ChunkSummaryFlags` on each `TileChunk` enables skipping entire 16×16 chunks that have no eligible tiles for a given disaster type.
