@@ -246,6 +246,8 @@ public sealed class PopulationDynamicsPhase
         var settlements = world.Settlements.ToList(); // snapshot; we mutate the dict during iteration
         var toInfect    = new HashSet<TileCoord>();
         var toRecover   = new HashSet<TileCoord>();
+        // D4: context factors for each new outbreak origin (spread infections default to 1/1/1)
+        var infectionContext = new Dictionary<TileCoord, (float Density, float Contact, float Famine, bool InWar, bool InFamine)>();
 
         foreach (var (coord, stub) in settlements)
         {
@@ -274,10 +276,37 @@ public sealed class PopulationDynamicsPhase
             {
                 // Outbreaks require minimum population — small settlements can't sustain endemic disease
                 if (stub.Population < _cfg.DiseaseMinPop) continue;
-                float density        = Math.Min(1f, (float)stub.Population / Math.Max(1, stub.CarryingCapacity));
-                float outbreakChance = _cfg.DiseaseBaseChance * (1f + density * _cfg.DiseaseDensityMult);
+
+                // ── Structural outbreak probability (D4) ──────────────────────────────
+                // base × density_factor × contact_factor × famine_factor
+
+                float density       = Math.Min(1f, (float)stub.Population / Math.Max(1, stub.CarryingCapacity));
+                float densityFactor = 1f + density * _cfg.DiseaseDensityMult;
+
+                // Contact factor: civ at war OR has active emissary-exchange-level contact
+                bool inWar = false;
+                bool hasContact = false;
+                if (world.Civilizations.TryGetValue(stub.CivId, out var civ))
+                {
+                    inWar      = civ.WarsAgainst.Count > 0;
+                    hasContact = inWar ||
+                                 civ.KnownCivs.Values.Any(kc =>
+                                     kc.BestSource >= CivContactSource.EmissaryExchange);
+                }
+                float contactFactor = hasContact ? _cfg.DiseaseContactMult : 1f;
+
+                // Famine factor: immune suppression from food shortage
+                bool inFamine    = stub.FoodPressureRatio < _cfg.DiseaseFamineThreshold;
+                float famineFactor = inFamine ? _cfg.DiseaseFamineMult : 1f;
+
+                float outbreakChance = _cfg.DiseaseBaseChance * densityFactor * contactFactor * famineFactor;
                 float roll = WorldRng.FloatAt(world.WorldSeed, year, coord.X * 31 + coord.Y, 0, S.PopDiseaseOutbreak);
-                if (roll < outbreakChance) toInfect.Add(coord);
+                if (roll < outbreakChance)
+                {
+                    toInfect.Add(coord);
+                    // Store context tuple for the payload below
+                    infectionContext[coord] = (densityFactor, contactFactor, famineFactor, inWar, inFamine);
+                }
             }
         }
 
@@ -285,8 +314,17 @@ public sealed class PopulationDynamicsPhase
         {
             if (!world.Settlements.TryGetValue(coord, out var stub) || stub.IsInfected) continue;
             world.Settlements[coord] = stub with { IsInfected = true, InfectedSinceYear = year };
+            // D4: include structural context; spread infections have default factors (1.0/1.0/1.0)
+            var ctx = infectionContext.TryGetValue(coord, out var c)
+                ? c : (Density: 1f, Contact: 1f, Famine: 1f, InWar: false, InFamine: false);
             pending.Add(new PendingEvent(EventType.DiseaseOutbreak, coord, null,
-                JsonSerializer.Serialize(new DiseaseOutbreakPayload(stub.Population)),
+                JsonSerializer.Serialize(new DiseaseOutbreakPayload(
+                    stub.Population,
+                    DensityFactor:  ctx.Density,
+                    ContactFactor:  ctx.Contact,
+                    FamineFactor:   ctx.Famine,
+                    InWar:          ctx.InWar,
+                    InFamine:       ctx.InFamine)),
                 CivId: stub.CivId.Value, SettlementName: stub.Name));
         }
 

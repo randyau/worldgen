@@ -524,10 +524,15 @@ carry_cap_minimum         = 100   # floor: newly-founded settlement with tiny te
 # 0 = frozen (never updates), 1 = raw each tick. At 0.05: half-life ~13 ticks (≈0.8 years).
 capacity_smoothing_alpha  = 0.05
 
-# Disease outbreaks — annual probability; spreads between nearby settlements; drains population while active
-# Risk concentrates in dense cities; small remote settlements are largely immune.
+# Disease outbreaks — structural model (D4): base × density_factor × contact_factor × famine_factor
+# Risk concentrates in dense cities, war-engaged civs, and famine-stricken settlements.
 disease_base_chance          = 0.01   # ~1 outbreak per 150 years per average settlement (was 0.02 — too frequent)
-disease_density_mult         = 3.0    # large dense cities still vulnerable: ~1.2% at pop cap
+disease_density_mult         = 3.0    # large dense cities still vulnerable: ~4× at pop/cap=1.0
+# Contact factor: civ has active emissary contact (EmissaryExchange+) or is at war → disease travels on roads and campaigns
+disease_contact_mult         = 1.5    # 50% extra risk when civ has trade/war contact with another civ
+# Famine factor: FoodPressureRatio < famine_threshold → immune suppression doubles outbreak risk
+disease_famine_mult          = 2.0    # 2× outbreak risk while in food crisis
+disease_famine_threshold     = 0.70   # FoodPressureRatio below which famine factor fires (matches crisis threshold)
 disease_mortality_per_year   = 0.05   # meaningful but not instantly lethal
 disease_min_pop              = 30     # outbreaks cannot start below this population
 disease_spread_radius        = 12     # tile radius within which disease can spread annually

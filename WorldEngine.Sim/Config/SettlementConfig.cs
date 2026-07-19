@@ -32,12 +32,24 @@ public sealed class SettlementConfig
     // Calibrated: alpha = 0.05 → ~20-tick half-life (≈1.25 years at 16 ticks/year).
     public float CapacitySmoothingAlpha   { get; set; } = 0.05f;
     // ─── Disease ──────────────────────────────────────────────────────────────
-    // Annual outbreak probability per uninfected settlement; multiplied by density factor.
-    // Lowered from 0.04: disease should concentrate in dense cities, not plague every hamlet.
+    // DECISION (D4): Outbreak probability is now structural — three multiplicative factors:
+    //   outbreakChance = base × (1 + density × DensityMult) × contactFactor × famineFactor
+    //   kept in [settlement] because they extend existing disease knobs; no new TOML section.
+    //
+    // Annual base outbreak probability per uninfected settlement.
     public float DiseaseBaseChance       { get; set; } = 0.02f;
-    // Density multiplier raised from 2.0 to 3.0 so large cities are still very vulnerable:
-    // at pop/cap=1.0: chance = 0.02*(1+3.0) = 8%; at pop/cap=0.3: chance = 0.02*(1+0.9) = 3.8%
+    // Density factor: multiplied by (1 + density × DensityMult) where density = Pop/CarryingCapacity.
+    // At pop/cap=1.0: factor = 1 + 3.0 = 4×; at pop/cap=0.3: factor = 1.9×.
     public float DiseaseDensityMult      { get; set; } = 3.0f;
+    // Contact factor: multiplier applied when the settlement's civ has active emissary contact
+    // (any KnownCivs entry with BestSource >= EmissaryExchange) OR is at war. Models disease
+    // spreading along trade routes and through military campaigns.
+    public float DiseaseContactMult      { get; set; } = 1.5f;
+    // Famine factor: multiplier applied when FoodPressureRatio < DiseaseFamineThreshold.
+    // Malnourished populations have suppressed immune response — double outbreak risk.
+    public float DiseaseFamineMult       { get; set; } = 2.0f;
+    // FoodPressureRatio floor below which the famine factor fires.
+    public float DiseaseFamineThreshold  { get; set; } = 0.7f;
     // Fraction of population lost per year while a settlement is infected.
     // Applied per-tick as MortalityPerYear / TicksPerYear.
     public float DiseaseMortalityPerYear { get; set; } = 0.05f;

@@ -81,7 +81,18 @@ internal sealed record SettlementConqueredPayload(
 internal sealed record SettlementAbandonedPayload(
     long FounderId, int FoundedYear, int TimesSettled, int Population);
 
-internal sealed record DiseaseOutbreakPayload(int Population);
+/// <summary>
+/// Snapshot of the three structural factors that contributed to this outbreak (D4).
+/// Allows CausalEdgeBuilder and narrative systems to attribute siege→plague, famine→plague, etc.
+/// </summary>
+internal sealed record DiseaseOutbreakPayload(
+    int   Population,
+    float DensityFactor,   // 1 + (Pop/Cap) × DensityMult — always ≥ 1
+    float ContactFactor,   // DiseaseContactMult if civ had active contact, else 1.0
+    float FamineFactor,    // DiseaseFamineMult if in food crisis, else 1.0
+    bool  InWar,           // civ was at war when outbreak started (causal marker)
+    bool  InFamine         // settlement was below famine threshold (causal marker)
+);
 
 internal sealed record DiseaseRecoveredPayload(int Population, int DurationYears);
 
