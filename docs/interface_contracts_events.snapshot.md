@@ -1,5 +1,4 @@
 <!-- AUTO-GENERATED — do not edit. Run: python3 scripts/gen-interface-contracts.py -->
-<!-- Generated: 2026-07-19T18:46:36Z -->
 
 # Interface Contracts Snapshot — events
 
@@ -191,4 +190,4 @@ public enum EventType
 }
 ```
 
-<!-- content-hash: 59b03e5cb13417ad -->
+<!-- content-hash: 8804eb586a103681 -->

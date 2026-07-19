@@ -1,4 +1,4 @@
-<!-- contract-snapshot-hash: a36dade9a65f976c -->
+<!-- contract-snapshot-hash: 8804eb586a103681 -->
 # Interface Contracts — Events & Enumerations
 **Parent:** `interface_contracts.md` | **Version:** 0.9 | **Status:** M3 complete (M4 Phase 1 emissary system included)
 

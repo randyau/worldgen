@@ -1,4 +1,4 @@
-<!-- contract-snapshot-hash: 4a3a3174fe60bcb6 -->
+<!-- contract-snapshot-hash: 1453380f25c29726 -->
 # Interface Contracts — Core Interfaces
 **Parent:** `interface_contracts.md` | **Version:** 0.9 | **Status:** M3 complete
 

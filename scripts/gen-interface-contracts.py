@@ -17,7 +17,7 @@ import hashlib
 import re
 import subprocess
 import sys
-from datetime import datetime, timezone
+
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -477,10 +477,7 @@ def extract_type(type_name: str) -> tuple[str, str, str] | None:
 def generate_domain(domain: str, type_names: list[str]) -> str:
     """Generate the full markdown content for one domain snapshot."""
     lines: list[str] = []
-    ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-
     lines.append(f"<!-- AUTO-GENERATED — do not edit. Run: python3 scripts/gen-interface-contracts.py -->")
-    lines.append(f"<!-- Generated: {ts} -->")
     lines.append(f"")
     lines.append(f"# Interface Contracts Snapshot — {domain}")
     lines.append(f"")

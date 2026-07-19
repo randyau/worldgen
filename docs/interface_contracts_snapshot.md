@@ -1,4 +1,4 @@
-<!-- contract-snapshot-hash: 79990b7c923aa96a -->
+<!-- contract-snapshot-hash: 4ff2e9f6be149634 -->
 # Interface Contracts — Snapshot & World Structures
 **Parent:** `interface_contracts.md` | **Version:** 0.9 | **Status:** M3 complete
 

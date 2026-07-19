@@ -1,4 +1,4 @@
-<!-- contract-snapshot-hash: 5d3a1c06e86b6188 -->
+<!-- contract-snapshot-hash: 2e8c8cd8e23f0e5d -->
 # Interface Contracts — Tile Structures
 **Parent:** `interface_contracts.md` | **Version:** 0.7 | **Status:** M2 complete
 
