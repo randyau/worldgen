@@ -1,11 +1,49 @@
 # Tuning & Balance Review — Codebase Improvement Report and Plan
 
 **Date:** 2026-07-18
-**Status:** PROPOSAL — for review
+**Status:** IMPLEMENTED — all Phases A–D shipped (see outcome summary below)
 **Scope:** How to make the simulation easier to tune and balance; mechanics that need
 refactoring or rethinking; config/tooling hygiene. Based on a survey of `sim_config.toml`,
 the config loader, the resource/population/territory phases, `UtilityScorer`, the M4 code,
 `docs/sim_observations_and_proposals.txt`, and the last ~25 commits.
+
+---
+
+## Outcome Summary (2026-07-18)
+
+All four phases from the proposal were implemented in the cleanup effort:
+
+**Phase A — Headless runner + metrics (A1–A3 complete)**
+- `Program.cs` now implements `RunSynchronous(ticks)` with full sim loop
+- `MetricsCollector` samples world health once/year to `yearly_metrics` table
+- `balance-run.py` script fans out multi-seed sweeps with `--compare` mode
+- `--audit-food` diagnostic added to headless runner (`FoodAuditSink`)
+
+**Phase B — Strict config loader (B1–B5 complete)**
+- `SimConfigLoader` strict mode detects unbound TOML keys (no silent drift)
+- Dead keys purged from `sim_config.toml`; ~3 dead properties removed this cleanup pass
+- Profile overlay and `--set` programmatic overrides implemented
+- Validation pass (`SimConfigValidator`) checks ranges and cross-field invariants
+- `TicksPerYear` derived constant replaces hardcoded `16`
+
+**Phase C — Balance regression harness (C1–C3 complete)**
+- `balance_invariants.toml` with calibrated bands from 3-seed × 300-year sweep
+- `BalanceRegressionTests` (Category=Balance) covering 2 seeds × 300 years
+- `sim_tuning.md` reference doc for the 25 highest-churn knobs
+
+**Phase D — Structural mechanics (D1–D5 complete)**
+- D1: Population ceiling unified — removed dual carry_cap table, added EMA smoothing
+- D2: Food audit diagnostic added to headless runner
+- D3: `UtilityScorer` goal-affinity and action weights extracted to `[utility_affinity]` config
+- D3: BiomeWildlifeRisk table extracted to `[wildlife_risk]` config section
+- D4: Structural disease model — base × density × contact × famine factors
+- D5: War system consolidated — all knobs to `WarConfig`; opportunistic war causes added;
+  campaign battles fire annually regardless of character position; `WarOutcome`/`WarCause` typed
+
+**Current sim behavior:**
+- Wars fire regularly; multipolar civ life-cycle works; food binds carrying capacity
+- `deaths_war` metric wired to conquest events (population-level estimate)
+- `mean_food_ratio` < 1.0 confirms food scarcity is the primary growth constraint
 
 ---
 

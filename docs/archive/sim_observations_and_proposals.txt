@@ -1,5 +1,39 @@
 WORLD ENGINE — SIM OBSERVATIONS & PROPOSALS
 Based on 5876-year run analysis
+ARCHIVED 2026-07-18 — see resolution status below
+
+RESOLUTION STATUS (as of 2026-07-18, post-Phases A–D cleanup):
+  A1. PHYSICIAN LIFESPAN — RESOLVED: Tier2 max-age config (Tier2MaxAgeSeasonsMin/Max 600–1200)
+      and deterministic crystallisation spawning fix (M3.3). Physicians live 38–75 years.
+  A2. DISEASE OVERTUNED — RESOLVED: DiseaseBaseChance reduced to 0.02; structural D4 model
+      (density × contact × famine factors) replaced flat probability. Disease churn eliminated.
+  A3. WARS INERT — RESOLVED: D5 war system — campaign battles fire annually, opportunistic causes
+      added (succession crisis, weak neighbor, resource shortage), conquest health threshold enforced.
+  A4. WAR TRIGGER ONE-TRICK — RESOLVED: War exhaustion via WarExhaustionYearsPerWar; 5 typed
+      WarCause values; tension-based trigger now competes with personal encounter and opportunistic.
+  A5. EMOTIONAL EVENTS NEVER FIRE — PARTIALLY RESOLVED: CharacterFlourishing/Spiraling events
+      wired via wellbeing thresholds; GoalFormed/GoalResolved/CharacterGrieved now in metrics.
+      Bond formation and grief events fire. AllianceFormed confirmed firing.
+  A6. EARLY-ERA OVERCROWDING — RESOLVED: S3 biome-weighted spawn placement; S2 unrest/secession
+      gives late-joining civs viable succession paths; civ-floor mechanic maintains minimum count.
+  B1. EVENT PAYLOADS — PARTIALLY RESOLVED: WarDeclared has cause_description; BattlePayload has
+      outcome and damage fields; DiseaseOutbreakPayload has structural context factors (D4).
+      Remaining rich payload fields (ScholarDiscovery type, merchant goods) are V2 scope.
+  B2. SUMMARIZATION LAYER — RESOLVED: M3.1 CharacterSummary + CivSummary tables, SummaryBuilder,
+      HistoryQueryService with LRU cache, GetCivSummary/GetRulersOfCiv/GetConflictHistory API.
+  B3. NAME DISAMBIGUATION — PARTIALLY RESOLVED: M3.5 ancestry-based name differentiation via
+      cultural descriptors. Ordinal suffixes (Caelen I/II) not yet implemented (V2 scope).
+  B4. LINEAGE/SUCCESSION GRAPH — RESOLVED: M3.1 SuccessionChain table, SummaryBuilder pre-indexes
+      chains per civ; GetRulersOfCiv returns ordered ruler list with years.
+  B5. CAUSAL EDGES — RESOLVED: M3.1 CausalEdgeBuilder infers disease→abandonment, war chains,
+      succession crisis→instability; GetCausalChain query available.
+  B6. CULTURAL DIFFERENTIATION — RESOLVED: M3.2 CulturalTrait enum (Militaristic/Expansionist/
+      Reclusive/etc.), EvaluateCulturalTraits, CivTraitAcquired events; M3.5 ancestry-based
+      cultural profile (ArchitecturalStyle, SettlementDescriptor, ArtisticTraditions).
+  B7. HISTORY QUERY API — RESOLVED: M3.1 IHistoryQuery + HistoryQueryService; all listed queries
+      implemented (GetCivHistory, GetCharacterHistory, GetSignificantEvents, GetRulerAtYear,
+      GetConflictHistory).
+
 ============================================================
 
 This document proposes changes in two categories:

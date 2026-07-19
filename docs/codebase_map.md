@@ -57,13 +57,17 @@ One-line description of every non-trivial source file. Check here before running
 
 ## WorldEngine.Sim/Civilizations/
 - `CivTracker.cs` — `Resolve()` dispatcher + EstablishSettlement, AllyWith, DeclareRivalry, RegisterRuin
-- `CivTracker.War.cs` — ResolveWar, StartWarBetween, ResolveRaid, ResolveNegotiate
+- `CivTracker.War.cs` — ResolveWar, StartWarBetween, ResolveRaid, ResolveNegotiate, RunWarCampaigns
+- `EmissaryTypes.cs` — CivContactSource enum (Rumor/Encounter/EmissaryExchange/Trade/Spy); CivKnowledgeRecord
 - `CivTracker.Diplomacy.cs` — RunAnnualDiplomacy, RunBorderTension, RunCivFloorSpawns, EndWarBetween, FireAllianceBroken
 - `CivTracker.Unrest.cs` — S2: annual unrest accrual (distance/size/famine/succession drivers) + secession — settlements splinter into new civs
 - `CivTracker.Naming.cs` — GenerateSettlementName, GenerateFertilityMultiplier, BiasedIndex, FireCivFounded, FireSettlementFounded; M3.5: ApplyCulturalSettlementName, GetCivNameSuffix, BuildCulturalProfile
 - `CulturalProfile.cs` — M3.5: immutable record (AncestryId, ArchitecturalStyle, SettlementDescriptor, ArtisticTraditions, ActiveTraits, DominantBiome)
 - `Civilization.cs` — mutable civ class: ruler, members, war state, border tension; M3.5: CulturalProfile?
 - `SettlementStub.cs` — live settlement record on sim thread
+
+## WorldEngine.Sim/Commands/
+- `PlayerCommands.cs` — UI→sim command records: SetSimSpeed, PauseToggle, StepOneTick, SetViewport (no-op); routed via CommandQueue
 
 ## WorldEngine.Sim/Entities/
 - `IEntity.cs` — base entity interface (EmitCommands, ToSnapshot)
@@ -93,9 +97,12 @@ One-line description of every non-trivial source file. Check here before running
   - `BeastCatalog.cs / BeastCatalogLoader.cs / BeastCatalogFile.cs` — loads beasts.toml
   - `BeastSpeciesConfig.cs / BeastSpawnConfig.cs / CombatConfig.cs`
 
+## WorldEngine.Sim/
+- `Program.cs` — A1: headless entry point; parses --seed, --years, --profile, --set, --audit-food; calls WorldGenPipeline then SimLoop.RunSynchronous; writes world.db
+
 ## WorldEngine.Sim/Simulation/
 - `SimLoop.cs` — main tick loop: emit→resolve→commit cycle, speed control; A1: RunSynchronous(ticks) for headless batch runs
-- `PhaseRunner.cs` (~224 lines) — runs all 7 phases in order per tick; writes events to DB; A2: drives MetricsAccumulator YTD counts + calls MetricsCollector.Sample on annual tick; D2: RunFoodAudit() for --audit-food
+- `PhaseRunner.cs` (~340 lines) — runs all 7 phases in order per tick; writes events to DB; A2: drives MetricsAccumulator YTD counts + calls MetricsCollector.Sample on annual tick; D2: RunFoodAudit() for --audit-food
 - `MetricsCollector.cs` — A2: samples WorldState once/year → writes yearly_metrics row; also defines MetricsAccumulator (YTD event counters) and YearlyMetricsRow moved to Persistence/
 - `FoodAuditSink.cs` — D2: captures per-tile food factors (fertility, moisture, growing_season, biome_mult, improvement) and per-settlement rollup; passed to ResourcePressurePhase.Execute() for --audit-food diagnostic; null on hot path
 - `SimRngSalts.cs` — integer salt constants used with WorldRng for reproducibility
@@ -108,6 +115,7 @@ One-line description of every non-trivial source file. Check here before running
   - `PopulationDynamicsPhase.cs` (~362 lines) — settlement growth, death, crystallisation, collapse
   - `ResourcePressurePhase.cs` (~361 lines) — food/water/resource ledger per settlement (territory-based since M3.0)
   - `TerritoryPhase.cs` — M3.0: annual city territory expansion/contraction
+  - `KnowledgePropagationPhase.cs` — annual pass spreading technology/knowledge between settlements in contact
 
 ## WorldEngine.Sim/Events/
 - `Payloads.cs` — all event payload records (one per EventType); serialised to JSON for storage
@@ -198,6 +206,11 @@ One-line description of every non-trivial source file. Check here before running
 
 ## docs/
 - `config_future.md` — TOML sections removed from sim_config.toml during B2 purge; preserved as design intent for unimplemented systems ([admin_distance], [spatial_buffer], [specialists], [artifacts], [cultural_modifiers], [civilization.settler_seeding]); includes dead-vs-live disagreement table
-- `tuning_balance_review_2026-07-18.md` — tuning/balance review and Phase A–D improvement plan
+- `tuning_balance_review_2026-07-18.md` — tuning/balance review and Phase A–D improvement plan; Status: IMPLEMENTED
 - `balance_invariants.md` — C1: philosophy for balance bands (observed-healthy ± margin), update procedure, Phase D migration notes
 - `sim_tuning.md` — C3: sim knob reference (knob / current / safe range / too-low / too-high / metric to watch)
+
+## docs/archive/
+- `sim_observations_and_proposals.txt` — archived 2026-07-18; 5876-year run analysis with per-item resolution status for A1–A6 and B1–B7
+- `sim_run_5876_characters.txt` — raw character data from the 5876-year reference run; superseded by metrics tooling
+- `sim_run_5876_civilizations.txt` — raw civ data from the 5876-year reference run; superseded by metrics tooling
