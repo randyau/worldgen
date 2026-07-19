@@ -215,20 +215,8 @@ One-line description of every non-trivial source file. Check here before running
 - `Unit/AncestryConfigTests.cs` — M3.5: AncestryConfig field loading, ApplyCulturalSettlementName, GetCivNameSuffix, BuildCulturalProfile
 - `Balance/BalanceRegressionTests.cs` — C2: world-health regression harness; 2 seeds × 300 years; [Trait("Category","Balance")]; run via scripts/test-balance.sh
 
-
-
-
-
-
-
 ## docs/perf/
 - `notes_m3.md` — M3 performance profiling notes and gate status
-
-
-
-
-
-
 
 ## scripts/
 - `balance-run.py` — A3: multi-seed headless sweep; fans out sim subprocesses, reads yearly_metrics, prints cross-seed mean/min/max table, exports merged CSV; --compare mode diffs two sweep dirs
@@ -236,35 +224,22 @@ One-line description of every non-trivial source file. Check here before running
 - `character-analysis.py` — ad-hoc character behavior analysis queries
 - `civ-history.py` — civ summary queries
 - `scip-query.py` — SCIP code navigation (defs, refs, types, impls, stats)
-
-
-
-
-
-
+- `gen-map.py` — GENERATED: regenerates docs/codebase_map.md from XML doc summaries; run after adding/removing types
+- `gen-config-ref.py` — GENERATED: regenerates docs/config_reference.md from config/sim_config.toml
+- `gen-enum-tables.py` — GENERATED: regenerates the enum tables in docs/queries/event_log_queries.md from Enumerations.cs
+- `doc-check.py` — lints authored docs for broken refs; checks generated files are in sync; used as CI gate
+- `doc-check-allowlist.txt` — allowlist for doc-check.py: legitimate exceptions that should not be flagged
 
 ## config/profiles/
 - `fast_history.toml` — 1 tick/season (4× faster); halved disease_base_chance; for multi-seed sweeps
 - `small_world.toml` — A3: 1 tick/season + halved disease for fast smoke tests (sub-minute runs)
 - `balance_invariants.toml` — C1: expected world-health bands at checkpoint years; loaded by BalanceRegressionTests, NOT part of SimConfig
 
-
-
-
-
-
-
 ## docs/
 - `config_future.md` — TOML sections removed from sim_config.toml during B2 purge; preserved as design intent for unimplemented systems ([admin_distance], [spatial_buffer], [specialists], [artifacts], [cultural_modifiers], [civilization.settler_seeding]); includes dead-vs-live disagreement table
 - `tuning_balance_review_2026-07-18.md` — tuning/balance review and Phase A–D improvement plan; Status: IMPLEMENTED
 - `balance_invariants.md` — C1: philosophy for balance bands (observed-healthy ± margin), update procedure, Phase D migration notes
 - `sim_tuning.md` — C3: sim knob reference (knob / current / safe range / too-low / too-high / metric to watch)
-
-
-
-
-
-
 
 ## docs/archive/
 - `sim_observations_and_proposals.txt` — archived 2026-07-18; 5876-year run analysis with per-item resolution status for A1–A6 and B1–B7

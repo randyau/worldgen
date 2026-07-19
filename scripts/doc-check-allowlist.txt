@@ -1,0 +1,26 @@
+# doc-check-allowlist.txt — tokens exempted from doc-check.py validation
+# One token per line. Lines starting with # are comments.
+# Add entries here when a backtick reference is legitimate but not resolvable
+# (historical decisions, V2 features, conceptual names, template placeholders).
+
+# Conceptual/architectural names (ADR and design docs)
+CommandResolver
+
+# Removed or renamed types — referenced in historical design docs
+ResourceRegistry
+WorldGenProgressQueue
+HealthData
+LoyaltyData
+AweData
+EventConfig
+PerformanceConfig
+RiverData
+
+# Template / placeholder paths in implementation_plan_m1.md
+docs/phases/phase_N_name.md
+
+# Windows publish path in testing/runbook_m1.md
+publish\win-x64\config\sim_config.toml
+
+# harsh_world.toml — mentioned in tuning doc; profile was never created
+harsh_world.toml

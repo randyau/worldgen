@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
-# Regenerates index.scip after each commit in the background.
-# The index is queried by Claude Code sessions via scripts/scip-query.py.
+# Post-commit hook:
+#   1. Regenerates index.scip (background) — queried by scripts/scip-query.py
+#   2. Regenerates the three generated docs (background)
+#   3. Runs doc-check.py — prints warnings; does NOT block the commit
+#      (post-commit cannot block; use scripts/doc-check.py in CI / test-fast.sh as a hard gate)
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 LOG="$REPO_ROOT/.scip-index.log"
 
+# 1. SCIP index regeneration (background)
 (
   cd "$REPO_ROOT"
   dotnet tool restore --no-cache > /dev/null 2>&1
@@ -13,4 +17,16 @@ LOG="$REPO_ROOT/.scip-index.log"
     --skip-dotnet-restore \
     >> "$LOG" 2>&1
   echo "$(date -Is) indexed $(git rev-parse --short HEAD)" >> "$LOG"
+) &
+
+# 2. Regenerate generated docs + run doc-check (background; warnings only, no block)
+(
+  cd "$REPO_ROOT"
+  python3 scripts/gen-map.py       >> "$LOG" 2>&1
+  python3 scripts/gen-config-ref.py >> "$LOG" 2>&1
+  python3 scripts/gen-enum-tables.py >> "$LOG" 2>&1
+  echo "--- doc-check $(date -Is) ---" >> "$LOG"
+  python3 scripts/doc-check.py >> "$LOG" 2>&1 \
+    && echo "doc-check: clean" >> "$LOG" \
+    || echo "doc-check: violations found — see $LOG" >&2
 ) &

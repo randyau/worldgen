@@ -232,12 +232,17 @@ def collect_manual_sections() -> list[str]:
     for line in text.splitlines():
         if line.startswith("## "):
             if in_manual and current_section_lines:
+                # Strip trailing blank lines before storing
+                while current_section_lines and not current_section_lines[-1].strip():
+                    current_section_lines.pop()
                 sections.append("\n".join(current_section_lines))
             current_section_lines = [line]
             in_manual = any(line.startswith(p) for p in manual_prefixes)
         elif in_manual:
             current_section_lines.append(line)
     if in_manual and current_section_lines:
+        while current_section_lines and not current_section_lines[-1].strip():
+            current_section_lines.pop()
         sections.append("\n".join(current_section_lines))
     return sections
 
