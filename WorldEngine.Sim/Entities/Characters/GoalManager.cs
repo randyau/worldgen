@@ -44,6 +44,24 @@ public static class GoalManager
         if (foundCityGoal != null && !world.TerritoryMap.ContainsKey(c.Location))
             foundCityGoal.StaleSince = (int)currentTick;
 
+        // BuildImprovement: refresh StaleSince while standing on an owned unimproved tile.
+        // Without this the goal abandons after 8 seasons every time the character moves away,
+        // then immediately reforms → event spam. innerLifeLimit gives 40 years total.
+        var existingBuildGoal = c.Goals.FirstOrDefault(g => g.Type == GoalType.BuildImprovement);
+        if (existingBuildGoal != null
+            && world.TerritoryMap.ContainsKey(c.Location)
+            && !world.ImprovementMap.ContainsKey(c.Location))
+            existingBuildGoal.StaleSince = (int)currentTick;
+
+        // Alliance: complete if target died, else let staleness accumulate (innerLifeLimit = 40 years).
+        var allianceGoal = c.Goals.FirstOrDefault(g => g.Type == GoalType.Alliance && g.TargetEntityId.HasValue);
+        if (allianceGoal != null)
+        {
+            var allianceTarget = world.GetEntity(allianceGoal.TargetEntityId!.Value);
+            if (allianceTarget == null || !allianceTarget.IsAlive)
+                allianceGoal.IsComplete = true;
+        }
+
         // SlayBeast: complete immediately if target died; otherwise let staleness accumulate naturally.
         // Capped by innerLifeLimit (~40 years) — prevents indefinite hunting expeditions.
         var slayGoal = c.Goals.FirstOrDefault(g => g.Type == GoalType.SlayBeast);
@@ -60,12 +78,15 @@ public static class GoalManager
             || (g.Type != GoalType.Grieve
                 && g.Type != GoalType.Bond
                 && g.Type != GoalType.Create
-                && g.Type != GoalType.FoundCity   // FoundCity uses innerLifeLimit — travel takes years
-                && g.Type != GoalType.SlayBeast   // SlayBeast uses innerLifeLimit — hunts can take years
+                && g.Type != GoalType.FoundCity        // innerLifeLimit — travel takes years
+                && g.Type != GoalType.SlayBeast        // innerLifeLimit — hunts can take years
+                && g.Type != GoalType.BuildImprovement // innerLifeLimit — building takes years
+                && g.Type != GoalType.Alliance         // innerLifeLimit — diplomacy takes years
                 && currentTick - g.StaleSince > cfg.GoalStaleSeasonLimit
                 && g.Progress < 0.1f)
             || ((g.Type == GoalType.Bond || g.Type == GoalType.Create || g.Type == GoalType.FoundCity
-                 || g.Type == GoalType.SlayBeast)
+                 || g.Type == GoalType.SlayBeast
+                 || g.Type == GoalType.BuildImprovement || g.Type == GoalType.Alliance)
                 && currentTick - g.StaleSince > innerLifeLimit
                 && g.Progress < 0.1f)).ToList();
 

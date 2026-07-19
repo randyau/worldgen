@@ -65,14 +65,21 @@ public sealed class TerritoryPhase
         int h = world.TileGrid.TileHeight;
         int[] dx = { -1, 1, 0, 0 };
         int[] dy = { 0, 0, -1, 1 };
-        int maxRadiusSq = world.SimConfig.Territory.MaxTerritoryRadius
-                        * world.SimConfig.Territory.MaxTerritoryRadius;
+
+        // Population-scaled radius: a village of 150 gets radius 4; a city of 1350 gets radius 12.
+        var tcfg = world.SimConfig.Territory;
+        int pop = world.Settlements.TryGetValue(cityTile, out var settStub) ? settStub.Population : 0;
+        int effectiveRadius = Math.Min(
+            tcfg.MaxTerritoryRadius,
+            Math.Max(tcfg.MinTerritoryRadius,
+                     tcfg.MinTerritoryRadius + pop / Math.Max(1, tcfg.PopPerTerritoryRadiusTile)));
+        int maxRadiusSq = effectiveRadius * effectiveRadius;
 
         int claimed = 0;
 
         for (int pass = 0; pass < claimCount; pass++)
         {
-            // Find the highest-fertility unclaimed adjacent land tile within MaxTerritoryRadius.
+            // Find the highest-fertility unclaimed adjacent land tile within the effective radius.
             // Radius cap forces civs to found new cities to access land beyond it.
             TileCoord? bestCoord = null;
             int bestFertility = -1;

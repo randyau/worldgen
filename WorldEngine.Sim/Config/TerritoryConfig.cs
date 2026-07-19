@@ -12,10 +12,17 @@ public sealed class TerritoryConfig
     public int MaxCityTiles           { get; set; } = 700;
 
     /// <summary>
-    /// Hard radius cap (Euclidean) from the city tile. Territory can never expand beyond this
-    /// distance, regardless of population. Civs must found a new city to access land beyond it.
+    /// Hard radius cap (Euclidean). Territory expands up to this distance but
+    /// effective radius is also capped by <see cref="MinTerritoryRadius"/> + population / <see cref="PopPerTerritoryRadiusTile"/>.
+    /// Civs must found new cities to claim land beyond this.
     /// </summary>
-    public int MaxTerritoryRadius     { get; set; } = 20;
+    public int MaxTerritoryRadius     { get; set; } = 12;
+
+    /// <summary>Guaranteed minimum radius regardless of population.</summary>
+    public int MinTerritoryRadius     { get; set; } = 3;
+
+    /// <summary>Settlement people per additional tile of radius above the minimum.</summary>
+    public int PopPerTerritoryRadiusTile { get; set; } = 150;
 
     /// <summary>Max tiles claimed per city per year (prevents instant snowball).</summary>
     public int TerritoryGrowthPerYear { get; set; } = 8;

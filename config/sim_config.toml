@@ -607,12 +607,12 @@ claim_tiles_per_person    = 8    # 1 tile per N people; city of 800 → 100 tile
 min_city_tiles            = 7    # radius-1 circle, always retained
 max_city_tiles            = 700  # absolute upper bound on tile count (~radius-15 circle)
                                   # (was 120/radius-6; S1 growth overhaul 2026-07-18)
-max_territory_radius      = 20   # hard Euclidean radius cap from city center; territory never expands beyond this
-                                  # (was 10; S1 growth overhaul 2026-07-18 — larger territories aid contact)
-                                  # (TOML was territory_max_radius — renamed to match C# property max_territory_radius)
-territory_growth_per_year = 8    # max tiles claimed per city per year (prevents instant snowball)
-                                  # (was 4; S1 growth overhaul 2026-07-18 — faster expansion to reach contact)
-initial_city_claim_radius = 2    # tiles claimed at founding (~13 tiles)
+max_territory_radius         = 12  # hard Euclidean radius cap (was 20; reduced 2026-07-19 — 20 tiles = 125k km², too large)
+min_territory_radius         = 3   # guaranteed minimum radius regardless of population
+pop_per_territory_radius_tile = 150 # people per additional tile of radius above the minimum
+                                     # 300 pop → radius 5, 900 pop → radius 9, 1350 pop → radius 12 (hard cap)
+territory_growth_per_year    = 8   # max tiles claimed per city per year (prevents instant snowball)
+initial_city_claim_radius    = 2   # tiles claimed at founding (~13 tiles)
 
 # =============================================================================
 # IMPROVEMENTS (Phase 3.0 — Tile Improvements)
