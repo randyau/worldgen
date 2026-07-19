@@ -146,7 +146,8 @@ public static partial class CivTracker
             pending.Add(new PendingEvent(EventType.CharacterBorn, leadTile, null,
                 JsonSerializer.Serialize(new CharacterBornPayload(
                     leader.Id.Value, leader.Identity.Name, leader.Identity.Epithet,
-                    leader.Personality.Ambition, leader.Personality.Aggression, Source: "secession")),
+                    leader.Personality.Ambition, leader.Personality.Aggression,
+                    Source: "secession", AncestryId: leader.Identity.AncestryId)),
                 new[] { leader.Id.Value },
                 ActorId: leader.Id.Value, ActorName: leader.Identity.Name));
         }

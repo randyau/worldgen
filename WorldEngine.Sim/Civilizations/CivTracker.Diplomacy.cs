@@ -274,7 +274,8 @@ public static partial class CivTracker
             pending.Add(new PendingEvent(EventType.CharacterBorn, tile.Value, null,
                 JsonSerializer.Serialize(new CharacterBornPayload(
                     founder.Id.Value, founder.Identity.Name, founder.Identity.Epithet,
-                    founder.Personality.Ambition, founder.Personality.Aggression, Source: "civ_floor")),
+                    founder.Personality.Ambition, founder.Personality.Aggression,
+                    Source: "civ_floor", AncestryId: founder.Identity.AncestryId)),
                 new[] { founder.Id.Value },
                 ActorId: founder.Id.Value, ActorName: founder.Identity.Name));
         }

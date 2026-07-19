@@ -4,10 +4,12 @@ namespace WorldEngine.Sim.Events;
 
 internal sealed record CharacterBornPayload(
     long CharacterId, string CharacterName, string? Epithet,
-    float Ambition, float Aggression, string? Role = null, string? Source = null);
+    float Ambition, float Aggression,
+    string? Role = null, string? Source = null, string? AncestryId = null);
 
 internal sealed record CharacterDeathPayload(
-    long CharacterId, string CharacterName, string Cause, int AgeSeason);
+    long CharacterId, string CharacterName, string Cause, int AgeSeason,
+    string? AncestryId = null, int MaxAgeSeason = 0);
 
 internal sealed record CharacterWellbeingPayload(
     long CharacterId, string CharacterName, float Wellbeing);

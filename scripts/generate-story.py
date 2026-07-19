@@ -163,12 +163,23 @@ def load_character(conn: sqlite3.Connection, char_id: int) -> dict | None:
         else:
             born_name = born["ActorName"]
 
-        # Get civ from their war/succession events
+        # Get ancestry from born event payload, civ from war/succession
+        civ_name_str = None
+        ancestry_id  = None
+        born_full = conn.execute(
+            "SELECT PayloadJson FROM Events WHERE ActorId=? AND Type=? LIMIT 1",
+            (char_id, EV_BORN)
+        ).fetchone()
+        if born_full:
+            try:
+                bp = json.loads(born_full["PayloadJson"])
+                ancestry_id = bp.get("AncestryId")
+            except (json.JSONDecodeError, KeyError):
+                pass
         civ_ev = conn.execute(
             "SELECT PayloadJson FROM Events WHERE ActorId=? AND Type IN (?,?) LIMIT 1",
             (char_id, EV_WAR, EV_SUCCESSION)
         ).fetchone()
-        civ_name_str = None
         if civ_ev:
             try:
                 cp = json.loads(civ_ev["PayloadJson"])
@@ -192,6 +203,7 @@ def load_character(conn: sqlite3.Connection, char_id: int) -> dict | None:
             "BirthYear": born["Year"] if born else None,
             "DeathYear": died["Year"] if died else None,
             "AgeSeasons": age_s,
+            "AncestryId": ancestry_id,
             "SettlementsFounded": conn.execute(
                 "SELECT COUNT(*) FROM Events WHERE ActorId=? AND Type=?",
                 (char_id, EV_SET_FOUNDED)).fetchone()[0],
@@ -251,18 +263,19 @@ def compress_events(events: list[dict]) -> list[dict]:
 
 
 def load_events(conn: sqlite3.Connection, char_id: int) -> list[dict]:
-    """Return filtered, narrative-relevant events for this character."""
+    """Return filtered, narrative-relevant events for this character.
+
+    Only includes events where this character is the ActorId — EventEntities
+    references are excluded because they pull in post-death settlement events
+    that are about the character's civ/city, not the character themselves.
+    """
     rows = conn.execute("""
         SELECT e.Type, e.Year, e.Season, e.PayloadJson, e.TypeName,
                e.ActorName, e.CivId, e.SettlementName
         FROM Events e
         WHERE e.ActorId = ?
-           OR EXISTS (
-               SELECT 1 FROM EventEntities ee
-               WHERE ee.EventId = e.Id AND ee.EntityId = ?
-           )
         ORDER BY e.Tick
-    """, (char_id, char_id)).fetchall()
+    """, (char_id,)).fetchall()
 
     events = []
     for r in rows:
@@ -387,14 +400,16 @@ def build_prompt(char: dict, events: list[dict], style: str,
     name    = char["Name"] or "Unknown"
     epithet = char.get("Epithet")
     full    = f'{name}, "{epithet}"' if epithet else name
-    civ     = char.get("CivName") or "an unknown civilization"
+    civ      = char.get("CivName") or "an unknown civilization"
+    ancestry = char.get("AncestryId") or char.get("AncestryId")
+    race_str = ancestry.replace("_", " ").title() if ancestry else "Unknown"
     birth   = char.get("BirthYear", "?")
     death   = char.get("DeathYear")
     age_s   = char.get("AgeSeasons")
     age_str = f" (age {int(age_s)//4})" if age_s else ""
 
     life_span = f"Year {birth}" + (f" – Year {death}{age_str}" if death else " – present")
-    factions  = f"Affiliated with: {civ}"
+    factions  = f"Race:      {race_str}\nAffiliated with: {civ}"
     stats = []
     if char.get("SettlementsFounded", 0):
         stats.append(f"founded {char['SettlementsFounded']} settlement(s)")

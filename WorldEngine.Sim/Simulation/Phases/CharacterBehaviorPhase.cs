@@ -184,7 +184,8 @@ public sealed class CharacterBehaviorPhase
 
             var payload = JsonSerializer.Serialize(new CharacterBornPayload(
                 born.Id.Value, born.Identity.Name, born.Identity.Epithet,
-                born.Personality.Ambition, born.Personality.Aggression));
+                born.Personality.Ambition, born.Personality.Aggression,
+                AncestryId: born.Identity.AncestryId));
             pending.Add(new PendingEvent(EventType.CharacterBorn, born.Location, null, payload,
                 new[] { born.Id.Value },
                 ActorId: born.Id.Value, ActorName: born.Identity.Name, CivId: stub.CivId.Value));
@@ -245,7 +246,8 @@ public sealed class CharacterBehaviorPhase
         }
 
         var payload = JsonSerializer.Serialize(new CharacterDeathPayload(
-            c.Id.Value, c.Identity.Name, cause, c.AgeSeason));
+            c.Id.Value, c.Identity.Name, cause, c.AgeSeason,
+            AncestryId: c.Identity.AncestryId, MaxAgeSeason: c.MaxAgeSeason));
         pending.Add(new PendingEvent(EventType.CharacterDied, c.Location, null, payload,
             new[] { c.Id.Value },
             ActorId: c.Id.Value, ActorName: c.Identity.Name));
@@ -324,7 +326,8 @@ public sealed class CharacterBehaviorPhase
 
                     var bornPayload = JsonSerializer.Serialize(new CharacterBornPayload(
                         newRuler.Id.Value, newRuler.Identity.Name, newRuler.Identity.Epithet,
-                        newRuler.Personality.Ambition, newRuler.Personality.Aggression));
+                        newRuler.Personality.Ambition, newRuler.Personality.Aggression,
+                        AncestryId: newRuler.Identity.AncestryId));
                     pending.Add(new PendingEvent(EventType.CharacterBorn, sTile, null, bornPayload,
                         new[] { newRuler.Id.Value },
                         ActorId: newRuler.Id.Value, ActorName: newRuler.Identity.Name, CivId: civ.Id.Value));
