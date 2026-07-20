@@ -413,3 +413,40 @@ Config properties (`DepositSettleThreshold`, `DepositScoreMultiplier`, `RouteSco
 `Tier2BehaviorPhase.RunMerchant()` now picks the destination settlement that has the most complementary resource balance relative to home (home has surplus, dest has deficit). On trade completion, a fraction (`MerchantTradeTransfer = 0.1`) of the surplus is transferred from home to dest in the ledger. The `MerchantTradeCompleted` event payload now includes `tradedResource`.
 
 This creates an emergent trade network: surplus regions naturally export to deficit regions via merchant movement, without any explicit "goods object" or physical routing simulation.
+
+---
+
+## Design Session G — Created Objects & Artifacts (2026-07-20)
+
+Context: the M5 Artifacts system shipped (persistent legendary items — creation via masterwork crafting / battle / heroic death, ownership transfer on death & conquest, covet & goal-seeking, an annual decay sink bounding accumulation, and telemetry). See the archived phase doc `docs/phases/archive/m5_phase_artifacts.md` for the build. These decisions capture the design direction that should inform upcoming milestone/phase plans.
+
+### G-1: An artifact is a *persisted, exceptional instance of a created object* — not a parallel system
+
+**Decision (design north-star, not yet fully realized):** artifacts must share type taxonomy and creation code with the ordinary goods characters produce. An artifact is "a created object that persisted because it was exceptional." Tier2 artisans producing *normal* versions of those same object types must flow through the same path.
+
+**Why:** two separate systems (ordinary creative output vs. artifacts) with independent vocabularies will diverge and confuse. The value of the sim is narrative coherence — a legendary blade and an everyday blade should be the same kind of thing at different quality tiers.
+
+**Current divergence to resolve (four disconnected taxonomies for "things characters make"):**
+- `ArtisanGoodType[]` (`Tier2BehaviorPhase`): textiles, pottery, metalwork, woodcraft, leatherwork, stonework → transient `ArtisanCrafted` event
+- `ArtType` enum (`CharacterBehaviorPhase`, salt `CharArtType`) → transient `ArtworkCreated` event
+- `DiscoveryType` enum → transient `ScholarDiscovery` event
+- `ArtifactCategory` enum (Weapon, Armor, Regalia, Tome, Relic, Jewelry, Artwork) → persistent `Artifact`
+
+Tell-tale bug of the split: `Tier2BehaviorPhase.RoleToArtifactCategory` types a masterwork by *role* (Artisan→Artwork), so a legendary piece of *metalwork* becomes "Artwork" rather than Weapon/Armor. A `// FUTURE (created-object unification)` marker sits at that map.
+
+**Target model (future milestone):**
+1. One shared `CraftedGoodType` / `CreatedObjectType` taxonomy replaces the three-plus enums above.
+2. A creative act yields a *product of type X*; **quality drives persistence** — routine → transient economic good (as today), exceptional → an `Artifact` of the *same type X*.
+3. `Artifact` becomes "a `CreatedObject` that persisted," sharing the type enum, `ArtifactNameGenerator` category pools, and the emission path. The `RoleToArtifactCategory` stopgap is deleted (type derives from the crafted good).
+
+### G-2: Deferred — artifact type variety
+
+Forged artifacts are currently always `Weapon`; `Armor` has no reliable spawn source. Expanding type variety (e.g. battle → weighted Weapon/Armor/Regalia; heroic death → Weapon/Relic/Regalia; ensuring every category has a creation path) is **deferred and folded into the G-1 unification** — do it there, not as a piecemeal patch beforehand.
+
+### G-3: Deferred — God Mode artifact placement
+
+`EventType.GodModeArtifactPlaced = 9004` is reserved but unwired. Player-authored artifact placement is deferred (candidate for the God Mode / authoring milestone).
+
+### G-4: Overflow control is a decay sink, tuned empirically
+
+Artifacts are created but were never destroyed → monotonic, unbounded stock over thousand-year histories. `ArtifactDecayPhase` (annual) rolls per-artifact destruction: Lost/ownerless items decay fast (`lost_artifact_annual_decay`), owned slowly (`owned_artifact_annual_decay`), driving the stock to equilibrium ≈ creation ÷ decay. Tune these two keys against the `living_artifacts` / `artifacts_per_settlement` sweep metrics; regression bands live at `[year_300]` in `config/balance_invariants.toml`. Any future creation source (G-2) must be re-swept against these to preserve the bound.
