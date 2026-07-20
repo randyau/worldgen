@@ -54,6 +54,9 @@ SUMMARY_COLS = [
     "settlements_in_shortage", "settlements_in_crisis",
     "active_diseases", "wars_active", "mean_food_ratio", "min_food_ratio",
     "mean_wellbeing", "tier1_count", "tier2_count",
+    # Artifact telemetry (M5 W4) — stock metrics + YTD event counts
+    "living_artifacts", "lost_artifacts", "artifacts_per_settlement",
+    "artifacts_created_ytd", "artifacts_destroyed_ytd", "artifacts_transferred_ytd",
 ]
 
 # Checkpoint years to include in the cross-seed summary

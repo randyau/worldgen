@@ -43,7 +43,13 @@ public sealed class YearlyMetricsRow
         float meanCitiesPerCiv,
         int   secessionsYtd,
         float meanUnrest,
-        int   civBorderPairs)
+        int   civBorderPairs,
+        int   artifactsCreatedYtd,
+        int   artifactsDestroyedYtd,
+        int   artifactsTransferredYtd,
+        int   livingArtifacts,
+        int   lostArtifacts,
+        float artifactsPerSettlement)
     {
         Year                   = year;
         WorldPopulation        = worldPopulation;
@@ -76,6 +82,12 @@ public sealed class YearlyMetricsRow
         SecessionsYtd          = secessionsYtd;
         MeanUnrest             = meanUnrest;
         CivBorderPairs         = civBorderPairs;
+        ArtifactsCreatedYtd    = artifactsCreatedYtd;
+        ArtifactsDestroyedYtd  = artifactsDestroyedYtd;
+        ArtifactsTransferredYtd = artifactsTransferredYtd;
+        LivingArtifacts        = livingArtifacts;
+        LostArtifacts          = lostArtifacts;
+        ArtifactsPerSettlement = artifactsPerSettlement;
     }
 
     // ── Properties (snake_case aliases handled by Dapper column mapping) ──────
@@ -115,4 +127,18 @@ public sealed class YearlyMetricsRow
     public float MeanUnrest              { get; set; }
     /// <summary>Distinct civ pairs whose territory tiles share an edge this year (territorial contact).</summary>
     public int   CivBorderPairs          { get; set; }
+
+    // ── Artifact metrics ──────────────────────────────────────────────────────
+    /// <summary>ArtifactCreated events this year (all origins: masterwork, battle, heroic_death).</summary>
+    public int   ArtifactsCreatedYtd     { get; set; }
+    /// <summary>ArtifactDestroyed events this year.</summary>
+    public int   ArtifactsDestroyedYtd   { get; set; }
+    /// <summary>ArtifactTransferred events this year (inheritance + conquest + claim).</summary>
+    public int   ArtifactsTransferredYtd { get; set; }
+    /// <summary>Living (non-destroyed) artifact count sampled at year-end. Key overflow indicator.</summary>
+    public int   LivingArtifacts         { get; set; }
+    /// <summary>Ownerless (Lost) non-destroyed artifact count sampled at year-end.</summary>
+    public int   LostArtifacts           { get; set; }
+    /// <summary>Living artifacts divided by settlement count. Headline overflow metric; calibrate after first sweep.</summary>
+    public float ArtifactsPerSettlement  { get; set; }
 }

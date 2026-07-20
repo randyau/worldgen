@@ -1,4 +1,5 @@
 using WorldEngine.Sim.Civilizations;
+using WorldEngine.Sim.Entities.Artifacts;
 using WorldEngine.Sim.Entities.Characters;
 using WorldEngine.Sim.Persistence;
 using WorldEngine.Sim.World;
@@ -114,6 +115,20 @@ public static class MetricsCollector
             }
         }
 
+        // ── Artifacts ─────────────────────────────────────────────────────────
+        // DECISION: stock metrics are computed from the registry each year. Living = not
+        // destroyed; Lost = ownerless but still in the world. artifacts_per_settlement
+        // is the headline overflow indicator — unbounded growth shows up here first.
+        int livingArtifacts = 0;
+        int lostArtifacts   = 0;
+        foreach (var a in world.Artifacts.Values)
+        {
+            if (a.IsDestroyed) continue;
+            livingArtifacts++;
+            if (a.Owner.Kind == ArtifactOwnerKind.Lost) lostArtifacts++;
+        }
+        float artifactsPerSettlement = livingArtifacts / (float)Math.Max(1, settTotal);
+
         // ── Characters ────────────────────────────────────────────────────────
         int tier1Count      = world.Entities.Characters.Count;
         int tier2Count      = world.Entities.Tier2Chars.Count;
@@ -138,6 +153,11 @@ public static class MetricsCollector
         int settFoundedYtd   = acc.SettlementsFoundedYtd;
         int settAbandonedYtd = acc.SettlementsAbandonedYtd;
         int settConqueredYtd = acc.SettlementsConqueredYtd;
+
+        // ── Artifact YTD event counts from accumulator ────────────────────────
+        int artifactsCreatedYtd    = acc.ArtifactsCreatedYtd;
+        int artifactsDestroyedYtd  = acc.ArtifactsDestroyedYtd;
+        int artifactsTransferredYtd = acc.ArtifactsTransferredYtd;
 
         store.WriteMetricsRow(new YearlyMetricsRow(
             year:                    world.CurrentYear,
@@ -170,7 +190,13 @@ public static class MetricsCollector
             meanCitiesPerCiv:        meanCitiesPerCiv,
             secessionsYtd:           acc.SecessionsYtd,
             meanUnrest:              settTotal > 0 ? (float)(unrestSum / settTotal) : 0f,
-            civBorderPairs:          borderPairs.Count));
+            civBorderPairs:          borderPairs.Count,
+            artifactsCreatedYtd:     artifactsCreatedYtd,
+            artifactsDestroyedYtd:   artifactsDestroyedYtd,
+            artifactsTransferredYtd: artifactsTransferredYtd,
+            livingArtifacts:         livingArtifacts,
+            lostArtifacts:           lostArtifacts,
+            artifactsPerSettlement:  artifactsPerSettlement));
 
         // Reset YTD counters for the next year
         acc.ResetYtd();
@@ -194,6 +220,14 @@ public sealed class MetricsAccumulator
     public int GoalsResolvedYtd        { get; set; }
     /// <summary>Count of CivSplintered events this year (S2 splinter mechanic).</summary>
     public int SecessionsYtd           { get; set; }
+
+    // ── Artifact YTD event counters ──────────────────────────────────────────
+    /// <summary>Count of ArtifactCreated events this year (all origins combined).</summary>
+    public int ArtifactsCreatedYtd     { get; set; }
+    /// <summary>Count of ArtifactDestroyed events this year.</summary>
+    public int ArtifactsDestroyedYtd   { get; set; }
+    /// <summary>Count of ArtifactTransferred events this year (inheritance + conquest + claim).</summary>
+    public int ArtifactsTransferredYtd { get; set; }
 
     // Death-by-cause counters — incremented from CharacterDeathPayload.Cause string.
     // Cause strings are set in CharacterBehaviorPhase.KillCharacter; this is the
@@ -252,6 +286,9 @@ public sealed class MetricsAccumulator
         DeathsDiseaseYtd        = 0;
         DeathsWarYtd            = 0;
         DeathsOtherYtd          = 0;
+        ArtifactsCreatedYtd     = 0;
+        ArtifactsDestroyedYtd   = 0;
+        ArtifactsTransferredYtd = 0;
     }
 }
 

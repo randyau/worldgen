@@ -105,6 +105,20 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
         catch (Microsoft.Data.Sqlite.SqliteException) { /* column already exists */ }
         try { _conn.Execute(DatabaseSchema.MigrateYearlyMetricsAddBorderPairs); }
         catch (Microsoft.Data.Sqlite.SqliteException) { /* column already exists */ }
+
+        // Migration: add artifact telemetry columns to yearly_metrics (M5 W4).
+        try { _conn.Execute(DatabaseSchema.MigrateYearlyMetricsAddArtifactsCreatedYtd); }
+        catch (Microsoft.Data.Sqlite.SqliteException) { /* column already exists */ }
+        try { _conn.Execute(DatabaseSchema.MigrateYearlyMetricsAddArtifactsDestroyedYtd); }
+        catch (Microsoft.Data.Sqlite.SqliteException) { /* column already exists */ }
+        try { _conn.Execute(DatabaseSchema.MigrateYearlyMetricsAddArtifactsTransferredYtd); }
+        catch (Microsoft.Data.Sqlite.SqliteException) { /* column already exists */ }
+        try { _conn.Execute(DatabaseSchema.MigrateYearlyMetricsAddLivingArtifacts); }
+        catch (Microsoft.Data.Sqlite.SqliteException) { /* column already exists */ }
+        try { _conn.Execute(DatabaseSchema.MigrateYearlyMetricsAddLostArtifacts); }
+        catch (Microsoft.Data.Sqlite.SqliteException) { /* column already exists */ }
+        try { _conn.Execute(DatabaseSchema.MigrateYearlyMetricsAddArtifactsPerSettlement); }
+        catch (Microsoft.Data.Sqlite.SqliteException) { /* column already exists */ }
     }
 
     /// <summary>
@@ -299,7 +313,9 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
                 wars_ended_conquest_ytd, tier1_count, tier2_count,
                 goals_formed_ytd, goals_resolved_ytd, mean_wellbeing,
                 max_cities_per_civ_actual, mean_cities_per_civ,
-                secessions_ytd, mean_unrest, civ_border_pairs
+                secessions_ytd, mean_unrest, civ_border_pairs,
+                artifacts_created_ytd, artifacts_destroyed_ytd, artifacts_transferred_ytd,
+                living_artifacts, lost_artifacts, artifacts_per_settlement
             ) VALUES (
                 @Year, @WorldPopulation, @ActiveCivs, @CollapsedCivs,
                 @SettlementsTotal, @SettlementsFoundedYtd, @SettlementsAbandonedYtd,
@@ -310,7 +326,9 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
                 @WarsEndedConquestYtd, @Tier1Count, @Tier2Count,
                 @GoalsFormedYtd, @GoalsResolvedYtd, @MeanWellbeing,
                 @MaxCitiesPerCivActual, @MeanCitiesPerCiv,
-                @SecessionsYtd, @MeanUnrest, @CivBorderPairs
+                @SecessionsYtd, @MeanUnrest, @CivBorderPairs,
+                @ArtifactsCreatedYtd, @ArtifactsDestroyedYtd, @ArtifactsTransferredYtd,
+                @LivingArtifacts, @LostArtifacts, @ArtifactsPerSettlement
             );
             """, row);
     }
