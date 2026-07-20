@@ -1,6 +1,6 @@
 # M5 Phase — Artifacts System
 
-**Status:** IN PROGRESS — started 2026-07-20
+**Status:** COMPLETE — 2026-07-20. Built via 5 parallel workers (W0 foundation, W1 creation/forging/lifecycle, W2 covet/goals, W3 snapshot/UI/queries, W4 telemetry) + an orchestrator-added ArtifactDecayPhase destruction sink calibrated empirically (living artifacts bounded ~9 at year 1000, peak 14, vs 18-and-climbing without decay). 496 fast tests green. Move to archive/ per workflow.
 **Scope (locked with user):** MVP (masterwork creation + registry + ownership transfer on death/conquest + persistence + snapshot + tests) **plus** battle/heroic-death forging, covet & goal-seeking, and UI inspector display. **God Mode placement is DEFERRED** (the `GodModeArtifactPlaced=9004` event type already exists but is not wired this phase).
 
 Artifacts are legendary items that persist through history independently of their creator. They are created by exceptional character work (masterwork), major battles, or a legendary character's death in combat. They are owned by a character or a settlement, transfer ownership on death (inheritance or become Lost) and on conquest, can be destroyed, are coveted by ambitious characters, and are tracked in the history log and UI inspector.

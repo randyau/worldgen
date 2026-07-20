@@ -48,7 +48,7 @@ public interface ICommand { }
 ```
 
 ## IWorldStateReadOnly
-**File:** `WorldEngine.Sim/World/IWorldStateReadOnly.cs:15`  
+**File:** `WorldEngine.Sim/World/IWorldStateReadOnly.cs:16`  
 **Kind:** `interface`
 
 ```csharp
@@ -115,4 +115,4 @@ public sealed class StateCache
 }
 ```
 
-<!-- content-hash: 172221fc0d47c925 -->
+<!-- content-hash: 0082e3c27a289147 -->
