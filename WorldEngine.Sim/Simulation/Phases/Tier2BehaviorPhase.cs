@@ -232,6 +232,11 @@ public sealed class Tier2BehaviorPhase
     // DECISION: No Weaponsmith/Jeweler roles exist; map available Tier2 roles to artifact categories
     // that best reflect each specialist's domain. General → Weapon (military), Governor → Regalia (rule),
     // Merchant → Jewelry (wealth), Scholar → Tome (knowledge), Physician → Relic (healing), Artisan → Artwork.
+    // FUTURE (created-object unification): this role→category map is a stopgap. An artifact
+    // should be the *exceptional persisted instance* of the ordinary product the character was
+    // making, inheriting that product's type — not a role-blind category. When ArtisanGoodType /
+    // ArtType / ArtifactCategory are collapsed into one shared CraftedGoodType taxonomy, derive
+    // the artifact's type from the crafted good (e.g. metalwork→Weapon/Armor), and delete this map.
     private static ArtifactCategory RoleToArtifactCategory(Tier2Role role) => role switch
     {
         Tier2Role.General   => ArtifactCategory.Weapon,
