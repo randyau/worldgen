@@ -936,3 +936,7 @@ battle_forge_probability      = 0.03
 heroic_death_forge_probability= 0.10
 # Probability an artifact becomes Lost (vs. inherited by settlement) on owner death.
 lost_on_death_probability     = 0.35
+# Minimum Ambition personality score to form covet-artifact goals (W2 covet & goal-seeking).
+covet_ambition_threshold      = 0.55
+# Maximum simultaneous covet-artifact goals per character.
+covet_max_goals               = 2

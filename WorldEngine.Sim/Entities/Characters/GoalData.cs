@@ -1,4 +1,5 @@
 using WorldEngine.Sim.Core;
+using WorldEngine.Sim.Entities.Artifacts;
 
 namespace WorldEngine.Sim.Entities.Characters;
 
@@ -35,6 +36,9 @@ public enum GoalType
 
     // Beast interaction
     SlayBeast,         // hunt and kill a specific legendary beast
+
+    // M5 Artifacts
+    CovetArtifact,     // desire a high-quality artifact not currently owned by the character
 }
 
 public enum GoalObject
@@ -48,6 +52,7 @@ public enum GoalObject
     Region,
     Rival,
     Artwork,
+    Artifact,
 }
 
 public sealed class GoalData
@@ -67,4 +72,10 @@ public sealed class GoalData
     /// Null for non-resource goals. Lowercase, matches ResourceLedger keys.
     /// </summary>
     public string?    ResourceTag    { get; set; }
+
+    /// <summary>
+    /// For CovetArtifact goals: the <see cref="ArtifactId"/> of the desired artifact.
+    /// Zero-valued for all other goal types.
+    /// </summary>
+    public ArtifactId CovetedArtifactId { get; set; }
 }

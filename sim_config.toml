@@ -375,6 +375,11 @@ reputation_spread_hops      = 2      # How many relationship hops reputation spr
 base_generation_probability = 0.05   # At max skill, 5% chance per crafting task
 notable_performance_threshold = 0.75 # Quality above which a performance is notable
 covet_threshold             = 0.6    # Artifact property score above which NPCs covet it
+battle_forge_probability    = 0.03   # Chance a decisive battle forges an artifact
+heroic_death_forge_probability = 0.10  # Chance a legendary character's combat death forges one
+lost_on_death_probability   = 0.35   # Probability artifact becomes Lost on owner death
+covet_ambition_threshold    = 0.55   # Minimum Ambition to form covet-artifact goals
+covet_max_goals             = 2      # Max simultaneous covet-artifact goals per character
 
 # =============================================================================
 # RELIGION

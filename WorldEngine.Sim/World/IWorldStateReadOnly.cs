@@ -2,6 +2,7 @@ using WorldEngine.Sim.Civilizations;
 using WorldEngine.Sim.Config;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities;
+using WorldEngine.Sim.Entities.Artifacts;
 using WorldEngine.Sim.Entities.Characters;
 using WorldEngine.Sim.Tiles;
 using System.Collections.Generic;
@@ -47,6 +48,10 @@ public interface IWorldStateReadOnly
     IEntity? GetEntity(EntityId id);
     IEnumerable<IEntity> GetEntitiesAt(TileCoord coord);
     IEnumerable<IEntity> GetEntitiesInRadius(TileCoord center, int radius);
+
+    // === ARTIFACTS (M5+) ===
+    /// <summary>All artifacts in the world (active and destroyed). Use ArtifactRegistry.Active() for non-destroyed only.</summary>
+    IReadOnlyDictionary<ArtifactId, Artifact> Artifacts { get; }
 
     // === CIVILIZATION / CHARACTER (Phase 2.2+) ===
     IReadOnlyDictionary<TileCoord, SettlementStub>  Settlements    { get; }

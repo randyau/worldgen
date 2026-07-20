@@ -350,6 +350,11 @@ Edit values in `sim_config.toml`; all keys live there without recompiling.
 | `base_generation_probability` | `0.05` | `SimConfig.Artifacts.BaseGenerationProbability` | At max skill, 5% chance per crafting task |
 | `notable_performance_threshold` | `0.75` | `SimConfig.Artifacts.NotablePerformanceThreshold` | Quality above which a performance is notable |
 | `covet_threshold` | `0.6` | `SimConfig.Artifacts.CovetThreshold` | Artifact property score above which NPCs covet it |
+| `battle_forge_probability` | `0.03` | `SimConfig.Artifacts.BattleForgeProbability` | Chance a decisive battle forges an artifact |
+| `heroic_death_forge_probability` | `0.10` | `SimConfig.Artifacts.HeroicDeathForgeProbability` | Chance a legendary character's combat death forges one |
+| `lost_on_death_probability` | `0.35` | `SimConfig.Artifacts.LostOnDeathProbability` | Probability artifact becomes Lost on owner death |
+| `covet_ambition_threshold` | `0.55` | `SimConfig.Artifacts.CovetAmbitionThreshold` | Minimum Ambition to form covet-artifact goals |
+| `covet_max_goals` | `2` | `SimConfig.Artifacts.CovetMaxGoals` | Max simultaneous covet-artifact goals per character |
 
 ## `[religion]` {#religion}
 

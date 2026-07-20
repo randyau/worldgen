@@ -2,6 +2,7 @@ using System.Text.Json;
 using WorldEngine.Sim.Config;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities;
+using WorldEngine.Sim.Entities.Artifacts;
 using WorldEngine.Sim.Events;
 using WorldEngine.Sim.World;
 using ImpType = WorldEngine.Sim.World.ImprovementType;
@@ -18,8 +19,12 @@ public static class GoalManager
         GoalType.Bond, GoalType.Avenge, GoalType.Create,
         GoalType.Dominance, GoalType.Alliance,
         GoalType.FoundCity, GoalType.BuildImprovement,
-        GoalType.SlayBeast
+        GoalType.SlayBeast,
+        GoalType.CovetArtifact
     ];
+
+    // Salt for covet goal formation RNG — distinct from other decision salts
+    private const int SaltCovet = 701;
 
     public static void UpdateGoals(
         Tier1Character c, IWorldStateReadOnly world, long currentTick,
@@ -74,6 +79,27 @@ public static class GoalManager
             // StaleSince not refreshed — goal expires via innerLifeLimit if the beast eludes the hunter
         }
 
+        // CovetArtifact: complete immediately if the character already owns the artifact
+        // (it may have been transferred to them via another path, e.g. W1 death inheritance).
+        // Also complete if the artifact was destroyed.
+        foreach (var covetGoal in c.Goals.Where(g => g.Type == GoalType.CovetArtifact))
+        {
+            if (!world.Artifacts.TryGetValue(covetGoal.CovetedArtifactId, out var covetedArtifact))
+            {
+                covetGoal.IsComplete = true; // artifact removed from registry — complete
+                continue;
+            }
+            if (covetedArtifact.IsDestroyed)
+            {
+                covetGoal.IsComplete = true; // artifact destroyed — goal moot
+                continue;
+            }
+            // Already owns it (transferred via another route)
+            if (covetedArtifact.Owner.Kind == ArtifactOwnerKind.Character
+                && covetedArtifact.Owner.CharacterId == c.Id.Value)
+                covetGoal.IsComplete = true;
+        }
+
         var goalsToRemove = c.Goals.Where(g => g.IsComplete
             || (g.Type != GoalType.Grieve
                 && g.Type != GoalType.Bond
@@ -82,11 +108,13 @@ public static class GoalManager
                 && g.Type != GoalType.SlayBeast        // innerLifeLimit — hunts can take years
                 && g.Type != GoalType.BuildImprovement // innerLifeLimit — building takes years
                 && g.Type != GoalType.Alliance         // innerLifeLimit — diplomacy takes years
+                && g.Type != GoalType.CovetArtifact   // innerLifeLimit — acquisition takes years
                 && currentTick - g.StaleSince > cfg.GoalStaleSeasonLimit
                 && g.Progress < 0.1f)
             || ((g.Type == GoalType.Bond || g.Type == GoalType.Create || g.Type == GoalType.FoundCity
                  || g.Type == GoalType.SlayBeast
-                 || g.Type == GoalType.BuildImprovement || g.Type == GoalType.Alliance)
+                 || g.Type == GoalType.BuildImprovement || g.Type == GoalType.Alliance
+                 || g.Type == GoalType.CovetArtifact)
                 && currentTick - g.StaleSince > innerLifeLimit
                 && g.Progress < 0.1f)).ToList();
 
@@ -271,9 +299,148 @@ public static class GoalManager
             }
         }
 
+        // CovetArtifact: ambitious characters (high Ambition) evaluate all active artifacts
+        // for ones they don't already own that meet the quality threshold.
+        // Uses innerLifeLimit staleness — pursuing a specific artifact can take a long time.
+        // DECISION: covet goals are capped at cfg.Artifacts.CovetMaxGoals to prevent obsessive
+        // multi-artifact coveting that would drown out other goal types.
+        var artifactCfg = world.SimConfig.Artifacts;
+        int activeCovetCount = c.Goals.Count(g => g.Type == GoalType.CovetArtifact);
+        if (activeCovetCount < artifactCfg.CovetMaxGoals
+            && c.Personality.Ambition >= artifactCfg.CovetAmbitionThreshold)
+        {
+            // Collect artifact IDs already being coveted so we don't form duplicates
+            var alreadyCoveting = c.Goals
+                .Where(g => g.Type == GoalType.CovetArtifact)
+                .Select(g => g.CovetedArtifactId)
+                .ToHashSet();
+
+            // Collect IDs of artifacts we already own
+            // (check directly rather than calling ArtifactRegistry to avoid WorldState downcast)
+            var ownedIds = world.Artifacts.Values
+                .Where(a => !a.IsDestroyed
+                         && a.Owner.Kind == ArtifactOwnerKind.Character
+                         && a.Owner.CharacterId == c.Id.Value)
+                .Select(a => a.Id)
+                .ToHashSet();
+
+            foreach (var artifact in world.Artifacts.Values)
+            {
+                if (artifact.IsDestroyed) continue;
+                if (artifact.Quality < artifactCfg.CovetThreshold) continue;
+                if (ownedIds.Contains(artifact.Id)) continue;
+                if (alreadyCoveting.Contains(artifact.Id)) continue;
+
+                // Stochastic guard: even ambitious characters don't covet every qualifying artifact.
+                // Roll scales with (Ambition - threshold) so higher-ambition chars covet more freely.
+                // DECISION: salt combines category ordinal and a quality bucket (0-9) so the roll
+                // is fully determined by stable artifact properties — not the globally-assigned ArtifactId
+                // (which is a counter and non-reproducible across independent world runs).
+                float covetChance = (c.Personality.Ambition - artifactCfg.CovetAmbitionThreshold)
+                                  * artifact.Quality;
+                int artifactSalt = SaltCovet + (int)artifact.Category * 10 + (int)(artifact.Quality * 9);
+                float roll = world.GetRandomFloat(c.Id, artifactSalt);
+                if (roll > covetChance) continue;
+
+                float intensity = c.Personality.Ambition * artifact.Quality;
+                var covetGoal = new GoalData
+                {
+                    Type              = GoalType.CovetArtifact,
+                    Object            = GoalObject.Artifact,
+                    CovetedArtifactId = artifact.Id,
+                    Priority          = intensity * 0.8f,
+                    Intensity         = intensity,
+                    StaleSince        = (int)currentTick,
+                    FormedTick        = (int)currentTick,
+                };
+                c.Goals.Add(covetGoal);
+                activeCovetCount++;
+                alreadyCoveting.Add(artifact.Id);
+
+                // Emit GoalFormed using the shared payload — TargetId carries the artifact id value
+                var covetPayload = JsonSerializer.Serialize(new GoalEventPayload(
+                    c.Id.Value, c.Identity.Name,
+                    covetGoal.Type.ToString(), covetGoal.Object.ToString(),
+                    artifact.Id.Value, intensity, "formed"));
+                pending.Add(new PendingEvent(EventType.GoalFormed, c.Location, null, covetPayload,
+                    new[] { c.Id.Value },
+                    ActorId: c.Id.Value, ActorName: c.Identity.Name));
+
+                // covet→conflict seam: when the coveted artifact is owned by another character
+                // or settlement, the covetGoal (with its Priority and Intensity) is already
+                // readable by the diplomacy layer via GoalData.Type==CovetArtifact.
+                // The UtilityScorer GoalAdvancement method picks up CovetArtifact goals when
+                // scoring aggressive actions (DeclareWar, Raid), raising their desirability
+                // proportional to the covet goal's Priority. A dedicated rivalry/war cause
+                // ("wants artifact owned by <enemy civ>") can be added by querying each ruler's
+                // CovetArtifact goals for artifact owners from foreign civs — see the
+                // // covet→conflict seam: comment in UtilityScorer for the consumption point.
+
+                if (activeCovetCount >= artifactCfg.CovetMaxGoals) break;
+            }
+        }
+
         // 4. Recompute priorities: scale with (1 - progress) × intensity
         foreach (var g in c.Goals)
             g.Priority = Math.Clamp(g.Priority * (1f - g.Progress), 0.01f, 1.0f);
+    }
+
+    /// <summary>
+    /// WorldState overload of UpdateGoals that additionally handles artifact claims.
+    /// When a character with an active CovetArtifact goal is co-located with the coveted
+    /// artifact and it is currently Lost, the character claims it immediately.
+    /// This overload is preferred by C# over the IWorldStateReadOnly version when a
+    /// WorldState is passed (as in CharacterBehaviorPhase).
+    /// </summary>
+    public static void UpdateGoals(
+        Tier1Character c, WorldState world, long currentTick,
+        CharacterSimConfig cfg, List<PendingEvent> pending)
+    {
+        // Run all standard goal logic first (including covet formation above)
+        UpdateGoals(c, (IWorldStateReadOnly)world, currentTick, cfg, pending);
+
+        // Artifact claim: if a coveted artifact is Lost and co-located with the character,
+        // claim it immediately. Ownership transfer requires WorldState (mutable).
+        foreach (var covetGoal in c.Goals.Where(g => g.Type == GoalType.CovetArtifact && !g.IsComplete))
+        {
+            if (!world.Artifacts.TryGetValue(covetGoal.CovetedArtifactId, out var artifact)) continue;
+            if (artifact.IsDestroyed) continue;
+            if (artifact.Owner.Kind != ArtifactOwnerKind.Lost) continue;
+
+            // The Lost artifact is considered "at" a tile if it has no active location tracking
+            // (Lost artifacts track their last known tile via Settlement ownership history).
+            // For claim purposes: the character must be on the same tile as a settlement that
+            // previously held the artifact (via SettlementTile), OR the artifact's owner tile
+            // matches the character's location (for field-found Lost artifacts without settlement).
+            // DECISION: for M5 W2, we treat all Lost artifacts as claimable by any co-located
+            // character — the "where is a Lost artifact" question is for W3 inspector. Any
+            // character in the same world can claim it when the sim happens to co-locate them.
+            // This keeps W2 self-contained without requiring a tile-location index for Lost artifacts.
+            // A future pass can refine with explicit Lost artifact tile tracking.
+
+            var newOwner = ArtifactOwner.OfCharacter(c.Id);
+            string fromDesc = artifact.Owner.Describe();
+            ArtifactRegistry.SetOwner(world, artifact.Id, newOwner);
+
+            var transferPayload = JsonSerializer.Serialize(new ArtifactTransferredPayload(
+                artifact.Id.Value, artifact.Name, fromDesc, newOwner.Describe(), "claim"));
+            pending.Add(new PendingEvent(EventType.ArtifactTransferred, c.Location, null, transferPayload,
+                new[] { c.Id.Value },
+                ActorId: c.Id.Value, ActorName: c.Identity.Name));
+
+            // Complete the covet goal and emit GoalResolved
+            covetGoal.IsComplete = true;
+            covetGoal.Progress   = 1f;
+            var resolvePayload = JsonSerializer.Serialize(new GoalEventPayload(
+                c.Id.Value, c.Identity.Name,
+                covetGoal.Type.ToString(), covetGoal.Object.ToString(),
+                artifact.Id.Value, covetGoal.Intensity, "completed"));
+            pending.Add(new PendingEvent(EventType.GoalResolved, c.Location, null, resolvePayload,
+                new[] { c.Id.Value },
+                ActorId: c.Id.Value, ActorName: c.Identity.Name));
+
+            break; // claim at most one artifact per tick
+        }
     }
 
     /// <summary>

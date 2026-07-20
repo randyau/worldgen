@@ -208,6 +208,7 @@ public sealed class WorldState : IWorldStateReadOnly
     IReadOnlyDictionary<TileCoord, RuinRecord>      IWorldStateReadOnly.Ruins         => Ruins;
     IReadOnlyDictionary<TileCoord, TileCoord>       IWorldStateReadOnly.TerritoryMap  => TerritoryMap;
     IReadOnlyDictionary<TileCoord, TileImprovement> IWorldStateReadOnly.ImprovementMap => ImprovementMap;
+    IReadOnlyDictionary<ArtifactId, Artifact>       IWorldStateReadOnly.Artifacts     => Artifacts;
 
     public RelationshipEdge? GetRelationship(EntityId a, EntityId b) =>
         Relationships.Get(a, b);

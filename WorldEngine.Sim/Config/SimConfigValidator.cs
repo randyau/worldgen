@@ -176,6 +176,9 @@ public static class SimConfigValidator
         CheckProbability("artifacts.battle_forge_probability",       a.BattleForgeProbability,      errors);
         CheckProbability("artifacts.heroic_death_forge_probability", a.HeroicDeathForgeProbability, errors);
         CheckProbability("artifacts.lost_on_death_probability",      a.LostOnDeathProbability,      errors);
+        CheckProbability("artifacts.covet_ambition_threshold",       a.CovetAmbitionThreshold,      errors);
+        if (a.CovetMaxGoals < 1)
+            errors.Add($"[artifacts] covet_max_goals must be ≥ 1 (got {a.CovetMaxGoals})");
     }
 
     // ─────────────────────────────────────────────────────────────────────────

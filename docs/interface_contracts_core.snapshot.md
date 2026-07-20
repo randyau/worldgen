@@ -48,7 +48,7 @@ public interface ICommand { }
 ```
 
 ## IWorldStateReadOnly
-**File:** `WorldEngine.Sim/World/IWorldStateReadOnly.cs:15`  
+**File:** `WorldEngine.Sim/World/IWorldStateReadOnly.cs:16`  
 **Kind:** `interface`
 
 ```csharp
@@ -81,6 +81,9 @@ public interface IWorldStateReadOnly
     IEnumerable<IEntity> GetEntitiesAt(TileCoord coord);
     IEnumerable<IEntity> GetEntitiesInRadius(TileCoord center, int radius);
 
+    // === ARTIFACTS (M5+) ===
+    IReadOnlyDictionary<ArtifactId, Artifact> Artifacts { get; }
+
     // === CIVILIZATION / CHARACTER (Phase 2.2+) ===
     IReadOnlyDictionary<TileCoord, SettlementStub>  Settlements    { get; }
     IReadOnlyDictionary<TileCoord, RuinRecord>      Ruins          { get; }
@@ -112,4 +115,4 @@ public sealed class StateCache
 }
 ```
 
-<!-- content-hash: 1453380f25c29726 -->
+<!-- content-hash: 0082e3c27a289147 -->

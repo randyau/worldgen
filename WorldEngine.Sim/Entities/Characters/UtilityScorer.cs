@@ -352,6 +352,17 @@ public sealed class UtilityScorer
     // so adding a new ActionType requires updating both here and in TryParseAction.
     private enum ActionType { Rest, Travel, Establish, Ally, Negotiate, Rivalry, War, Raid, Create, Flee, BuildImprovement, FoundCity, HuntBeast }
 
+    // covet→conflict seam: GoalAdvancement already boosts War/Raid actions when a character has
+    // a CovetArtifact goal, because GoalAffinity[CovetArtifact, War] and [CovetArtifact, Raid]
+    // can be set in the [utility_affinity] TOML table (currently defaulting to 0 = no boost).
+    // The diplomacy layer (CivTracker.Diplomacy) can inspect each ruler's Goals for CovetArtifact
+    // entries where the artifact.Owner.Kind == Character and owner's civ != ruler's civ to derive
+    // a "covet-driven war cause" without W2 touching CivTracker files. Pattern:
+    //   ruler.Goals.Where(g => g.Type == GoalType.CovetArtifact)
+    //     .Select(g => world.Artifacts.TryGetValue(g.CovetedArtifactId, out var a) ? a : null)
+    //     .Where(a => a?.Owner.Kind == ArtifactOwnerKind.Character) — yields coveted char-owned artifacts
+    // W1 (CivTracker.War) can read this to inject a "covets artifact" war cause.
+
     private float Score(
         Tier1Character c,
         ActionType action,

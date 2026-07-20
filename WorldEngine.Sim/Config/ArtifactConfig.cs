@@ -26,4 +26,16 @@ public sealed class ArtifactConfig
     /// when its character owner dies.
     /// </summary>
     public float LostOnDeathProbability       { get; set; } = 0.35f;
+
+    /// <summary>
+    /// Minimum Ambition personality score for a character to form covet-artifact goals.
+    /// Characters below this threshold don't care enough about power/prestige to pursue artifacts.
+    /// </summary>
+    public float CovetAmbitionThreshold       { get; set; } = 0.55f;
+
+    /// <summary>
+    /// Maximum number of covet goals a character can hold simultaneously.
+    /// Prevents obsessively coveting every artifact in the world.
+    /// </summary>
+    public int   CovetMaxGoals               { get; set; } = 2;
 }
