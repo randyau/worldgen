@@ -48,6 +48,20 @@ public static class DatabaseSchema
     public const string MigrateYearlyMetricsAddBorderPairs =
         "ALTER TABLE yearly_metrics ADD COLUMN civ_border_pairs INTEGER NOT NULL DEFAULT 0;";
 
+    /// <summary>Migrations: adds artifact telemetry columns to yearly_metrics (M5 W4).</summary>
+    public const string MigrateYearlyMetricsAddArtifactsCreatedYtd =
+        "ALTER TABLE yearly_metrics ADD COLUMN artifacts_created_ytd INTEGER NOT NULL DEFAULT 0;";
+    public const string MigrateYearlyMetricsAddArtifactsDestroyedYtd =
+        "ALTER TABLE yearly_metrics ADD COLUMN artifacts_destroyed_ytd INTEGER NOT NULL DEFAULT 0;";
+    public const string MigrateYearlyMetricsAddArtifactsTransferredYtd =
+        "ALTER TABLE yearly_metrics ADD COLUMN artifacts_transferred_ytd INTEGER NOT NULL DEFAULT 0;";
+    public const string MigrateYearlyMetricsAddLivingArtifacts =
+        "ALTER TABLE yearly_metrics ADD COLUMN living_artifacts INTEGER NOT NULL DEFAULT 0;";
+    public const string MigrateYearlyMetricsAddLostArtifacts =
+        "ALTER TABLE yearly_metrics ADD COLUMN lost_artifacts INTEGER NOT NULL DEFAULT 0;";
+    public const string MigrateYearlyMetricsAddArtifactsPerSettlement =
+        "ALTER TABLE yearly_metrics ADD COLUMN artifacts_per_settlement REAL NOT NULL DEFAULT 0.0;";
+
     public const string CreateEventEntities = """
         CREATE TABLE IF NOT EXISTS EventEntities (
             EventId    INTEGER NOT NULL REFERENCES Events(Id),
@@ -224,7 +238,13 @@ public static class DatabaseSchema
             mean_cities_per_civ       REAL    NOT NULL DEFAULT 0.0,
             secessions_ytd            INTEGER NOT NULL DEFAULT 0,
             mean_unrest               REAL    NOT NULL DEFAULT 0.0,
-            civ_border_pairs          INTEGER NOT NULL DEFAULT 0
+            civ_border_pairs          INTEGER NOT NULL DEFAULT 0,
+            artifacts_created_ytd     INTEGER NOT NULL DEFAULT 0,
+            artifacts_destroyed_ytd   INTEGER NOT NULL DEFAULT 0,
+            artifacts_transferred_ytd INTEGER NOT NULL DEFAULT 0,
+            living_artifacts          INTEGER NOT NULL DEFAULT 0,
+            lost_artifacts            INTEGER NOT NULL DEFAULT 0,
+            artifacts_per_settlement  REAL    NOT NULL DEFAULT 0.0
         );
         """;
 

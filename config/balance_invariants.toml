@@ -122,3 +122,23 @@
   [year_300.max_cities_per_civ]
   value = 12
   rationale = "Post-S4 observed 3-5 max cities per civ. Splinter fires above ~6-7; 12 catches a broken splinter mechanic letting an empire snowball."
+
+  # ── Artifact bands (M5 W4) — PROVISIONAL — calibrate after first sweep ────────
+  #
+  # W1/W2 are not yet merged; artifact creation hooks are not wired. These bands
+  # use generous ranges so BalanceRegressionTests stays green while artifact
+  # mechanics are being developed. Tighten after the first post-merge calibration
+  # run (python3 scripts/balance-run.py --seed-list 42,777,9999 --years 300 --label artifacts).
+  # See docs/phases/m5_phase_artifacts.md W4 section for calibration procedure.
+  #
+  # PROVISIONAL — calibrate after first sweep
+
+  [year_300.living_artifacts]
+  min = 0
+  max = 10000
+  rationale = "PROVISIONAL — no artifact hooks wired yet (W1 pending). Expected 0 at year 300 pre-W1. Upper bound is a generous overflow guard; tighten after calibration sweep."
+
+  [year_300.artifacts_per_settlement]
+  min = 0.0
+  max = 500.0
+  rationale = "PROVISIONAL — headline overflow indicator: living artifacts / settlement count. Set generously wide until W1/W2 are merged and a calibration sweep run. Tighten to observed ±40%."

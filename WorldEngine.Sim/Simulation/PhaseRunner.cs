@@ -250,6 +250,9 @@ public sealed class PhaseRunner
             case EventType.CivSplintered:        _metricsAcc.SecessionsYtd++;            break;
             case EventType.GoalFormed:           _metricsAcc.GoalsFormedYtd++;           break;
             case EventType.GoalResolved:         _metricsAcc.GoalsResolvedYtd++;         break;
+            case EventType.ArtifactCreated:      _metricsAcc.ArtifactsCreatedYtd++;      break;
+            case EventType.ArtifactDestroyed:    _metricsAcc.ArtifactsDestroyedYtd++;    break;
+            case EventType.ArtifactTransferred:  _metricsAcc.ArtifactsTransferredYtd++;  break;
             case EventType.CharacterDied:
                 // Extract cause from CharacterDeathPayload JSON.
                 // DECISION: rather than deserializing the full payload (requires reflection on
