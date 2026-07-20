@@ -3,16 +3,25 @@
 **Date:** June 18, 2026 (updated June 23, 2026)  
 **Status:** Milestone 1 COMPLETE (2026-06-22). Milestone 2 COMPLETE (2026-06-23). Milestone 3 COMPLETE (2026-06-26). Milestone 4 COMPLETE (2026-07-19). All phases archived.
 
+> **⚠️ Forward planning has moved.** This document is the historical spec of record for
+> M1–M2 and is otherwise frozen. The milestone plan **drifted** from the original table below:
+> the planned "M4 UI Experience" (Spotlight, God Mode, distribution) was never built — the sim
+> went deeper instead (M4 = civ/war/religion), and an unplanned M5 (Artifacts) shipped. The
+> current forward roadmap — including the reconstructed Spotlight, God Mode, and UI-polish work
+> — now lives in **`docs/roadmap.md`**. Read that for anything M6+.
+
 ---
 
 ## Milestone Overview
+
+*(Original plan — retained for history. See `docs/roadmap.md` for what actually shipped and the current forward plan.)*
 
 | Milestone | Name | Goal |
 |---|---|---|
 | 1 | The Living World | A world generates, simulates environmental history, produces a queryable log |
 | 2 | The Character System | Beasts, then heroes, then lieutenants, then population — layered and playtested |
 | 3 | Narrative Exploration | History becomes readable, authorable, and tunable |
-| 4 | UI Experience | Polish, Spotlight, God Mode, distribution |
+| 4 | UI Experience | Polish, Spotlight, God Mode, distribution *(never built as planned — see roadmap.md)* |
 
 This document specifies **Milestone 1 in full**. Milestones 2-4 are described at summary level — they will be specced in detail when their time comes.
 

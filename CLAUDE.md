@@ -11,6 +11,7 @@ A procedural world generation and history simulation engine. The simulation gene
 The primary audience is worldbuilders and writers, not traditional gamers. The core product is the richness and coherence of the generated history, not gameplay challenge.
 
 **Companion documents (read these before any significant implementation work):**
+- `docs/roadmap.md` — **forward source of truth** for milestone/phase planning (M6+); mvp_spec.md is frozen history
 - `docs/implementation_decisions_v0.3.md` — all architectural decisions with rationale
 - `docs/architecture_decision_records.md` — ADR quick-reference (why the codebase is structured as it is)
 - `docs/design_session_decisions.md` — tile layout, world gen algorithms, env sim, UI boundary decisions (DS-A through DS-D)
