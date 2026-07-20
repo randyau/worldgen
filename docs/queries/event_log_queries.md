@@ -533,3 +533,141 @@ GROUP BY Type
 ORDER BY total_payload_bytes DESC
 LIMIT 20;
 ```
+
+---
+
+## Artifact Queries (M5)
+
+Use these to explore the artifact system. The `ArtifactCreated` (6001) and `ArtifactDestroyed` (6002)
+event types carry artifact data in `PayloadJson`. The payload for `ArtifactCreated` contains at minimum:
+
+```json
+{ "ArtifactId": 123, "Name": "Blade of Caelen", "Category": "Weapon",
+  "Quality": 0.95, "CreatorName": "Caelen the Unyielding", "CreatedYear": 41 }
+```
+
+`ArtifactTransferred` events (if emitted by the artifact system) carry `ArtifactId`, `FromOwner`,
+and `ToOwner` fields and form the lineage chain.
+
+### Artifact creation timeline
+
+```sql
+-- All artifacts created, in order
+SELECT Year, Season,
+       json_extract(PayloadJson, '$.ArtifactId')   as artifact_id,
+       json_extract(PayloadJson, '$.Name')          as name,
+       json_extract(PayloadJson, '$.Category')      as category,
+       json_extract(PayloadJson, '$.Quality')       as quality,
+       json_extract(PayloadJson, '$.CreatorName')   as creator,
+       LocationX, LocationY
+FROM Events
+WHERE Type = 6001   -- ArtifactCreated
+ORDER BY Year, Season;
+
+-- How many artifacts have been created per century?
+SELECT (Year / 100) * 100 as century, COUNT(*) as artifacts_created
+FROM Events
+WHERE Type = 6001
+GROUP BY century
+ORDER BY century;
+
+-- Masterworks only (quality >= 0.9)
+SELECT Year,
+       json_extract(PayloadJson, '$.Name')        as name,
+       json_extract(PayloadJson, '$.CreatorName') as creator,
+       ROUND(json_extract(PayloadJson, '$.Quality'), 3) as quality
+FROM Events
+WHERE Type = 6001
+  AND CAST(json_extract(PayloadJson, '$.Quality') as REAL) >= 0.9
+ORDER BY quality DESC;
+```
+
+### Transfer / lineage chain
+
+Reconstruct the full ownership history of a specific artifact by walking
+`ArtifactCreated` and all subsequent `ArtifactTransferred` events sharing the same `ArtifactId`.
+
+```sql
+-- Full lineage for a specific artifact (replace 123 with the target ArtifactId)
+SELECT Year, Season, Type,
+       CASE Type
+           WHEN 6001 THEN 'Created'
+           WHEN 6002 THEN 'Destroyed'
+           ELSE 'Transferred'
+       END as event_kind,
+       json_extract(PayloadJson, '$.Name')      as name,
+       json_extract(PayloadJson, '$.FromOwner') as from_owner,
+       json_extract(PayloadJson, '$.ToOwner')   as to_owner
+FROM Events
+WHERE json_extract(PayloadJson, '$.ArtifactId') = 123
+ORDER BY Year, Season, Id;
+
+-- How many times has each artifact changed hands?
+SELECT json_extract(PayloadJson, '$.ArtifactId') as artifact_id,
+       COUNT(*) as transfer_count
+FROM Events
+WHERE Type NOT IN (6001, 6002)   -- exclude creation/destruction; count only transfers
+  AND json_extract(PayloadJson, '$.ArtifactId') IS NOT NULL
+GROUP BY artifact_id
+ORDER BY transfer_count DESC
+LIMIT 20;
+
+-- Most-travelled artifacts (created in one region, last seen elsewhere)
+-- Requires ArtifactCreated + location of the last transfer event
+SELECT
+    c.Year as created_year,
+    json_extract(c.PayloadJson, '$.Name') as name,
+    c.LocationX as origin_x, c.LocationY as origin_y,
+    t.LocationX as last_x,  t.LocationY as last_y,
+    ABS(c.LocationX - t.LocationX) + ABS(c.LocationY - t.LocationY) as manhattan_dist
+FROM Events c
+JOIN (
+    SELECT json_extract(PayloadJson, '$.ArtifactId') as aid,
+           MAX(Id) as last_event_id
+    FROM Events
+    WHERE json_extract(PayloadJson, '$.ArtifactId') IS NOT NULL
+    GROUP BY aid
+) latest ON json_extract(c.PayloadJson, '$.ArtifactId') = latest.aid
+JOIN Events t ON t.Id = latest.last_event_id
+WHERE c.Type = 6001
+ORDER BY manhattan_dist DESC
+LIMIT 10;
+```
+
+### Most-coveted / highest-quality artifacts
+
+```sql
+-- Top 20 highest-quality artifacts ever created
+SELECT Year,
+       json_extract(PayloadJson, '$.ArtifactId')   as id,
+       json_extract(PayloadJson, '$.Name')          as name,
+       json_extract(PayloadJson, '$.Category')      as category,
+       json_extract(PayloadJson, '$.CreatorName')   as creator,
+       ROUND(json_extract(PayloadJson, '$.Quality'), 3) as quality
+FROM Events
+WHERE Type = 6001
+ORDER BY quality DESC
+LIMIT 20;
+
+-- Artifacts that were eventually destroyed (lost/legendary items)
+SELECT c.Year as created_year,
+       json_extract(c.PayloadJson, '$.Name')    as name,
+       json_extract(c.PayloadJson, '$.Quality') as quality,
+       d.Year as destroyed_year
+FROM Events c
+JOIN Events d ON json_extract(d.PayloadJson, '$.ArtifactId')
+              = json_extract(c.PayloadJson, '$.ArtifactId')
+WHERE c.Type = 6001
+  AND d.Type = 6002
+ORDER BY (d.Year - c.Year) DESC;   -- longest-lived at top
+
+-- Average quality by category
+SELECT json_extract(PayloadJson, '$.Category') as category,
+       COUNT(*)                                 as count,
+       ROUND(AVG(CAST(json_extract(PayloadJson, '$.Quality') as REAL)), 3) as avg_quality,
+       ROUND(MAX(CAST(json_extract(PayloadJson, '$.Quality') as REAL)), 3) as max_quality
+FROM Events
+WHERE Type = 6001
+GROUP BY category
+ORDER BY avg_quality DESC;
+```

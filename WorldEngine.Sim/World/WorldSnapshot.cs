@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities;
+using WorldEngine.Sim.Entities.Artifacts;
 using WorldEngine.Sim.Entities.Characters;
 
 namespace WorldEngine.Sim.World;
@@ -22,6 +23,25 @@ public sealed record ImprovementSnapshot(
     TileCoord CityTile,
     int       BuiltYear,
     long      BuilderId);
+
+/// <summary>
+/// Immutable snapshot of a single artifact for UI display.
+/// Owner description is pre-formatted at snapshot time so the UI needs no lookups.
+/// OwnerCharacterId: character entity id when owned by a character; 0 otherwise.
+/// OwnerSettlementTile: settlement tile when held at a settlement; TileCoord(-1,-1) otherwise.
+/// </summary>
+public sealed record ArtifactSnapshot(
+    long      Id,
+    string    Name,
+    string    Category,
+    string    Origin,
+    float     Quality,
+    int       CreatedYear,
+    string    CreatorName,
+    string    OwnerDesc,
+    bool      IsDestroyed,
+    long      OwnerCharacterId,
+    TileCoord OwnerSettlementTile);
 
 /// <summary>Immutable settlement info for UI display.</summary>
 public sealed record SettlementSnapshot(
@@ -108,5 +128,9 @@ public sealed record WorldSnapshot(
 
     // Save state (M3 Phase 3.6) — used by UI to show "Saving..." overlay
     bool IsSaving     = false,
-    long LastSaveTick = -1
+    long LastSaveTick = -1,
+
+    // Artifact system (M5) — all artifacts known to the world at snapshot time
+    // Includes destroyed artifacts so the UI can display historical context if needed.
+    IReadOnlyList<ArtifactSnapshot>? Artifacts = null
 );

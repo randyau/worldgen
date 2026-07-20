@@ -1,6 +1,7 @@
 using WorldEngine.Sim.Civilizations;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities;
+using WorldEngine.Sim.Entities.Artifacts;
 using WorldEngine.Sim.Entities.Characters;
 using WorldEngine.Sim.Tiles;
 
@@ -29,6 +30,7 @@ public sealed class SnapshotBuilder
         var territoryMap     = BuildTerritorySnapshot(world);
         var improvementMap   = BuildImprovementSnapshot(world);
         var watchedChar      = BuildCharacterWatchSnapshot(world);
+        var artifacts        = BuildArtifactSnapshots(world);
 
         return new WorldSnapshot(
             CurrentYear:                 world.CurrentYear,
@@ -52,7 +54,8 @@ public sealed class SnapshotBuilder
             StormCorridorNormalizedLat:  world.StormCorridorNormalizedLat,
             WatchedCharacter:            watchedChar,
             IsSaving:                    world.IsSaving,
-            LastSaveTick:                world.LastSaveTick
+            LastSaveTick:                world.LastSaveTick,
+            Artifacts:                   artifacts
         );
     }
 
@@ -306,6 +309,68 @@ public sealed class SnapshotBuilder
             Season.Winter => profile.MoistureDeltaWinter,
             _             => 0
         };
+
+    /// <summary>
+    /// Projects all artifacts (living and destroyed) into <see cref="ArtifactSnapshot"/> records.
+    /// Destroyed artifacts are included so the UI can show historical context; the IsDestroyed flag
+    /// lets consumers filter them out when showing only active holdings.
+    /// DECISION: include destroyed artifacts in the snapshot rather than filtering them at build time,
+    /// because the inspector may want to show "this settlement once held X" for ruins/history.
+    /// </summary>
+    private static IReadOnlyList<ArtifactSnapshot> BuildArtifactSnapshots(WorldState world)
+    {
+        var registry = world.Artifacts;
+        if (registry.Count == 0)
+            return Array.Empty<ArtifactSnapshot>();
+
+        // Build resolve delegates once; closed over world — no heap alloc per artifact
+        string? ResolveCharacterName(EntityId id) =>
+            world.Entities.All.TryGetValue(id, out var e) ? e.ToSnapshot().Name : null;
+
+        string? ResolveSettlementName(TileCoord tile) =>
+            world.Settlements.TryGetValue(tile, out var s) ? s.Name : null;
+
+        var noSettlement = new TileCoord(-1, -1);
+        var result = new List<ArtifactSnapshot>(registry.Count);
+
+        foreach (var artifact in registry.Values)
+        {
+            string ownerDesc;
+            long charId    = 0L;
+            TileCoord tile = noSettlement;
+            switch (artifact.Owner.Kind)
+            {
+                case ArtifactOwnerKind.Character:
+                    charId    = artifact.Owner.CharacterId;
+                    var cName = ResolveCharacterName(new EntityId(charId));
+                    ownerDesc = cName is null ? artifact.Owner.Describe() : $"Held by {cName}";
+                    break;
+                case ArtifactOwnerKind.Settlement:
+                    tile      = artifact.Owner.SettlementTile;
+                    var sName = ResolveSettlementName(tile);
+                    ownerDesc = sName is null ? artifact.Owner.Describe() : $"Held at {sName}";
+                    break;
+                default:
+                    ownerDesc = "Lost";
+                    break;
+            }
+
+            result.Add(new ArtifactSnapshot(
+                Id:                  artifact.Id.Value,
+                Name:                artifact.Name,
+                Category:            artifact.Category.ToString(),
+                Origin:              artifact.Origin,
+                Quality:             artifact.Quality,
+                CreatedYear:         artifact.CreatedYear,
+                CreatorName:         artifact.CreatorName,
+                OwnerDesc:           ownerDesc,
+                IsDestroyed:         artifact.IsDestroyed,
+                OwnerCharacterId:    charId,
+                OwnerSettlementTile: tile));
+        }
+
+        return result;
+    }
 
     /// <summary>
     /// Builds the character watch snapshot when a watch target is set.

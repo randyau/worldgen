@@ -3,6 +3,7 @@ using WorldEngine.Sim.Civilizations;
 using WorldEngine.Sim.Config;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities;
+using WorldEngine.Sim.Entities.Artifacts;
 using WorldEngine.Sim.Entities.Characters;
 using WorldEngine.Sim.Events;
 using WorldEngine.Sim.World;
@@ -59,7 +60,7 @@ public sealed class Tier2BehaviorPhase
 
     // ─── Lifecycle ────────────────────────────────────────────────────────────
 
-    private static void UpdateLifecycle(
+    private void UpdateLifecycle(
         Tier2Character c, WorldState world, long tick, List<PendingEvent> pending)
     {
         c.AgeSeason++;
@@ -74,11 +75,58 @@ public sealed class Tier2BehaviorPhase
                 new[] { c.Id.Value },
                 ActorId: c.Id.Value, ActorName: c.Name));
 
+            // Artifact inheritance — transfer or lose owned artifacts on death
+            HandleTier2ArtifactInheritance(c, world, pending);
+
             // Emit DismissedFromRole when a Tier 2 specialist dies — their role ends with them.
             var dismissPayload = JsonSerializer.Serialize(new SpecialistDismissedPayload(
                 c.Id.Value, c.Name, c.Livelihood.Role.ToString(), deathCause));
             pending.Add(new PendingEvent(EventType.DismissedFromRole, c.Location, null, dismissPayload,
                 new[] { c.Id.Value },
+                ActorId: c.Id.Value, ActorName: c.Name));
+        }
+    }
+
+    private void HandleTier2ArtifactInheritance(
+        Tier2Character c, WorldState world, List<PendingEvent> pending)
+    {
+        var ownedArtifacts = ArtifactRegistry.OwnedByCharacter(world, c.Id).ToList();
+        if (ownedArtifacts.Count == 0) return;
+
+        TileCoord? settleTile = world.Settlements.ContainsKey(c.Location) ? c.Location
+            : c.Livelihood.SettlementTile != default && world.Settlements.ContainsKey(c.Livelihood.SettlementTile)
+                ? c.Livelihood.SettlementTile
+            : null;
+
+        // Use _simCfg (injected at construction) so test overrides take effect
+        var artCfg = _simCfg.Artifacts;
+        for (int i = 0; i < ownedArtifacts.Count; i++)
+        {
+            var artifact = ownedArtifacts[i];
+            float lossRoll = WorldRng.FloatAt(world.WorldSeed, world.CurrentTick,
+                (int)(c.Id.Value & 0xFFFF), i, S.ArtifactDeathInheritance);
+
+            string fromOwner = artifact.Owner.Describe();
+            ArtifactOwner newOwner;
+            string toOwnerDesc;
+
+            if (lossRoll < artCfg.LostOnDeathProbability || settleTile is null)
+            {
+                newOwner    = ArtifactOwner.Lost;
+                toOwnerDesc = ArtifactOwner.Lost.Describe();
+            }
+            else
+            {
+                newOwner    = ArtifactOwner.OfSettlement(settleTile.Value);
+                toOwnerDesc = newOwner.Describe();
+            }
+
+            ArtifactRegistry.SetOwner(world, artifact.Id, newOwner);
+
+            var transPayload = JsonSerializer.Serialize(new ArtifactTransferredPayload(
+                artifact.Id.Value, artifact.Name, fromOwner, toOwnerDesc, "inheritance"));
+            pending.Add(new PendingEvent(EventType.ArtifactTransferred, c.Location, null, transPayload,
+                new[] { artifact.Id.Value },
                 ActorId: c.Id.Value, ActorName: c.Name));
         }
     }
@@ -148,8 +196,25 @@ public sealed class Tier2BehaviorPhase
             if (excepRoll < _cfg.Tier2ExceptionalWorkChance)
             {
                 c.HasMasterwork = true;
-                // V2: ARTIFACT — when the artifact system is live, emit ArtifactCreated here
-                // using the same payload decorated with isExceptional=true
+
+                // Forge a masterwork artifact and emit ArtifactCreated.
+                // Quality derived from the exceptional roll (higher roll → higher quality within the masterwork band).
+                float quality = Math.Clamp(0.6f + excepRoll * 0.4f, 0f, 1f);
+                var cat = RoleToArtifactCategory(c.Livelihood.Role);
+                var name = ArtifactNameGenerator.Generate(world, cat, (int)c.Id.Value);
+                var artifact = ArtifactRegistry.Create(world, name, cat, world.CurrentYear,
+                    creatorId:   c.Id.Value,
+                    creatorName: c.Name,
+                    origin:      "masterwork",
+                    quality:     quality,
+                    owner:       ArtifactOwner.OfCharacter(c.Id));
+
+                var artPayload = JsonSerializer.Serialize(new ArtifactCreatedPayload(
+                    artifact.Id.Value, artifact.Name, artifact.Category.ToString(),
+                    c.Id.Value, c.Name, "masterwork", quality));
+                pending.Add(new PendingEvent(EventType.ArtifactCreated, c.Location, null, artPayload,
+                    new[] { c.Id.Value },
+                    ActorId: c.Id.Value, ActorName: c.Name));
             }
         }
         return true;
@@ -162,6 +227,20 @@ public sealed class Tier2BehaviorPhase
         Tier2Role.Merchant  => S.T2MerchantExcep,
         Tier2Role.Physician => S.T2PhysicianExcep,
         _                   => S.T2ArtisanExcep,
+    };
+
+    // DECISION: No Weaponsmith/Jeweler roles exist; map available Tier2 roles to artifact categories
+    // that best reflect each specialist's domain. General → Weapon (military), Governor → Regalia (rule),
+    // Merchant → Jewelry (wealth), Scholar → Tome (knowledge), Physician → Relic (healing), Artisan → Artwork.
+    private static ArtifactCategory RoleToArtifactCategory(Tier2Role role) => role switch
+    {
+        Tier2Role.General   => ArtifactCategory.Weapon,
+        Tier2Role.Governor  => ArtifactCategory.Regalia,
+        Tier2Role.Merchant  => ArtifactCategory.Jewelry,
+        Tier2Role.Scholar   => ArtifactCategory.Tome,
+        Tier2Role.Physician => ArtifactCategory.Relic,
+        Tier2Role.Artisan   => ArtifactCategory.Artwork,
+        _                   => ArtifactCategory.Relic,
     };
 
     private const float MerchantTradeTransfer = 0.1f;  // fraction of surplus transferred per trade

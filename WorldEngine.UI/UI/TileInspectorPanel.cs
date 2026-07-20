@@ -132,8 +132,12 @@ public sealed class TileInspectorPanel
         if (snapshot is not null)
         {
             AddBeastSection(data.Coord, snapshot.EntitySnapshots);
-            AddCharacterSection(data.Coord, snapshot.EntitySnapshots);
+            AddCharacterSection(data.Coord, snapshot.EntitySnapshots, snapshot);
         }
+
+        // ── Settlement artifacts (M5) ─────────────────────────────────────────
+        if (snapshot?.Settlements.ContainsKey(data.Coord) == true)
+            AddSettlementArtifacts(data.Coord, snapshot);
 
         // ── History at tile (M3 Phase 3.4) ───────────────────────────────────
         if (data.TileHistory is { Count: > 0 } history)
@@ -165,7 +169,8 @@ public sealed class TileInspectorPanel
 
     private void AddCharacterSection(
         TileCoord coord,
-        IReadOnlyDictionary<EntityId, EntitySnapshot> entitySnapshots)
+        IReadOnlyDictionary<EntityId, EntitySnapshot> entitySnapshots,
+        WorldSnapshot snapshot)
     {
         var tier1 = entitySnapshots.Values
             .Where(e => e.Kind == EntityKind.Tier1Character && e.IsAlive && e.Location == coord)
@@ -205,12 +210,49 @@ public sealed class TileInspectorPanel
                 _        => "Spiraling"
             };
             AddLine($"  HP {c.HealthFraction:P0}  Age {c.AgeSeason}s  [{wbLabel}]");
+
+            // ── Character artifacts (M5) ──────────────────────────────────────
+            AddCharacterArtifacts(c.Id.Value, snapshot);
         }
         foreach (var c in tier2)
         {
             AddLine($"{c.Name} [Tier2]");
             AddLine($"  HP {c.HealthFraction:P0}  Age {c.AgeSeason}s");
         }
+    }
+
+    // ── Artifact helpers (M5) ─────────────────────────────────────────────────
+
+    /// <summary>Lists living artifacts held by the given character.</summary>
+    private void AddCharacterArtifacts(long characterId, WorldSnapshot snapshot)
+    {
+        if (snapshot.Artifacts is not { Count: > 0 } all) return;
+
+        var carried = all
+            .Where(a => !a.IsDestroyed && a.OwnerCharacterId == characterId)
+            .ToList();
+
+        if (carried.Count == 0) return;
+
+        AddLine("  Artifacts:");
+        foreach (var a in carried)
+            AddLine($"    {a.Name} ({a.Category}) — Q:{a.Quality:F2} — {a.Origin}  [by {a.CreatorName}]");
+    }
+
+    /// <summary>Lists living artifacts located at the given settlement tile.</summary>
+    private void AddSettlementArtifacts(TileCoord coord, WorldSnapshot snapshot)
+    {
+        if (snapshot.Artifacts is not { Count: > 0 } all) return;
+
+        var housed = all
+            .Where(a => !a.IsDestroyed && a.OwnerSettlementTile == coord)
+            .ToList();
+
+        if (housed.Count == 0) return;
+
+        AddLine("--- Artifacts at this settlement ---");
+        foreach (var a in housed)
+            AddLine($"  {a.Name} ({a.Category}) — Q:{a.Quality:F2} — {a.Origin}  [by {a.CreatorName}]");
     }
 
     // Raw 0-255 maps to -50°C … +50°C (100°C span)

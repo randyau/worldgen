@@ -2,9 +2,11 @@ using System.Text.Json;
 using WorldEngine.Sim.Config;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities;
+using WorldEngine.Sim.Entities.Artifacts;
 using WorldEngine.Sim.Entities.Characters;
 using WorldEngine.Sim.Events;
 using WorldEngine.Sim.World;
+using S = WorldEngine.Sim.Simulation.SimRngSalts;
 
 namespace WorldEngine.Sim.Civilizations;
 
@@ -170,6 +172,10 @@ public static partial class CivTracker
                         new[] { attackerEntityId },
                         CivId: civA.Id.Value, SettlementName: target.Name));
 
+                    // Decisive battle: chance to forge an artifact from the victory
+                    TryForgeBattleArtifact(world, pending, targetTile, civA.Id, attackerEntityId, attackerName,
+                        world.CurrentYear, world.CurrentYear * 31 + (int)civA.Id.Value);
+
                     // Conquest if health depleted
                     if (newHealth <= 0)
                     {
@@ -200,6 +206,10 @@ public static partial class CivTracker
                                 civA.Id.Value, previousCivId.Value, conqueredPop)),
                             new[] { attackerEntityId },
                             CivId: civA.Id.Value, SettlementName: target.Name));
+
+                        // Conquest: transfer all artifacts held by the conquered settlement
+                        TransferConquestArtifacts(world, pending, targetTile, civA.Id,
+                            attackerEntityId, attackerName);
 
                         bool anyLeft = world.Settlements.Values.Any(s => s.CivId == previousCivId);
                         if (!anyLeft)
@@ -340,6 +350,11 @@ public static partial class CivTracker
                     ActorId: raider.Id.Value, ActorName: raider.Identity.Name,
                     CivId: raider.Identity.CivId.Value, SettlementName: settlement.Name));
 
+                // Conquest: transfer all artifacts held by the conquered settlement to the raider's civ
+                if (raider.Identity.CivId.IsValid)
+                    TransferConquestArtifacts(world, pending, cmd.SettlementTile, raider.Identity.CivId,
+                        raider.Id.Value, raider.Identity.Name);
+
                 // If the losing civ has no settlements left, it collapses.
                 bool anyLeft = losingCiv != null && losingCiv.SettlementCount > 0;
                 if (!anyLeft)
@@ -366,6 +381,84 @@ public static partial class CivTracker
                 Health         = newHealth,
                 ResourceStores = newStores
             };
+        }
+    }
+
+    // ─── Artifact helpers ─────────────────────────────────────────────────────
+
+    /// <summary>
+    /// On a decisive campaign battle victory, rolls battle_forge_probability to create a new artifact
+    /// owned by the winning settlement tile.
+    /// </summary>
+    private static void TryForgeBattleArtifact(
+        WorldState world, List<PendingEvent> pending,
+        TileCoord victorTile, CivId victorCivId,
+        long attackerEntityId, string attackerName,
+        int year, int uniqueSeed)
+    {
+        var artCfg = world.SimConfig.Artifacts;
+        float forgeRoll = WorldRng.FloatAt(world.WorldSeed, world.CurrentYear,
+            (int)victorCivId.Value, uniqueSeed, S.ArtifactBattleForge);
+        if (forgeRoll >= artCfg.BattleForgeProbability) return;
+
+        // Find the victor's nearest settlement to own the artifact
+        TileCoord ownerTile = victorTile;
+        if (!world.Settlements.ContainsKey(victorTile))
+        {
+            foreach (var (tile, stub) in world.Settlements)
+            {
+                if (stub.CivId == victorCivId) { ownerTile = tile; break; }
+            }
+        }
+
+        float quality = Math.Clamp(0.5f + forgeRoll * 0.5f, 0f, 1f);
+        var cat  = ArtifactCategory.Weapon; // battle-forged artifacts are weapons
+        var name = ArtifactNameGenerator.Generate(world, cat, (int)(attackerEntityId ^ (uniqueSeed & 0xFF)));
+        var artifact = ArtifactRegistry.Create(world, name, cat, year,
+            creatorId:   0,
+            creatorName: attackerName,
+            origin:      "battle",
+            quality:     quality,
+            owner:       ArtifactOwner.OfSettlement(ownerTile));
+
+        var artPayload = JsonSerializer.Serialize(new ArtifactCreatedPayload(
+            artifact.Id.Value, artifact.Name, artifact.Category.ToString(),
+            0, attackerName, "battle", quality));
+        pending.Add(new PendingEvent(EventType.ArtifactCreated, victorTile, null, artPayload,
+            new[] { attackerEntityId },
+            CivId: victorCivId.Value, SettlementName: world.Settlements.TryGetValue(ownerTile, out var vs) ? vs.Name : null));
+    }
+
+    /// <summary>
+    /// Transfers all artifacts owned by a settlement to the conquering civ's settlement at the same tile.
+    /// Emits ArtifactTransferred for each artifact.
+    /// </summary>
+    private static void TransferConquestArtifacts(
+        WorldState world, List<PendingEvent> pending,
+        TileCoord conqueredTile, CivId victorCivId,
+        long attackerEntityId, string attackerName)
+    {
+        var settlementArtifacts = ArtifactRegistry.InSettlement(world, conqueredTile).ToList();
+        if (settlementArtifacts.Count == 0) return;
+
+        // The conqueror now holds this settlement tile — artifacts stay at the tile, ownership unchanged
+        // (settlement already updated to new civ). We just need to record the transfer event.
+        foreach (var artifact in settlementArtifacts)
+        {
+            string fromOwner = artifact.Owner.Describe();
+            // The settlement tile is now the conqueror's — update owner description by re-creating it
+            var newOwner = ArtifactOwner.OfSettlement(conqueredTile);
+            // No need to call SetOwner since tile coord is the same; just emit the transfer event
+            // DECISION: The settlement tile unchanged; ArtifactOwner.SettlementTile still valid.
+            // We emit the event to record the civ change; the physical location stays the same.
+
+            var transPayload = JsonSerializer.Serialize(new ArtifactTransferredPayload(
+                artifact.Id.Value, artifact.Name,
+                fromOwner, newOwner.Describe(), "conquest"));
+            pending.Add(new PendingEvent(EventType.ArtifactTransferred, conqueredTile, null, transPayload,
+                new[] { artifact.Id.Value },
+                ActorId: attackerEntityId, ActorName: attackerName,
+                CivId: victorCivId.Value));
         }
     }
 

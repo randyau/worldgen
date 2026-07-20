@@ -19,6 +19,8 @@ namespace WorldEngine.Sim.Simulation;
 ///  1000–1099 CharacterBehaviorPhase (civ-birth, grief)
 ///  1100–1199 CharacterBehaviorPhase (disease)
 ///  3000–3099 CharacterBehaviorPhase (artwork)
+///  4000–4099 ArtifactNameGenerator (name epithets/nouns — see ArtifactNameGenerator.cs)
+///  5000–5099 Artifact lifecycle — battle forge, heroic-death forge, death inheritance
 /// </summary>
 internal static class SimRngSalts
 {
@@ -59,4 +61,10 @@ internal static class SimRngSalts
 
     // CharacterBehaviorPhase — artwork
     public const int CharArtType         = 3001;
+
+    // Artifact lifecycle — battle/heroic-death forge; death-inheritance roll
+    // 4000–4099 reserved for ArtifactNameGenerator (defined inline in that class)
+    public const int ArtifactBattleForge      = 5000; // decisive battle victory forge roll
+    public const int ArtifactHeroicDeath      = 5001; // legendary character combat-death forge roll
+    public const int ArtifactDeathInheritance = 5002; // per-artifact roll: Lost vs inherited
 }

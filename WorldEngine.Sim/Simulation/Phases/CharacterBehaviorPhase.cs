@@ -3,6 +3,7 @@ using WorldEngine.Sim.Civilizations;
 using WorldEngine.Sim.Config;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities;
+using WorldEngine.Sim.Entities.Artifacts;
 using WorldEngine.Sim.Entities.Characters;
 using WorldEngine.Sim.Events;
 using WorldEngine.Sim.World;
@@ -252,6 +253,12 @@ public sealed class CharacterBehaviorPhase
             new[] { c.Id.Value },
             ActorId: c.Id.Value, ActorName: c.Identity.Name));
 
+        // Artifact inheritance — transfer or lose owned artifacts on death
+        HandleArtifactInheritanceOnDeath(c, world, pending);
+
+        // Heroic-death forging: legendary (high-skill) characters who die in combat may forge an artifact
+        TryHeroicDeathForge(c, cause, world, pending);
+
         // Handle succession when a civ member dies
         if (c.Identity.CivId.IsValid
             && world.Civilizations.TryGetValue(c.Identity.CivId, out var civ))
@@ -341,6 +348,113 @@ public sealed class CharacterBehaviorPhase
                         CivId: civ.Id.Value));
                 }
             }
+        }
+    }
+
+    // ─── Heroic-death artifact forging ───────────────────────────────────────
+
+    /// <summary>
+    /// When a legendary character (high Combat skill) dies in combat, roll HeroicDeathForgeProbability
+    /// to forge an artifact owned by the fallen's settlement (or lost if no settlement).
+    /// </summary>
+    private void TryHeroicDeathForge(
+        Tier1Character c, string cause, WorldState world, List<PendingEvent> pending)
+    {
+        // Only trigger for combat/wound deaths of high-skill characters
+        bool isCombatDeath = cause.Contains("wound") || cause.Contains("killed") || cause.Contains("slain");
+        if (!isCombatDeath) return;
+
+        // DECISION: "legendary" threshold = Combat >= 0.5f (top half of the skill range)
+        if (c.Skills.Combat < 0.5f) return;
+
+        // Use _simCfg (injected at construction) so test overrides take effect
+        var artCfg = _simCfg.Artifacts;
+        float roll = WorldRng.FloatAt(world.WorldSeed, world.CurrentTick,
+            (int)(c.Id.Value & 0xFFFF), (int)(c.Id.Value >> 16), S.ArtifactHeroicDeath);
+        if (roll >= artCfg.HeroicDeathForgeProbability) return;
+
+        // Artifact is owned by the fallen's settlement, or becomes Lost
+        ArtifactOwner owner;
+        if (world.Settlements.ContainsKey(c.Location))
+            owner = ArtifactOwner.OfSettlement(c.Location);
+        else if (c.Identity.CivId.IsValid
+                 && world.Civilizations.TryGetValue(c.Identity.CivId, out var civ3)
+                 && world.Settlements.ContainsKey(civ3.CapitalTile))
+            owner = ArtifactOwner.OfSettlement(civ3.CapitalTile);
+        else
+            owner = ArtifactOwner.Lost;
+
+        float quality = Math.Clamp(0.55f + c.Skills.Combat * 0.4f, 0f, 1f);
+        var cat      = ArtifactCategory.Weapon; // heroic death → weapon artifact
+        var name     = ArtifactNameGenerator.Generate(world, cat, (int)c.Id.Value);
+        var artifact = ArtifactRegistry.Create(world, name, cat, world.CurrentYear,
+            creatorId:   0,
+            creatorName: c.Identity.Name,
+            origin:      "heroic_death",
+            quality:     quality,
+            owner:       owner);
+
+        var artPayload = JsonSerializer.Serialize(new ArtifactCreatedPayload(
+            artifact.Id.Value, artifact.Name, artifact.Category.ToString(),
+            0, c.Identity.Name, "heroic_death", quality));
+        pending.Add(new PendingEvent(EventType.ArtifactCreated, c.Location, null, artPayload,
+            new[] { c.Id.Value },
+            ActorId: c.Id.Value, ActorName: c.Identity.Name,
+            CivId: c.Identity.CivId.IsValid ? c.Identity.CivId.Value : 0));
+    }
+
+    // ─── Artifact inheritance on death ───────────────────────────────────────
+
+    /// <summary>
+    /// For each artifact owned by the deceased character, roll LostOnDeathProbability.
+    /// Failures become Lost; successes transfer to the deceased's home settlement (if any).
+    /// Emits ArtifactTransferred for each artifact affected.
+    /// </summary>
+    private void HandleArtifactInheritanceOnDeath(
+        Tier1Character c, WorldState world, List<PendingEvent> pending)
+    {
+        var ownedArtifacts = ArtifactRegistry.OwnedByCharacter(world, c.Id).ToList();
+        if (ownedArtifacts.Count == 0) return;
+
+        // Determine inheritance settlement: deceased's civ capital, or their current tile if settled
+        TileCoord? settleTile = null;
+        if (world.Settlements.ContainsKey(c.Location))
+            settleTile = c.Location;
+        else if (c.Identity.CivId.IsValid
+                 && world.Civilizations.TryGetValue(c.Identity.CivId, out var civ2)
+                 && world.Settlements.ContainsKey(civ2.CapitalTile))
+            settleTile = civ2.CapitalTile;
+
+        // Use _simCfg (injected at construction) so test overrides take effect
+        var artCfg = _simCfg.Artifacts;
+        for (int i = 0; i < ownedArtifacts.Count; i++)
+        {
+            var artifact = ownedArtifacts[i];
+            float lossRoll = WorldRng.FloatAt(world.WorldSeed, world.CurrentTick,
+                (int)(c.Id.Value & 0xFFFF), i, S.ArtifactDeathInheritance);
+
+            string fromOwner = artifact.Owner.Describe();
+            ArtifactOwner newOwner;
+            string toOwnerDesc;
+
+            if (lossRoll < artCfg.LostOnDeathProbability || settleTile is null)
+            {
+                newOwner    = ArtifactOwner.Lost;
+                toOwnerDesc = ArtifactOwner.Lost.Describe();
+            }
+            else
+            {
+                newOwner    = ArtifactOwner.OfSettlement(settleTile.Value);
+                toOwnerDesc = newOwner.Describe();
+            }
+
+            ArtifactRegistry.SetOwner(world, artifact.Id, newOwner);
+
+            var transPayload = JsonSerializer.Serialize(new ArtifactTransferredPayload(
+                artifact.Id.Value, artifact.Name, fromOwner, toOwnerDesc, "inheritance"));
+            pending.Add(new PendingEvent(EventType.ArtifactTransferred, c.Location, null, transPayload,
+                new[] { artifact.Id.Value },
+                ActorId: c.Id.Value, ActorName: c.Identity.Name));
         }
     }
 
