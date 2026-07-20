@@ -99,6 +99,7 @@ public sealed class PhaseRunner
             KnowledgePropagationPhase.Execute(world);
             CivTracker.RunAnnualDiplomacy(world, pending);
             pending.AddRange(_territoryPhase.Execute(world));
+            ArtifactDecayPhase.Execute(world, pending, _config.Artifacts);
         }
         RunPhaseStub(world, SimPhase.ConflictResolution);
         RunEventGeneration(world, pending);

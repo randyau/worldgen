@@ -67,4 +67,5 @@ internal static class SimRngSalts
     public const int ArtifactBattleForge      = 5000; // decisive battle victory forge roll
     public const int ArtifactHeroicDeath      = 5001; // legendary character combat-death forge roll
     public const int ArtifactDeathInheritance = 5002; // per-artifact roll: Lost vs inherited
+    public const int ArtifactDecay            = 5003; // per-artifact annual decay (lost-to-history) roll
 }

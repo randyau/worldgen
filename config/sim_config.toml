@@ -940,3 +940,7 @@ lost_on_death_probability     = 0.35
 covet_ambition_threshold      = 0.55
 # Maximum simultaneous covet-artifact goals per character.
 covet_max_goals               = 2
+# Annual probability a Lost (ownerless) artifact is destroyed — primary sink bounding accumulation.
+lost_artifact_annual_decay    = 0.008
+# Annual probability an owned artifact is destroyed by accident/disaster/war (owners protect relics).
+owned_artifact_annual_decay   = 0.001

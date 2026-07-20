@@ -38,4 +38,17 @@ public sealed class ArtifactConfig
     /// Prevents obsessively coveting every artifact in the world.
     /// </summary>
     public int   CovetMaxGoals               { get; set; } = 2;
+
+    /// <summary>
+    /// Annual probability that a Lost (ownerless) artifact is destroyed — lost to history,
+    /// crumbled to dust, buried in a forgotten ruin. This is the primary destruction sink that
+    /// bounds long-term artifact accumulation; Lost items decay fastest as no one safeguards them.
+    /// </summary>
+    public float LostArtifactAnnualDecay      { get; set; } = 0.008f;
+
+    /// <summary>
+    /// Annual probability that an owned (character- or settlement-held) artifact is destroyed
+    /// by accident, disaster, or war. Much lower than the Lost rate — owners protect their relics.
+    /// </summary>
+    public float OwnedArtifactAnnualDecay     { get; set; } = 0.001f;
 }

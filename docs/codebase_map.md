@@ -120,6 +120,7 @@ One-line description of every non-trivial source file. Check here before running
 - `SimLoop.cs` — Background simulation thread. Ticks WorldState, builds snapshots, commits to StateCache. Only the background thread touches WorldState. UI thread only reads StateCache.
 
 ## WorldEngine.Sim/Simulation/Phases/
+- `ArtifactDecayPhase.cs` — Annual destruction sink for artifacts. Without a sink, the artifact stock is monotonic (created but never destroyed) and grows unbounded over thousand-year histories. Each year every living artifact rolls a small destruction chance — high for Lost (ownerless) items that no one safeguards, very low for owned items. This drives the stock toward an equilibrium of roughly (annual creation rate ÷ decay rate) rather than growing forever. Runs on annual ticks only; emits
 - `CharacterBehaviorPhase.cs` — Phase 5 — updates all Tier 1 characters each tick: needs decay, goal management, action selection (utility scoring), lifecycle (aging, death), command resolution (settlement, war, etc.).
 - `EntityBehaviorPhase.cs` — SimPhase 4 — EntityBehavior. Each season tick: update beast needs/lifecycle, emit commands, resolve them. Beast emergence schedule is checked annually.
 - `EnvironmentalPhase.cs` — Phase 1 — Environmental: seasonal climate, annual drift, disaster system, resource dynamics, sea level changes. Direct mutator — never called from UI thread.

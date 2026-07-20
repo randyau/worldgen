@@ -135,10 +135,10 @@
 
   [year_300.living_artifacts]
   min = 0
-  max = 10000
-  rationale = "PROVISIONAL — no artifact hooks wired yet (W1 pending). Expected 0 at year 300 pre-W1. Upper bound is a generous overflow guard; tighten after calibration sweep."
+  max = 8
+  rationale = "Calibrated 2026-07-20 (seeds 42/777/9999, 1000y, with ArtifactDecayPhase). Observed year-300 envelope 2–4; max 8 (~2x) trips on runaway accumulation (e.g. decay disabled — no-decay runs reach ~10 at year 300 and ~18 by year 1000). min 0 tolerates slow-start seeds."
 
   [year_300.artifacts_per_settlement]
   min = 0.0
-  max = 500.0
-  rationale = "PROVISIONAL — headline overflow indicator: living artifacts / settlement count. Set generously wide until W1/W2 are merged and a calibration sweep run. Tighten to observed ±40%."
+  max = 1.5
+  rationale = "Calibrated 2026-07-20. Headline overflow indicator (living artifacts / settlements). Observed year-300 envelope 0.20–0.44; max 1.5 (~3x) catches structural over-accumulation while allowing seed variance. Decay keeps year-1000 near 0.7; without decay it exceeds 1.5 and climbs unbounded."

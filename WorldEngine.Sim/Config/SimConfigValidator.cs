@@ -177,6 +177,8 @@ public static class SimConfigValidator
         CheckProbability("artifacts.heroic_death_forge_probability", a.HeroicDeathForgeProbability, errors);
         CheckProbability("artifacts.lost_on_death_probability",      a.LostOnDeathProbability,      errors);
         CheckProbability("artifacts.covet_ambition_threshold",       a.CovetAmbitionThreshold,      errors);
+        CheckProbability("artifacts.lost_artifact_annual_decay",     a.LostArtifactAnnualDecay,     errors);
+        CheckProbability("artifacts.owned_artifact_annual_decay",    a.OwnedArtifactAnnualDecay,    errors);
         if (a.CovetMaxGoals < 1)
             errors.Add($"[artifacts] covet_max_goals must be ≥ 1 (got {a.CovetMaxGoals})");
     }

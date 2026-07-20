@@ -355,6 +355,8 @@ Edit values in `sim_config.toml`; all keys live there without recompiling.
 | `lost_on_death_probability` | `0.35` | `SimConfig.Artifacts.LostOnDeathProbability` | Probability artifact becomes Lost on owner death |
 | `covet_ambition_threshold` | `0.55` | `SimConfig.Artifacts.CovetAmbitionThreshold` | Minimum Ambition to form covet-artifact goals |
 | `covet_max_goals` | `2` | `SimConfig.Artifacts.CovetMaxGoals` | Max simultaneous covet-artifact goals per character |
+| `lost_artifact_annual_decay` | `0.008` | `SimConfig.Artifacts.LostArtifactAnnualDecay` | Annual prob a Lost artifact is destroyed (primary accumulation sink) |
+| `owned_artifact_annual_decay` | `0.001` | `SimConfig.Artifacts.OwnedArtifactAnnualDecay` | Annual prob an owned artifact is destroyed (accident/disaster/war) |
 
 ## `[religion]` {#religion}
 

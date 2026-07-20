@@ -380,6 +380,8 @@ heroic_death_forge_probability = 0.10  # Chance a legendary character's combat d
 lost_on_death_probability   = 0.35   # Probability artifact becomes Lost on owner death
 covet_ambition_threshold    = 0.55   # Minimum Ambition to form covet-artifact goals
 covet_max_goals             = 2      # Max simultaneous covet-artifact goals per character
+lost_artifact_annual_decay  = 0.008  # Annual prob a Lost artifact is destroyed (primary accumulation sink)
+owned_artifact_annual_decay = 0.001  # Annual prob an owned artifact is destroyed (accident/disaster/war)
 
 # =============================================================================
 # RELIGION

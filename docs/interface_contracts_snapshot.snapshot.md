@@ -4,9 +4,22 @@
 
 ## WorldSnapshot
 **File:** `WorldEngine.Sim/World/WorldSnapshot.cs:66`  
-**Kind:** `sealed record`
+**Kind:** `class`
 
 ```csharp
+public sealed record CharacterWatchSnapshot(
+    EntityId   Id,
+    string     Name,
+    string     Epithet,
+    string     CivName,
+    TileCoord  Location,
+    string     BiomeName,
+    int        AgeSeasons,
+    float      Wellbeing,
+    NeedsVector   Needs,
+    PersonalityVector Personality,
+    IReadOnlyList<GoalWatchEntry> Goals);
+
 public sealed record WorldSnapshot(
     // Time
     int CurrentYear,
@@ -52,8 +65,13 @@ public sealed record WorldSnapshot(
 
     // Save state (M3 Phase 3.6) — used by UI to show "Saving..." overlay
     bool IsSaving     = false,
-    long LastSaveTick = -1
+    long LastSaveTick = -1,
+
+    // Artifact system (M5) — all artifacts known to the world at snapshot time
+    // Includes destroyed artifacts so the UI can display historical context if needed.
+    IReadOnlyList<ArtifactSnapshot>? Artifacts = null
 );
+}
 ```
 
 ## SettlementStub
@@ -89,9 +107,22 @@ public sealed record SettlementStub(
 
 ## SettlementSnapshot
 **File:** `WorldEngine.Sim/World/WorldSnapshot.cs:27`  
-**Kind:** `sealed record`
+**Kind:** `class`
 
 ```csharp
+public sealed record ArtifactSnapshot(
+    long      Id,
+    string    Name,
+    string    Category,
+    string    Origin,
+    float     Quality,
+    int       CreatedYear,
+    string    CreatorName,
+    string    OwnerDesc,
+    bool      IsDestroyed,
+    long      OwnerCharacterId,
+    TileCoord OwnerSettlementTile);
+
 public sealed record SettlementSnapshot(
     TileCoord Coord,
     string    Name,
@@ -103,6 +134,74 @@ public sealed record SettlementSnapshot(
     int       ConqueredYear      = 0,
     int       ConqueredFromCivId = 0,
     IReadOnlyDictionary<string, float>? ResourceStores = null);
+
+public sealed record GoalWatchEntry(string Description, float Priority);
+
+public sealed record CharacterWatchSnapshot(
+    EntityId   Id,
+    string     Name,
+    string     Epithet,
+    string     CivName,
+    TileCoord  Location,
+    string     BiomeName,
+    int        AgeSeasons,
+    float      Wellbeing,
+    NeedsVector   Needs,
+    PersonalityVector Personality,
+    IReadOnlyList<GoalWatchEntry> Goals);
+
+public sealed record WorldSnapshot(
+    // Time
+    int CurrentYear,
+    Season CurrentSeason,
+    SimSpeed CurrentSpeed,
+    bool IsPaused,
+    long TicksPerSecond,
+
+    // Map — flat array indexed by (y * WorldTileWidth + x); X wraps, Y clamps
+    TileDisplayData[] AllTiles,
+    OverlayType ActiveOverlay,
+    int WorldTileWidth,
+    int WorldTileHeight,
+
+    // Event log
+    IReadOnlyList<SimEvent> RecentEvents,
+
+    // Tile inspector (null if no tile selected)
+    TileInspectorData? InspectedTile,
+
+    // Entities — flat lookup by EntityId; used by inspector and map renderer
+    IReadOnlyDictionary<EntityId, EntitySnapshot> EntitySnapshots,
+
+    // Settlements — keyed by tile coord; used by inspector and map renderer
+    IReadOnlyDictionary<TileCoord, SettlementSnapshot> Settlements,
+
+    // Ruins — keyed by tile coord; displayed in inspector and map renderer
+    IReadOnlyDictionary<TileCoord, RuinRecord> Ruins,
+
+    // Territory and improvements (M3 Phase 3.0)
+    // TerritoryMap: tile → (owning city tile, civ id). Absent = unclaimed.
+    IReadOnlyDictionary<TileCoord, TerritorySnapshot> TerritoryMap,
+    // ImprovementMap: tile → improvement snapshot. Absent = no improvement.
+    IReadOnlyDictionary<TileCoord, ImprovementSnapshot> ImprovementMap,
+
+    // World-level drift parameters for UI status display
+    float GlobalTemperatureAnomaly,
+    float GlobalPrecipitationMultiplier,
+    float StormCorridorNormalizedLat,
+
+    // Character watch panel (M3 Phase 3.4) — null when no character is being watched
+    CharacterWatchSnapshot? WatchedCharacter = null,
+
+    // Save state (M3 Phase 3.6) — used by UI to show "Saving..." overlay
+    bool IsSaving     = false,
+    long LastSaveTick = -1,
+
+    // Artifact system (M5) — all artifacts known to the world at snapshot time
+    // Includes destroyed artifacts so the UI can display historical context if needed.
+    IReadOnlyList<ArtifactSnapshot>? Artifacts = null
+);
+}
 ```
 
 ## Civilization
@@ -235,9 +334,21 @@ public sealed record ImprovementSnapshot(
 
 ## CharacterWatchSnapshot
 **File:** `WorldEngine.Sim/World/WorldSnapshot.cs:49`  
-**Kind:** `sealed record`
+**Kind:** `class`
 
 ```csharp
+string    Name,
+    string    CivName,
+    int       Population,
+    int       Health,
+    int       FoundedYear,
+    IReadOnlyDictionary<string, float>? ResourceLedger = null,
+    int       ConqueredYear      = 0,
+    int       ConqueredFromCivId = 0,
+    IReadOnlyDictionary<string, float>? ResourceStores = null);
+
+public sealed record GoalWatchEntry(string Description, float Priority);
+
 public sealed record CharacterWatchSnapshot(
     EntityId   Id,
     string     Name,
@@ -250,6 +361,59 @@ public sealed record CharacterWatchSnapshot(
     NeedsVector   Needs,
     PersonalityVector Personality,
     IReadOnlyList<GoalWatchEntry> Goals);
+
+public sealed record WorldSnapshot(
+    // Time
+    int CurrentYear,
+    Season CurrentSeason,
+    SimSpeed CurrentSpeed,
+    bool IsPaused,
+    long TicksPerSecond,
+
+    // Map — flat array indexed by (y * WorldTileWidth + x); X wraps, Y clamps
+    TileDisplayData[] AllTiles,
+    OverlayType ActiveOverlay,
+    int WorldTileWidth,
+    int WorldTileHeight,
+
+    // Event log
+    IReadOnlyList<SimEvent> RecentEvents,
+
+    // Tile inspector (null if no tile selected)
+    TileInspectorData? InspectedTile,
+
+    // Entities — flat lookup by EntityId; used by inspector and map renderer
+    IReadOnlyDictionary<EntityId, EntitySnapshot> EntitySnapshots,
+
+    // Settlements — keyed by tile coord; used by inspector and map renderer
+    IReadOnlyDictionary<TileCoord, SettlementSnapshot> Settlements,
+
+    // Ruins — keyed by tile coord; displayed in inspector and map renderer
+    IReadOnlyDictionary<TileCoord, RuinRecord> Ruins,
+
+    // Territory and improvements (M3 Phase 3.0)
+    // TerritoryMap: tile → (owning city tile, civ id). Absent = unclaimed.
+    IReadOnlyDictionary<TileCoord, TerritorySnapshot> TerritoryMap,
+    // ImprovementMap: tile → improvement snapshot. Absent = no improvement.
+    IReadOnlyDictionary<TileCoord, ImprovementSnapshot> ImprovementMap,
+
+    // World-level drift parameters for UI status display
+    float GlobalTemperatureAnomaly,
+    float GlobalPrecipitationMultiplier,
+    float StormCorridorNormalizedLat,
+
+    // Character watch panel (M3 Phase 3.4) — null when no character is being watched
+    CharacterWatchSnapshot? WatchedCharacter = null,
+
+    // Save state (M3 Phase 3.6) — used by UI to show "Saving..." overlay
+    bool IsSaving     = false,
+    long LastSaveTick = -1,
+
+    // Artifact system (M5) — all artifacts known to the world at snapshot time
+    // Includes destroyed artifacts so the UI can display historical context if needed.
+    IReadOnlyList<ArtifactSnapshot>? Artifacts = null
+);
+}
 ```
 
-<!-- content-hash: 4ff2e9f6be149634 -->
+<!-- content-hash: d46b4a1dab9e7ddd -->
