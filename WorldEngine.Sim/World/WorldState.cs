@@ -2,6 +2,7 @@ using WorldEngine.Sim.Civilizations;
 using WorldEngine.Sim.Config;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities;
+using WorldEngine.Sim.Entities.Artifacts;
 using WorldEngine.Sim.Entities.Characters;
 using WorldEngine.Sim.Tiles;
 
@@ -56,6 +57,8 @@ public sealed class WorldState : IWorldStateReadOnly
     public Dictionary<TileCoord, TileCoord>       TerritoryMap    { get; } = new();
     /// <summary>Tile → improvement. One improvement per tile maximum.</summary>
     public Dictionary<TileCoord, TileImprovement> ImprovementMap  { get; } = new();
+    /// <summary>All legendary artifacts ever created in this world, keyed by artifact id.</summary>
+    public Dictionary<ArtifactId, Artifact>        Artifacts       { get; } = new();
     public RelationshipGraph                       Relationships   { get; } = new();
     public int NextCivId { get; set; } = 1;
 

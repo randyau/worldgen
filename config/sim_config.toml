@@ -18,8 +18,10 @@
 #   [sim_loop.speed] (keys moved to [sim_loop] with corrected names),
 #   [sim_loop.persistence] (key moved to [sim_loop]).
 # Future-intent sections moved to docs/config_future.md:
-#   [admin_distance], [spatial_buffer], [specialists], [artifacts],
+#   [admin_distance], [spatial_buffer], [specialists],
 #   [cultural_modifiers], [civilization.settler_seeding].
+# Implemented sections (moved from config_future.md to here):
+#   [artifacts] — M5 W0 foundation (2026-07-20).
 # Runtime fertility keys from dead [resources] bound via [world_gen.resources].
 
 # =============================================================================
@@ -914,3 +916,23 @@ tundra              = 0.5   # sparse cover; cold limits predator density
 desert              = 0.4   # near-barren; limited wildlife population to threaten settlers
 high_mountain       = 0.3   # alpine — too inhospitable for most large predators
 volcanic            = 0.4   # hostile terrain limits wildlife population
+
+# =============================================================================
+# ARTIFACTS
+# =============================================================================
+# Moved from docs/config_future.md (2026-07-20 — M5 W0 foundation).
+# Controls legendary item generation probabilities and ownership lifecycle.
+
+[artifacts]
+# At max skill, probability per crafting task that a legendary artifact is produced.
+base_generation_probability   = 0.05
+# Quality score above which a crafting performance is considered notable for artifact rolls.
+notable_performance_threshold = 0.75
+# Artifact quality score above which ambitious characters will covet the item.
+covet_threshold               = 0.6
+# Chance a decisive battle forges a legendary artifact.
+battle_forge_probability      = 0.03
+# Chance a legendary character's combat death forges a legacy artifact.
+heroic_death_forge_probability= 0.10
+# Probability an artifact becomes Lost (vs. inherited by settlement) on owner death.
+lost_on_death_probability     = 0.35

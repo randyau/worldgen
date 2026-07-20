@@ -230,3 +230,15 @@ internal sealed record CivSplinteredPayload(
     int    PopulationTransferred,
     float  LeaderUnrest,
     int    TileX, int TileY);
+
+// ─── M5 Artifacts (W0 foundation) ────────────────────────────────────────────
+
+internal sealed record ArtifactCreatedPayload(
+    long ArtifactId, string ArtifactName, string Category,
+    long CreatorId, string CreatorName, string Origin, float Quality);
+
+internal sealed record ArtifactTransferredPayload(
+    long ArtifactId, string ArtifactName, string FromOwner, string ToOwner, string Reason);
+
+internal sealed record ArtifactDestroyedPayload(
+    long ArtifactId, string ArtifactName, string Cause);

@@ -20,6 +20,7 @@ public static class SimConfigValidator
         ValidateSettlement(cfg.Settlement, errors);
         ValidateReligion(cfg.Religion, errors);
         ValidateWar(cfg.War, errors);
+        ValidateArtifacts(cfg.Artifacts, errors);
 
         if (errors.Count > 0)
             throw new SimConfigValidationException(errors);
@@ -161,6 +162,20 @@ public static class SimConfigValidator
             errors.Add($"[war] max_war_duration_years must be ≥ 1 (got {w.MaxWarDurationYears})");
         if (w.PeaceCooldownYears < 0)
             errors.Add($"[war] peace_cooldown_years must be ≥ 0 (got {w.PeaceCooldownYears})");
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // [artifacts]
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private static void ValidateArtifacts(ArtifactConfig a, List<string> errors)
+    {
+        CheckProbability("artifacts.base_generation_probability",    a.BaseGenerationProbability,   errors);
+        CheckProbability("artifacts.notable_performance_threshold",  a.NotablePerformanceThreshold, errors);
+        CheckProbability("artifacts.covet_threshold",                a.CovetThreshold,              errors);
+        CheckProbability("artifacts.battle_forge_probability",       a.BattleForgeProbability,      errors);
+        CheckProbability("artifacts.heroic_death_forge_probability", a.HeroicDeathForgeProbability, errors);
+        CheckProbability("artifacts.lost_on_death_probability",      a.LostOnDeathProbability,      errors);
     }
 
     // ─────────────────────────────────────────────────────────────────────────

@@ -21,6 +21,7 @@ One-line description of every non-trivial source file. Check here before running
 - `AncestryConfig.cs` — All data for one ancestry, loaded from config/ancestries.toml. Personality and aptitude fields are bias offsets added to the Gaussian mean (base 0.5).
 - `AncestryLoader.cs` — Loads ancestries.toml into AncestryConfig instances.
 - `AncestryRegistry.cs` — Loaded set of all ancestry configs. Accessible via world.SimConfig.AncestryRegistry. Provides biome-weighted ancestry sampling and cross-ancestry trust lookups.
+- `ArtifactConfig.cs` — Artifact generation and ownership constants. Loaded from the [artifacts] section of sim_config.toml.
 - `BeastsSimConfig.cs` — Beast lifecycle constants from the [beasts] section of sim_config.toml. Species-specific values (health, strength, etc.) live in config/beasts.toml.
 - `BiomeThresholdConfig.cs` — Elevation, temperature, and moisture thresholds for biome classification.
 - `CharacterNamesConfig.cs` — Name pools for procedurally naming characters (first and last names).
@@ -62,6 +63,11 @@ One-line description of every non-trivial source file. Check here before running
 - `EntitySnapshot.cs` — Immutable UI-facing summary of one entity. Read by the UI thread from WorldSnapshot. Heavy entity data stays on the sim thread inside EntityRegistry.
 - `IEntity.cs` — The core simulation entity interface. Every simulated object implements this. Entities NEVER mutate world state directly. They emit ICommand instances during the EMIT step which are resolved by CommandResolver in the RESOLVE step.
 - `SimEntity.cs` — Abstract base for all named, tracked simulation entities. Holds the fields shared across Tier1Character, Tier2Character, and LegendaryBeast — Id, Location, lifecycle state, and health/aging — so subclasses own only their tier-specific behaviour.
+
+## WorldEngine.Sim/Entities/Artifacts/
+- `Artifact.cs` — Category of legendary item — drives name generation and narrative significance.
+- `ArtifactNameGenerator.cs` — Deterministic legendary-item name generator seeded via WorldRng. Same world seed + same invocation parameters produce identical names. Style: "<Epithet> <Noun>" — e.g. "Dawnbreaker", "The Sundered Crown".
+- `ArtifactRegistry.cs` — Static operations helper for the artifact registry on
 
 ## WorldEngine.Sim/Entities/Beasts/
 - `BeastCatalog.cs` — Queryable, in-memory view of the beast species catalog loaded from config/beasts.toml.

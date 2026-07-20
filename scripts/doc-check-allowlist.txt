@@ -24,3 +24,6 @@ publish\win-x64\config\sim_config.toml
 
 # harsh_world.toml — mentioned in tuning doc; profile was never created
 harsh_world.toml
+
+# M5 W3 Snapshot type — declared in phase doc, implemented in a later worker
+ArtifactSnapshot

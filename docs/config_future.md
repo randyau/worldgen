@@ -124,21 +124,6 @@ reputation_spread_hops      = 2      # How many relationship hops reputation spr
 
 ---
 
-## Artifacts
-
-Crafting artifact generation probabilities. Needed when the artifact/item system is
-implemented (V2 roadmap).
-
-```toml
-[artifacts]
-# Artifact generation (crafting specialists)
-base_generation_probability = 0.05   # At max skill, 5% chance per crafting task
-notable_performance_threshold = 0.75 # Quality above which a performance is notable
-covet_threshold             = 0.6    # Artifact property score above which NPCs covet it
-```
-
----
-
 ## Cultural Modifiers
 
 Persistent regional modifiers (animosity, fear, reverence) that accumulate from events and

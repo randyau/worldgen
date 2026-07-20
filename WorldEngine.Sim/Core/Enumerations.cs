@@ -172,6 +172,7 @@ public enum EventType
     // M3+ artifacts / religion (6000+/4000+ ranges reserved)
     ArtifactCreated         = 6001,
     ArtifactDestroyed       = 6002,
+    ArtifactTransferred     = 6003,  // ownership changed: inheritance, conquest, or claim
     ReligionFounded         = 4003,
     ReligionExtinct         = 4004,
     GodModeDisasterTriggered    = 9001,
@@ -242,6 +243,7 @@ public static class VerbClassification
         EventType.ArtisanCrafted          => VerbClass.Creation,
         EventType.ArtifactCreated         => VerbClass.Creation,
         EventType.ArtifactDestroyed       => VerbClass.Destruction,
+        EventType.ArtifactTransferred     => VerbClass.Transfer,
         EventType.ReligionFounded         => VerbClass.Creation,
         EventType.ReligionExtinct         => VerbClass.Destruction,
         EventType.GodModeDisasterTriggered    => VerbClass.Destruction,

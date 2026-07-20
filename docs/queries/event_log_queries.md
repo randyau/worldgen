@@ -58,7 +58,8 @@ The `Type` column stores integer values. Use these constants in WHERE clauses:
   3307 = ArtisanCrafted          
 
 -- Artifact (6000–6999)
-  6001 = ArtifactCreated      6002 = ArtifactDestroyed  
+  6001 = ArtifactCreated        6002 = ArtifactDestroyed    
+  6003 = ArtifactTransferred  
 
 -- Artifacts/Religion (4000–4999)
   4003 = ReligionFounded    4004 = ReligionExtinct  
