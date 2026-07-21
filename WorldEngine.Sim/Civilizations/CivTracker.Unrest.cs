@@ -209,7 +209,7 @@ public static partial class CivTracker
         parent.BorderTension[newCivId]  = cfg.SplinterInitialTension;
 
         // ── Events ────────────────────────────────────────────────────────────
-        FireCivFounded(newCiv, leader, world, pending);
+        FireCivFounded(newCiv, leader, world, pending, "Splinter", parent.Id.Value, parent.Name);
         pending.Add(new PendingEvent(EventType.CivSplintered, leadTile, null,
             JsonSerializer.Serialize(new CivSplinteredPayload(
                 parent.Id.Value, parent.Name,

@@ -117,6 +117,15 @@ public sealed class CivHistoryPanel : IPanel
             : $"Founded Year {summary.FoundedYear}  |  Active";
         AddLine(status, Color.LightGray);
 
+        string originLine = summary.FoundingOrigin switch
+        {
+            "Splinter" when summary.ParentCivName is not null =>
+                $"Origin: split from {summary.ParentCivName}",
+            "Splinter" => "Origin: civil war / secession",
+            _ => "Origin: nomads settled"
+        };
+        AddLine(originLine, Color.DarkGray);
+
         if (summary.DominantAncestry is not null)
         {
             AddLine($"Dominant ancestry: {summary.DominantAncestry}", Color.LightGray);

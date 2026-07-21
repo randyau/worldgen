@@ -299,7 +299,10 @@ public sealed class HistoryQueryService : IHistoryQuery
         DominantAncestry:   r.DominantAncestry,
         CulturalTraits:     ParseStringArray(r.CulturalTraits),
         FirstRulerName:     r.FirstRulerName,
-        LastRulerName:      r.LastRulerName
+        LastRulerName:      r.LastRulerName,
+        FoundingOrigin:     r.FoundingOrigin,
+        ParentCivId:        r.ParentCivId,
+        ParentCivName:      r.ParentCivName
     );
 
     private static CharacterSummary MapCharSummary(CharacterSummaryRow r) => new(
@@ -420,6 +423,9 @@ public sealed class HistoryQueryService : IHistoryQuery
         public string? CulturalTraits      { get; init; }
         public string? FirstRulerName      { get; init; }
         public string? LastRulerName       { get; init; }
+        public string  FoundingOrigin      { get; init; } = "NomadsSettled";
+        public long?   ParentCivId         { get; init; }
+        public string? ParentCivName       { get; init; }
     }
 
     private sealed class CharacterSummaryRow

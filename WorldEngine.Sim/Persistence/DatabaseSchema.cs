@@ -116,7 +116,10 @@ public static class DatabaseSchema
             DominantAncestry    TEXT,
             CulturalTraits      TEXT,
             FirstRulerName      TEXT,
-            LastRulerName       TEXT
+            LastRulerName       TEXT,
+            FoundingOrigin      TEXT,
+            ParentCivId         INTEGER,
+            ParentCivName       TEXT
         );
         """;
 

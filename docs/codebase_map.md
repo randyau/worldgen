@@ -193,7 +193,6 @@ One-line description of every non-trivial source file. Check here before running
 
 ## WorldEngine.UI/Rendering/
 - `Camera2D.cs` — Pan/zoom camera for the tile map.
-- `OverlayLegend.cs` — SpriteBatch-drawn legend for the active overlay type, displayed in the lower-left corner of the map area. Shows a gradient bar for gradient overlays (Elevation, Temperature, Moisture, MagicIntensity) or a column of color swatches for discrete overlays (Biome, Resources). Territory overlay is skipped (would need live civ data).
 - `OverlayRenderer.cs` — Per-tile color for each OverlayType (Biome/Elevation/Temp/Moisture/Resources/Magic/Territory).
 - `TileMapRenderer.cs` — Draws tiles + entity/settlement/ruin markers; M3.4: territory civ-color tint + improvement icons.
 

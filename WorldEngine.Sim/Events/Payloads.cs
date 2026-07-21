@@ -66,7 +66,9 @@ internal sealed record BattlePayload(
 // ─── Settlement / civilization ────────────────────────────────────────────────
 
 internal sealed record CivFoundedPayload(
-    long CivId, string CivName, long FounderId, string FounderName);
+    long CivId, string CivName, long FounderId, string FounderName,
+    string FoundingOrigin = "NomadsSettled",
+    long? ParentCivId = null, string? ParentCivName = null);
 
 internal sealed record CivCollapsedPayload(
     long CivId, string? Reason = null);

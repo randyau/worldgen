@@ -48,7 +48,8 @@ public static class SummaryBuilder
             "SELECT ActorId, Year, PayloadJson FROM Events WHERE Type = @t",
             new { t = CharacterDied })
             .Where(r => r.ActorId.HasValue)
-            .ToDictionary(r => r.ActorId!.Value, r => r);
+            .GroupBy(r => r.ActorId!.Value)
+            .ToDictionary(g => g.Key, g => g.OrderByDescending(r => r.Year).First());
 
         var warCountByActorId = conn.Query<(long ActorId, int Count)>(
             "SELECT ActorId, COUNT(*) AS Count FROM Events WHERE Type = @t AND ActorId IS NOT NULL GROUP BY ActorId",
@@ -333,14 +334,20 @@ public static class SummaryBuilder
             if (row.CivId is null) continue;
             long civId = row.CivId.Value;
 
-            string  civName      = "";
-            string? firstRuler   = null;
+            string  civName       = "";
+            string? firstRuler    = null;
+            string  foundingOrigin = "NomadsSettled";
+            long?   parentCivId   = null;
+            string? parentCivName = null;
             try
             {
                 using var doc = JsonDocument.Parse(row.PayloadJson ?? "{}");
                 var root = doc.RootElement;
-                if (root.TryGetProperty("CivName",    out var cn)) civName    = cn.GetString() ?? "";
-                if (root.TryGetProperty("FounderName", out var fn)) firstRuler = fn.GetString();
+                if (root.TryGetProperty("CivName",      out var cn)) civName       = cn.GetString() ?? "";
+                if (root.TryGetProperty("FounderName",  out var fn)) firstRuler    = fn.GetString();
+                if (root.TryGetProperty("FoundingOrigin", out var fo)) foundingOrigin = fo.GetString() ?? "NomadsSettled";
+                if (root.TryGetProperty("ParentCivId",  out var pi) && pi.ValueKind == JsonValueKind.Number) parentCivId = pi.GetInt64();
+                if (root.TryGetProperty("ParentCivName", out var pn)) parentCivName = pn.GetString();
             }
             catch (JsonException) { /* skip */ }
 
@@ -351,11 +358,13 @@ public static class SummaryBuilder
                 INSERT OR REPLACE INTO CivSummaries
                     (CivId, Name, FoundedYear, CollapseYear, IsCollapsed,
                      PeakSettlements, TotalRulers, TotalWarsInitiated, TotalWarsSuffered,
-                     TotalYearsAtWar, DominantAncestry, CulturalTraits, FirstRulerName, LastRulerName)
+                     TotalYearsAtWar, DominantAncestry, CulturalTraits, FirstRulerName, LastRulerName,
+                     FoundingOrigin, ParentCivId, ParentCivName)
                 VALUES
                     (@CivId, @Name, @FoundedYear, @CollapseYear, @IsCollapsed,
                      @PeakSettlements, @TotalRulers, @TotalWarsInitiated, @TotalWarsSuffered,
-                     @TotalYearsAtWar, @DominantAncestry, @CulturalTraits, @FirstRulerName, @LastRulerName)
+                     @TotalYearsAtWar, @DominantAncestry, @CulturalTraits, @FirstRulerName, @LastRulerName,
+                     @FoundingOrigin, @ParentCivId, @ParentCivName)
                 """, new
             {
                 CivId              = civId,
@@ -373,7 +382,10 @@ public static class SummaryBuilder
                                          ? System.Text.Json.JsonSerializer.Serialize(traits)
                                          : "[]",
                 FirstRulerName     = firstRuler,
-                LastRulerName      = lastRuler.TryGetValue(civId, out string? lr) ? lr : firstRuler
+                LastRulerName      = lastRuler.TryGetValue(civId, out string? lr) ? lr : firstRuler,
+                FoundingOrigin     = foundingOrigin,
+                ParentCivId        = parentCivId,
+                ParentCivName      = parentCivName
             }, tx);
         }
         tx.Commit();

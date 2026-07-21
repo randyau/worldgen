@@ -15,10 +15,12 @@ public static partial class CivTracker
     private const int SaltFertilityVariance = 5003;
 
     private static void FireCivFounded(
-        Civilization civ, Tier1Character founder, WorldState world, List<PendingEvent> pending)
+        Civilization civ, Tier1Character founder, WorldState world, List<PendingEvent> pending,
+        string origin = "NomadsSettled", long? parentCivId = null, string? parentCivName = null)
     {
         var payload = JsonSerializer.Serialize(new CivFoundedPayload(
-            civ.Id.Value, civ.Name, founder.Id.Value, founder.Identity.Name));
+            civ.Id.Value, civ.Name, founder.Id.Value, founder.Identity.Name,
+            origin, parentCivId, parentCivName));
         pending.Add(new PendingEvent(EventType.CivilizationFounded, civ.CapitalTile, null, payload,
             new[] { founder.Id.Value },
             ActorId: founder.Id.Value, ActorName: founder.Identity.Name, CivId: civ.Id.Value));

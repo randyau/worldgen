@@ -35,7 +35,10 @@ public sealed record CivSummary(
     string? DominantAncestry,
     IReadOnlyList<string> CulturalTraits,
     string? FirstRulerName,
-    string? LastRulerName
+    string? LastRulerName,
+    string  FoundingOrigin  = "NomadsSettled",
+    long?   ParentCivId     = null,
+    string? ParentCivName   = null
 );
 
 /// <summary>Summary record for a single war between two civilizations.</summary>
