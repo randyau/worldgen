@@ -87,6 +87,52 @@ public static partial class CivTracker
             warEntityIds, warSecondaryIds,
             ActorId: declCiv.RulerId.Value, ActorName: declRuler?.Identity.Name ?? declCiv.Name,
             CivId: declCiv.Id.Value));
+
+        // Defensive coalition seeding: neighbors of the target that share a common enemy
+        // get a trust boost, making future alliances easier — small civs rally against aggressors.
+        SeedDefensiveCoalition(declCiv, targCiv, world);
+    }
+
+    private static void SeedDefensiveCoalition(
+        Civilization aggressor, Civilization target, WorldState world)
+    {
+        if (world.GetEntity(target.RulerId) is not Tier1Character targetRuler) return;
+
+        int r = world.SimConfig.War.WarProximityRadius;
+        float bonus = world.SimConfig.War.CoalitionTrustBonus;
+
+        // Pre-collect target tile set for proximity check.
+        var targetTiles = world.Settlements
+            .Where(kv => kv.Value.CivId == target.Id)
+            .Select(kv => kv.Key)
+            .ToList();
+        if (targetTiles.Count == 0) return;
+
+        foreach (var (otherId, other) in world.Civilizations)
+        {
+            if (other.IsCollapsed) continue;
+            if (other.Id == aggressor.Id || other.Id == target.Id) continue;
+            if (other.IsAtWarWith(target.Id)) continue;
+            if (world.GetEntity(other.RulerId) is not Tier1Character otherRuler) continue;
+
+            // Check proximity to any target settlement.
+            bool proximate = world.Settlements.Any(kv =>
+            {
+                if (kv.Value.CivId != other.Id) return false;
+                return targetTiles.Any(t =>
+                {
+                    int dx = kv.Key.X - t.X, dy = kv.Key.Y - t.Y;
+                    return dx * dx + dy * dy <= r * r;
+                });
+            });
+            if (!proximate) continue;
+
+            var rel = world.Relationships.GetOrCreate(otherRuler.Id, targetRuler.Id);
+            world.Relationships.Upsert(rel with
+            {
+                Trust = Math.Min(1f, rel.Trust + bonus)
+            });
+        }
     }
 
     // ─── Annual war campaigns (M4.2) ─────────────────────────────────────────

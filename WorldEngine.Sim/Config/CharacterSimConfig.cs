@@ -292,7 +292,7 @@ public sealed class CharacterSimConfig
     public float GriefDecayRate             { get; set; } = 0.004f;  // grief Intensity decay per tick
     public int   StagnationThresholdTicks   { get; set; } = 80;      // ticks before inactive goal drains wellbeing (~1 season)
     public float StagnationDrainRate        { get; set; } = 0.002f;  // wellbeing drain per tick for stagnant goals
-    public float PurposeDroughtDrain        { get; set; } = 0.003f;  // wellbeing drain per tick with no flourishing goals
+    public float PurposeDroughtDrain        { get; set; } = 0.001f;  // wellbeing drain per tick with no flourishing goals
 
     // Tier 2 tuning
     public int   Tier2PerPopulation     { get; set; } = 10;  // one Tier2 per this many pop

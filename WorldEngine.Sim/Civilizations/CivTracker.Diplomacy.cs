@@ -433,6 +433,20 @@ public static partial class CivTracker
             if (a.IsAtWarWith(b.Id)) continue;
             if (a.InPeaceCooldownWith(b.Id, world.CurrentYear, wCfg.PeaceCooldownYears, wCfg.WarExhaustionYearsPerWar)) continue;
 
+            // Allied rulers: decay tension and skip accrual — respect the peace treaty.
+            var rulerA = world.GetEntity(a.RulerId) as Tier1Character;
+            var rulerB = world.GetEntity(b.RulerId) as Tier1Character;
+            if (rulerA != null && rulerB != null)
+            {
+                var rel = world.Relationships.Get(rulerA.Id, rulerB.Id);
+                if (rel?.IsAlly == true)
+                {
+                    Decay(a.BorderTension, b.Id, wCfg.TensionDecayRate * 2f);
+                    Decay(b.BorderTension, a.Id, wCfg.TensionDecayRate * 2f);
+                    continue;
+                }
+            }
+
             float proximity = 0f;
             foreach (var ca in byCiv[a.Id])
             foreach (var cb in byCiv[b.Id])

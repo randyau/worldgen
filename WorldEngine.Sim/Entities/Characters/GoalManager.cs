@@ -477,7 +477,7 @@ public static class GoalManager
         }
 
         // Purpose drought: characters with no flourishing goals lose wellbeing (existential aimlessness)
-        bool hasFlourishing = c.Goals.Any(g => g.Type is GoalType.Create or GoalType.Bond or GoalType.FoundCity);
+        bool hasFlourishing = c.Goals.Any(g => g.Type is GoalType.Create or GoalType.Bond or GoalType.FoundCity or GoalType.Protect);
         if (!hasFlourishing)
             delta -= cfg.PurposeDroughtDrain;
 

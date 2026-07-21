@@ -468,7 +468,7 @@ wellbeing_flee_multiplier       = 0.4     # Flee: flight-or-fight stress
 # Stagnation: inactive goals drain wellbeing after this many ticks (note: TOML previously had wellbeing_ prefix; renamed to match C# property)
 stagnation_threshold_ticks      = 80  # ticks before inactive goal drains wellbeing (~5 years at 16 ticks/year)
 stagnation_drain_rate           = 0.002    # per tick for goals stuck without progress
-purpose_drought_drain           = 0.003    # per tick when character has no flourishing goals (Create/Bond/FoundCity)
+purpose_drought_drain           = 0.001    # per tick when character has no flourishing goals (Create/Bond/FoundCity/Protect)
 
 # Tier 2 sub-tuning (appended to [character] section — Tomlyn merges same-section keys)
 # NOTE: tier2_* keys previously failed to bind due to digit→uppercase PascalToSnakeCase bug (fixed in B2).
@@ -740,9 +740,9 @@ war_aggression_threshold      = 0.5   # minimum ruler Aggression to consider Dec
 # Border tension (civ-level trigger — moved from [character])
 war_proximity_radius          = 40    # tile radius within which settlements accumulate tension
                                       # (was 15 — too small for 400×300 tile world; raised S1 2026-07-18)
-tension_accrual_per_pair      = 0.12  # tension per close settlement pair per year (× proximity × ruler Aggression)
-tension_decay_rate            = 0.15  # fraction of tension lost when no proximate settlements exist
-tension_war_threshold         = 1.0   # accumulated tension that triggers war when ruler is aggressive enough
+tension_accrual_per_pair      = 0.08  # tension per close settlement pair per year (× proximity × ruler Aggression; was 0.12)
+tension_decay_rate            = 0.20  # fraction of tension lost when no proximate settlements exist (was 0.15)
+tension_war_threshold         = 1.2   # accumulated tension that triggers war when ruler is aggressive enough (was 1.0)
 personal_war_tension_fraction = 0.6   # fraction of tension_war_threshold at which a personal encounter justifies war
 
 # ==========================================================================
@@ -774,6 +774,10 @@ weak_neighbor_tension_bonus       = 0.25  # extra tension/year when target quali
 resource_shortage_war_food_threshold = 0.75  # aggressor mean food ratio below this → it gains bonus tension
 resource_shortage_tension_bonus      = 0.20  # extra tension/year when aggressor is in food shortage
 
+# Defensive coalitions: when war is declared, neighboring civ rulers get a trust nudge
+# toward the target — simulates small civs rallying against a common aggressor.
+coalition_trust_bonus                = 0.20  # trust boost per civ on each war declaration
+
 # =============================================================================
 # RELIGION (M4 Phase 3 — Religion founding via character goal)
 # =============================================================================
@@ -791,15 +795,15 @@ religion_founding_cooldown_years    = 50    # per character: min years between f
 
 [unrest]
 # Distance driver: settlements beyond this radius from the capital accumulate unrest
-unrest_comfort_radius        = 35     # tiles; within this range, distance driver is zero
-                                      # (was 20; S4 — premature distance splinters at 20; 2026-07-18)
-unrest_distance_per_tile     = 0.003  # unrest/tile/year beyond comfort_radius
-                                      # at 30 tiles excess → +0.09/yr; crosses 0.7 threshold in ~8 years
+unrest_comfort_radius        = 15     # tiles; within this range, distance driver is zero
+                                      # (was 35; reduced 2026-07-21 — 35 was too lenient; secession never fired)
+unrest_distance_per_tile     = 0.005  # unrest/tile/year beyond comfort_radius (was 0.003)
+                                      # at 20 tiles excess → +0.10/yr; crosses 0.7 threshold in ~7 years
 
 # Size driver: empire-scale unrest; fires above soft city threshold
-unrest_soft_city_threshold   = 6     # cities before size-driver kicks in (was 5; S4 — splinter past ~6-7 cities)
-unrest_per_excess_city       = 0.04  # unrest/yr per excess city above threshold (was 0.02; S4)
-                                     # at 8 cities (2 excess) → +0.08/yr to distant settlements
+unrest_soft_city_threshold   = 4     # cities before size-driver kicks in (was 6; reduced 2026-07-21)
+unrest_per_excess_city       = 0.05  # unrest/yr per excess city above threshold (was 0.04)
+                                     # at 6 cities (2 excess) → +0.10/yr to distant settlements
 
 # Famine driver: food crisis accelerates unrest
 unrest_famine_bonus          = 0.15  # extra unrest/yr when settlement is in food crisis

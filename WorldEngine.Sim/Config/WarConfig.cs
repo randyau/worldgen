@@ -153,4 +153,12 @@ public sealed class WarConfig
     /// Models desperation driving expansion: hungry civs are pushier.
     /// </summary>
     public float ResourceShortageTensionBonus { get; set; } = 0.20f;
+
+    // ─── Diplomacy / peaceful coexistence ────────────────────────────────────
+
+    /// <summary>
+    /// Trust boost applied between the target's ruler and each proximate non-enemy civ ruler
+    /// when a war is declared — seeds defensive coalitions against common aggressors.
+    /// </summary>
+    public float CoalitionTrustBonus { get; set; } = 0.20f;
 }

@@ -13,14 +13,14 @@ public sealed class UnrestConfig
     /// distance-driven unrest. Beyond this radius, unrest accumulates proportionally
     /// to the excess distance. Reuses the succession_stable_radius concept.
     /// </summary>
-    public int   UnrestComfortRadius      { get; set; } = 35;
+    public int   UnrestComfortRadius      { get; set; } = 15;
 
     /// <summary>
     /// Unrest accrued per tile of distance beyond UnrestComfortRadius per year.
     /// A settlement 30 tiles beyond the comfort radius accumulates
     /// 30 × UnrestDistancePerTile each year.
     /// </summary>
-    public float UnrestDistancePerTile    { get; set; } = 0.003f;
+    public float UnrestDistancePerTile    { get; set; } = 0.005f;
 
     // ── Size driver ───────────────────────────────────────────────────────────
     /// <summary>
@@ -28,13 +28,13 @@ public sealed class UnrestConfig
     /// Above this threshold, each additional city adds UnrestPerExcessCity per year
     /// to ALL distant settlements (the empire is becoming unwieldy).
     /// </summary>
-    public int   UnrestSoftCityThreshold  { get; set; } = 6;
+    public int   UnrestSoftCityThreshold  { get; set; } = 4;
 
     /// <summary>
     /// Unrest added per excess city (above UnrestSoftCityThreshold) per year.
     /// At 8 cities (3 excess) and this=0.02: +0.06/yr to all distant settlements.
     /// </summary>
-    public float UnrestPerExcessCity      { get; set; } = 0.04f;
+    public float UnrestPerExcessCity      { get; set; } = 0.05f;
 
     // ── Famine driver ─────────────────────────────────────────────────────────
     /// <summary>
