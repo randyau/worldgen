@@ -200,7 +200,7 @@ When the docs don't answer a question:
 
 ## Code Style
 
-- **C# 12 / .NET 8** features are fine — use them where they make code clearer
+- **C# 12 / .NET 10** features are fine — use them where they make code clearer (the solution targets `net10.0`; requires the .NET 10 SDK, pinned in `global.json`)
 - **Records** for immutable data, **sealed classes** for entity types, **interfaces** for contracts
 - **Primary constructors** acceptable for simple dependency injection
 - **Pattern matching** preferred over long if-else chains for event type switching

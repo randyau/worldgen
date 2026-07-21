@@ -29,7 +29,7 @@ TESTS_DIR = REPO_ROOT / "WorldEngine.Tests"
 SCRIPTS_DIR = REPO_ROOT / "scripts"
 DOCS_DIR  = REPO_ROOT / "docs"
 OUTPUT    = DOCS_DIR / "codebase_map.md"
-XML_PATH  = SIM_DIR / "bin" / "Release" / "net8.0" / "WorldEngine.Sim.xml"
+XML_PATH  = SIM_DIR / "bin" / "Release" / "net10.0" / "WorldEngine.Sim.xml"
 PROJ_FILE = SIM_DIR / "WorldEngine.Sim.csproj"
 
 BANNER = """\

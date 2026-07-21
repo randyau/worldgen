@@ -45,7 +45,7 @@ public class StateCacheTests
     }
 
     [Fact]
-    public void StateCache_ThreadSafetyUnderConcurrentAccess()
+    public async Task StateCache_ThreadSafetyUnderConcurrentAccess()
     {
         var cache = new StateCache();
         var errors = new System.Collections.Concurrent.ConcurrentBag<Exception>();
@@ -71,7 +71,7 @@ public class StateCacheTests
             }
         })).ToArray();
 
-        Task.WaitAll(writers.Concat(readers).ToArray());
+        await Task.WhenAll(writers.Concat(readers).ToArray());
 
         errors.Should().BeEmpty("concurrent reads and writes must not throw or corrupt state");
     }

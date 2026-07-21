@@ -165,7 +165,7 @@ public class MetricsCollectorTests
     // ─── C0b: death-cause counters are populated ──────────────────────────────
 
     [Fact]
-    public void MetricsCollector_DeathCausesAreNonZeroAfterLongRun()
+    public async Task MetricsCollector_DeathCausesAreNonZeroAfterLongRun()
     {
         // Run long enough for characters to die of old age, disease, etc.
         // At 16 ticks/year, Tier1 max age is 80–200 seasons (~5–13 sim-years).
@@ -173,7 +173,7 @@ public class MetricsCollectorTests
         // for initial character placement and civ floor spawns.
         var cfg    = new WorldConfig { Seed = 42, WidthKm = 300, HeightKm = 300, TileWidthKm = 10 };
         var simCfg = TestSimConfig.Default();
-        var world  = new WorldGenPipeline().RunFullAsync(cfg, simCfg).GetAwaiter().GetResult();
+        var world  = await new WorldGenPipeline().RunFullAsync(cfg, simCfg);
 
         var (simLoop, phaseRunner, eventStore) = BuildHeadlessStack(world);
 

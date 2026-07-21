@@ -81,7 +81,7 @@ def find_sim_binary(repo_root: Path, use_binary: str | None) -> list[str]:
     if use_binary:
         return [use_binary]
     # Prefer pre-built Release binary if it exists (much faster startup)
-    release_bin = repo_root / "WorldEngine.Sim" / "bin" / "Release" / "net8.0" / "WorldEngine.Sim"
+    release_bin = repo_root / "WorldEngine.Sim" / "bin" / "Release" / "net10.0" / "WorldEngine.Sim"
     if release_bin.is_file():
         return [str(release_bin)]
     release_bin_win = release_bin.with_suffix(".exe")

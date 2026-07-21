@@ -166,9 +166,11 @@ public sealed class ReligionSpecialistTests
 
         events.Should().NotContain(e => e.Type == EventType.ReligionFounded,
             "goal should be abandoned when Spiritual drops, not fire the event");
-        c.Goals.Where(g => g.Type == GoalType.FoundReligion)
-            .Should().OnlyContain(g => g.IsComplete,
-            "abandoned goal should be marked complete for pruning");
+        // The abandoned goal is marked complete (IsComplete=true) and pruned in the same tick,
+        // so no *active* FoundReligion goal should remain. NotContain-incomplete is robust
+        // whether the goal was already pruned (empty) or is still present-but-complete.
+        c.Goals.Should().NotContain(g => g.Type == GoalType.FoundReligion && !g.IsComplete,
+            "abandoned goal should be marked complete (and pruned), not left active");
     }
 
     [Fact]

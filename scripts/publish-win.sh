@@ -5,7 +5,7 @@
 #
 # Usage:
 #   scripts/publish-win.sh              # self-contained (no .NET install needed on Windows)
-#   scripts/publish-win.sh --framework  # framework-dependent (requires .NET 8 Runtime on Windows)
+#   scripts/publish-win.sh --framework  # framework-dependent (requires .NET 10 Runtime on Windows)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

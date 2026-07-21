@@ -38,7 +38,7 @@ public class BiomeSpawnWeightTests
     /// fraction of the eligible candidate tiles.
     /// </summary>
     [Fact]
-    public void InitialSpawns_UnderRepresentHarshBiomes()
+    public async Task InitialSpawns_UnderRepresentHarshBiomes()
     {
         // Medium world: 1000×800 km at 10 km/tile = 100×80 tiles — big enough for
         // latitude-banded biomes (tundra at the poles).
@@ -48,7 +48,7 @@ public class BiomeSpawnWeightTests
         simConfig.Character.MinFertilityToSettle = 10;         // widen eligibility so tundra tiles qualify
 
         var pipeline = new WorldGenPipeline();
-        var world = pipeline.RunFullAsync(worldConfig, simConfig).GetAwaiter().GetResult();
+        var world = await pipeline.RunFullAsync(worldConfig, simConfig);
 
         // Candidate-pool biome census (mirror the spawner's eligibility rules)
         static bool IsHarsh(BiomeType b) =>
@@ -90,16 +90,16 @@ public class BiomeSpawnWeightTests
     }
 
     [Fact]
-    public void InitialSpawns_AreReproducible()
+    public async Task InitialSpawns_AreReproducible()
     {
         var worldConfig = new WorldConfig { Seed = 4242, WidthKm = 500, HeightKm = 400, TileWidthKm = 10 };
 
         var sim1 = Helpers.TestSimConfig.Default();
-        var w1 = new WorldGenPipeline().RunFullAsync(worldConfig, sim1).GetAwaiter().GetResult();
+        var w1 = await new WorldGenPipeline().RunFullAsync(worldConfig, sim1);
         CharacterSpawner.SpawnAll(w1, sim1);
 
         var sim2 = Helpers.TestSimConfig.Default();
-        var w2 = new WorldGenPipeline().RunFullAsync(worldConfig, sim2).GetAwaiter().GetResult();
+        var w2 = await new WorldGenPipeline().RunFullAsync(worldConfig, sim2);
         CharacterSpawner.SpawnAll(w2, sim2);
 
         var locs1 = w1.Entities.Characters.Select(c => c.Location).ToList();
