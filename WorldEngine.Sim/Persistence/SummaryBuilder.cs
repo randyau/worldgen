@@ -217,7 +217,7 @@ public static class SummaryBuilder
 
         // Collapse years
         var collapseByC = conn.Query<(long CivId, int Year)>(
-            "SELECT CivId, Year FROM Events WHERE Type = @t AND CivId IS NOT NULL",
+            "SELECT CivId, MAX(Year) AS Year FROM Events WHERE Type = @t AND CivId IS NOT NULL GROUP BY CivId",
             new { t = CivilizationCollapsed })
             .ToDictionary(x => x.CivId, x => x.Year);
 

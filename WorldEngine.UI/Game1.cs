@@ -44,7 +44,6 @@ public sealed class Game1 : Game
     // Rendering
     private Camera2D? _camera;
     private TileMapRenderer? _tileRenderer;
-    private OverlayLegend? _overlayLegend;
 
     // UI panels (created in LoadContent)
     private WorldGenScreen? _genScreen;
@@ -112,8 +111,7 @@ public sealed class Game1 : Game
 
         _camera       = new Camera2D();
         _tileRenderer = new TileMapRenderer(GraphicsDevice, _camera);
-        _overlayLegend = new OverlayLegend();
-        _overlayLegend.Initialize(GraphicsDevice);
+
 
         _genScreen    = new WorldGenScreen();
         _timeControls = new TimeControlsPanel(_commandQueue);
@@ -749,14 +747,6 @@ public sealed class Game1 : Game
             _tileRenderer.Draw(_spriteBatch, snapshot);
             _spriteBatch.End();
 
-            // Overlay legend — drawn on the map with same scissor rectangle
-            if (_overlayLegend is not null)
-            {
-                var mapRect = new Rectangle(0, 0, vp.Width - SidebarWidth, vp.Height - TimelineHeight);
-                _spriteBatch.Begin(rasterizerState: new RasterizerState { ScissorTestEnable = true });
-                _overlayLegend.Draw(_spriteBatch, mapRect, snapshot.ActiveOverlay);
-                _spriteBatch.End();
-            }
 
             // Timeline bar — drawn below the map, no scissor
             if (_timeline is not null)
@@ -778,6 +768,5 @@ public sealed class Game1 : Game
         _eventStore?.Dispose();
         _tileRenderer?.Dispose();
         _timeline?.Dispose();
-        _overlayLegend?.Dispose();
     }
 }
