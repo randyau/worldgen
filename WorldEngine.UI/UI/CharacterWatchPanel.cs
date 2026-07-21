@@ -45,6 +45,9 @@ public sealed class CharacterWatchPanel
     /// <summary>Hides the panel.</summary>
     public void Hide() { Root.Visible = false; IsVisible = false; }
 
+    /// <summary>Toggles visibility.</summary>
+    public void Toggle() { if (IsVisible) Hide(); else Show(); }
+
     /// <summary>
     /// Refreshes displayed data from the snapshot. Called each frame when IsVisible.
     /// Does nothing if no character is being watched.

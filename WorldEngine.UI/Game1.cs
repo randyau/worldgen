@@ -17,6 +17,7 @@ using WorldEngine.Sim.WorldGen;
 using WorldEngine.Sim.WorldGen.Layers;
 using WorldEngine.UI.Rendering;
 using WorldEngine.UI.UI;
+using WorldEngine.UI.UI.Input;
 
 namespace WorldEngine.UI;
 
@@ -61,6 +62,10 @@ public sealed class Game1 : Game
 
     // Phase 3.4 panels (created in StartSim)
     private CharacterWatchPanel? _charWatch;
+
+    // M6.1.3 — keybind registry (single source of truth) + help overlay
+    private KeybindRegistry?  _keybinds;
+    private HelpOverlayPanel? _helpOverlay;
 
     // Phase 3.6 — save / resume
     private const string SaveDir = "worldsave";
@@ -208,10 +213,6 @@ public sealed class Game1 : Game
 
     protected override void Update(GameTime gameTime)
     {
-        var kb = Keyboard.GetState();
-        if (kb.IsKeyDown(Keys.Escape))
-            _commandQueue.Enqueue(new SetInspectedTile(null));
-
         DrainGenProgress();
 
         // Resume path: load task completed
@@ -379,9 +380,48 @@ public sealed class Game1 : Game
             _charWatch.Root.Left = 4;
             _mainUI.Widgets.Add(_charWatch.Root);
 
+            // ── Help overlay (M6.1.3) — centered modal-style panel ───────────────
+            _helpOverlay = new HelpOverlayPanel();
+            _helpOverlay.Root.HorizontalAlignment = HorizontalAlignment.Center;
+            _helpOverlay.Root.VerticalAlignment   = VerticalAlignment.Center;
+            _mainUI.Widgets.Add(_helpOverlay.Root);
+
             if (_desktop.Root is Panel rootPanel)
                 rootPanel.Widgets.Add(_timeline.ScrubLabel);
         }
+
+        // Build the keybind registry now that panels/commands exist, then feed the help panel.
+        BuildKeybinds();
+        _helpOverlay?.Populate(_keybinds!);
+    }
+
+    /// <summary>
+    /// Registers every keyboard shortcut in one place (M6.1.3). Each binding's action is the
+    /// single source of behavior — UI buttons added in later stories wire to these same actions.
+    /// </summary>
+    private void BuildKeybinds()
+    {
+        var reg = new KeybindRegistry();
+
+        // Overlays — edge-triggered so holding a key doesn't flood the command queue.
+        reg.Register(Keys.B, "Biome overlay",      "Overlays", () => _commandQueue.Enqueue(new SetActiveOverlay(OverlayType.Biome)));
+        reg.Register(Keys.E, "Elevation overlay",  "Overlays", () => _commandQueue.Enqueue(new SetActiveOverlay(OverlayType.Elevation)));
+        reg.Register(Keys.T, "Territory overlay",  "Overlays", () => _commandQueue.Enqueue(new SetActiveOverlay(OverlayType.Territory)));
+        reg.Register(Keys.M, "Moisture overlay",   "Overlays", () => _commandQueue.Enqueue(new SetActiveOverlay(OverlayType.Moisture)));
+        reg.Register(Keys.R, "Resources overlay",  "Overlays", () => _commandQueue.Enqueue(new SetActiveOverlay(OverlayType.Resources)));
+        reg.Register(Keys.G, "Magic overlay",      "Overlays", () => _commandQueue.Enqueue(new SetActiveOverlay(OverlayType.MagicIntensity)));
+
+        // Panels
+        reg.Register(Keys.H,           "Civ history panel",     "Panels", () => _civHistory?.Toggle());
+        reg.Register(Keys.W,           "Character watch panel", "Panels", () => _charWatch?.Toggle());
+        reg.Register(Keys.OemQuestion, "This help",             "Panels", () => _helpOverlay?.Toggle());
+
+        // World
+        reg.Register(Keys.N,      "New world",     "World", ResetToNewWorld);
+        reg.Register(Keys.S,      "Save world",    "World", () => _commandQueue.Enqueue(new SaveWorld(SaveDir)), ctrl: true);
+        reg.Register(Keys.Escape, "Deselect tile", "World", () => _commandQueue.Enqueue(new SetInspectedTile(null)));
+
+        _keybinds = reg;
     }
 
     private void HandleInput(WorldSnapshot snapshot)
@@ -424,33 +464,10 @@ public sealed class Game1 : Game
             }
         }
 
-        // Overlay shortcuts
+        // All keyboard shortcuts flow through the single registry (M6.1.3), so keys and the
+        // visible UI controls added in later stories share one code path.
         // DECISION: T is Territory overlay (M3 Phase 3.4). Temperature moved off keyboard.
-        if (kb.IsKeyDown(Keys.B)) _commandQueue.Enqueue(new SetActiveOverlay(OverlayType.Biome));
-        if (kb.IsKeyDown(Keys.E)) _commandQueue.Enqueue(new SetActiveOverlay(OverlayType.Elevation));
-        if (kb.IsKeyDown(Keys.T)) _commandQueue.Enqueue(new SetActiveOverlay(OverlayType.Territory));
-        if (kb.IsKeyDown(Keys.M)) _commandQueue.Enqueue(new SetActiveOverlay(OverlayType.Moisture));
-        if (kb.IsKeyDown(Keys.R)) _commandQueue.Enqueue(new SetActiveOverlay(OverlayType.Resources));
-        if (kb.IsKeyDown(Keys.G)) _commandQueue.Enqueue(new SetActiveOverlay(OverlayType.MagicIntensity));
-
-        // H = toggle civ history panel; W = toggle character watch panel
-        if (kb.IsKeyDown(Keys.H) && !_prevKb.IsKeyDown(Keys.H))
-        {
-            if (_civHistory?.IsVisible == true) _civHistory.Hide();
-            else _civHistory?.Show();
-        }
-        if (kb.IsKeyDown(Keys.W) && !_prevKb.IsKeyDown(Keys.W))
-        {
-            if (_charWatch?.IsVisible == true) _charWatch.Hide();
-            else _charWatch?.Show();
-        }
-
-        // N = new world (press-edge only, not hold)
-        if (kb.IsKeyDown(Keys.N) && !_prevKb.IsKeyDown(Keys.N) && _simStarted) ResetToNewWorld();
-
-        // Ctrl+S = manual save (Phase 3.6)
-        if (kb.IsKeyDown(Keys.LeftControl) && kb.IsKeyDown(Keys.S) && !_prevKb.IsKeyDown(Keys.S))
-            _commandQueue.Enqueue(new SaveWorld(SaveDir));
+        _keybinds?.Process(kb, _prevKb);
 
         // Timeline scrubber
         if (_timeline is not null)
@@ -530,7 +547,10 @@ public sealed class Game1 : Game
             if (_charProfile is not null) _mainUI.Widgets.Remove(_charProfile.Root);
             if (_civHistory  is not null) _mainUI.Widgets.Remove(_civHistory.Root);
             if (_charWatch   is not null) _mainUI.Widgets.Remove(_charWatch.Root);
+            if (_helpOverlay is not null) _mainUI.Widgets.Remove(_helpOverlay.Root);
         }
+        _helpOverlay?.Hide();
+        _keybinds = null;   // rebuilt by StartSim against the fresh panels
         if (_desktop?.Root is Panel dp && _timeline is not null)
             dp.Widgets.Remove(_timeline.ScrubLabel);
         _charProfile?.Hide();

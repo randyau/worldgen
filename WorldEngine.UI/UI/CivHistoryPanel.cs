@@ -57,6 +57,9 @@ public sealed class CivHistoryPanel
         Root.Visible = false;
     }
 
+    /// <summary>Toggles visibility.</summary>
+    public void Toggle() { if (IsVisible) Hide(); else Show(); }
+
     public void ShowCiv(long civId)
     {
         Show();
