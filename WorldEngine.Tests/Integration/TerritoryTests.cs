@@ -94,11 +94,11 @@ public class TerritoryTests
 
         int initialCount = world.Civilizations[civId].CityTerritories[cityTile].Count;
 
-        // Inflate population so the city wants more tiles than it currently has
+        // Inflate population enough to push effective radius above InitialCityClaimRadius
+        // (need pop > PopPerTerritoryRadiusTile to gain +1 radius tile)
         world.Settlements[cityTile] = world.Settlements[cityTile] with
         {
-            Population = world.SimConfig.Territory.MinCityTiles
-                       * world.SimConfig.Territory.ClaimTilesPerPerson * 3
+            Population = world.SimConfig.Territory.PopPerTerritoryRadiusTile * 2
         };
 
         var phase = new TerritoryPhase(world.SimConfig);

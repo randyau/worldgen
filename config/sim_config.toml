@@ -571,6 +571,12 @@ crystal_pop_merchant        = 1000
 growth_event_threshold_pct  = 0.05   # 5% growth vs start-of-tick pop; fires on annual tick only
 shrink_event_threshold_pct  = 0.05   # 5% decline; catches disease/disaster hits each year
 
+# Ruin recording — only settlements large enough to leave a historical trace become ruins
+ruin_min_pop_threshold      = 75    # skip ruin registration if pop < this at time of abandonment
+# Ruin decay — very old ruins weather away over time
+ruin_decay_start_years      = 300   # ruins older than this are eligible for decay
+ruin_decay_chance_per_year  = 0.02  # 2% annual chance of removal once eligible
+
 [resource_pressure]
 shortage_threshold      = 0.6    # food ratio below this = shortage; seeds Acquire goals
 crisis_threshold        = 0.3    # food ratio below this = crisis; also seeds Flee goals
@@ -615,13 +621,13 @@ store_raid_destruction_per_damage  = 0.008  # fraction of ALL stores destroyed p
 [territory]
 claim_tiles_per_person    = 8    # 1 tile per N people; city of 800 → 100 tiles (~radius 5)
 min_city_tiles            = 7    # radius-1 circle, always retained
-max_city_tiles            = 700  # absolute upper bound on tile count (~radius-15 circle)
-                                  # (was 120/radius-6; S1 growth overhaul 2026-07-18)
-max_territory_radius         = 12  # hard Euclidean radius cap (was 20; reduced 2026-07-19 — 20 tiles = 125k km², too large)
-min_territory_radius         = 3   # guaranteed minimum radius regardless of population
-pop_per_territory_radius_tile = 150 # people per additional tile of radius above the minimum
-                                     # 300 pop → radius 5, 900 pop → radius 9, 1350 pop → radius 12 (hard cap)
-territory_growth_per_year    = 8   # max tiles claimed per city per year (prevents instant snowball)
+max_city_tiles            = 120  # absolute upper bound on tile count (~radius-6 circle; 120×100km²=12,000km²)
+                                  # (was 700/radius-15; reduced 2026-07-21 — too much food from unclaimed land)
+max_territory_radius         = 7   # hard Euclidean radius cap; 7 tiles = ~70km from city center
+min_territory_radius         = 2   # guaranteed minimum radius regardless of population (~12 tiles)
+pop_per_territory_radius_tile = 300 # people per additional tile of radius above the minimum
+                                     # 300 pop → radius 3, 900 pop → radius 5, 1500 pop → radius 7 (hard cap)
+territory_growth_per_year    = 4   # max tiles claimed per city per year (prevents instant snowball)
 initial_city_claim_radius    = 2   # tiles claimed at founding (~13 tiles)
 
 # =============================================================================

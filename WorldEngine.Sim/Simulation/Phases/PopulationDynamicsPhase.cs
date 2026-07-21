@@ -57,6 +57,7 @@ public sealed class PopulationDynamicsPhase
         {
             RunAnnualDiseaseChecks(world, pending);
             RunAnnualWildlifeAttacks(world, pending);
+            RunAnnualRuinDecay(world);
         }
 
         // Refresh TotalPopulation on each civ so InCivFoundingCooldown can read it without
@@ -224,7 +225,9 @@ public sealed class PopulationDynamicsPhase
         if (!world.Settlements.TryGetValue(tile, out var stub)) return;
         world.Settlements.Remove(tile);
 
-        int timesSettled = CivTracker.RegisterRuin(tile, stub, "abandoned", world, pending);
+        // Attribute cause: low health at death implies war damage rather than natural abandonment
+        string cause = stub.Health < world.SimConfig.Settlement.MaxHealth / 2 ? "war_damage" : "abandoned";
+        int timesSettled = CivTracker.RegisterRuin(tile, stub, cause, world, pending);
 
         var payload = JsonSerializer.Serialize(new SettlementAbandonedPayload(
             stub.FounderId.Value, stub.FoundedYear, timesSettled, stub.Population));
@@ -390,6 +393,27 @@ public sealed class PopulationDynamicsPhase
                     stub.Population, damage, defenderId, defenderName)),
                 CivId: stub.CivId.Value, SettlementName: stub.Name));
         }
+    }
+
+    // ─── Ruin decay ───────────────────────────────────────────────────────────
+
+    private void RunAnnualRuinDecay(WorldState world)
+    {
+        var cfg = _cfg;
+        int year = world.CurrentYear;
+        var toRemove = new List<TileCoord>();
+
+        foreach (var (tile, ruin) in world.Ruins)
+        {
+            int age = year - ruin.DestroyedYear;
+            if (age < cfg.RuinDecayStartYears) continue;
+            float roll = WorldRng.FloatAt(world.WorldSeed, world.CurrentYear, tile.X, tile.Y, S.PopRuinDecay);
+            if (roll < cfg.RuinDecayChancePerYear)
+                toRemove.Add(tile);
+        }
+
+        foreach (var tile in toRemove)
+            world.Ruins.Remove(tile);
     }
 
     // ─── Helper ───────────────────────────────────────────────────────────────

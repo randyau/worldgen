@@ -88,6 +88,14 @@ public sealed class SettlementConfig
     // Population deducted from parent settlement each time an emigrant character spawns.
     public int   EmigrantPopCost        { get; set; } = 20;
 
+    // ─── Ruin recording & decay ───────────────────────────────────────────────
+    // Only settlements above this population leave a persistent ruin record.
+    public int   RuinMinPopThreshold        { get; set; } = 75;
+    // Ruins older than this many years become eligible for weathering.
+    public int   RuinDecayStartYears        { get; set; } = 300;
+    // Annual probability of removing a ruin once it's past RuinDecayStartYears.
+    public float RuinDecayChancePerYear     { get; set; } = 0.02f;
+
     public int   CrystalPopArtisan        { get; set; } = 200;
     public int   CrystalPopScholar        { get; set; } = 300;
     public int   CrystalPopPhysician      { get; set; } = 500;

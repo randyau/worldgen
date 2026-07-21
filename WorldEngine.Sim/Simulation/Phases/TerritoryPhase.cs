@@ -46,8 +46,9 @@ public sealed class TerritoryPhase
                     int canExpand = Math.Min(_cfg.TerritoryGrowthPerYear, _cfg.MaxCityTiles - owned);
                     ExpandTerritory(cityTile, civId, civ, ownedTiles, canExpand, world, pending);
                 }
-                // Automatic contraction removed — territory is only lost through war/raid
-                // damage or settlement abandonment (handled in CivTracker and PopDynamics).
+
+                // Prune tiles disconnected from the city center (islands cut off by rival territory).
+                PruneDisconnectedTiles(cityTile, ownedTiles, world);
             }
         }
 
@@ -163,5 +164,49 @@ public sealed class TerritoryPhase
     {
         int dx = a.X - b.X, dy = a.Y - b.Y;
         return dx * dx + dy * dy;
+    }
+
+    // ─── Connectivity prune ───────────────────────────────────────────────────
+
+    // Flood-fill from cityTile through ownedTiles. Any tile not reachable is
+    // an island (cut off by rival claims) and gets released.
+    private static void PruneDisconnectedTiles(
+        TileCoord cityTile, HashSet<TileCoord> ownedTiles, WorldState world)
+    {
+        if (!ownedTiles.Contains(cityTile)) return;
+
+        int w = world.TileGrid.TileWidth;
+        int h = world.TileGrid.TileHeight;
+        int[] dx = { -1, 1, 0, 0 };
+        int[] dy = {  0, 0,-1, 1 };
+
+        var reachable = new HashSet<TileCoord>();
+        var queue = new Queue<TileCoord>();
+        reachable.Add(cityTile);
+        queue.Enqueue(cityTile);
+
+        while (queue.Count > 0)
+        {
+            var cur = queue.Dequeue();
+            for (int i = 0; i < 4; i++)
+            {
+                int nx = ((cur.X + dx[i]) % w + w) % w;
+                int ny = Math.Clamp(cur.Y + dy[i], 0, h - 1);
+                var neighbor = new TileCoord(nx, ny);
+                if (reachable.Contains(neighbor)) continue;
+                if (!ownedTiles.Contains(neighbor)) continue;
+                reachable.Add(neighbor);
+                queue.Enqueue(neighbor);
+            }
+        }
+
+        if (reachable.Count == ownedTiles.Count) return;
+
+        foreach (var tile in ownedTiles.Where(t => !reachable.Contains(t)).ToList())
+        {
+            world.TerritoryMap.Remove(tile);
+            world.ImprovementMap.Remove(tile);
+            ownedTiles.Remove(tile);
+        }
     }
 }

@@ -42,6 +42,9 @@ internal static class SimRngSalts
     // PopulationDynamicsPhase — Tier2 crystallisation
     public const int PopCrystallise      = 830;
 
+    // PopulationDynamicsPhase — ruin weathering decay
+    public const int PopRuinDecay        = 831;
+
     // Tier2BehaviorPhase
     public const int T2General      = 900;  // crystallization + artisan notable roll
     public const int T2ArtisanExcep = 901;  // artisan exceptional (masterwork) roll

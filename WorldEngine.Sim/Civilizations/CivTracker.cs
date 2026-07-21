@@ -235,6 +235,11 @@ public static partial class CivTracker
         TileCoord tile, SettlementStub stub, string cause, WorldState world,
         List<PendingEvent>? pending = null)
     {
+        // Skip ruin registration for tiny outposts — they leave no lasting historical trace.
+        if (stub.Population < world.SimConfig.Settlement.RuinMinPopThreshold
+            && !world.Ruins.ContainsKey(tile))
+            return 0;
+
         int timesSettled = world.Ruins.TryGetValue(tile, out var existing)
             ? existing.TimesSettled + 1
             : 1;
