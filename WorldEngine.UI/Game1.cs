@@ -161,42 +161,9 @@ public sealed class Game1 : Game
             mainUI.Widgets.Add(_timeControls.Root);
         }
 
-        // Semi-transparent backing panel behind the left-side toolbar rows (BUG-2/3).
-        // Covers the two rows of buttons (overlay bar + panel toggle bar) that would
-        // otherwise float over the map with no visual separation.
-        var leftToolbarBacking = new Panel
-        {
-            HorizontalAlignment = HorizontalAlignment.Left,
-            VerticalAlignment   = VerticalAlignment.Top,
-            Top     = UI.Theme.UiTheme.TopBarClearance,
-            Left    = 0,
-            Width   = 520,
-            Height  = 80,
-            Background = new Myra.Graphics2D.Brushes.SolidBrush(UI.Theme.UiTheme.PanelBackground)
-        };
-        mainUI.Widgets.Add(leftToolbarBacking);
-
-        // Overlay control bar (M6.1.1): visible, labeled overlay toggles below the time bar.
-        if (_overlayBar is not null)
-        {
-            _overlayBar.Root.HorizontalAlignment = HorizontalAlignment.Left;
-            _overlayBar.Root.VerticalAlignment   = VerticalAlignment.Top;
-            _overlayBar.Root.Top  = UI.Theme.UiTheme.TopBarClearance + 4;
-            _overlayBar.Root.Left = 4;
-            mainUI.Widgets.Add(_overlayBar.Root);
-        }
-
-        // Panel toggle bar (M6.1.2): visible show/hide affordances, below the overlay bar.
-        if (_panelManager is not null)
-        {
-            _panelManager.ToggleBar.HorizontalAlignment = HorizontalAlignment.Left;
-            _panelManager.ToggleBar.VerticalAlignment   = VerticalAlignment.Top;
-            _panelManager.ToggleBar.Top  = 84;   // clear the overlay bar
-            _panelManager.ToggleBar.Left = 4;
-            mainUI.Widgets.Add(_panelManager.ToggleBar);
-        }
-
-        // Sidebar: fixed 360px wide, docked to top-right, below time controls
+        // Sidebar: fixed 360px wide, docked to top-right, below time controls.
+        // Overlay toggles and panel show/hide buttons live at the top of the sidebar so
+        // they don't float over the map area.
         var sidebar = new VerticalStackPanel
         {
             Width                = SidebarWidth,
@@ -205,6 +172,13 @@ public sealed class Game1 : Game
             VerticalAlignment    = VerticalAlignment.Top,
             Top                  = 44,   // clear the time controls bar (~40px tall)
         };
+
+        // Overlay control bar (M6.1.1): visible, labeled overlay toggles — top of sidebar.
+        if (_overlayBar is not null) sidebar.Widgets.Add(_overlayBar.Root);
+
+        // Panel toggle bar (M6.1.2): show/hide affordances — below overlay bar in sidebar.
+        if (_panelManager is not null) sidebar.Widgets.Add(_panelManager.ToggleBar);
+
         if (_tileInspector is not null) sidebar.Widgets.Add(_tileInspector.Root);
         if (_filterPanel   is not null) sidebar.Widgets.Add(_filterPanel.Root);
         if (_eventLog      is not null) sidebar.Widgets.Add(_eventLog.Root);
@@ -482,6 +456,14 @@ public sealed class Game1 : Game
             OnCiv       = id    => _civHistory?.ShowCiv(id),
             OnClear     = ()    => _commandQueue.Enqueue(new SetInspectedTile(null)),
         };
+
+        // Default camera: fit the whole world into the map viewport area.
+        if (_camera is not null)
+        {
+            int mapW = GraphicsDevice.Viewport.Width  - SidebarWidth;
+            int mapH = GraphicsDevice.Viewport.Height - TimelineHeight;
+            _camera.FitToWorld(world.Config.TileWidth, world.Config.TileHeight, mapW, mapH);
+        }
     }
 
     /// <summary>

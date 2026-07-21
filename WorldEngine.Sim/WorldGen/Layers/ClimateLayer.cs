@@ -304,6 +304,49 @@ public sealed class ClimateLayer : IWorldGenLayer<ClimateResult>
                 raw[i] = 0.05f;
         }
 
+        // Feather the tropical/mid-lat band boundary — vertical box-blur over ±featherRows.
+        // The two sweeps use opposing wind directions so the transition between them is a
+        // sharp horizontal line. Blending a few rows removes the visible band edge.
+        int featherRows = cfg.WindBandFeatherRows;
+        if (featherRows > 0)
+        {
+            // Find the two boundary rows (one each side of equator).
+            var boundaryRows = new List<int>();
+            for (int y = 1; y < h; y++)
+            {
+                if (InTropical(y, h, tropHalf) != InTropical(y - 1, h, tropHalf))
+                    boundaryRows.Add(y);
+            }
+
+            var scratch = new float[ctx.TileCount];
+            Array.Copy(raw, scratch, ctx.TileCount);
+
+            foreach (int bRow in boundaryRows)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    // Blur rows in [bRow-featherRows, bRow+featherRows-1]
+                    int yMin = Math.Max(0, bRow - featherRows);
+                    int yMax = Math.Min(h - 1, bRow + featherRows - 1);
+                    for (int y = yMin; y <= yMax; y++)
+                    {
+                        int idx = ctx.IndexOf(x, y);
+                        if (ocean.IsOcean[idx]) continue;
+                        float sum = 0f;
+                        int count = 0;
+                        for (int ny = Math.Max(0, y - featherRows); ny <= Math.Min(h - 1, y + featherRows); ny++)
+                        {
+                            int nIdx = ctx.IndexOf(x, ny);
+                            if (!ocean.IsOcean[nIdx]) { sum += raw[nIdx]; count++; }
+                        }
+                        if (count > 0) scratch[idx] = sum / count;
+                    }
+                }
+            }
+
+            Array.Copy(scratch, raw, ctx.TileCount);
+        }
+
         for (int i = 0; i < ctx.TileCount; i++)
             moisture[i] = (byte)Math.Clamp((int)(raw[i] * 255f), 0, 255);
     }

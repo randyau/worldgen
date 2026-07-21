@@ -117,6 +117,14 @@ public class ClimateConfig
     public float ContinentalAmplification { get; set; } = 0f;
 
     /// <summary>
+    /// Half-width of the vertical Gaussian feather applied at the tropical/mid-lat band
+    /// boundary after both moisture sweeps complete. Rows within this distance of the
+    /// boundary are blended with their neighbours, eliminating the sharp east↔west wind
+    /// reversal line. 0 = no feathering (sharp boundary). 4–8 produces a smooth transition.
+    /// </summary>
+    public int WindBandFeatherRows { get; set; } = 0;
+
+    /// <summary>
     /// Moisture carry level that lake tiles recharge the sweep to (0–1).
     /// Lakes act as inland moisture sources; if carry is below this value when the
     /// sweep crosses a lake, it is raised to this level. 0.3–0.5 is realistic.

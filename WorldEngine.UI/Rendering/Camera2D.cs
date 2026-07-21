@@ -8,9 +8,9 @@ namespace WorldEngine.UI.Rendering;
 public sealed class Camera2D
 {
     public Vector2 Position { get; private set; } = Vector2.Zero;
-    public float Zoom { get; private set; } = 16f; // pixels per tile
+    public float Zoom { get; private set; } = 4f; // pixels per tile
 
-    private static readonly float MinZoom = 4f;
+    private static readonly float MinZoom = 2f;
     private static readonly float MaxZoom = 64f;
 
     public void Pan(Vector2 delta) => Position += delta / Zoom;
@@ -33,6 +33,18 @@ public sealed class Camera2D
 
     public Vector2 TileToScreen(TileCoord coord) =>
         new Vector2((coord.X - Position.X) * Zoom, (coord.Y - Position.Y) * Zoom);
+
+    /// <summary>Fits the camera to show the entire world. Call once after the sim starts.</summary>
+    public void FitToWorld(int tileW, int tileH, int viewportW, int viewportH)
+    {
+        float zoomX = (float)viewportW / tileW;
+        float zoomY = (float)viewportH / tileH;
+        Zoom = Math.Clamp(Math.Min(zoomX, zoomY), MinZoom, MaxZoom);
+        // Centre the world in the viewport
+        Position = new Vector2(
+            tileW / 2f - viewportW / (2f * Zoom),
+            tileH / 2f - viewportH / (2f * Zoom));
+    }
 
     public (int minX, int minY, int maxX, int maxY) GetVisibleTileBounds(GraphicsDevice gd)
     {

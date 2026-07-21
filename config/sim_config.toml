@@ -222,6 +222,9 @@ continental_seasonal_threshold    = 0.25  # maritime influence below this → co
 maritime_seasonal_threshold       = 0.50  # maritime influence above this → maritime profile (dry summer, wet autumn/winter)
 min_seasonal_moisture_ratio       = 0.20  # seasonal CurrentMoisture floor: max(BaseMoisture + delta, BaseMoisture × this)
                                           # prevents winter/drought from zeroing moisture on low-BaseMoisture tiles
+wind_band_feather_rows            = 6     # half-width of vertical blend zone at tropical/mid-lat boundary.
+                                          # Rows within this distance of the band edge are averaged with their neighbours,
+                                          # smoothing the sharp east↔west wind reversal. 0 = sharp, 4-8 = smooth.
 
 # =============================================================================
 # DISASTERS (runtime, Phase 5)
