@@ -163,12 +163,27 @@ public sealed class Game1 : Game
             mainUI.Widgets.Add(_timeControls.Root);
         }
 
+        // Semi-transparent backing panel behind the left-side toolbar rows (BUG-2/3).
+        // Covers the two rows of buttons (overlay bar + panel toggle bar) that would
+        // otherwise float over the map with no visual separation.
+        var leftToolbarBacking = new Panel
+        {
+            HorizontalAlignment = HorizontalAlignment.Left,
+            VerticalAlignment   = VerticalAlignment.Top,
+            Top     = UI.Theme.UiTheme.TopBarClearance,
+            Left    = 0,
+            Width   = 520,
+            Height  = 80,
+            Background = new Myra.Graphics2D.Brushes.SolidBrush(UI.Theme.UiTheme.PanelBackground)
+        };
+        mainUI.Widgets.Add(leftToolbarBacking);
+
         // Overlay control bar (M6.1.1): visible, labeled overlay toggles below the time bar.
         if (_overlayBar is not null)
         {
             _overlayBar.Root.HorizontalAlignment = HorizontalAlignment.Left;
             _overlayBar.Root.VerticalAlignment   = VerticalAlignment.Top;
-            _overlayBar.Root.Top  = UI.Theme.UiTheme.TopBarClearance;   // clear the time controls
+            _overlayBar.Root.Top  = UI.Theme.UiTheme.TopBarClearance + 4;
             _overlayBar.Root.Left = 4;
             mainUI.Widgets.Add(_overlayBar.Root);
         }

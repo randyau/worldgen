@@ -109,6 +109,10 @@ public sealed class PhaseRunner
         if (isAnnualTick && _config.SimLoop.MetricsEnabled)
             MetricsCollector.Sample(world, _metricsAcc, _eventStore);
 
+        // Rebuild pre-aggregated summary tables every 50 years so CivHistoryPanel has live data.
+        if (isAnnualTick && world.CurrentYear > 0 && world.CurrentYear % 50 == 0)
+            _eventStore.BuildSummaries();
+
         world.CurrentTick++;
     }
 

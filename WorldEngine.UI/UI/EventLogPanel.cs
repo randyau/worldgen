@@ -78,16 +78,15 @@ public sealed class EventLogPanel
                 Background = new SolidBrush(UiTheme.TierColor(ev.TierInvolvement))
             };
 
-            // Richer text: [Year Season] Domain — TypeName [@SettlementName or @(x,y)]
-            string evText = $"[{ev.Year} {SeasonAbbrev(ev.Season)}] {ev.Domain} — {ev.TypeName}";
-            if (ev.SettlementName is not null)
-                evText += $" @ {ev.SettlementName}";
-            else if (ev.Location.HasValue)
-                evText += $" @({ev.Location.Value.X},{ev.Location.Value.Y})";
-
+            // Compact format: [Yr Sn] ActorName — short description @ location
+            string shortDesc = ShortEventDesc(ev.TypeName);
+            string location  = ev.SettlementName is not null ? $" @ {ev.SettlementName}"
+                             : ev.Location.HasValue           ? $" @({ev.Location.Value.X},{ev.Location.Value.Y})"
+                             : "";
+            string evText = $"[{ev.Year} {SeasonAbbrev(ev.Season)}] {shortDesc}{location}";
             var evLabel = new Label { Text = evText, TextColor = textColor };
 
-            // Clickable actor name button (if actor is a named character entity)
+            // Clickable actor name — shown first in the row for easy character following
             Widget? actorWidget = null;
             if (ev.ActorId > 0 && ev.ActorName is not null && IsCharacterEvent(ev.Type))
             {
@@ -95,7 +94,7 @@ public sealed class EventLogPanel
                 var actorBtn = new TextButton
                 {
                     Text  = ev.ActorName,
-                    Width = 90
+                    Width = 85
                 };
                 actorBtn.Click += (_, _) => _pendingCharacterProfileId = capturedActorId;
                 actorWidget = actorBtn;
@@ -123,8 +122,8 @@ public sealed class EventLogPanel
 
             var row = new HorizontalStackPanel { Spacing = 3 };
             row.Widgets.Add(tierStripe);
-            row.Widgets.Add(evLabel);
             if (actorWidget is not null) row.Widgets.Add(actorWidget);
+            row.Widgets.Add(evLabel);
             if (civWidget   is not null) row.Widgets.Add(civWidget);
             row.Widgets.Add(causeBtn);
             if (badgeWidget is not null) row.Widgets.Add(badgeWidget);
@@ -181,6 +180,54 @@ public sealed class EventLogPanel
         Season.Autumn => "Au",
         Season.Winter => "Wi",
         _             => "??"
+    };
+
+    private static string ShortEventDesc(string typeName) => typeName switch
+    {
+        "CharacterBorn"            => "born",
+        "CharacterDied"            => "died",
+        "CharacterMarried"         => "married",
+        "CharacterExiled"          => "exiled",
+        "CharacterGrieved"         => "grieving",
+        "CharacterFlourishing"     => "flourishing",
+        "CharacterSpiraling"       => "spiraling",
+        "WarDeclared"              => "war declared",
+        "WarEnded"                 => "war ended",
+        "AllianceFormed"           => "alliance formed",
+        "AllianceBroken"           => "alliance broken",
+        "RivalryFormed"            => "rivalry",
+        "BattleOccurred"           => "battle",
+        "SettlementFounded"        => "settlement founded",
+        "SettlementConquered"      => "settlement conquered",
+        "SettlementDestroyed"      => "settlement destroyed",
+        "SettlementAbandoned"      => "settlement abandoned",
+        "CivilizationFounded"      => "civ founded",
+        "CivilizationCollapsed"    => "civ collapsed",
+        "CivilizationSplinter"     => "civ splinter",
+        "TerritoryExpanded"        => "territory expanded",
+        "TerritoryLost"            => "territory lost",
+        "GoalFormed"               => "goal set",
+        "GoalResolved"             => "goal achieved",
+        "ArtworkCreated"           => "artwork created",
+        "ArtisanCrafted"           => "crafted",
+        "ScholarDiscovery"         => "discovery",
+        "MerchantTradeCompleted"   => "trade",
+        "PhysicianHealed"          => "healed",
+        "DiseaseOutbreak"          => "disease outbreak",
+        "DiseaseRecovered"         => "disease cleared",
+        "DroughtBegan"             => "drought started",
+        "DroughtEnded"             => "drought ended",
+        "WildlifeRaid"             => "wildlife raid",
+        "BeastSlain"               => "beast slain",
+        "AppointedToRole"          => "appointed",
+        "DismissedFromRole"        => "dismissed",
+        "SuccessionOccurred"       => "succession",
+        "ArtifactCreated"          => "artifact created",
+        "ArtifactDestroyed"        => "artifact destroyed",
+        "ArtifactTransferred"      => "artifact transferred",
+        "EmissaryDispatched"       => "emissary sent",
+        "EmissaryLost"             => "emissary lost",
+        _                          => typeName
     };
 
     /// <summary>True if this event type typically has a meaningful actor who is a named character.</summary>

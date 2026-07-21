@@ -44,8 +44,8 @@ public static class FirstRunOverlay
 
         AddTip("▶", "Time Controls (top bar) — pause, play, or fast-forward history.");
         AddTip("■", "Overlays (top bar, left) — switch map layers: elevation, climate, territory…");
-        AddTip("≡", "Event Log (right sidebar) — recent events; use the Filters to narrow results.");
-        AddTip("→", "Click any event's → button to trace its causal chain.");
+        AddTip(">>", "Event Log (right sidebar) — recent events; use the Filters to narrow results.");
+        AddTip("->", "Click any event's -> button to trace its causal chain.");
         AddTip("?", "Press ? at any time to see all keybindings.");
 
         content.Widgets.Add(new Label { Text = " ", Height = 4 });
@@ -62,8 +62,8 @@ public static class FirstRunOverlay
         {
             Title   = "Getting Started",
             Content = content,
-            Width   = 420,
-            Height  = 260
+            Width   = 460,
+            Height  = 290
         };
 
         dismissBtn.Click += (_, _) =>

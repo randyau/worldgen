@@ -88,7 +88,7 @@ public sealed class CivHistoryPanel : IPanel
         if (_civIds.Count == 0)
         {
             _content.Widgets.Clear();
-            AddLine("(No civ summaries yet — run BuildSummaries to populate)", Color.DarkGray);
+            AddLine("(No civ summaries yet — summaries build every 50 in-game years)", Color.DarkGray);
         }
     }
 

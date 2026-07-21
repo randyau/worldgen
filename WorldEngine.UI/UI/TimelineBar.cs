@@ -84,6 +84,18 @@ public sealed class TimelineBar : IDisposable
             _scrubYear         = -1;
             ScrubLabel.Visible = false;
         }
+        else if (inBar && mouse.LeftButton == ButtonState.Released)
+        {
+            // Hover hint: explain the bar when not clicking
+            ScrubLabel.Text    = "History bar: blue=event density · gold dots=headlines · click to scrub to year";
+            ScrubLabel.Visible = true;
+            ScrubLabel.Left    = barRect.X + 4;
+            ScrubLabel.Top     = barRect.Y - 18;
+        }
+        else if (!inBar && _scrubYear < 0)
+        {
+            ScrubLabel.Visible = false;
+        }
     }
 
     /// <summary>
