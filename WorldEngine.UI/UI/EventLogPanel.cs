@@ -34,9 +34,9 @@ public sealed class EventLogPanel
         var regionalBox   = new CheckBox { Text = "Regional",   IsChecked = _showRegional };
         var backgroundBox = new CheckBox { Text = "Background", IsChecked = _showBackground };
 
-        headlineBox.PressedChanged   += (_, _) => _showHeadline   = headlineBox.IsChecked;
-        regionalBox.PressedChanged   += (_, _) => _showRegional   = regionalBox.IsChecked;
-        backgroundBox.PressedChanged += (_, _) => _showBackground = backgroundBox.IsChecked;
+        headlineBox.IsCheckedChanged   += (_, _) => _showHeadline   = headlineBox.IsChecked;
+        regionalBox.IsCheckedChanged   += (_, _) => _showRegional   = regionalBox.IsChecked;
+        backgroundBox.IsCheckedChanged += (_, _) => _showBackground = backgroundBox.IsChecked;
 
         var filterBar = new HorizontalStackPanel { Spacing = 8 };
         filterBar.Widgets.Add(headlineBox);

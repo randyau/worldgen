@@ -17,7 +17,7 @@ public sealed class CivHistoryPanel : IPanel
     private readonly IHistoryQuery _history;
     private readonly AncestryRegistry? _ancestries;
     private readonly VerticalStackPanel _content;
-    private readonly ComboBox _civCombo;
+    private readonly ComboView _civCombo;
     private readonly List<long> _civIds = new();
 
     public Widget Root { get; }
@@ -28,8 +28,8 @@ public sealed class CivHistoryPanel : IPanel
         _history    = history;
         _ancestries = ancestries;
 
-        _civCombo = new ComboBox { Width = 320, HorizontalAlignment = HorizontalAlignment.Stretch };
-        _civCombo.SelectedIndexChanged += OnCivSelected;
+        _civCombo = new ComboView { Width = 320, HorizontalAlignment = HorizontalAlignment.Stretch };
+        _civCombo.SelectedIndexChanged += (_, _) => OnCivSelected();
 
         _content = new VerticalStackPanel { Spacing = 2 };
         var scroll = new ScrollViewer { Content = _content, Width = UiTheme.ScrollWidth, Height = 420 };
@@ -73,7 +73,7 @@ public sealed class CivHistoryPanel : IPanel
     private void RefreshCivList()
     {
         _civIds.Clear();
-        _civCombo.Items.Clear();
+        _civCombo.Widgets.Clear();
 
         var civs = _history.GetAllCivSummaries();
         foreach (var civ in civs)
@@ -81,7 +81,7 @@ public sealed class CivHistoryPanel : IPanel
             string label = civ.IsCollapsed
                 ? $"{civ.Name}  [collapsed {civ.CollapseYear}]"
                 : $"{civ.Name}  [active]";
-            _civCombo.Items.Add(new ListItem(label));
+            _civCombo.Widgets.Add(new Label { Text = label, TextColor = UiTheme.BodyText });
             _civIds.Add(civ.CivId);
         }
 
@@ -92,7 +92,7 @@ public sealed class CivHistoryPanel : IPanel
         }
     }
 
-    private void OnCivSelected(object? sender, EventArgs e)
+    private void OnCivSelected()
     {
         int idx = _civCombo.SelectedIndex ?? -1;
         if (idx >= 0 && idx < _civIds.Count)
