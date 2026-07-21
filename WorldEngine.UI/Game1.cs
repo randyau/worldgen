@@ -77,6 +77,9 @@ public sealed class Game1 : Game
     // M6.1.2 — unified panel show/hide + visible toggle bar
     private PanelManager? _panelManager;
 
+    // M6.3.1 — first-class filter panel above the event log
+    private FilterPanel? _filterPanel;
+
     // Phase 3.6 — save / resume
     private const string SaveDir = "worldsave";
     private Label? _savingLabel;          // "Saving..." overlay
@@ -115,6 +118,7 @@ public sealed class Game1 : Game
         _genScreen    = new WorldGenScreen();
         _timeControls = new TimeControlsPanel(_commandQueue);
         _eventLog     = new EventLogPanel();
+        _filterPanel  = new FilterPanel();
         _overlayBar   = new OverlayBar(_commandQueue);
         _panelManager = new PanelManager();
         _tileInspector = new TileInspectorPanel();
@@ -189,6 +193,7 @@ public sealed class Game1 : Game
             Top                  = 44,   // clear the time controls bar (~40px tall)
         };
         if (_tileInspector is not null) sidebar.Widgets.Add(_tileInspector.Root);
+        if (_filterPanel   is not null) sidebar.Widgets.Add(_filterPanel.Root);
         if (_eventLog      is not null) sidebar.Widgets.Add(_eventLog.Root);
         mainUI.Widgets.Add(sidebar);
 
@@ -283,7 +288,7 @@ public sealed class Game1 : Game
                 _timeControls?.Update(snapshot);
                 _overlayBar?.Update(snapshot.ActiveOverlay);
                 _panelManager?.Sync();   // reconcile toggle-bar buttons with self-closed panels
-                _eventLog?.Update(snapshot, _focusLens);
+                _eventLog?.Update(snapshot, _focusLens, _filterPanel?.CurrentFilter);
                 _tileInspector?.Update(snapshot.InspectedTile, snapshot);
 
                 // Phase 3.6: show/hide saving overlay

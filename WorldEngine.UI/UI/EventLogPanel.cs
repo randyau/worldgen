@@ -18,10 +18,6 @@ public sealed class EventLogPanel
     private readonly VerticalStackPanel _rows;
     private readonly ScrollViewer _scroll;
 
-    private bool _showHeadline  = true;
-    private bool _showRegional  = true;
-    private bool _showBackground;
-
     // Consumed by Game1 each frame — cleared after reading
     private long? _pendingCauseChainEventId;
     private long? _pendingCharacterProfileId;
@@ -31,40 +27,27 @@ public sealed class EventLogPanel
         _rows   = new VerticalStackPanel { Spacing = 2 };
         _scroll = new ScrollViewer { Content = _rows, Width = 340, Height = 250 };
 
-        var headlineBox   = new CheckBox { Text = "Headline",   IsChecked = _showHeadline };
-        var regionalBox   = new CheckBox { Text = "Regional",   IsChecked = _showRegional };
-        var backgroundBox = new CheckBox { Text = "Background", IsChecked = _showBackground };
-
-        headlineBox.IsCheckedChanged   += (_, _) => _showHeadline   = headlineBox.IsChecked;
-        regionalBox.IsCheckedChanged   += (_, _) => _showRegional   = regionalBox.IsChecked;
-        backgroundBox.IsCheckedChanged += (_, _) => _showBackground = backgroundBox.IsChecked;
-
-        var filterBar = new HorizontalStackPanel { Spacing = 8 };
-        filterBar.Widgets.Add(headlineBox);
-        filterBar.Widgets.Add(regionalBox);
-        filterBar.Widgets.Add(backgroundBox);
-
-        var stack = new VerticalStackPanel { Spacing = 4 };
-        stack.Widgets.Add(filterBar);
-        stack.Widgets.Add(_scroll);
-
         Root = new Panel();
-        Root.Widgets.Add(stack);
+        Root.Widgets.Add(_scroll);
     }
 
     // ── Public API ─────────────────────────────────────────────────────────────────────────────
 
     /// <summary>
     /// Rebuilds the event log from the latest snapshot.
-    /// When focusLens is active, events not in its FocusedEventIds are dimmed.
+    /// Applies <paramref name="filter"/> criteria and optionally dims events outside <paramref name="focusLens"/>.
     /// </summary>
-    public void Update(WorldSnapshot snapshot, FocusLensState? focusLens = null)
+    public void Update(WorldSnapshot snapshot, FocusLensState? focusLens = null, EventLogFilter? filter = null)
     {
+        filter ??= EventLogFilter.Default;
         _rows.Widgets.Clear();
 
         foreach (var ev in snapshot.RecentEvents.Reverse())
         {
-            if (!ShouldShow(ev.TierInvolvement)) continue;
+            if (!filter.PassesTier(ev.TierInvolvement))  continue;
+            if (!filter.PassesDomain(ev.Domain))          continue;
+            if (!filter.PassesActor(ev.ActorName))        continue;
+            if (!filter.PassesYear(ev.Year))              continue;
 
             bool isFocused = focusLens is null
                           || focusLens.Type == FocusType.None
@@ -146,15 +129,6 @@ public sealed class EventLogPanel
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────────────────────────
-
-    private bool ShouldShow(EventTier tier) => tier switch
-    {
-        EventTier.Headline   => _showHeadline,
-        EventTier.Regional   => _showRegional,
-        EventTier.Character  => _showRegional,   // shown alongside regional
-        EventTier.Background => _showBackground,
-        _                    => false
-    };
 
     private static string SeasonAbbrev(Season season) => season switch
     {
