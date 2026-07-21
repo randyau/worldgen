@@ -11,7 +11,7 @@ namespace WorldEngine.UI.UI;
 /// Updated each tick from WorldSnapshot.WatchedCharacter.
 /// Precursor to M4 Spotlight — everything read-only, no sim commands except WatchCharacter.
 /// </summary>
-public sealed class CharacterWatchPanel
+public sealed class CharacterWatchPanel : IPanel
 {
     private readonly VerticalStackPanel _content;
 

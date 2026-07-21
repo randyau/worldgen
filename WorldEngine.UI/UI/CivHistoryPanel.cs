@@ -12,7 +12,7 @@ namespace WorldEngine.UI.UI;
 /// Myra panel showing the full arc of a civilization — rulers, key wars, major events, traits.
 /// Includes a civ selector ComboBox at the top.
 /// </summary>
-public sealed class CivHistoryPanel
+public sealed class CivHistoryPanel : IPanel
 {
     private readonly IHistoryQuery _history;
     private readonly AncestryRegistry? _ancestries;

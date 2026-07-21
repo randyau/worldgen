@@ -10,7 +10,7 @@ namespace WorldEngine.UI.UI;
 /// (M6 Epic 6.1.3).
 /// </summary>
 // MAP: Help panel listing all shortcuts, generated from KeybindRegistry so it can't drift.
-public sealed class HelpOverlayPanel
+public sealed class HelpOverlayPanel : IPanel
 {
     private readonly VerticalStackPanel _content;
 

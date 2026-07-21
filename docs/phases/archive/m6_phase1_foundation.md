@@ -1,7 +1,7 @@
 # M6 Phase 1 — UI Foundation
 
 **Milestone:** M6 — UI Experience & Polish
-**Status:** IN PROGRESS — started 2026-07-21
+**Status:** COMPLETE — 2026-07-21
 **Roadmap:** `docs/roadmap.md` § "M6 — UI Experience & Polish" (Epics 6.1, 6.2.1)
 
 ## Goal
@@ -22,9 +22,14 @@ through `ICommand` → `CommandResolver`; no hardcoded sim constants; zero warni
 | 2 | 6.1.3 | `KeybindRegistry` (single source of truth) + `HelpOverlayPanel` | DONE |
 | 3 | 6.1.4 | UI-side `SelectionState` + `SelectionRouter` | DONE |
 | 4 | 6.1.1 | `OverlayBar` with active-state highlight | DONE |
-| 5 | 6.1.2 | `PanelManager` + visible toggle bar | pending |
+| 5 | 6.1.2 | `PanelManager` + visible toggle bar | DONE |
 
 Deferred to later M6 phases: 6.2.2–6.2.4, all 6.3, all 6.4.
+
+**Story 5 scope note:** the toggle bar manages the three panels that previously had ad-hoc
+toggles (`civ`, `watch`, `help`) via the new `IPanel` interface; the always-on sidebar panels
+(event log, tile inspector) and the bottom timeline are left always-visible. Bringing those
+under the manager is a small follow-up for a later M6 visual-pass phase, not foundation work.
 
 ## Key decisions
 

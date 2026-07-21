@@ -73,6 +73,9 @@ public sealed class Game1 : Game
     private SelectionState?  _selection;
     private SelectionRouter? _selectionRouter;
 
+    // M6.1.2 — unified panel show/hide + visible toggle bar
+    private PanelManager? _panelManager;
+
     // Phase 3.6 — save / resume
     private const string SaveDir = "worldsave";
     private Label? _savingLabel;          // "Saving..." overlay
@@ -110,6 +113,7 @@ public sealed class Game1 : Game
         _timeControls = new TimeControlsPanel(_commandQueue);
         _eventLog     = new EventLogPanel();
         _overlayBar   = new OverlayBar(_commandQueue);
+        _panelManager = new PanelManager();
         _tileInspector = new TileInspectorPanel();
 
         var rootPanel = BuildRootPanel();
@@ -160,6 +164,16 @@ public sealed class Game1 : Game
             _overlayBar.Root.Top  = UI.Theme.UiTheme.TopBarClearance;   // clear the time controls
             _overlayBar.Root.Left = 4;
             mainUI.Widgets.Add(_overlayBar.Root);
+        }
+
+        // Panel toggle bar (M6.1.2): visible show/hide affordances, below the overlay bar.
+        if (_panelManager is not null)
+        {
+            _panelManager.ToggleBar.HorizontalAlignment = HorizontalAlignment.Left;
+            _panelManager.ToggleBar.VerticalAlignment   = VerticalAlignment.Top;
+            _panelManager.ToggleBar.Top  = 84;   // clear the overlay bar
+            _panelManager.ToggleBar.Left = 4;
+            mainUI.Widgets.Add(_panelManager.ToggleBar);
         }
 
         // Sidebar: fixed 360px wide, docked to top-right, below time controls
@@ -263,6 +277,7 @@ public sealed class Game1 : Game
                 _lastSnapshot = snapshot;
                 _timeControls?.Update(snapshot);
                 _overlayBar?.Update(snapshot.ActiveOverlay);
+                _panelManager?.Sync();   // reconcile toggle-bar buttons with self-closed panels
                 _eventLog?.Update(snapshot, _focusLens);
                 _tileInspector?.Update(snapshot.InspectedTile, snapshot);
 
@@ -288,7 +303,7 @@ public sealed class Game1 : Game
                 if (watchId != 0)
                 {
                     _commandQueue.Enqueue(new WatchCharacter(new EntityId(watchId)));
-                    _charWatch?.Show();
+                    _panelManager?.Show("watch");
                 }
             }
 
@@ -383,8 +398,8 @@ public sealed class Game1 : Game
 
         if (_mainUI is not null && _desktop is not null)
         {
-            // Left-docked contextual panels sit below the overlay bar (Top clears both bars).
-            const int leftPanelTop = 84;
+            // Left-docked contextual panels sit below the overlay + panel-toggle bars.
+            const int leftPanelTop = 124;
 
             _charProfile.Root.HorizontalAlignment = HorizontalAlignment.Left;
             _charProfile.Root.VerticalAlignment   = VerticalAlignment.Top;
@@ -413,6 +428,11 @@ public sealed class Game1 : Game
             if (_desktop.Root is Panel rootPanel)
                 rootPanel.Widgets.Add(_timeline.ScrubLabel);
         }
+
+        // Register toggleable panels with the manager (restores remembered open/closed state).
+        _panelManager?.Register("civ",   "Civ History", _civHistory!);
+        _panelManager?.Register("watch", "Watch",       _charWatch!);
+        _panelManager?.Register("help",  "Help (?)",    _helpOverlay!);
 
         // Build the keybind registry now that panels/commands exist, then feed the help panel.
         BuildKeybinds();
@@ -446,10 +466,10 @@ public sealed class Game1 : Game
         reg.Register(Keys.R, "Resources overlay",  "Overlays", () => _commandQueue.Enqueue(new SetActiveOverlay(OverlayType.Resources)));
         reg.Register(Keys.G, "Magic overlay",      "Overlays", () => _commandQueue.Enqueue(new SetActiveOverlay(OverlayType.MagicIntensity)));
 
-        // Panels
-        reg.Register(Keys.H,           "Civ history panel",     "Panels", () => _civHistory?.Toggle());
-        reg.Register(Keys.W,           "Character watch panel", "Panels", () => _charWatch?.Toggle());
-        reg.Register(Keys.OemQuestion, "This help",             "Panels", () => _helpOverlay?.Toggle());
+        // Panels — route through the manager so keys and toggle-bar buttons share one path.
+        reg.Register(Keys.H,           "Civ history panel",     "Panels", () => _panelManager?.Toggle("civ"));
+        reg.Register(Keys.W,           "Character watch panel", "Panels", () => _panelManager?.Toggle("watch"));
+        reg.Register(Keys.OemQuestion, "This help",             "Panels", () => _panelManager?.Toggle("help"));
 
         // World
         reg.Register(Keys.N,      "New world",     "World", ResetToNewWorld);
@@ -575,6 +595,11 @@ public sealed class Game1 : Game
         _timeline?.Dispose();
         _timeline = null;
 
+        // Capture which managed panels were open (into remembered state) and clear the toggle
+        // bar before detaching panels, so the next world restores the same open/closed set.
+        _panelManager?.ResetRegistrations();
+        _keybinds = null;   // rebuilt by StartSim against the fresh panels
+
         // Hide and detach old narrative/watch panels from the widget tree so
         // StartSim can add fresh ones without stale roots accumulating.
         if (_mainUI is not null)
@@ -584,8 +609,6 @@ public sealed class Game1 : Game
             if (_charWatch   is not null) _mainUI.Widgets.Remove(_charWatch.Root);
             if (_helpOverlay is not null) _mainUI.Widgets.Remove(_helpOverlay.Root);
         }
-        _helpOverlay?.Hide();
-        _keybinds = null;   // rebuilt by StartSim against the fresh panels
         if (_desktop?.Root is Panel dp && _timeline is not null)
             dp.Widgets.Remove(_timeline.ScrubLabel);
         _charProfile?.Hide();
