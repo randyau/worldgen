@@ -206,7 +206,7 @@ One-line description of every non-trivial source file. Check here before running
 - `TileInspectorPanel.cs` — Sidebar tile inspector; territory/improvement/history sections; [Watch] buttons per character (M3.4).
 - `TimeControlsPanel.cs` — Top toolbar: speed buttons, year/season label.
 - `TimelineBar.cs` — Timeline scrubber bar drawn via SpriteBatch at the bottom of the map area. Shows event density heatmap and allows scrubbing to any historical year. The ScrubLabel is a Myra Label — add it to the root overlay panel in Game1.
-- `WorldGenScreen.cs` — Full-screen world-gen progress overlay.
+- `WorldGenScreen.cs` — Full-screen world-gen progress overlay with completion state and "Start Simulation" button.
 
 ## WorldEngine.UI/UI/Theme/
 - `PanelChrome.cs` — Builds the standard docked-panel chrome — a bordered, padded container with a title bar and optional <c>[Close]</c> button — so every panel shares one look instead of each re-inventing its own header/close/background (M6 Epic 6.2.1).

@@ -2,6 +2,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using Myra.Graphics2D.UI;
+using WorldEngine.Sim.Core;
 using WorldEngine.Sim.World;
 
 namespace WorldEngine.UI.UI;
@@ -17,6 +18,7 @@ public sealed class TimelineBar : IDisposable
     private Dictionary<int, int> _eventsByDecade = new();
     private int _maxBucketCount;
     private int _scrubYear = -1;
+    private List<int> _headlineYears = new();
 
     /// <summary>Current scrub year, or -1 if not scrubbing.</summary>
     public int ScrubYear => _scrubYear;
@@ -45,6 +47,16 @@ public sealed class TimelineBar : IDisposable
     {
         _eventsByDecade  = history.GetEventCountByDecade(1, currentYear);
         _maxBucketCount  = _eventsByDecade.Values.DefaultIfEmpty(0).Max();
+    }
+
+    /// <summary>
+    /// Loads Headline-tier event years for the headline pips.
+    /// Call whenever the sim year advances significantly (e.g. every 50 sim-years).
+    /// </summary>
+    public void LoadHeadlineEvents(IHistoryQuery history, int currentYear)
+    {
+        var events = history.GetSignificantEvents(1, currentYear, EventTier.Headline);
+        _headlineYears = events.Select(ev => ev.Year).ToList();
     }
 
     /// <summary>
@@ -85,7 +97,7 @@ public sealed class TimelineBar : IDisposable
         // Background
         sb.Draw(_pixel, barRect, Color.DimGray * 0.85f);
 
-        // Density heatmap — shade each decade bucket from light→dark based on event density
+        // Density heatmap — shade each decade bucket with cool-blue gradient based on event density
         if (_eventsByDecade.Count > 0 && currentYear > 0)
         {
             foreach (var (decade, count) in _eventsByDecade)
@@ -97,9 +109,34 @@ public sealed class TimelineBar : IDisposable
                 int   w   = Math.Max(1, px1 - px0);
 
                 float density = _maxBucketCount > 0 ? (float)count / _maxBucketCount : 0f;
-                // Light gray (few events) → dark slate gray (many events)
-                byte gray = (byte)(200 - (int)(density * 140));
-                sb.Draw(_pixel, new Rectangle(px0, barRect.Y, w, barRect.Height), new Color(gray, gray, gray));
+                // Cool-blue gradient: few events → dark navy, many events → bright cyan
+                byte b = (byte)(80 + (int)(density * 175));
+                byte g = (byte)(density * 200);
+                sb.Draw(_pixel, new Rectangle(px0, barRect.Y, w, barRect.Height), new Color(0, g, b));
+            }
+        }
+
+        // Century tick marks — vertical lines at 100-year boundaries (top half only)
+        if (currentYear > 0)
+        {
+            for (int y = 100; y <= currentYear; y += 100)
+            {
+                int x = barRect.X + (int)((float)y / currentYear * barRect.Width);
+                sb.Draw(_pixel, new Rectangle(x, barRect.Y, 1, barRect.Height / 2), Color.White * 0.5f);
+            }
+        }
+
+        // Headline event pips — gold dots at headline event years
+        if (currentYear > 0)
+        {
+            int pipSize = 3;
+            int centerY = barRect.Y + barRect.Height / 2;
+            foreach (int year in _headlineYears)
+            {
+                int x = barRect.X + (int)((float)year / currentYear * barRect.Width);
+                int pipX = x - pipSize / 2;
+                int pipY = centerY - pipSize / 2;
+                sb.Draw(_pixel, new Rectangle(pipX, pipY, pipSize, pipSize), Color.Gold);
             }
         }
 

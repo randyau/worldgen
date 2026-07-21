@@ -250,8 +250,10 @@ public sealed class Game1 : Game
         if (!_simStarted && _loadTask?.IsCompletedSuccessfully == true)
             StartSimFromLoad(_loadTask.Result);
 
-        // Gen path: gen task completed
+        // Gen path: show completion screen when ready, then start sim on button click
         if (!_simStarted && _genTask?.IsCompletedSuccessfully == true)
+            _genScreen?.ShowComplete();
+        if (!_simStarted && _genTask?.IsCompletedSuccessfully == true && _genScreen?.ConsumePendingStart() == true)
             StartSim(_genTask.Result);
 
         // Surface sim thread crashes to a visible label and log file
@@ -292,6 +294,7 @@ public sealed class Game1 : Game
                     && snapshot.CurrentYear - _lastBucketLoadYear >= 50)
                 {
                     _timeline.LoadEventBuckets(_historyQuery, snapshot.CurrentYear);
+                    _timeline.LoadHeadlineEvents(_historyQuery, snapshot.CurrentYear);
                     _lastBucketLoadYear = snapshot.CurrentYear;
                 }
             }
