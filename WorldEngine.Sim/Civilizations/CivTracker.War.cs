@@ -38,6 +38,20 @@ public static partial class CivTracker
         if (declCiv.IsAtWarWith(targCiv.Id)) return;
         if (declCiv.InPeaceCooldownWith(targCiv.Id, world.CurrentYear, wCfg.PeaceCooldownYears, wCfg.WarExhaustionYearsPerWar)) return;
 
+        // Ramp war probability with population — no cliff at the floor
+        int declPop = world.Settlements.Values.Where(s => s.CivId == declCiv.Id).Sum(s => s.Population);
+        int targPop = world.Settlements.Values.Where(s => s.CivId == targCiv.Id).Sum(s => s.Population);
+        int bottleneckPop = Math.Min(declPop, targPop);
+        float warPopFactor = Math.Clamp(
+            (bottleneckPop - wCfg.WarMinCivPop) / (float)wCfg.WarPopRampRange, 0f, 1f);
+        if (warPopFactor <= 0f) return;
+        if (warPopFactor < 1f)
+        {
+            float warRoll = WorldRng.FloatAt(world.WorldSeed, world.CurrentYear,
+                declCiv.CapitalTile.X, declCiv.CapitalTile.Y, 4201);
+            if (warRoll >= warPopFactor) return;
+        }
+
         declCiv.WarsAgainst[targCiv.Id] = world.CurrentYear;
         targCiv.WarsAgainst[declCiv.Id] = world.CurrentYear;
 

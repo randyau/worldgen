@@ -89,4 +89,15 @@ public sealed class UnrestConfig
     /// Feeds into the existing BorderTension system used for war triggers.
     /// </summary>
     public float SplinterInitialTension   { get; set; } = 0.60f;
+
+    /// <summary>
+    /// Population floor below which secession probability is zero.
+    /// </summary>
+    public int SecessionMinCivPop { get; set; } = 500;
+
+    /// <summary>
+    /// Population range over which secession probability ramps from 0 to full.
+    /// At SecessionMinCivPop the chance is 0; at SecessionMinCivPop + this value it is fully unlocked.
+    /// </summary>
+    public int SecessionPopRampRange { get; set; } = 500;
 }

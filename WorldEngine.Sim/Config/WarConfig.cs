@@ -161,4 +161,17 @@ public sealed class WarConfig
     /// when a war is declared — seeds defensive coalitions against common aggressors.
     /// </summary>
     public float CoalitionTrustBonus { get; set; } = 0.20f;
+
+    /// <summary>
+    /// Population floor below which war probability is zero.
+    /// Both the aggressor and target must exceed this floor.
+    /// </summary>
+    public int WarMinCivPop { get; set; } = 300;
+
+    /// <summary>
+    /// Population range over which war probability ramps from 0 to full.
+    /// At WarMinCivPop the chance is 0; at WarMinCivPop + this value it is fully unlocked.
+    /// The bottleneck civ (lower pop of the two) determines the ramp factor.
+    /// </summary>
+    public int WarPopRampRange { get; set; } = 700;
 }

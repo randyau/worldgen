@@ -740,9 +740,9 @@ war_aggression_threshold      = 0.5   # minimum ruler Aggression to consider Dec
 # Border tension (civ-level trigger — moved from [character])
 war_proximity_radius          = 40    # tile radius within which settlements accumulate tension
                                       # (was 15 — too small for 400×300 tile world; raised S1 2026-07-18)
-tension_accrual_per_pair      = 0.08  # tension per close settlement pair per year (× proximity × ruler Aggression; was 0.12)
+tension_accrual_per_pair      = 0.05  # tension per close settlement pair per year (× proximity × ruler Aggression; was 0.08)
 tension_decay_rate            = 0.20  # fraction of tension lost when no proximate settlements exist (was 0.15)
-tension_war_threshold         = 1.2   # accumulated tension that triggers war when ruler is aggressive enough (was 1.0)
+tension_war_threshold         = 1.4   # accumulated tension that triggers war when ruler is aggressive enough (was 1.2)
 personal_war_tension_fraction = 0.6   # fraction of tension_war_threshold at which a personal encounter justifies war
 
 # ==========================================================================
@@ -778,6 +778,11 @@ resource_shortage_tension_bonus      = 0.20  # extra tension/year when aggressor
 # toward the target — simulates small civs rallying against a common aggressor.
 coalition_trust_bonus                = 0.20  # trust boost per civ on each war declaration
 
+# Minimum population: both aggressor and target must exceed this for war to begin.
+# Below this threshold, civs are too small to sustain military campaigns.
+war_min_civ_pop                      = 300   # population floor: war probability is 0 below this (bottleneck civ)
+war_pop_ramp_range                   = 700   # population range over which war probability ramps 0→full (floor+range = fully unlocked)
+
 # =============================================================================
 # RELIGION (M4 Phase 3 — Religion founding via character goal)
 # =============================================================================
@@ -802,8 +807,8 @@ unrest_distance_per_tile     = 0.005  # unrest/tile/year beyond comfort_radius (
 
 # Size driver: empire-scale unrest; fires above soft city threshold
 unrest_soft_city_threshold   = 4     # cities before size-driver kicks in (was 6; reduced 2026-07-21)
-unrest_per_excess_city       = 0.05  # unrest/yr per excess city above threshold (was 0.04)
-                                     # at 6 cities (2 excess) → +0.10/yr to distant settlements
+unrest_per_excess_city       = 0.035 # unrest/yr per excess city above threshold (was 0.05 → 0.035; overtuned)
+                                     # at 6 cities (2 excess) → +0.07/yr to distant settlements
 
 # Famine driver: food crisis accelerates unrest
 unrest_famine_bonus          = 0.15  # extra unrest/yr when settlement is in food crisis
@@ -815,12 +820,14 @@ unrest_succession_mult       = 1.5   # multiplier on all unrest sources during c
 unrest_decay_rate            = 0.10  # fraction decayed per year (10%/yr → half-life ~7 years)
 
 # Secession trigger
-unrest_secession_threshold   = 0.70  # unrest level that makes a settlement eligible to secede
-unrest_secession_chance      = 0.40  # annual probability of secession when above threshold
+unrest_secession_threshold   = 0.80  # unrest level that makes a settlement eligible to secede (was 0.70; overtuned)
+unrest_secession_chance      = 0.30  # annual probability of secession when above threshold (was 0.40)
 unrest_cluster_radius        = 25    # tile radius; nearby same-civ high-unrest settlements may join (was 15; S4 —
                                      # bigger clusters mean seceded civs start with 2-3 cities, not 1)
 unrest_cluster_min_unrest    = 0.30  # min unrest for a neighbour to join the seceding cluster (was 0.50; S4)
-splinter_initial_tension     = 0.60  # initial BorderTension the new civ has toward its parent
+splinter_initial_tension     = 0.40  # initial BorderTension the new civ has toward its parent (was 0.60; overtuned)
+secession_min_civ_pop        = 500   # population floor: secession probability is 0 below this
+secession_pop_ramp_range     = 500   # population range over which secession probability ramps 0→full (floor+range = fully unlocked)
 
 # ─── Utility scorer — behavior tables (D3) ────────────────────────────────────
 # Two tables extracted from UtilityScorer.cs to make character AI tunable without recompiling.

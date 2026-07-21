@@ -83,9 +83,15 @@ public static partial class CivTracker
             if (tile == civ.CapitalTile) continue;              // capitals do not secede from themselves
             if (civ.SettlementCount + civ.ColonyCount < 2) continue; // nothing to splinter from
 
+            // Ramp secession probability with civ population — no cliff at the floor
+            int civPop = world.Settlements.Values.Where(s => s.CivId == stub.CivId).Sum(s => s.Population);
+            float popFactor = Math.Clamp(
+                (civPop - cfg.SecessionMinCivPop) / (float)cfg.SecessionPopRampRange, 0f, 1f);
+            if (popFactor <= 0f) continue;
+
             float roll = WorldRng.FloatAt(world.WorldSeed, world.CurrentYear,
                                           tile.X, tile.Y, SaltSecessionRoll);
-            if (roll >= cfg.UnrestSecessionChance) continue;
+            if (roll >= cfg.UnrestSecessionChance * popFactor) continue;
 
             secededCivs.Add(stub.CivId);
             ExecuteSecession(tile, civ, world, pending, cfg);
