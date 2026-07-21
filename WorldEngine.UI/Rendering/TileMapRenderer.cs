@@ -104,7 +104,7 @@ public sealed class TileMapRenderer(GraphicsDevice gd, Camera2D camera)
         DrawRuinMarkers(sb, snapshot, tw, th, minX, maxX, minY, maxY);
 
         // Draw settlement markers — always visible regardless of zoom
-        DrawSettlementMarkers(sb, snapshot, tw, th, minX, maxX, minY, maxY);
+        DrawSettlementMarkers(sb, snapshot, tw, th, minX, maxX, minY, maxY, territoryMode);
 
         // Draw selection highlight over the inspected tile
         if (snapshot.InspectedTile?.Coord is TileCoord sel)
@@ -265,16 +265,15 @@ public sealed class TileMapRenderer(GraphicsDevice gd, Camera2D camera)
 
     private void DrawSettlementMarkers(
         SpriteBatch sb, WorldSnapshot snapshot,
-        int tw, int th, int minX, int maxX, int minY, int maxY)
+        int tw, int th, int minX, int maxX, int minY, int maxY,
+        bool territoryMode = false)
     {
         if (snapshot.Settlements.Count == 0) return;
 
         int markerSize = MarkerPx(0.4f, 3);
         int half       = markerSize / 2;
 
-        // White fill with dark border — stands out on any biome color
-        var fill   = Color.White;
-        var border = new Color(30, 20, 10);
+        var fill = Color.White;
 
         for (int ty = minY; ty <= maxY; ty++)
         for (int tx = minX; tx <= maxX; tx++)
@@ -287,12 +286,16 @@ public sealed class TileMapRenderer(GraphicsDevice gd, Camera2D camera)
             int cx  = (int)MathF.Round(pos.X + camera.Zoom * 0.5f);
             int cy  = (int)MathF.Round(pos.Y + camera.Zoom * 0.5f);
 
-            // Tint red if settlement is in poor health
+            // Fill: white, or health-tinted
             if (s.Health < 40) fill = new Color(220, 80, 60);
             else if (s.Health < 70) fill = new Color(230, 200, 80);
             else fill = Color.White;
 
-            // Border then fill (border drawn as slightly larger rect)
+            // Border: civ color in territory mode so it updates immediately with ownership changes
+            var border = (territoryMode && snapshot.TerritoryMap.TryGetValue(coord, out var terr))
+                ? UiTheme.CivColor(terr.CivId)
+                : new Color(30, 20, 10);
+
             sb.Draw(_pixel, new Rectangle(cx - half - 1, cy - half - 1, markerSize + 2, markerSize + 2), border);
             sb.Draw(_pixel, new Rectangle(cx - half, cy - half, markerSize, markerSize), fill);
         }

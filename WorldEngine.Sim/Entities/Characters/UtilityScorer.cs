@@ -493,13 +493,14 @@ public sealed class UtilityScorer
         int[] dx = { -1, 1, 0, 0 };
         int[] dy = { 0, 0, -1, 1 };
 
-        // Shuffle direction evaluation order per-character so tied scores don't always break
-        // toward East/West. Uses character ID (stable per character) as a deterministic key.
+        // Shuffle direction evaluation order so tied scores don't create latitude bias.
+        // Keyed on character ID + current tick so the same character varies direction over time.
         int[] ord = { 0, 1, 2, 3 };
-        int idInt = (int)(c.Id.Value & 0x7FFFFFFF);
+        int idInt   = (int)(c.Id.Value & 0x7FFFFFFF);
+        int tickInt = (int)(world.CurrentTick & 0x7FFFFFFF);
         for (int k = 3; k > 0; k--)
         {
-            int j = (int)(WorldRng.FloatAt(world.Config.Seed, idInt, c.Location.X + k, c.Location.Y, 888) * (k + 1));
+            int j = (int)(WorldRng.FloatAt(world.Config.Seed, idInt ^ tickInt, c.Location.X + k, c.Location.Y, 888) * (k + 1));
             j = Math.Clamp(j, 0, k);
             (ord[k], ord[j]) = (ord[j], ord[k]);
         }

@@ -235,9 +235,11 @@ public static partial class CivTracker
         TileCoord tile, SettlementStub stub, string cause, WorldState world,
         List<PendingEvent>? pending = null)
     {
-        // Skip ruin registration for tiny outposts — they leave no lasting historical trace.
-        if (stub.Population < world.SimConfig.Settlement.RuinMinPopThreshold
-            && !world.Ruins.ContainsKey(tile))
+        // All settlements start at settlement_start_pop (500), so checking pop at abandonment
+        // time incorrectly skips settlements that starved down to pop_min_viable before collapse.
+        // We only skip if this is the first ruin at the tile AND the settlement was never real
+        // (i.e., it was founded and immediately abandoned in the same year — a ghost entry).
+        if (stub.Population <= 0 && !world.Ruins.ContainsKey(tile))
             return 0;
 
         int timesSettled = world.Ruins.TryGetValue(tile, out var existing)

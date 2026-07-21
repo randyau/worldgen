@@ -572,7 +572,7 @@ growth_event_threshold_pct  = 0.05   # 5% growth vs start-of-tick pop; fires on 
 shrink_event_threshold_pct  = 0.05   # 5% decline; catches disease/disaster hits each year
 
 # Ruin recording — only settlements large enough to leave a historical trace become ruins
-ruin_min_pop_threshold      = 75    # skip ruin registration if pop < this at time of abandonment
+ruin_min_pop_threshold      = 0     # all settlements start at 500 pop; checking pop at death incorrectly skips starved-out settlements (was 75)
 # Ruin decay — very old ruins weather away over time
 ruin_decay_start_years      = 300   # ruins older than this are eligible for decay
 ruin_decay_chance_per_year  = 0.02  # 2% annual chance of removal once eligible

@@ -31,9 +31,18 @@ public sealed class TerritoryPhase
 
             foreach (var (cityTile, ownedTiles) in civ.CityTerritories.ToList())
             {
-                if (!world.Settlements.TryGetValue(cityTile, out var stub)) continue;
-                // Only process settlements belonging to this civ
-                if (stub.CivId != civId) continue;
+                bool hasSettlement = world.Settlements.TryGetValue(cityTile, out var stub)
+                                  && stub.CivId == civId;
+
+                if (!hasSettlement)
+                {
+                    // Ghost entry: city was destroyed or transferred. Prune disconnected tiles and
+                    // clean up the entry entirely — do not expand.
+                    PruneDisconnectedTiles(cityTile, ownedTiles, world);
+                    if (ownedTiles.Count == 0)
+                        civ.CityTerritories.Remove(cityTile);
+                    continue;
+                }
 
                 int owned = ownedTiles.Count;
 
