@@ -21,7 +21,7 @@ through `ICommand` → `CommandResolver`; no hardcoded sim constants; zero warni
 | 1 | 6.2.1 | `UiTheme` tokens + `PanelChrome` helper; panels off inline literals | DONE |
 | 2 | 6.1.3 | `KeybindRegistry` (single source of truth) + `HelpOverlayPanel` | DONE |
 | 3 | 6.1.4 | UI-side `SelectionState` + `SelectionRouter` | DONE |
-| 4 | 6.1.1 | `OverlayBar` with active-state highlight | pending |
+| 4 | 6.1.1 | `OverlayBar` with active-state highlight | DONE |
 | 5 | 6.1.2 | `PanelManager` + visible toggle bar | pending |
 
 Deferred to later M6 phases: 6.2.2–6.2.4, all 6.3, all 6.4.

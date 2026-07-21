@@ -49,6 +49,7 @@ public sealed class Game1 : Game
     private WorldGenScreen? _genScreen;
     private TimeControlsPanel? _timeControls;
     private EventLogPanel? _eventLog;
+    private OverlayBar? _overlayBar;
     private TileInspectorPanel? _tileInspector;
     private Panel? _mainUI;       // reference to the mainUI panel for post-sim panel injection
 
@@ -108,6 +109,7 @@ public sealed class Game1 : Game
         _genScreen    = new WorldGenScreen();
         _timeControls = new TimeControlsPanel(_commandQueue);
         _eventLog     = new EventLogPanel();
+        _overlayBar   = new OverlayBar(_commandQueue);
         _tileInspector = new TileInspectorPanel();
 
         var rootPanel = BuildRootPanel();
@@ -148,6 +150,16 @@ public sealed class Game1 : Game
             _timeControls.Root.HorizontalAlignment = HorizontalAlignment.Stretch;
             _timeControls.Root.VerticalAlignment   = VerticalAlignment.Top;
             mainUI.Widgets.Add(_timeControls.Root);
+        }
+
+        // Overlay control bar (M6.1.1): visible, labeled overlay toggles below the time bar.
+        if (_overlayBar is not null)
+        {
+            _overlayBar.Root.HorizontalAlignment = HorizontalAlignment.Left;
+            _overlayBar.Root.VerticalAlignment   = VerticalAlignment.Top;
+            _overlayBar.Root.Top  = UI.Theme.UiTheme.TopBarClearance;   // clear the time controls
+            _overlayBar.Root.Left = 4;
+            mainUI.Widgets.Add(_overlayBar.Root);
         }
 
         // Sidebar: fixed 360px wide, docked to top-right, below time controls
@@ -250,6 +262,7 @@ public sealed class Game1 : Game
             {
                 _lastSnapshot = snapshot;
                 _timeControls?.Update(snapshot);
+                _overlayBar?.Update(snapshot.ActiveOverlay);
                 _eventLog?.Update(snapshot, _focusLens);
                 _tileInspector?.Update(snapshot.InspectedTile, snapshot);
 
@@ -370,21 +383,24 @@ public sealed class Game1 : Game
 
         if (_mainUI is not null && _desktop is not null)
         {
+            // Left-docked contextual panels sit below the overlay bar (Top clears both bars).
+            const int leftPanelTop = 84;
+
             _charProfile.Root.HorizontalAlignment = HorizontalAlignment.Left;
             _charProfile.Root.VerticalAlignment   = VerticalAlignment.Top;
-            _charProfile.Root.Top  = 44;
+            _charProfile.Root.Top  = leftPanelTop;
             _charProfile.Root.Left = 4;
             _mainUI.Widgets.Add(_charProfile.Root);
 
             _civHistory.Root.HorizontalAlignment = HorizontalAlignment.Left;
             _civHistory.Root.VerticalAlignment   = VerticalAlignment.Top;
-            _civHistory.Root.Top  = 44;
+            _civHistory.Root.Top  = leftPanelTop;
             _civHistory.Root.Left = 4;
             _mainUI.Widgets.Add(_civHistory.Root);
 
             _charWatch.Root.HorizontalAlignment = HorizontalAlignment.Left;
             _charWatch.Root.VerticalAlignment   = VerticalAlignment.Top;
-            _charWatch.Root.Top  = 44;
+            _charWatch.Root.Top  = leftPanelTop;
             _charWatch.Root.Left = 4;
             _mainUI.Widgets.Add(_charWatch.Root);
 

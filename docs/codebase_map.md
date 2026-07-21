@@ -202,6 +202,7 @@ One-line description of every non-trivial source file. Check here before running
 - `CivHistoryPanel.cs` — Myra panel showing the full arc of a civilization — rulers, key wars, major events, traits. Includes a civ selector ComboBox at the top.
 - `EventLogPanel.cs` — Sidebar panel showing recent simulation events. Supports focus lens filtering (dimming events not involving the focus target) and exposes pending requests for the character profile card and causal chain dialog.
 - `HelpOverlayPanel.cs` — "?"-toggled panel listing every keyboard shortcut, grouped by category. Rendered directly from the <see cref="KeybindRegistry"/> so it can never drift from actual input handling (M6 Epic 6.1.3).
+- `OverlayBar.cs` — Visible, labeled overlay toolbar (M6 Epic 6.1.1). One button per <see cref="OverlayType"/>; each enqueues <c>SetActiveOverlay</c> — the same command the accelerator keys fire — and the active overlay is highlighted from <c>WorldSnapshot.ActiveOverlay</c>. Restores Temperature, which had been dropped off the keyboard.
 - `TileInspectorPanel.cs` — Sidebar tile inspector; territory/improvement/history sections; [Watch] buttons per character (M3.4).
 - `TimeControlsPanel.cs` — Top toolbar: speed buttons, year/season label.
 - `TimelineBar.cs` — Timeline scrubber bar drawn via SpriteBatch at the bottom of the map area. Shows event density heatmap and allows scrubbing to any historical year. The ScrubLabel is a Myra Label — add it to the root overlay panel in Game1.
