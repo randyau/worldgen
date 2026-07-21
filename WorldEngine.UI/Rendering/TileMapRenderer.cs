@@ -135,7 +135,7 @@ public sealed class TileMapRenderer(GraphicsDevice gd, Camera2D camera)
         SpriteBatch sb, WorldSnapshot snapshot,
         int tw, int th, int minX, int maxX, int minY, int maxY)
     {
-        int iconSize = Math.Max(2, (int)(camera.Zoom * 0.18f));
+        int iconSize = MarkerPx(0.18f, 2);
 
         for (int ty = minY; ty <= maxY; ty++)
         for (int tx = minX; tx <= maxX; tx++)
@@ -149,6 +149,34 @@ public sealed class TileMapRenderer(GraphicsDevice gd, Camera2D camera)
             int iy  = (int)MathF.Round(pos.Y) + 1;
             var color = ImprovementColor(imp.ImprovementType);
             sb.Draw(_pixel, new Rectangle(ix, iy, iconSize, iconSize), color);
+        }
+    }
+
+    // ── Marker size helpers — single source of truth for zoom-scaled pixel art ──────────────────
+
+    /// <summary>Square marker size in pixels at the current zoom level.</summary>
+    private int MarkerPx(float factor = 0.35f, int minPx = 3) =>
+        Math.Max(minPx, (int)(camera.Zoom * factor));
+
+    /// <summary>Draws a cross/+ shape centered at (cx,cy) — used for character markers.</summary>
+    private void DrawCross(SpriteBatch sb, int cx, int cy, int arm, int thick, Color color)
+    {
+        // Horizontal bar
+        sb.Draw(_pixel, new Rectangle(cx - arm, cy - thick / 2, arm * 2, thick), color);
+        // Vertical bar
+        sb.Draw(_pixel, new Rectangle(cx - thick / 2, cy - arm, thick, arm * 2), color);
+    }
+
+    /// <summary>Draws an × shape by overlapping two thin diagonal approximations.</summary>
+    private void DrawX(SpriteBatch sb, int cx, int cy, int half, Color color)
+    {
+        // Diagonal approximation: draw 3 dots along each diagonal
+        int t = Math.Max(1, half / 3);
+        for (int i = -1; i <= 1; i++)
+        {
+            int ox = i * (half / 2);
+            sb.Draw(_pixel, new Rectangle(cx + ox - t, cy + ox - t, t * 2, t * 2), color);
+            sb.Draw(_pixel, new Rectangle(cx - ox - t, cy + ox - t, t * 2, t * 2), color);
         }
     }
 
@@ -180,7 +208,7 @@ public sealed class TileMapRenderer(GraphicsDevice gd, Camera2D camera)
             else normal.Add(snap.Location);
         }
 
-        int dotSize = Math.Max(2, (int)(camera.Zoom * 0.3f));
+        int dotSize = MarkerPx(0.3f, 2);
         int half    = dotSize / 2;
 
         void DrawDot(TileCoord coord, Color color)
@@ -217,9 +245,10 @@ public sealed class TileMapRenderer(GraphicsDevice gd, Camera2D camera)
                 charTiles.Add(snap.Location);
         }
 
-        int dotSize = Math.Max(2, (int)(camera.Zoom * 0.25f));
-        int half    = dotSize / 2;
-        var blue    = new Color(60, 100, 220);
+        // Characters drawn as a + cross — distinct from beast dots and settlement squares
+        int arm   = MarkerPx(0.2f, 2);
+        int thick = Math.Max(1, arm / 2);
+        var blue  = new Color(80, 130, 230);
 
         for (int ty = minY; ty <= maxY; ty++)
         for (int tx = minX; tx <= maxX; tx++)
@@ -229,8 +258,8 @@ public sealed class TileMapRenderer(GraphicsDevice gd, Camera2D camera)
             if (!charTiles.Contains(coord)) continue;
             var pos = camera.TileToScreen(coord);
             int cx  = (int)MathF.Round(pos.X + camera.Zoom * 0.5f);
-            int cy  = (int)MathF.Round(pos.Y + camera.Zoom * 0.2f); // top of tile
-            sb.Draw(_pixel, new Rectangle(cx - half, cy - half, dotSize, dotSize), blue);
+            int cy  = (int)MathF.Round(pos.Y + camera.Zoom * 0.5f); // centered like other markers
+            DrawCross(sb, cx, cy, arm, thick, blue);
         }
     }
 
@@ -240,8 +269,7 @@ public sealed class TileMapRenderer(GraphicsDevice gd, Camera2D camera)
     {
         if (snapshot.Settlements.Count == 0) return;
 
-        // Scale marker with zoom but keep it readable at all zoom levels
-        int markerSize = Math.Max(3, (int)(camera.Zoom * 0.4f));
+        int markerSize = MarkerPx(0.4f, 3);
         int half       = markerSize / 2;
 
         // White fill with dark border — stands out on any biome color
@@ -276,22 +304,21 @@ public sealed class TileMapRenderer(GraphicsDevice gd, Camera2D camera)
     {
         if (snapshot.Ruins.Count == 0) return;
 
-        int markerSize = Math.Max(2, (int)(camera.Zoom * 0.25f));
-        int half       = markerSize / 2;
-        var ruinColor  = new Color(110, 80, 50); // muted brown
+        // Ruins drawn as an × — distinct from active settlement squares
+        int ruinHalf  = MarkerPx(0.25f, 2);
+        var ruinColor = new Color(110, 80, 50); // muted brown
 
         for (int ty = minY; ty <= maxY; ty++)
         for (int tx = minX; tx <= maxX; tx++)
         {
             int wx    = ((tx % tw) + tw) % tw;
             var coord = new TileCoord(wx, ty);
-            // Don't show ruin marker when an active settlement is present
             if (!snapshot.Ruins.ContainsKey(coord) || snapshot.Settlements.ContainsKey(coord)) continue;
 
             var pos = camera.TileToScreen(coord);
             int cx  = (int)MathF.Round(pos.X + camera.Zoom * 0.5f);
             int cy  = (int)MathF.Round(pos.Y + camera.Zoom * 0.5f);
-            sb.Draw(_pixel, new Rectangle(cx - half, cy - half, markerSize, markerSize), ruinColor);
+            DrawX(sb, cx, cy, ruinHalf, ruinColor);
         }
     }
 

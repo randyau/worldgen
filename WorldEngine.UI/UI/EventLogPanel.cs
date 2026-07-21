@@ -21,6 +21,7 @@ public sealed class EventLogPanel
     // Consumed by Game1 each frame — cleared after reading
     private long? _pendingCauseChainEventId;
     private long? _pendingCharacterProfileId;
+    private long? _pendingCivId;
 
     public EventLogPanel()
     {
@@ -42,6 +43,20 @@ public sealed class EventLogPanel
         filter ??= EventLogFilter.Default;
         _rows.Widgets.Clear();
 
+        // Build CivId → CivName from territory+settlement tables for cross-panel civ links (6.3.4)
+        var civNames = new Dictionary<long, string>();
+        foreach (var (_, territory) in snapshot.TerritoryMap)
+        {
+            long cid = territory.CivId;
+            if (cid > 0 && !civNames.ContainsKey(cid) &&
+                snapshot.Settlements.TryGetValue(territory.CityTile, out var settle) &&
+                !string.IsNullOrEmpty(settle.CivName))
+            {
+                civNames[cid] = settle.CivName;
+            }
+        }
+
+        int rowCount = 0;
         foreach (var ev in snapshot.RecentEvents.Reverse())
         {
             if (!filter.PassesTier(ev.TierInvolvement))  continue;
@@ -86,6 +101,16 @@ public sealed class EventLogPanel
                 actorWidget = actorBtn;
             }
 
+            // Civ link button
+            Widget? civWidget = null;
+            if (ev.CivId > 0 && civNames.TryGetValue(ev.CivId, out string? civName))
+            {
+                long capturedCivId = ev.CivId;
+                var civBtn = new TextButton { Text = $"[{civName}]", Height = 20 };
+                civBtn.Click += (_, _) => _pendingCivId = capturedCivId;
+                civWidget = civBtn;
+            }
+
             // Cause chain button
             long capturedEvId = ev.Id.Value;
             var causeBtn = new TextButton { Text = "->", Width = 24, Height = 20 };
@@ -100,9 +125,20 @@ public sealed class EventLogPanel
             row.Widgets.Add(tierStripe);
             row.Widgets.Add(evLabel);
             if (actorWidget is not null) row.Widgets.Add(actorWidget);
+            if (civWidget   is not null) row.Widgets.Add(civWidget);
             row.Widgets.Add(causeBtn);
             if (badgeWidget is not null) row.Widgets.Add(badgeWidget);
             _rows.Widgets.Add(row);
+            rowCount++;
+        }
+
+        // 6.4.3 — empty state when filter yields no results
+        if (rowCount == 0)
+        {
+            string msg = filter.IsDefault
+                ? "(no events yet)"
+                : "(no events match filter)";
+            _rows.Widgets.Add(new Label { Text = msg, TextColor = UiTheme.MutedText });
         }
     }
 
@@ -114,6 +150,14 @@ public sealed class EventLogPanel
     {
         var val = _pendingCauseChainEventId;
         _pendingCauseChainEventId = null;
+        return val;
+    }
+
+    /// <summary>Returns the civ ID clicked for navigation, then clears it.</summary>
+    public long? ConsumePendingCiv()
+    {
+        var val = _pendingCivId;
+        _pendingCivId = null;
         return val;
     }
 

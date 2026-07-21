@@ -324,6 +324,12 @@ public sealed class Game1 : Game
                 if (_eventLog.ConsumePendingCharacterProfile() is long charId)
                     _selection?.SelectCharacter(charId);
 
+                if (_eventLog.ConsumePendingCiv() is long civId)
+                {
+                    _selection?.SelectCiv(civId);
+                    _panelManager?.Show("civ");
+                }
+
                 if (_eventLog.ConsumePendingCauseChain() is long evId)
                     ShowCauseChainDialog(evId);
             }
@@ -448,6 +454,10 @@ public sealed class Game1 : Game
         // Build the keybind registry now that panels/commands exist, then feed the help panel.
         BuildKeybinds();
         _helpOverlay?.Populate(_keybinds!);
+
+        // 6.4.2 — show first-run orientation once after the sim starts
+        if (_desktop is not null)
+            FirstRunOverlay.Show(_desktop);
 
         // Unified selection model (M6.1.4): one "selected thing" drives which panel shows.
         _selection = new SelectionState();
