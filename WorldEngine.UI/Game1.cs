@@ -18,6 +18,7 @@ using WorldEngine.Sim.WorldGen.Layers;
 using WorldEngine.UI.Rendering;
 using WorldEngine.UI.UI;
 using WorldEngine.UI.UI.Input;
+using WorldEngine.UI.UI.Selection;
 
 namespace WorldEngine.UI;
 
@@ -66,6 +67,10 @@ public sealed class Game1 : Game
     // M6.1.3 — keybind registry (single source of truth) + help overlay
     private KeybindRegistry?  _keybinds;
     private HelpOverlayPanel? _helpOverlay;
+
+    // M6.1.4 — unified selection model driving which contextual panel shows
+    private SelectionState?  _selection;
+    private SelectionRouter? _selectionRouter;
 
     // Phase 3.6 — save / resume
     private const string SaveDir = "worldsave";
@@ -278,11 +283,14 @@ public sealed class Game1 : Game
             if (_eventLog is not null && _historyQuery is not null && _desktop is not null)
             {
                 if (_eventLog.ConsumePendingCharacterProfile() is long charId)
-                    _charProfile?.ShowCharacter(charId);
+                    _selection?.SelectCharacter(charId);
 
                 if (_eventLog.ConsumePendingCauseChain() is long evId)
                     ShowCauseChainDialog(evId);
             }
+
+            // Apply any selection change to the contextual panels (M6.1.4).
+            _selectionRouter?.Apply();
         }
 
         _desktop?.UpdateLayout();
@@ -393,6 +401,17 @@ public sealed class Game1 : Game
         // Build the keybind registry now that panels/commands exist, then feed the help panel.
         BuildKeybinds();
         _helpOverlay?.Populate(_keybinds!);
+
+        // Unified selection model (M6.1.4): one "selected thing" drives which panel shows.
+        _selection = new SelectionState();
+        _selectionRouter = new SelectionRouter(_selection)
+        {
+            // Tile inspection stays a sim command — the snapshot must carry tile detail.
+            OnTile      = coord => _commandQueue.Enqueue(new SetInspectedTile(coord)),
+            OnCharacter = id    => _charProfile?.ShowCharacter(id),
+            OnCiv       = id    => _civHistory?.ShowCiv(id),
+            OnClear     = ()    => _commandQueue.Enqueue(new SetInspectedTile(null)),
+        };
     }
 
     /// <summary>
@@ -460,7 +479,7 @@ public sealed class Game1 : Game
                 if (coord.X < 0 || coord.X >= snapshot.WorldTileWidth
                  || coord.Y < 0 || coord.Y >= snapshot.WorldTileHeight)
                     return;
-                _commandQueue.Enqueue(new SetInspectedTile(coord));
+                _selection?.SelectTile(coord);
             }
         }
 
