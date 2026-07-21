@@ -52,7 +52,7 @@ where the codebase now is.
 
 | # | Name | Detail | Theme |
 |---|------|--------|-------|
-| **M6** | UI Experience & Polish | **story-level (below)** | Make what exists feel finished and legible. |
+| **M6** | UI Experience & Polish | ✅ COMPLETE 2026-07-21 | All epics 6.1–6.4 done. See archive. |
 | **M7** | Authoring & Agency (Spotlight + God Mode) | **story-level (below)** | The core product promise: watch, author, inhabit. |
 | M8 | Created-Object Unification & Economic Depth | summary | Pay down G-1 debt; deepen crafting/economy. |
 | M9 | Worldgen Preview & Modding | summary | Layered preview + adjustment; player config/data modding. |
@@ -67,10 +67,9 @@ authoring pressure clarifies the target taxonomy. M9/M10 are the long-tail platf
 
 ## M6 — UI Experience & Polish  *(DETAILED)*
 
-**Progress:** Phase 1 (Foundation) COMPLETE 2026-07-21 — stories 6.2.1 (design tokens +
-`PanelChrome`), 6.1.3 (`KeybindRegistry` + help overlay), 6.1.4 (selection model), 6.1.1
-(overlay bar), 6.1.2 (`PanelManager` + toggle bar). See
-`docs/phases/archive/m6_phase1_foundation.md`. Remaining: 6.2.2–6.2.4, 6.3.*, 6.4.*.
+**Progress:** COMPLETE 2026-07-21. All epics done:
+- Phase 1 (6.1.1–6.1.4, 6.2.1): foundation + interaction architecture — `docs/phases/archive/m6_phase1_foundation.md`
+- Phase 2 (6.2.2–6.4.3): visual polish, filter panel, causal chain, cross-panel linking, first-run, empty states — `docs/phases/archive/m6_phase2_visual_polish.md`
 
 ### Goal
 A cohesive, legible, discoverable UI over the existing simulation. No new sim systems — this
