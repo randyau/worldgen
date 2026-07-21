@@ -2,6 +2,7 @@ using Microsoft.Xna.Framework;
 using Myra.Graphics2D.UI;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.World;
+using WorldEngine.UI.UI.Theme;
 
 namespace WorldEngine.UI.UI;
 
@@ -68,7 +69,7 @@ public sealed class EventLogPanel
                           || focusLens.Type == FocusType.None
                           || focusLens.FocusedEventIds.Contains(ev.Id.Value);
 
-            Color textColor = isFocused ? TierColor(ev.TierInvolvement) : Color.DarkGray;
+            Color textColor = isFocused ? UiTheme.TierColor(ev.TierInvolvement) : UiTheme.DisabledText;
 
             // Main event label text
             string evText = $"[{ev.Year}] {ev.TypeName}";
@@ -135,14 +136,6 @@ public sealed class EventLogPanel
         EventTier.Character  => _showRegional,   // shown alongside regional
         EventTier.Background => _showBackground,
         _                    => false
-    };
-
-    private static Color TierColor(EventTier tier) => tier switch
-    {
-        EventTier.Headline  => Color.Gold,
-        EventTier.Regional  => Color.White,
-        EventTier.Character => Color.LightGray,
-        _                   => Color.DarkGray
     };
 
     /// <summary>True if this event type typically has a meaningful actor who is a named character.</summary>

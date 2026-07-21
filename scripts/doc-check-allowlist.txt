@@ -27,3 +27,7 @@ harsh_world.toml
 
 # M5 W3 Snapshot type — declared in phase doc, implemented in a later worker
 ArtifactSnapshot
+
+# M6 Phase 1 types — declared in the phase doc, implemented in later stories of the phase
+KeybindRegistry
+PanelManager

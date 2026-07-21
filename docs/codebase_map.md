@@ -206,6 +206,10 @@ One-line description of every non-trivial source file. Check here before running
 - `TimelineBar.cs` — Timeline scrubber bar drawn via SpriteBatch at the bottom of the map area. Shows event density heatmap and allows scrubbing to any historical year. The ScrubLabel is a Myra Label — add it to the root overlay panel in Game1.
 - `WorldGenScreen.cs` — Full-screen world-gen progress overlay.
 
+## WorldEngine.UI/UI/Theme/
+- `PanelChrome.cs` — Builds the standard docked-panel chrome — a bordered, padded container with a title bar and optional <c>[Close]</c> button — so every panel shares one look instead of each re-inventing its own header/close/background (M6 Epic 6.2.1).
+- `UiTheme.cs` — Single source of truth for the UI's visual language: colors, spacing, and metrics. Panels pull named tokens from here instead of hardcoding <see cref="Color"/> literals and pixel widths, so the whole UI can be retuned from one place (M6 Epic 6.2.1).
+
 ## WorldEngine.Tests/
 - xUnit test suite; mirrors Sim folder structure
 - Key files: reproducibility tests, integration tests per phase, world gen tests

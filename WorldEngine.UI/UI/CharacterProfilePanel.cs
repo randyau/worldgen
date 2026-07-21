@@ -4,6 +4,7 @@ using Myra.Graphics2D.UI;
 using WorldEngine.Sim.Config;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.World;
+using WorldEngine.UI.UI.Theme;
 
 namespace WorldEngine.UI.UI;
 
@@ -49,7 +50,7 @@ public sealed class CharacterProfilePanel
             : summary.Name;
         if (summary.Epithet is not null)
             nameStr += $" the {summary.Epithet}";
-        AddLine(nameStr, Color.Gold);
+        AddLine(nameStr, UiTheme.HeaderText);
 
         // Ancestry + life span
         string ancestry = summary.AncestryId ?? "Unknown";

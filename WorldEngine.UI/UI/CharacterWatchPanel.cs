@@ -2,6 +2,7 @@ using Microsoft.Xna.Framework;
 using Myra.Graphics2D.UI;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.World;
+using WorldEngine.UI.UI.Theme;
 
 namespace WorldEngine.UI.UI;
 
@@ -58,7 +59,7 @@ public sealed class CharacterWatchPanel
 
         // ── Header ──────────────────────────────────────────────────────────
         string epithet = watch.Epithet.Length > 0 ? $" the {watch.Epithet}" : "";
-        AddLine($"{watch.Name}{epithet}", Color.Gold);
+        AddLine($"{watch.Name}{epithet}", UiTheme.HeaderText);
         AddLine($"Civ: {watch.CivName}  |  Age: {watch.AgeSeasons}s  ({watch.AgeSeasons / 4} yrs)", Color.LightGray);
         AddLine($"Location: ({watch.Location.X}, {watch.Location.Y}) — {watch.BiomeName}", Color.LightGray);
 

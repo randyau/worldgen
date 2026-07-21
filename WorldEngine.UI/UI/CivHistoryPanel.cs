@@ -4,6 +4,7 @@ using Myra.Graphics2D.UI;
 using WorldEngine.Sim.Config;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.World;
+using WorldEngine.UI.UI.Theme;
 
 namespace WorldEngine.UI.UI;
 
@@ -31,19 +32,14 @@ public sealed class CivHistoryPanel
         _civCombo.SelectedIndexChanged += OnCivSelected;
 
         _content = new VerticalStackPanel { Spacing = 2 };
-        var scroll = new ScrollViewer { Content = _content, Width = 330, Height = 420 };
+        var scroll = new ScrollViewer { Content = _content, Width = UiTheme.ScrollWidth, Height = 420 };
 
-        var closeBtn = new TextButton { Text = "[Close]" };
-        closeBtn.Click += (_, _) => Hide();
+        var body = new VerticalStackPanel { Spacing = UiTheme.PanelSpacing };
+        body.Widgets.Add(_civCombo);
+        body.Widgets.Add(scroll);
 
-        var stack = new VerticalStackPanel { Spacing = 4, Width = 330 };
-        stack.Widgets.Add(new Label { Text = "CIVILIZATION HISTORY", TextColor = Color.Gold });
-        stack.Widgets.Add(_civCombo);
-        stack.Widgets.Add(scroll);
-        stack.Widgets.Add(closeBtn);
-
-        var outer = new Panel { Width = 330, Visible = false };
-        outer.Widgets.Add(stack);
+        var outer = PanelChrome.Wrap("CIVILIZATION HISTORY", body, Hide);
+        outer.Visible = false;
         Root = outer;
     }
 

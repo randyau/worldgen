@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities;
 using WorldEngine.Sim.World;
+using WorldEngine.UI.UI.Theme;
 
 namespace WorldEngine.UI.Rendering;
 
@@ -55,7 +56,7 @@ public sealed class TileMapRenderer(GraphicsDevice gd, Camera2D camera)
                 // Territory overlay: apply semi-transparent civ-color tint + border outline
                 if (territoryMode && snapshot.TerritoryMap.TryGetValue(coord, out var terr))
                 {
-                    var civColor = CivColor(terr.CivId);
+                    var civColor = UiTheme.CivColor(terr.CivId);
                     // City tile itself gets full brightness tint; other territory gets alpha tint
                     bool isCity = snapshot.Settlements.ContainsKey(coord);
                     float alpha = isCity ? 0.65f : 0.35f;
@@ -123,34 +124,8 @@ public sealed class TileMapRenderer(GraphicsDevice gd, Camera2D camera)
         }
     }
 
-    /// <summary>
-    /// Derives a deterministic color for a civilization from its numeric id.
-    /// Uses a fixed hue rotation so each civ gets a visually distinct color.
-    /// </summary>
-    private static Color CivColor(long civId)
-    {
-        // Rotate hue by a golden-angle step for each civ so colors spread evenly
-        float hue  = (civId * 137.508f) % 360f;
-        float sat  = 0.65f;
-        float val  = 0.90f;
-        return HsvToRgb(hue, sat, val);
-    }
-
-    private static Color HsvToRgb(float h, float s, float v)
-    {
-        h = h % 360f;
-        float c  = v * s;
-        float x  = c * (1f - MathF.Abs((h / 60f) % 2f - 1f));
-        float m  = v - c;
-        float r1, g1, b1;
-        if      (h < 60)  { r1 = c; g1 = x; b1 = 0; }
-        else if (h < 120) { r1 = x; g1 = c; b1 = 0; }
-        else if (h < 180) { r1 = 0; g1 = c; b1 = x; }
-        else if (h < 240) { r1 = 0; g1 = x; b1 = c; }
-        else if (h < 300) { r1 = x; g1 = 0; b1 = c; }
-        else              { r1 = c; g1 = 0; b1 = x; }
-        return new Color((int)((r1 + m) * 255), (int)((g1 + m) * 255), (int)((b1 + m) * 255));
-    }
+    // Civ color derivation now lives in UiTheme.CivColor so panels and the territory
+    // overlay share one deterministic hue mapping (M6 Epic 6.2.1).
 
     /// <summary>
     /// Draws a small colored glyph in the top-left corner of each tile that has an improvement.

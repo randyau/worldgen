@@ -23,7 +23,7 @@ namespace WorldEngine.UI;
 // MAP: MonoGame entry: update/draw loop, StateCache reads, input routing; H=civ history, W=watch panel, T=territory overlay.
 public sealed class Game1 : Game
 {
-    private const int SidebarWidth   = 360;   // must match sidebar VerticalStackPanel Width
+    private const int SidebarWidth   = UI.Theme.UiTheme.SidebarWidth;   // must match sidebar VerticalStackPanel Width
     private const int TimelineHeight  = 40;    // px reserved at bottom for timeline bar
 
     private GraphicsDeviceManager _graphics;
