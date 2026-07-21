@@ -838,7 +838,10 @@ public sealed class CharacterBehaviorPhase
             }
 
             if (c.Health <= 0)
+            {
                 KillCharacter(c, world, $"killed by {beast.Name}", pending);
+                break; // character is dead — stop processing further beasts this tick
+            }
         }
     }
 }

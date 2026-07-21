@@ -404,6 +404,7 @@ public static class SummaryBuilder
         var birthByCharId = conn.Query<(long CharId, int Year)>(
             "SELECT ActorId AS CharId, Year FROM Events WHERE Type = @t AND ActorId IS NOT NULL",
             new { t = CharacterBorn })
+            .DistinctBy(x => x.CharId)
             .ToDictionary(x => x.CharId, x => x.Year);
 
         // Collect all succession events ordered by year
@@ -480,6 +481,7 @@ public static class SummaryBuilder
         var deathByCharId = conn.Query<(long CharId, int Year, string PayloadJson)>(
             "SELECT ActorId AS CharId, Year, PayloadJson FROM Events WHERE Type = @t AND ActorId IS NOT NULL",
             new { t = CharacterDied })
+            .DistinctBy(x => x.CharId)
             .ToDictionary(x => x.CharId, x => x);
 
         foreach (var chain in chainByCiv.Values)
