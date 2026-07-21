@@ -8,6 +8,14 @@
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 LOG="$REPO_ROOT/.scip-index.log"
 
+# The solution targets a global.json-pinned SDK. If the default `dotnet` on PATH doesn't
+# satisfy it (common when the SDK was installed to ~/.dotnet via dotnet-install.sh rather
+# than system-wide), fall back to that user-local install so the scip index still builds.
+if ! (cd "$REPO_ROOT" && dotnet --version) >/dev/null 2>&1 && [ -x "$HOME/.dotnet/dotnet" ]; then
+  export DOTNET_ROOT="$HOME/.dotnet"
+  export PATH="$HOME/.dotnet:$PATH"
+fi
+
 # 1. SCIP index regeneration (background)
 (
   cd "$REPO_ROOT"

@@ -34,7 +34,7 @@ The sim and UI are intentionally decoupled: `WorldEngine.Sim` is a pure library 
 
 ## Prerequisites
 
-- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) (pinned in `global.json`)
 - Windows (for the UI — MonoGame targets Win/DirectX). The sim and tests build and run on Linux/WSL2.
 
 ---
@@ -53,12 +53,12 @@ scripts/publish-win.sh
 ```
 Produces a self-contained `publish/win-x64/WorldEngine.UI.exe`. Run from Windows Explorer or PowerShell. No .NET install required on the Windows side.
 
-If you already have .NET 8 Runtime on Windows and want a smaller output:
+If you already have .NET 10 Runtime on Windows and want a smaller output:
 ```bash
 scripts/publish-win.sh --framework
 ```
 
-**Full solution build (any platform with .NET 8):**
+**Full solution build (any platform with .NET 10):**
 ```bash
 dotnet build WorldEngine.sln
 dotnet test WorldEngine.Tests

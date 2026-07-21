@@ -38,12 +38,14 @@
 
 ## 1. Language and Platform
 
-### Decision: C# on .NET 8
+### Decision: C# on .NET 10
+
+*(Originally .NET 8; upgraded 2026-07-21 to the current LTS. Reasoning below is version-agnostic.)*
 
 **Chosen over:** Rust, Python, Kotlin/JVM, Go
 
 **Why C#:**
-- .NET 8 is genuinely cross-platform (Windows/Linux/Mac as first-class targets)
+- .NET 10 is genuinely cross-platform (Windows/Linux/Mac as first-class targets)
 - No classpath, no daemon, simple `dotnet` CLI
 - Strong type system catches design drift during long Claude Code sessions
 - True parallelism (no GIL)
@@ -55,7 +57,7 @@
 
 **Why not Python:** GIL prevents true parallelism in Phase 4/5. Python objects carry 50-200 bytes overhead — tile grids and causal graphs at scale hit memory ceilings.
 
-**Why not Kotlin/JVM:** JVM classpath complexity and version conflicts create unpredictable friction. .NET 8 cross-platform story is cleaner.
+**Why not Kotlin/JVM:** JVM classpath complexity and version conflicts create unpredictable friction. .NET 10 cross-platform story is cleaner.
 
 **Why not Go:** Weak plugin/modding story. Go plugins are notoriously painful on non-Linux.
 

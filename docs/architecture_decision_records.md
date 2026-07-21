@@ -7,9 +7,9 @@ For full rationale and detail, see `docs/implementation_decisions_v0.3.md`.
 
 ---
 
-## ADR-001: Language — C# on .NET 8
+## ADR-001: Language — C# on .NET 10
 
-**Decision:** C# on .NET 8.
+**Decision:** C# on .NET 10 (LTS). *(Originally .NET 8; upgraded 2026-07-21 to the current LTS — the rationale below is framework-version-agnostic.)*
 
 **Rejected:** Rust (borrow checker friction for graph/entity patterns), Python (GIL, memory overhead at scale), Kotlin/JVM (classpath complexity), Go (poor plugin/modding story).
 

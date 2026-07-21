@@ -377,7 +377,7 @@ The sim has the highest silent failure risk: a generation error or routing bug p
 - **Local builds only for development:** `dotnet build`, `dotnet test` — no cloud/CI cost.
 - **Zero warnings policy:** `dotnet build` must produce zero warnings. Treat warnings as errors.
 - **Nullable reference types are enabled** — no `#nullable disable` anywhere.
-- **Target framework:** .NET 8. Do not upgrade without explicit instruction.
+- **Target framework:** .NET 10 (LTS), pinned via `global.json`. Do not change without explicit instruction.
 - **Secrets:** Never commit connection strings, API keys, or seeds intended to be private. The sim seed is a config parameter — fine to commit. Credentials are not.
 
 ---
