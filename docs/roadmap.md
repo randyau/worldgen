@@ -173,6 +173,20 @@ Pays down the Session G / G-1 debt and builds economic depth on the cleaned foun
 
 ## Cross-cutting backlog (not milestone-bound)
 
+- **Character water crossings** — Characters currently cannot cross ocean tiles; they
+  pathfind land-only (`IsLand` check in `UtilityScorer.BestAdjacentTile`), so continents
+  separated by water are permanently isolated. Design needed before implementation:
+  - Should crossing be cheap (any coastal character can hop narrow straits) or gated
+    (requires a ship goal, `NavigationSkill`, or a friendly coastal settlement)?
+  - A minimal "coast-to-coast ferry" could let characters at coastal tiles step onto a
+    shallow-ocean tile for one move, skipping the pathfinding complexity entirely.
+  - A fuller solution would add ocean pathfinding through shallow water only (using
+    `TileStaticFlags.IsCoastal` on ocean tiles as the walkable set), governed by a
+    `character.ocean_crossing_enabled` config toggle.
+  - Either path needs a `CrossesOcean = true` flag on the resulting `MoveToTile` command
+    so history events can record sea voyages distinctly.
+  - Planned for a future phase — file this under sim character mobility alongside M7 or
+    as a standalone story in M8/M9.
 - **LLM prose generation** — V2 feature; hook only (per CLAUDE.md), no build.
 - **Magic as physical substrate** — V2; `MagicIntensity` stays a stored, behavior-free layer.
 - **Voxel rendering, plugin/code modding, multiplayer** — out of scope.
