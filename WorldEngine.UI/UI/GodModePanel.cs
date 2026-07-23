@@ -78,6 +78,13 @@ public sealed class GodModePanel : IPanel
         row2.Widgets.Add(spawnBtn);
         row2.Widgets.Add(nudgeBtn);
         _content.Widgets.Add(row2);
+
+        _content.Widgets.Add(new Label { Text = "" });
+        _content.Widgets.Add(new Label { Text = "HOW TO USE", TextColor = UiTheme.HeaderText });
+        _content.Widgets.Add(new Label { Text = "  Space  — pause / resume", TextColor = UiTheme.MutedText });
+        _content.Widgets.Add(new Label { Text = "  Click map tile → sets target for", TextColor = UiTheme.MutedText });
+        _content.Widgets.Add(new Label { Text = "    Place Artifact / Trigger Disaster / Spawn", TextColor = UiTheme.MutedText });
+        _content.Widgets.Add(new Label { Text = "  W → Watch panel → select char → Nudge", TextColor = UiTheme.MutedText });
     }
 
     private static TextButton MakeButton(string text, Action onClick)

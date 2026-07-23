@@ -557,9 +557,11 @@ public sealed class Game1 : Game
         reg.Register(Keys.F2,         "God Mode panel",         "Panels", () => _panelManager?.Toggle("godmode"));
 
         // World
-        reg.Register(Keys.N,      "New world",     "World", ResetToNewWorld);
-        reg.Register(Keys.S,      "Save world",    "World", () => _commandQueue.Enqueue(new SaveWorld(SaveDir)), ctrl: true);
-        reg.Register(Keys.Escape, "Deselect tile", "World", () => _commandQueue.Enqueue(new SetInspectedTile(null)));
+        reg.Register(Keys.Space,  "Pause / resume",  "World", () => _commandQueue.Enqueue(new SetSimSpeed(
+            _lastSnapshot?.IsPaused == true ? SimSpeed.Normal : SimSpeed.Paused)));
+        reg.Register(Keys.N,      "New world",       "World", ResetToNewWorld);
+        reg.Register(Keys.S,      "Save world",      "World", () => _commandQueue.Enqueue(new SaveWorld(SaveDir)), ctrl: true);
+        reg.Register(Keys.Escape, "Deselect tile",   "World", () => _commandQueue.Enqueue(new SetInspectedTile(null)));
 
         _keybinds = reg;
     }

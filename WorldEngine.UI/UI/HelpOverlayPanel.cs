@@ -41,6 +41,18 @@ public sealed class HelpOverlayPanel : IPanel
                 });
             _content.Widgets.Add(new Label { Text = "" });
         }
+
+        // Static section: button-based flows that have no keyboard shortcut
+        _content.Widgets.Add(new Label { Text = "GOD MODE (F2)", TextColor = UiTheme.HeaderText });
+        _content.Widgets.Add(new Label { Text = "  1. Click map tile to select target", TextColor = UiTheme.BodyText });
+        _content.Widgets.Add(new Label { Text = "  2. Pause (Space), then choose action", TextColor = UiTheme.BodyText });
+        _content.Widgets.Add(new Label { Text = "  Nudge: open Watch (W) first to select character", TextColor = UiTheme.BodyText });
+        _content.Widgets.Add(new Label { Text = "" });
+        _content.Widgets.Add(new Label { Text = "SPOTLIGHT (W panel)", TextColor = UiTheme.HeaderText });
+        _content.Widgets.Add(new Label { Text = "  Open Watch (W) → [Enter Spotlight]", TextColor = UiTheme.BodyText });
+        _content.Widgets.Add(new Label { Text = "  Click map tile → move intent", TextColor = UiTheme.BodyText });
+        _content.Widgets.Add(new Label { Text = "  Goal buttons → bias character behavior", TextColor = UiTheme.BodyText });
+        _content.Widgets.Add(new Label { Text = "  Character remains autonomous; intent biases decisions", TextColor = UiTheme.BodyText });
     }
 
     public void Show() { Root.Visible = true; IsVisible = true; }

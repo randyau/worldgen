@@ -157,6 +157,8 @@ public sealed class CharacterWatchPanel : IPanel
         }
         else
         {
+            AddLine("Spotlight biases this character's decisions without", UiTheme.MutedText);
+            AddLine("overriding survival autonomy. Click tile → move intent.", UiTheme.MutedText);
             EntityId capturedWatchId = watch.Id;
             var enterBtn = new TextButton { Text = "[Enter Spotlight]", Padding = new Myra.Graphics2D.Thickness(4) };
             enterBtn.Click += (_, _) => _pendingEnterSpotlight = capturedWatchId;
