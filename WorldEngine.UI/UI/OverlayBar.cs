@@ -14,7 +14,7 @@ namespace WorldEngine.UI.UI;
 // MAP: Labeled overlay toggle bar; enqueues SetActiveOverlay and highlights the active overlay.
 public sealed class OverlayBar
 {
-    public readonly HorizontalStackPanel Root;
+    public readonly VerticalStackPanel Root;
     private readonly Dictionary<OverlayType, TextButton> _buttons = new();
     private OverlayType _active = (OverlayType)(-1);   // force first Update to apply
 
@@ -31,14 +31,20 @@ public sealed class OverlayBar
 
     public OverlayBar(CommandQueue queue)
     {
-        Root = new HorizontalStackPanel { Spacing = UiTheme.PanelSpacing };
-        foreach (var (type, label) in Overlays)
+        var row1 = new HorizontalStackPanel { Spacing = UiTheme.PanelSpacing };
+        var row2 = new HorizontalStackPanel { Spacing = UiTheme.PanelSpacing };
+        Root = new VerticalStackPanel { Spacing = UiTheme.PanelSpacing };
+        Root.Widgets.Add(row1);
+        Root.Widgets.Add(row2);
+
+        for (int i = 0; i < Overlays.Length; i++)
         {
+            var (type, label) = Overlays[i];
             var captured = type;
             var btn = new TextButton { Text = label };
             btn.Click += (_, _) => queue.Enqueue(new SetActiveOverlay(captured));
             _buttons[type] = btn;
-            Root.Widgets.Add(btn);
+            (i < 4 ? row1 : row2).Widgets.Add(btn);
         }
     }
 

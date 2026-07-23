@@ -27,11 +27,10 @@ public sealed class CharacterProfilePanel
         _ancestries = ancestries;
         _content    = new VerticalStackPanel { Spacing = 2 };
 
-        var scroll = new ScrollViewer { Content = _content, Width = 330, Height = 460 };
+        var scroll = new ScrollViewer { Content = _content, Width = UiTheme.ScrollWidth, Height = 380 };
 
-        var outer = new Panel { Width = 330, Visible = false };
-        outer.Widgets.Add(scroll);
-        Root = outer;
+        Root = PanelChrome.Wrap("CHARACTER PROFILE", scroll, Hide);
+        Root.Visible = false;
     }
 
     /// <summary>Populates the panel with data for the given character and makes it visible.</summary>
@@ -127,10 +126,6 @@ public sealed class CharacterProfilePanel
         // V2: LLM_PROSE_HOOK — pass summary + events to LLM prose generation service
         _content.Widgets.Add(narrativeBtn);
 
-        // ── Close button ─────────────────────────────────────────────────────
-        var closeBtn = new TextButton { Text = "[Close]" };
-        closeBtn.Click += (_, _) => Hide();
-        _content.Widgets.Add(closeBtn);
     }
 
     public void Hide()

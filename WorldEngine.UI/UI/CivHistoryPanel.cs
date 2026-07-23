@@ -32,7 +32,7 @@ public sealed class CivHistoryPanel : IPanel
         _civCombo.SelectedIndexChanged += (_, _) => OnCivSelected();
 
         _content = new VerticalStackPanel { Spacing = 2 };
-        var scroll = new ScrollViewer { Content = _content, Width = UiTheme.ScrollWidth, Height = 420 };
+        var scroll = new ScrollViewer { Content = _content, Width = UiTheme.ScrollWidth, Height = 340 };
 
         var body = new VerticalStackPanel { Spacing = UiTheme.PanelSpacing };
         body.Widgets.Add(_civCombo);

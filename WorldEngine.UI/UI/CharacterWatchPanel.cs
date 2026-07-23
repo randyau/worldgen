@@ -32,11 +32,10 @@ public sealed class CharacterWatchPanel : IPanel
     {
         _content = new VerticalStackPanel { Spacing = 2 };
 
-        var scroll = new ScrollViewer { Content = _content, Width = 300, Height = 420 };
+        var scroll = new ScrollViewer { Content = _content, Width = UiTheme.ScrollWidth, Height = 340 };
 
-        var outer = new Panel { Width = 300, Visible = false };
-        outer.Widgets.Add(scroll);
-        Root = outer;
+        Root = PanelChrome.Wrap("CHARACTER WATCH", scroll, Hide);
+        Root.Visible = false;
     }
 
     /// <summary>Makes the panel visible (called when the player first hits W or clicks Watch).</summary>
