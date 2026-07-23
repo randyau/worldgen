@@ -132,5 +132,9 @@ public sealed record WorldSnapshot(
 
     // Artifact system (M5) — all artifacts known to the world at snapshot time
     // Includes destroyed artifacts so the UI can display historical context if needed.
-    IReadOnlyList<ArtifactSnapshot>? Artifacts = null
+    IReadOnlyList<ArtifactSnapshot>? Artifacts = null,
+
+    // Spotlight (M7+) — set when the player is controlling a character
+    EntityId?  SpotlightCharacterId = null,
+    TileCoord? SpotlightMoveTarget  = null
 );

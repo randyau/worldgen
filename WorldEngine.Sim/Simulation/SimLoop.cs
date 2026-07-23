@@ -174,9 +174,28 @@ public sealed class SimLoop
             case SaveWorld sv:
                 TriggerSave(sv.SaveDir);
                 break;
-            case AuthorPlaceArtifact or AuthorTriggerDisaster
-              or AuthorSpawnCharacter or AuthorNudgeCharacter:
-                AuthoringResolver.Resolve(cmd, _world, _phaseRunner);
+            case EnterSpotlight es:
+                _world.SpotlightCharacterId = es.CharacterId;
+                _world.SpotlightIntent      = new SpotlightIntent();
+                // Also set WatchedCharacterId so the watch panel shows the spotlighted character
+                _world.WatchedCharacterId   = es.CharacterId;
+                break;
+            case ExitSpotlight:
+                _world.SpotlightIntent?.Clear();
+                _world.SpotlightCharacterId = null;
+                _world.SpotlightIntent      = null;
+                break;
+            case SetSpotlightMoveIntent mi:
+                if (_world.SpotlightIntent is not null)
+                    _world.SpotlightIntent.MoveTarget = mi.Target;
+                break;
+            case SetSpotlightGoalIntent gi:
+                if (_world.SpotlightIntent is not null)
+                    _world.SpotlightIntent.GoalIntent = gi.Goal;
+                break;
+            case SetSpotlightSocialIntent si:
+                if (_world.SpotlightIntent is not null)
+                    _world.SpotlightIntent.SocialTarget = si.TargetCharacterId;
                 break;
         }
     }

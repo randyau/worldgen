@@ -65,6 +65,10 @@ public sealed class Game1 : Game
     // Phase 3.4 panels (created in StartSim)
     private CharacterWatchPanel? _charWatch;
 
+    // M7 — God Mode panel + spotlight state
+    private GodModePanel? _godModePanel;
+    private EntityId?     _spotlightCharacterId;
+
     // M6.1.3 — keybind registry (single source of truth) + help overlay
     private KeybindRegistry?  _keybinds;
     private HelpOverlayPanel? _helpOverlay;
@@ -161,9 +165,42 @@ public sealed class Game1 : Game
             mainUI.Widgets.Add(_timeControls.Root);
         }
 
-        // Sidebar: fixed 360px wide, docked to top-right, below time controls.
-        // Overlay toggles and panel show/hide buttons live at the top of the sidebar so
-        // they don't float over the map area.
+        // Semi-transparent backing panel behind the left-side toolbar rows (BUG-2/3).
+        // Covers the two rows of buttons (overlay bar + panel toggle bar) that would
+        // otherwise float over the map with no visual separation.
+        var leftToolbarBacking = new Panel
+        {
+            HorizontalAlignment = HorizontalAlignment.Left,
+            VerticalAlignment   = VerticalAlignment.Top,
+            Top     = UI.Theme.UiTheme.TopBarClearance,
+            Left    = 0,
+            Width   = 520,
+            Height  = 80,
+            Background = new Myra.Graphics2D.Brushes.SolidBrush(UI.Theme.UiTheme.PanelBackground)
+        };
+        mainUI.Widgets.Add(leftToolbarBacking);
+
+        // Overlay control bar (M6.1.1): visible, labeled overlay toggles below the time bar.
+        if (_overlayBar is not null)
+        {
+            _overlayBar.Root.HorizontalAlignment = HorizontalAlignment.Left;
+            _overlayBar.Root.VerticalAlignment   = VerticalAlignment.Top;
+            _overlayBar.Root.Top  = UI.Theme.UiTheme.TopBarClearance + 4;
+            _overlayBar.Root.Left = 4;
+            mainUI.Widgets.Add(_overlayBar.Root);
+        }
+
+        // Panel toggle bar (M6.1.2): visible show/hide affordances, below the overlay bar.
+        if (_panelManager is not null)
+        {
+            _panelManager.ToggleBar.HorizontalAlignment = HorizontalAlignment.Left;
+            _panelManager.ToggleBar.VerticalAlignment   = VerticalAlignment.Top;
+            _panelManager.ToggleBar.Top  = 84;   // clear the overlay bar
+            _panelManager.ToggleBar.Left = 4;
+            mainUI.Widgets.Add(_panelManager.ToggleBar);
+        }
+
+        // Sidebar: fixed 360px wide, docked to top-right, below time controls
         var sidebar = new VerticalStackPanel
         {
             Width                = SidebarWidth,
@@ -172,13 +209,6 @@ public sealed class Game1 : Game
             VerticalAlignment    = VerticalAlignment.Top,
             Top                  = 44,   // clear the time controls bar (~40px tall)
         };
-
-        // Overlay control bar (M6.1.1): visible, labeled overlay toggles — top of sidebar.
-        if (_overlayBar is not null) sidebar.Widgets.Add(_overlayBar.Root);
-
-        // Panel toggle bar (M6.1.2): show/hide affordances — below overlay bar in sidebar.
-        if (_panelManager is not null) sidebar.Widgets.Add(_panelManager.ToggleBar);
-
         if (_tileInspector is not null) sidebar.Widgets.Add(_tileInspector.Root);
         if (_filterPanel   is not null) sidebar.Widgets.Add(_filterPanel.Root);
         if (_eventLog      is not null) sidebar.Widgets.Add(_eventLog.Root);
@@ -282,7 +312,8 @@ public sealed class Game1 : Game
                 if (_savingLabel is not null)
                     _savingLabel.Visible = snapshot.IsSaving;
 
-                _charWatch?.Refresh(snapshot);
+                _spotlightCharacterId = snapshot.SpotlightCharacterId;
+                _charWatch?.Refresh(snapshot, _spotlightCharacterId, snapshot.InspectedTile?.Coord);
 
                 // Refresh timeline event buckets every 50 sim years
                 if (_timeline is not null && _historyQuery is not null
@@ -294,6 +325,17 @@ public sealed class Game1 : Game
                 }
             }
 
+            // Update GodMode panel context each frame
+            if (_godModePanel is not null)
+            {
+                var watchChar = snapshot.WatchedCharacter;
+                _godModePanel.SetContext(
+                    snapshot.InspectedTile?.Coord,
+                    watchChar?.Id,
+                    watchChar?.Name,
+                    snapshot.IsPaused);
+            }
+
             // Consume Watch button clicks from the tile inspector
             if (_tileInspector is not null)
             {
@@ -303,6 +345,29 @@ public sealed class Game1 : Game
                     _commandQueue.Enqueue(new WatchCharacter(new EntityId(watchId)));
                     _panelManager?.Show("watch");
                 }
+            }
+
+            // Process spotlight intent commands from CharacterWatchPanel (M7 Phase 7.4)
+            if (_charWatch is not null)
+            {
+                if (_charWatch.ConsumePendingEnterSpotlight() is { } enterSpotId)
+                    _commandQueue.Enqueue(new EnterSpotlight(enterSpotId));
+                if (_charWatch.ConsumePendingExitSpotlight())
+                    _commandQueue.Enqueue(new ExitSpotlight());
+                if (_charWatch.ConsumePendingMoveIntent() && snapshot.InspectedTile?.Coord is { } moveTarget)
+                    _commandQueue.Enqueue(new SetSpotlightMoveIntent(moveTarget));
+                if (_charWatch.ConsumePendingWanderGoal() && _spotlightCharacterId.HasValue)
+                    _commandQueue.Enqueue(new AuthorNudgeCharacter(_spotlightCharacterId.Value, CharacterNudge.SetWander));
+                if (_charWatch.ConsumePendingSettleGoal() && _spotlightCharacterId.HasValue)
+                    _commandQueue.Enqueue(new AuthorNudgeCharacter(_spotlightCharacterId.Value, CharacterNudge.SetSettle));
+            }
+
+            // Camera follow in spotlight mode (M7 Phase 7.4.3)
+            if (_spotlightCharacterId.HasValue && snapshot.WatchedCharacter?.Location is { } charLoc && _camera is not null)
+            {
+                int mapW = GraphicsDevice.Viewport.Width  - SidebarWidth;
+                int mapH = GraphicsDevice.Viewport.Height - TimelineHeight;
+                _camera.CenterOn(charLoc, mapW, mapH);
             }
 
             // Process pending event log interactions (consume-once pattern)
@@ -400,6 +465,10 @@ public sealed class Game1 : Game
         // ── Character Watch panel (Phase 3.4) ───────────────────────────────
         _charWatch = new CharacterWatchPanel();
 
+        // ── God Mode panel (M7 epics 7.2.1–7.2.3) ───────────────────────────
+        _godModePanel = new GodModePanel(_commandQueue);
+        _godModePanel.Desktop = _desktop;
+
         if (_mainUI is not null && _desktop is not null)
         {
             // Left-docked contextual panels sit below the overlay + panel-toggle bars.
@@ -423,6 +492,12 @@ public sealed class Game1 : Game
             _charWatch.Root.Left = 4;
             _mainUI.Widgets.Add(_charWatch.Root);
 
+            _godModePanel.Root.HorizontalAlignment = HorizontalAlignment.Left;
+            _godModePanel.Root.VerticalAlignment   = VerticalAlignment.Top;
+            _godModePanel.Root.Top  = leftPanelTop + 440;
+            _godModePanel.Root.Left = 4;
+            _mainUI.Widgets.Add(_godModePanel.Root);
+
             // ── Help overlay (M6.1.3) — centered modal-style panel ───────────────
             _helpOverlay = new HelpOverlayPanel();
             _helpOverlay.Root.HorizontalAlignment = HorizontalAlignment.Center;
@@ -434,9 +509,10 @@ public sealed class Game1 : Game
         }
 
         // Register toggleable panels with the manager (restores remembered open/closed state).
-        _panelManager?.Register("civ",   "Civ History", _civHistory!);
-        _panelManager?.Register("watch", "Watch",       _charWatch!);
-        _panelManager?.Register("help",  "Help (?)",    _helpOverlay!);
+        _panelManager?.Register("civ",     "Civ History", _civHistory!);
+        _panelManager?.Register("watch",   "Watch",       _charWatch!);
+        _panelManager?.Register("help",    "Help (?)",    _helpOverlay!);
+        _panelManager?.Register("godmode", "God Mode",    _godModePanel!);
 
         // Build the keybind registry now that panels/commands exist, then feed the help panel.
         BuildKeybinds();
@@ -456,14 +532,6 @@ public sealed class Game1 : Game
             OnCiv       = id    => _civHistory?.ShowCiv(id),
             OnClear     = ()    => _commandQueue.Enqueue(new SetInspectedTile(null)),
         };
-
-        // Default camera: fit the whole world into the map viewport area.
-        if (_camera is not null)
-        {
-            int mapW = GraphicsDevice.Viewport.Width  - SidebarWidth;
-            int mapH = GraphicsDevice.Viewport.Height - TimelineHeight;
-            _camera.FitToWorld(world.Config.TileWidth, world.Config.TileHeight, mapW, mapH);
-        }
     }
 
     /// <summary>
@@ -486,6 +554,7 @@ public sealed class Game1 : Game
         reg.Register(Keys.H,           "Civ history panel",     "Panels", () => _panelManager?.Toggle("civ"));
         reg.Register(Keys.W,           "Character watch panel", "Panels", () => _panelManager?.Toggle("watch"));
         reg.Register(Keys.OemQuestion, "This help",             "Panels", () => _panelManager?.Toggle("help"));
+        reg.Register(Keys.F2,         "God Mode panel",         "Panels", () => _panelManager?.Toggle("godmode"));
 
         // World
         reg.Register(Keys.N,      "New world",     "World", ResetToNewWorld);
@@ -532,6 +601,9 @@ public sealed class Game1 : Game
                  || coord.Y < 0 || coord.Y >= snapshot.WorldTileHeight)
                     return;
                 _selection?.SelectTile(coord);
+                // In spotlight mode: map click also sets move intent
+                if (_spotlightCharacterId.HasValue)
+                    _commandQueue.Enqueue(new SetSpotlightMoveIntent(coord));
             }
         }
 
@@ -620,11 +692,15 @@ public sealed class Game1 : Game
         // StartSim can add fresh ones without stale roots accumulating.
         if (_mainUI is not null)
         {
-            if (_charProfile is not null) _mainUI.Widgets.Remove(_charProfile.Root);
-            if (_civHistory  is not null) _mainUI.Widgets.Remove(_civHistory.Root);
-            if (_charWatch   is not null) _mainUI.Widgets.Remove(_charWatch.Root);
-            if (_helpOverlay is not null) _mainUI.Widgets.Remove(_helpOverlay.Root);
+            if (_charProfile  is not null) _mainUI.Widgets.Remove(_charProfile.Root);
+            if (_civHistory   is not null) _mainUI.Widgets.Remove(_civHistory.Root);
+            if (_charWatch    is not null) _mainUI.Widgets.Remove(_charWatch.Root);
+            if (_helpOverlay  is not null) _mainUI.Widgets.Remove(_helpOverlay.Root);
+            if (_godModePanel is not null) _mainUI.Widgets.Remove(_godModePanel.Root);
         }
+        _commandQueue.Enqueue(new ExitSpotlight());
+        _spotlightCharacterId = null;
+        _godModePanel = null;
         if (_desktop?.Root is Panel dp && _timeline is not null)
             dp.Widgets.Remove(_timeline.ScrubLabel);
         _charProfile?.Hide();

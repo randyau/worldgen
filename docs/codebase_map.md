@@ -17,6 +17,7 @@ One-line description of every non-trivial source file. Check here before running
 ## WorldEngine.Sim/Commands/
 - `AuthoringCommands.cs` — Player-authored God Mode commands. Each represents a single intentional act that bypasses normal simulation probability and is stamped IsGodMode = true in the resulting SimEvent. All fields are value-type only (no callbacks/delegates).
 - `PlayerCommands.cs` — UI-to-sim command records: SetSimSpeed, PauseToggle, StepOneTick, SetViewport (no-op); routed via CommandQueue.
+- `SpotlightCommands.cs` — Player spotlight commands (M7+). Each command represents a player intent for controlling or influencing a specific character. All fields are value-type only.
 
 ## WorldEngine.Sim/Config/
 - `AncestryConfig.cs` — All data for one ancestry, loaded from config/ancestries.toml. Personality and aptitude fields are bias offsets added to the Gaussian mean (base 0.5).
@@ -199,11 +200,12 @@ One-line description of every non-trivial source file. Check here before running
 
 ## WorldEngine.UI/UI/
 - `CharacterProfilePanel.cs` — Myra panel showing a structured character profile card. Populated entirely from IHistoryQuery — no prose generation.
-- `CharacterWatchPanel.cs` — Read-only live panel tracking a single named character's current state. Updated each tick from WorldSnapshot.WatchedCharacter. Precursor to M4 Spotlight — everything read-only, no sim commands except WatchCharacter.
+- `CharacterWatchPanel.cs` — Live panel tracking a single named character. When the character is spotlighted (M7 Phase 7.4) exposes intent controls: enter/exit spotlight, move-to, goal nudges.
 - `CivHistoryPanel.cs` — Myra panel showing the full arc of a civilization — rulers, key wars, major events, traits. Includes a civ selector ComboBox at the top.
 - `EventLogPanel.cs` — Sidebar panel showing recent simulation events. Supports focus lens filtering (dimming events not involving the focus target) and exposes pending requests for the character profile card and causal chain dialog.
 - `FilterPanel.cs` — Immutable snapshot of the active event-log filter criteria. Passed to <see cref="EventLogPanel.Update"/> each frame.
 - `FirstRunOverlay.cs` — Dismissible first-run orientation dialog shown once when the simulation starts for the first time. Points the player at the time controls, overlays, and event log.
+- `GodModePanel.cs` — God Mode panel — allows paused-only authoring actions: place artifact, trigger disaster, spawn character, nudge character. Opens modal dialogs for each action.
 - `HelpOverlayPanel.cs` — "?"-toggled panel listing every keyboard shortcut, grouped by category. Rendered directly from the <see cref="KeybindRegistry"/> so it can never drift from actual input handling (M6 Epic 6.1.3).
 - `OverlayBar.cs` — Visible, labeled overlay toolbar (M6 Epic 6.1.1). One button per <see cref="OverlayType"/>; each enqueues <c>SetActiveOverlay</c> — the same command the accelerator keys fire — and the active overlay is highlighted from <c>WorldSnapshot.ActiveOverlay</c>. Restores Temperature, which had been dropped off the keyboard.
 - `TileInspectorPanel.cs` — Sidebar tile inspector; territory/improvement/history sections; [Watch] buttons per character (M3.4).

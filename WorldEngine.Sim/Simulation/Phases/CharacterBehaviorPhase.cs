@@ -231,6 +231,13 @@ public sealed class CharacterBehaviorPhase
     {
         c.IsAlive = false;
 
+        // Clear spotlight if the dead character was being controlled (7.3.3 — no state leaks on death)
+        if (world.SpotlightCharacterId == c.Id)
+        {
+            world.SpotlightCharacterId = null;
+            world.SpotlightIntent      = null;
+        }
+
         // Rivalries end when a participant dies — you can't have a personal feud with a corpse.
         // Wars are civ-level and continue regardless of whether this individual is alive.
         // Alliances and bond edges are left in place: they feed grief/mourning logic

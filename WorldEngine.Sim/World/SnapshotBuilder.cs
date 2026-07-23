@@ -55,7 +55,9 @@ public sealed class SnapshotBuilder
             WatchedCharacter:            watchedChar,
             IsSaving:                    world.IsSaving,
             LastSaveTick:                world.LastSaveTick,
-            Artifacts:                   artifacts
+            Artifacts:                   artifacts,
+            SpotlightCharacterId:        world.SpotlightCharacterId,
+            SpotlightMoveTarget:         world.SpotlightIntent?.MoveTarget
         );
     }
 

@@ -8,9 +8,9 @@ namespace WorldEngine.UI.Rendering;
 public sealed class Camera2D
 {
     public Vector2 Position { get; private set; } = Vector2.Zero;
-    public float Zoom { get; private set; } = 4f; // pixels per tile
+    public float Zoom { get; private set; } = 16f; // pixels per tile
 
-    private static readonly float MinZoom = 2f;
+    private static readonly float MinZoom = 4f;
     private static readonly float MaxZoom = 64f;
 
     public void Pan(Vector2 delta) => Position += delta / Zoom;
@@ -34,24 +34,29 @@ public sealed class Camera2D
     public Vector2 TileToScreen(TileCoord coord) =>
         new Vector2((coord.X - Position.X) * Zoom, (coord.Y - Position.Y) * Zoom);
 
-    /// <summary>Fits the camera to show the entire world. Call once after the sim starts.</summary>
-    public void FitToWorld(int tileW, int tileH, int viewportW, int viewportH)
-    {
-        float zoomX = (float)viewportW / tileW;
-        float zoomY = (float)viewportH / tileH;
-        Zoom = Math.Clamp(Math.Min(zoomX, zoomY), MinZoom, MaxZoom);
-        // Centre the world in the viewport
-        Position = new Vector2(
-            tileW / 2f - viewportW / (2f * Zoom),
-            tileH / 2f - viewportH / (2f * Zoom));
-    }
-
     public (int minX, int minY, int maxX, int maxY) GetVisibleTileBounds(GraphicsDevice gd)
     {
         int w = gd.Viewport.Width, h = gd.Viewport.Height;
         var tl = ScreenToTile(Vector2.Zero);
         var br = ScreenToTile(new Vector2(w, h));
         return (tl.X - 1, tl.Y - 1, br.X + 1, br.Y + 1);
+    }
+
+    /// <summary>Centers the camera on a tile without changing zoom level.</summary>
+    public void CenterOn(TileCoord coord, int viewportW, int viewportH)
+    {
+        Position = new Vector2(
+            coord.X - viewportW / (2f * Zoom),
+            coord.Y - viewportH / (2f * Zoom));
+    }
+
+    /// <summary>Fits the entire world into the given viewport area.</summary>
+    public void FitToWorld(int tileWidth, int tileHeight, int viewportW, int viewportH)
+    {
+        float zoomX = (float)viewportW / tileWidth;
+        float zoomY = (float)viewportH / tileHeight;
+        Zoom     = Math.Clamp(Math.Min(zoomX, zoomY), MinZoom, MaxZoom);
+        Position = Vector2.Zero;
     }
 
 }

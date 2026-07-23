@@ -7,10 +7,10 @@ using WorldEngine.UI.UI.Theme;
 namespace WorldEngine.UI.UI;
 
 /// <summary>
-/// Read-only live panel tracking a single named character's current state.
-/// Updated each tick from WorldSnapshot.WatchedCharacter.
-/// Precursor to M4 Spotlight — everything read-only, no sim commands except WatchCharacter.
+/// Live panel tracking a single named character. When the character is spotlighted
+/// (M7 Phase 7.4) exposes intent controls: enter/exit spotlight, move-to, goal nudges.
 /// </summary>
+// MAP: Character watch + spotlight HUD (M3 Phase 3.4 + M7 Phase 7.4).
 public sealed class CharacterWatchPanel : IPanel
 {
     private readonly VerticalStackPanel _content;
@@ -18,8 +18,7 @@ public sealed class CharacterWatchPanel : IPanel
     public Widget Root { get; }
     public bool IsVisible { get; private set; }
 
-    // Consume-once flag set when "Full Profile" is clicked
-    // (reserved for future M3.3 integration — currently a no-op stub)
+    // Consume-once flags for profile navigation
     private long _pendingProfileCharacterId;
     public long ConsumePendingProfile()
     {
@@ -28,34 +27,42 @@ public sealed class CharacterWatchPanel : IPanel
         return id;
     }
 
+    // Consume-once spotlight intent flags (M7 Phase 7.4)
+    private EntityId? _pendingEnterSpotlight;
+    private bool      _pendingExitSpotlight;
+    private bool      _pendingMoveIntent;
+    private bool      _pendingWanderGoal;
+    private bool      _pendingSettleGoal;
+
+    public EntityId? ConsumePendingEnterSpotlight() { var v = _pendingEnterSpotlight; _pendingEnterSpotlight = null; return v; }
+    public bool ConsumePendingExitSpotlight()   { var v = _pendingExitSpotlight;  _pendingExitSpotlight = false;  return v; }
+    public bool ConsumePendingMoveIntent()      { var v = _pendingMoveIntent;      _pendingMoveIntent = false;     return v; }
+    public bool ConsumePendingWanderGoal()      { var v = _pendingWanderGoal;      _pendingWanderGoal = false;     return v; }
+    public bool ConsumePendingSettleGoal()      { var v = _pendingSettleGoal;      _pendingSettleGoal = false;     return v; }
+
     public CharacterWatchPanel()
     {
         _content = new VerticalStackPanel { Spacing = 2 };
 
-        var scroll = new ScrollViewer { Content = _content, Width = UiTheme.ScrollWidth, Height = 340 };
-
+        var scroll = new ScrollViewer { Content = _content, Width = UiTheme.ScrollWidth, Height = 420 };
         Root = PanelChrome.Wrap("CHARACTER WATCH", scroll, Hide);
         Root.Visible = false;
     }
 
-    /// <summary>Makes the panel visible (called when the player first hits W or clicks Watch).</summary>
-    public void Show() { Root.Visible = true; IsVisible = true; }
-
-    /// <summary>Hides the panel.</summary>
-    public void Hide() { Root.Visible = false; IsVisible = false; }
-
-    /// <summary>Toggles visibility.</summary>
+    public void Show()   { Root.Visible = true;  IsVisible = true; }
+    public void Hide()   { Root.Visible = false; IsVisible = false; }
     public void Toggle() { if (IsVisible) Hide(); else Show(); }
 
     /// <summary>
     /// Refreshes displayed data from the snapshot. Called each frame when IsVisible.
-    /// Does nothing if no character is being watched.
     /// </summary>
-    public void Refresh(WorldSnapshot snapshot)
+    public void Refresh(WorldSnapshot snapshot, EntityId? spotlightId = null, TileCoord? inspectedTile = null)
     {
         if (!IsVisible) return;
         var watch = snapshot.WatchedCharacter;
         if (watch is null) { _content.Widgets.Clear(); return; }
+
+        bool isSpotlighted = spotlightId.HasValue && spotlightId.Value == watch.Id;
 
         _content.Widgets.Clear();
 
@@ -119,22 +126,50 @@ public sealed class CharacterWatchPanel : IPanel
 
         AddSeparator();
 
-        // ── Full Profile link (stub — connects to CharacterProfilePanel in M3.3+) ──
-        long capturedId = watch.Id.Value;
-        var profileBtn = new TextButton
+        // ── Spotlight controls (M7 Phase 7.4) ───────────────────────────────
+        if (isSpotlighted)
         {
-            Text    = "[Full Profile]",
-            Padding = new Myra.Graphics2D.Thickness(4)
-        };
+            EntityId capturedSpotId = watch.Id;
+
+            var exitBtn = new TextButton { Text = "[Exit Spotlight]", Padding = new Myra.Graphics2D.Thickness(4) };
+            exitBtn.Click += (_, _) => _pendingExitSpotlight = true;
+            _content.Widgets.Add(exitBtn);
+
+            AddLine("SPOTLIGHT ACTIVE", Color.Cyan);
+
+            var moveBtn = new TextButton
+            {
+                Text    = "[Move to inspected tile]",
+                Padding = new Myra.Graphics2D.Thickness(4),
+                Enabled = inspectedTile.HasValue
+            };
+            moveBtn.Click += (_, _) => _pendingMoveIntent = true;
+            _content.Widgets.Add(moveBtn);
+
+            var goalRow = new HorizontalStackPanel { Spacing = 4 };
+            var wanderBtn = new TextButton { Text = "[Goal: Wander]", Padding = new Myra.Graphics2D.Thickness(4) };
+            wanderBtn.Click += (_, _) => _pendingWanderGoal = true;
+            var settleBtn = new TextButton { Text = "[Goal: Settle]", Padding = new Myra.Graphics2D.Thickness(4) };
+            settleBtn.Click += (_, _) => _pendingSettleGoal = true;
+            goalRow.Widgets.Add(wanderBtn);
+            goalRow.Widgets.Add(settleBtn);
+            _content.Widgets.Add(goalRow);
+        }
+        else
+        {
+            EntityId capturedWatchId = watch.Id;
+            var enterBtn = new TextButton { Text = "[Enter Spotlight]", Padding = new Myra.Graphics2D.Thickness(4) };
+            enterBtn.Click += (_, _) => _pendingEnterSpotlight = capturedWatchId;
+            _content.Widgets.Add(enterBtn);
+        }
+
+        // ── Full Profile + Close ─────────────────────────────────────────────
+        long capturedId = watch.Id.Value;
+        var profileBtn = new TextButton { Text = "[Full Profile]", Padding = new Myra.Graphics2D.Thickness(4) };
         profileBtn.Click += (_, _) => _pendingProfileCharacterId = capturedId;
         _content.Widgets.Add(profileBtn);
 
-        // Close button
-        var closeBtn = new TextButton
-        {
-            Text    = "[Close]",
-            Padding = new Myra.Graphics2D.Thickness(4)
-        };
+        var closeBtn = new TextButton { Text = "[Close]", Padding = new Myra.Graphics2D.Thickness(4) };
         closeBtn.Click += (_, _) => Hide();
         _content.Widgets.Add(closeBtn);
     }
@@ -149,7 +184,6 @@ public sealed class CharacterWatchPanel : IPanel
 
     private static string PersTick(float v)
     {
-        // Convert 0-1 to 5-char block bar
         int n = (int)(v * 5);
         return $"[{new string('#', n)}{new string('.', 5 - n)}]";
     }

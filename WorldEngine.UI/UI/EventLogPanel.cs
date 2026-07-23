@@ -63,6 +63,7 @@ public sealed class EventLogPanel
             if (!filter.PassesDomain(ev.Domain))          continue;
             if (!filter.PassesActor(ev.ActorName))        continue;
             if (!filter.PassesYear(ev.Year))              continue;
+            if (!filter.PassesGodMode(ev.IsGodMode))      continue;
 
             bool isFocused = focusLens is null
                           || focusLens.Type == FocusType.None
@@ -120,7 +121,13 @@ public sealed class EventLogPanel
                 ? new Label { Text = "★", TextColor = Color.Gold }
                 : null;
 
+            // God Mode badge — gold [G] prefix for author-triggered events
+            Widget? godModeWidget = ev.IsGodMode
+                ? new Label { Text = "[G]", TextColor = Color.Gold }
+                : null;
+
             var row = new HorizontalStackPanel { Spacing = 3 };
+            if (godModeWidget is not null) row.Widgets.Add(godModeWidget);
             row.Widgets.Add(tierStripe);
             if (actorWidget is not null) row.Widgets.Add(actorWidget);
             row.Widgets.Add(evLabel);
@@ -227,6 +234,10 @@ public sealed class EventLogPanel
         "ArtifactTransferred"      => "artifact transferred",
         "EmissaryDispatched"       => "emissary sent",
         "EmissaryLost"             => "emissary lost",
+        "GodModeArtifactPlaced"    => "✦ artifact placed",
+        "GodModeDisasterTriggered" => "✦ disaster triggered",
+        "GodModeCharacterCreated"  => "✦ character created",
+        "GodModeCharacterNudged"   => "✦ character nudged",
         _                          => typeName
     };
 

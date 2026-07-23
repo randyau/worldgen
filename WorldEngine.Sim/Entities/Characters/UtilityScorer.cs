@@ -16,6 +16,11 @@ public sealed class UtilityScorer
     // Salt for softmax random selection
     private const int SaltSoftmax = 600;
 
+    // DECISION: bias-not-override policy — spotlight intent multiplies matching actions' utility by
+    // SpotlightIntentBias (3.0) rather than forcing a hard override, preserving survival responses
+    // (fleeing a disaster overrides a move intent). The softmax still selects; we just tilt the odds.
+    private const float SpotlightIntentBias = 3.0f;
+
     // Pre-baked affinity and need-weight tables, indexed by (int)GoalType and (int)ActionType.
     private readonly UtilityAffinityTables _tables;
 
@@ -48,6 +53,10 @@ public sealed class UtilityScorer
     {
         var candidates = BuildCandidates(c, world, cfg);
         if (candidates.Count == 0) return null;
+
+        // Apply spotlight intent bias when this character is under player control
+        if (world.SpotlightCharacterId == c.Id)
+            ApplySpotlightBias(candidates, world, c);
 
         float temp = cfg.SoftmaxTempMin
             + c.Personality.Curiosity * (cfg.SoftmaxTempMax - cfg.SoftmaxTempMin);
@@ -717,4 +726,65 @@ public sealed class UtilityScorer
         BiomeType.Volcanic           => 0.1f,
         _                            => 0.2f,
     };
+
+    // ─── Spotlight intent bias ─────────────────────────────────────────────────
+
+    /// <summary>
+    /// Multiplies the score of actions that match the current spotlight player intent by
+    /// <see cref="SpotlightIntentBias"/>. Operates as an in-place mutation of the candidates list
+    /// so the softmax still selects probabilistically — survival instincts can still win.
+    /// </summary>
+    private static void ApplySpotlightBias(
+        List<ScoredAction> candidates,
+        IWorldStateReadOnly world,
+        Tier1Character c)
+    {
+        var moveTarget = world.SpotlightMoveTarget;
+        var goalIntent = world.SpotlightGoalIntent;
+
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            var ca = candidates[i];
+            float bias = 1.0f;
+
+            // MoveTarget: bias any move action whose destination steps toward the intent tile
+            if (moveTarget.HasValue && ca.Command is MoveToTile move)
+            {
+                // Apply bias if this move takes the character closer to the target
+                var step = StepToward(c.Location, moveTarget.Value, world);
+                if (step.HasValue && step.Value == move.Destination)
+                    bias = SpotlightIntentBias;
+            }
+            else if (moveTarget.HasValue && ca.Command is FleeRegion flee)
+            {
+                // FleeRegion also moves the character — treat the same way
+                var step = StepToward(c.Location, moveTarget.Value, world);
+                if (step.HasValue && step.Value == flee.Destination)
+                    bias = SpotlightIntentBias;
+            }
+
+            // GoalIntent: bias actions whose ActionType aligns with the goal intent
+            // TODO: fuller GoalIntent → action mapping in M8; this covers the primary cases
+            if (goalIntent.HasValue && bias == 1.0f)
+            {
+                bool matchesGoal = goalIntent.Value switch
+                {
+                    GoalType.FoundCity   => ca.Command is MoveToTile or EstablishSettlement,
+                    GoalType.Flee        => ca.Command is FleeRegion,
+                    GoalType.Bond        => ca.Command is Negotiate or AllyWith,
+                    GoalType.Alliance    => ca.Command is AllyWith,
+                    GoalType.Survive     => ca.Command is Rest,
+                    GoalType.Acquire     => ca.Command is Rest, // stay put to acquire locally
+                    GoalType.Create      => ca.Command is CreateArtwork,
+                    GoalType.BuildImprovement => ca.Command is BuildImprovement,
+                    GoalType.SlayBeast   => ca.Command is MoveToTile,
+                    _                    => false
+                };
+                if (matchesGoal) bias = SpotlightIntentBias;
+            }
+
+            if (bias != 1.0f)
+                candidates[i] = ca with { Score = ca.Score * bias };
+        }
+    }
 }

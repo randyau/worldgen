@@ -17,7 +17,8 @@ public sealed record EventLogFilter(
     string DomainText,
     string ActorText,
     int? YearFrom,
-    int? YearTo)
+    int? YearTo,
+    bool HideGodMode = false)
 {
     public static readonly EventLogFilter Default = new(
         ShowHeadline:   true,
@@ -26,13 +27,17 @@ public sealed record EventLogFilter(
         DomainText:     "",
         ActorText:      "",
         YearFrom:       null,
-        YearTo:         null);
+        YearTo:         null,
+        HideGodMode:    false);
 
     /// <summary>True when every event passes without extra filtering.</summary>
     public bool IsDefault =>
         ShowHeadline && ShowRegional && !ShowBackground &&
         string.IsNullOrEmpty(DomainText) && string.IsNullOrEmpty(ActorText) &&
-        YearFrom is null && YearTo is null;
+        YearFrom is null && YearTo is null && !HideGodMode;
+
+    /// <summary>True if this god-mode event should be shown.</summary>
+    public bool PassesGodMode(bool isGodMode) => !HideGodMode || !isGodMode;
 
     public bool PassesTier(EventTier tier) => tier switch
     {
@@ -68,6 +73,7 @@ public sealed class FilterPanel
     private readonly CheckBox _headlineBox;
     private readonly CheckBox _regionalBox;
     private readonly CheckBox _backgroundBox;
+    private readonly CheckBox _godModeBox;
     private readonly TextBox  _domainBox;
     private readonly TextBox  _actorBox;
     private readonly TextBox  _yearFromBox;
@@ -81,6 +87,7 @@ public sealed class FilterPanel
         _headlineBox   = new CheckBox { Text = "Headline",   IsChecked = true };
         _regionalBox   = new CheckBox { Text = "Regional",   IsChecked = true };
         _backgroundBox = new CheckBox { Text = "Background", IsChecked = false };
+        _godModeBox    = new CheckBox { Text = "Hide God Mode", IsChecked = false };
 
         var tierRow = new HorizontalStackPanel { Spacing = 6 };
         tierRow.Widgets.Add(_headlineBox);
@@ -123,6 +130,7 @@ public sealed class FilterPanel
         _body = new Panel { Visible = _expanded };
         var bodyStack = new VerticalStackPanel { Spacing = 3 };
         bodyStack.Widgets.Add(tierRow);
+        bodyStack.Widgets.Add(_godModeBox);
         bodyStack.Widgets.Add(domainRow);
         bodyStack.Widgets.Add(actorRow);
         bodyStack.Widgets.Add(bottomRow);
@@ -141,6 +149,7 @@ public sealed class FilterPanel
         _headlineBox.IsCheckedChanged   += (_, _) => Rebuild();
         _regionalBox.IsCheckedChanged   += (_, _) => Rebuild();
         _backgroundBox.IsCheckedChanged += (_, _) => Rebuild();
+        _godModeBox.IsCheckedChanged    += (_, _) => Rebuild();
         _domainBox.TextChangedByUser    += (_, _) => Rebuild();
         _actorBox.TextChangedByUser     += (_, _) => Rebuild();
         _yearFromBox.TextChangedByUser  += (_, _) => Rebuild();
@@ -168,7 +177,8 @@ public sealed class FilterPanel
             DomainText:     _domainBox.Text ?? "",
             ActorText:      _actorBox.Text  ?? "",
             YearFrom:       yearFrom,
-            YearTo:         yearTo);
+            YearTo:         yearTo,
+            HideGodMode:    _godModeBox.IsChecked);
     }
 
     private void Clear()
@@ -176,6 +186,7 @@ public sealed class FilterPanel
         _headlineBox.IsChecked   = true;
         _regionalBox.IsChecked   = true;
         _backgroundBox.IsChecked = false;
+        _godModeBox.IsChecked    = false;
         _domainBox.Text   = "";
         _actorBox.Text    = "";
         _yearFromBox.Text = "";

@@ -67,6 +67,14 @@ public interface IWorldStateReadOnly
     int CountAlliances(EntityId id);
     int CountRivals(EntityId id);
 
+    // === SPOTLIGHT (M7+) ===
+    /// <summary>Character currently under spotlight player control. Null when spotlight is inactive.</summary>
+    EntityId? SpotlightCharacterId { get; }
+    /// <summary>Player's current move intent for the spotlit character. Null if no move intent is set.</summary>
+    TileCoord? SpotlightMoveTarget { get; }
+    /// <summary>Player's current goal intent for the spotlit character. Null if no goal intent is set.</summary>
+    GoalType?  SpotlightGoalIntent { get; }
+
     // === RELATIONSHIPS / HISTORY (M3+) ===
     // float GetRelationshipTrust(EntityId from, EntityId to);
     // IEnumerable<SimEvent> GetRecentEvents(int withinYears);

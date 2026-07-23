@@ -118,6 +118,17 @@ public sealed class WorldState : IWorldStateReadOnly
     /// <summary>Character being watched in the character watch panel. Null means no watch active.</summary>
     public EntityId? WatchedCharacterId { get; internal set; }
 
+    // === SPOTLIGHT (M7+) ===
+    /// <summary>Character currently under spotlight player control. Null means no spotlight active.</summary>
+    public EntityId?        SpotlightCharacterId { get; internal set; }
+
+    /// <summary>Current player intent for the spotlit character. Null when spotlight is inactive.</summary>
+    public SpotlightIntent? SpotlightIntent      { get; internal set; }
+
+    // IWorldStateReadOnly spotlight projection — entity logic reads these; never reads SpotlightIntent directly
+    TileCoord? IWorldStateReadOnly.SpotlightMoveTarget => SpotlightIntent?.MoveTarget;
+    GoalType?  IWorldStateReadOnly.SpotlightGoalIntent => SpotlightIntent?.GoalIntent;
+
     // === SAVE STATE ===
     /// <summary>True while an auto-save or manual save is running on the background Task.</summary>
     public volatile bool IsSaving;
