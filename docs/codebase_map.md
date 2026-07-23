@@ -15,6 +15,7 @@ One-line description of every non-trivial source file. Check here before running
 - `SettlementStub.cs` — Lightweight settlement record. Population is dynamic from Phase 2.4 onward.
 
 ## WorldEngine.Sim/Commands/
+- `AuthoringCommands.cs` — Player-authored God Mode commands. Each represents a single intentional act that bypasses normal simulation probability and is stamped IsGodMode = true in the resulting SimEvent. All fields are value-type only (no callbacks/delegates).
 - `PlayerCommands.cs` — UI-to-sim command records: SetSimSpeed, PauseToggle, StepOneTick, SetViewport (no-op); routed via CommandQueue.
 
 ## WorldEngine.Sim/Config/

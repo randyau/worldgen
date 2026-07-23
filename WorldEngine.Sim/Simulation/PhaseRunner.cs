@@ -205,7 +205,7 @@ public sealed class PhaseRunner
                 VerbClass        = VerbClassification.Classify(pe.Type),
                 PopulationImpact = impact,
                 IsFirstOfKind    = isFirst,
-                IsGodMode        = false,
+                IsGodMode        = (int)pe.Type >= 9000,
                 ActorId          = pe.ActorId,
                 ActorName        = pe.ActorName,
                 CivId            = pe.CivId,

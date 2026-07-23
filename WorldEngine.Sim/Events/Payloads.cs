@@ -244,3 +244,17 @@ internal sealed record ArtifactTransferredPayload(
 
 internal sealed record ArtifactDestroyedPayload(
     long ArtifactId, string ArtifactName, string Cause);
+
+// ─── GodMode authored events (9000-range) ────────────────────────────────────
+
+internal sealed record GodModeArtifactPayload(
+    long ArtifactId, string ArtifactName, string Category, float Quality);
+
+internal sealed record GodModeDisasterPayload(
+    string DisasterType, float Intensity);
+
+internal sealed record GodModeCharacterPayload(
+    long CharacterId, string CharacterName, string? AncestryId);
+
+internal sealed record GodModeNudgePayload(
+    long CharacterId, string CharacterName, string Nudge);

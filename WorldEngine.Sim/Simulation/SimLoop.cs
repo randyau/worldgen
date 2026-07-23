@@ -174,6 +174,10 @@ public sealed class SimLoop
             case SaveWorld sv:
                 TriggerSave(sv.SaveDir);
                 break;
+            case AuthorPlaceArtifact or AuthorTriggerDisaster
+              or AuthorSpawnCharacter or AuthorNudgeCharacter:
+                AuthoringResolver.Resolve(cmd, _world, _phaseRunner);
+                break;
         }
     }
 

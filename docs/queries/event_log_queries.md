@@ -67,7 +67,7 @@ The `Type` column stores integer values. Use these constants in WHERE clauses:
 -- God Mode (9000+)
   9001 = GodModeDisasterTriggered     9002 = GodModeEntitySpawned       
   9003 = GodModeCharacterCreated      9004 = GodModeArtifactPlaced      
-  9005 = GodModeCivilizationForced  
+  9005 = GodModeCivilizationForced    9006 = GodModeCharacterNudged     
 
 -- Emissary/Diplomatic (5000–5999)
   5001 = EmissaryDispatched          5002 = EmissaryLost              
