@@ -53,7 +53,7 @@ where the codebase now is.
 | # | Name | Detail | Theme |
 |---|------|--------|-------|
 | **M6** | UI Experience & Polish | ✅ COMPLETE 2026-07-21 | All epics 6.1–6.4 done. See archive. |
-| **M7** | Authoring & Agency (Spotlight + God Mode) | **story-level (below)** | The core product promise: watch, author, inhabit. |
+| **M7** | Authoring & Agency (Spotlight + God Mode) | ✅ COMPLETE 2026-07-23 | All epics 7.1–7.4 done. See archive. |
 | M8 | Created-Object Unification & Economic Depth | summary | Pay down G-1 debt; deepen crafting/economy. |
 | M9 | Worldgen Preview & Modding | summary | Layered preview + adjustment; player config/data modding. |
 | M10 | Scale & Distribution | summary | 10k+ year performance; local-scale gen; packaging. |
