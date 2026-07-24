@@ -1,7 +1,17 @@
 # M8 Phase 5 — Settings Scaffold
 
 **Milestone:** M8 — UI Framework Rewrite
-**Status:** NOT STARTED
+**Status:** COMPLETE — 2026-07-24. `UiPrefs` (JSON, global not per-world) + `UiPrefsStore`
+load/save. `SettingsPanel` (Summoned, `Ctrl+,`) has Display (dock width — applied live to
+`LayoutHost.DockWidth`; theme variant/high-contrast/reduce-motion/density — persisted only, not
+yet applied live, see the DECISION on `UiPrefs` itself) and Controls (hosts the new
+`KeybindEditor` composite, extracted from `HelpPanel` so both share one rebind-row-list instead
+of duplicating it) tabs. `KeybindRegistry.ExportOverrides/ApplyOverrides` round-trip overrides
+through `UiPrefs.KeybindOverrides`; a rebind from either Help or Settings persists via one shared
+`Game1.ApplyAndPersistUiPrefs` callback. Simulation-config tab out of scope per this doc (M10).
+No gear button was added to the top bar (keybind-only entry point) — deferred as a small,
+separately-verifiable follow-up; not part of this scaffold's core deliverable. Build 0 warnings,
+501/501 tests green.
 **Depends on:** 8.4 (`CommandRegistry`, `KeybindEditor`)
 **Worker model:** Sonnet
 **Framework refs:** `docs/ui_design_framework.md` §9 (settings/keybindings/config), §2.5 (motion)

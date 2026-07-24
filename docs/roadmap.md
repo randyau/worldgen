@@ -54,7 +54,7 @@ where the codebase now is.
 |---|------|--------|-------|
 | **M6** | UI Experience & Polish | ✅ COMPLETE 2026-07-21 | All epics 6.1–6.4 done. See archive. |
 | **M7** | Authoring & Agency (Spotlight + God Mode) | ✅ COMPLETE 2026-07-23 | All epics 7.1–7.4 done. See archive. |
-| **M8** | UI Framework Rewrite | DETAILED | A coherent, maintainable, bug-resistant UI system before feature growth resumes. |
+| **M8** | UI Framework Rewrite | ✅ COMPLETE 2026-07-24 | All phases 8.0–8.5 done. See archive. |
 | M9 | Created-Object Unification & Economic Depth | summary | Pay down G-1 debt; deepen crafting/economy. |
 | M10 | Worldgen Preview & Modding | summary | Layered preview + adjustment; player config/data modding. |
 | M11 | Scale & Distribution | summary | 10k+ year performance; local-scale gen; packaging. |
@@ -155,10 +155,21 @@ the command/resolve architecture or reproducibility of the un-authored baseline.
 
 ---
 
-## M8 — UI Framework Rewrite  *(DETAILED)*
+## M8 — UI Framework Rewrite  ✅ COMPLETE 2026-07-24
 
 **Design authority:** `docs/ui_design_framework.md` (read it before scoping any phase).
-**Phase docs:** `docs/phases/m8_ui_framework_rewrite.md` (index) + `m8_phase0…5_*.md`.
+**Phase docs (archived):** `docs/phases/archive/m8_ui_framework_rewrite.md` (index, has
+close-out notes) + `m8_phase0…5_*.md`.
+
+All 6 phases shipped: design tokens/kit/Presenter (8.0), the layout host + tabbed dock (8.1), a
+single `SelectionBus` (8.2), every panel rebuilt on the kit (8.3, with the Timeline/Legends/
+Toasts/map-tooltips sub-part of 8.3.6 deferred as net-new surfaces out of scope for a kit
+migration), a rebindable `CommandRegistry` + Help (8.4), and a Settings shell with `UiPrefs`
+persistence (8.5, sim-config tab deferred to M10 as planned). See the index's close-out notes for
+the two accepted deviations (Myra usage in `UI/Layout/`+`UI/Panels/` beyond the letter of "only
+Kit sees Myra"; a Settings gear button in the top bar not added). 8.0-8.2 were manually
+playtested; 8.3-8.5 verified by build+test only (no display in the agent environment) — recommend
+a full manual pass before relying on this milestone in front of end users.
 
 ### Goal
 Replace the accreted, per-panel UI construction in `WorldEngine.UI` with one coherent design

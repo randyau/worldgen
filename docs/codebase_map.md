@@ -206,6 +206,10 @@ One-line description of every non-trivial source file. Check here before running
 - `TimelineBar.cs` — Timeline scrubber bar drawn via SpriteBatch at the bottom of the map area. Shows event density heatmap and allows scrubbing to any historical year. The ScrubLabel is a Myra Label — add it to the root overlay panel in Game1.
 - `WorldGenScreen.cs` — Full-screen world-gen progress overlay with completion state and "Start Simulation" button.
 
+## WorldEngine.UI/UI/Input/
+- `CommandRegistry.cs` — The set of all named user actions. <see cref="KeybindRegistry"/> binds keys to command ids and invokes them here; UI buttons can invoke the same id directly.
+- `KeybindEditor.cs` — Renders every <see cref="CommandRegistry"/> command grouped by category, each with its current key and [Rebind]/[Reset] affordances. Capture-next-keypress is driven externally via <see cref="TryCaptureKey"/> (the host feeds keyboard input from its own per-frame poll).
+
 ## WorldEngine.UI/UI/Kit/
 - `EntityLink.cs` — Layer 2 — clickable entity reference; every nameable thing should render through this.
 - `IWeWidget.cs` — Layer 1 — common surface so Layer 2 composites can nest any We* widget.
@@ -236,7 +240,8 @@ One-line description of every non-trivial source file. Check here before running
 - `EventLogPanel.cs` — Pinned panel showing recent simulation events. Supports focus lens dimming and routes actor/ civ/cause-chain clicks immediately (M8.2.2) instead of a consume-once poll.
 - `FilterPanel.cs` — Immutable snapshot of the active event-log filter criteria. Passed to <see cref="EventLogPanel"/> each frame via <see cref="FilterPanel.CurrentFilter"/>.
 - `GodModePanel.cs` — God Mode panel — allows paused-only authoring actions: place artifact, trigger disaster, spawn character, nudge character. Dialogs route through the shared <see cref="ModalHost"/>.
-- `HelpOverlayPanel.cs` — "?"-toggled panel listing every keyboard shortcut, grouped by category. Rendered directly from the <see cref="KeybindRegistry"/> so it can never drift from actual input handling (M6 Epic 6.1.3).
+- `HelpPanel.cs` — "?"-toggled panel listing every command via <see cref="KeybindEditor"/>, plus the God-Mode/ Spotlight workflow cards. Rendered directly from <see cref="CommandRegistry"/>/ <see cref="KeybindRegistry"/> so it can never drift from actual input handling.
+- `SettingsPanel.cs` — Settings shell: a left tab list (Display / Controls) + right content, both inside a <see cref="PanelFrame"/>. The simulation-config tab is explicitly out of scope for M8 (lands in M10) — tabs are registered by id here so that tab is a drop-in later.
 - `TileInspectorPanel.cs` — Layer 3 — Contextual (Tile) panel: ruin/settlement/tile facts/seasonal/resources/
 
 ## WorldEngine.UI/UI/Present/
@@ -245,6 +250,9 @@ One-line description of every non-trivial source file. Check here before running
 ## WorldEngine.UI/UI/Selection/
 - `EntityRef.cs` — Small reference to a selectable entity — the payload EntityLink hands to ISelectionSink.
 - `SelectionBus.cs` — Immutable snapshot of the current selection, broadcast by <see cref="SelectionBus"/>.</summary> public readonly record struct SelectionSnapshot(SelectionKind Kind, long Id, TileCoord Coord); // MAP: The one "what am I looking at" channel (framework §7.1) — replaces SelectionRouter and // every consume-once navigation poller that used to live in Game1/panels (M8 phase 8.2). <summary> Single selection bus for the UI. Panels/composites call <see cref="Select"/> directly at the click site instead of setting a per-panel pending field for <c>Game1</c> to poll each frame. UI-only state — see the determinism note on <see cref="SelectionState"/>: tile inspection still round-trips a sim command because the snapshot must carry tile detail, but "what is selected" needs no sim round-trip.
+
+## WorldEngine.UI/UI/Settings/
+- `UiPrefs.cs` — Persisted UI preferences: display tuning + keybind overrides. Global (not per-world), stored next to the first-run flag file. Sim tuning stays in <c>config/*.toml</c> — this is UI-only.
 
 ## WorldEngine.UI/UI/Theme/
 - `UiTheme.cs` — Single source of truth for the UI's visual language: colors, spacing, and metrics. Panels pull named tokens from here instead of hardcoding <see cref="Color"/> literals and pixel widths, so the whole UI can be retuned from one place (M6 Epic 6.2.1).

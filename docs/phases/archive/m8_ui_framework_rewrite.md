@@ -1,15 +1,16 @@
 # M8 — UI Framework Rewrite (index)
 
 **Milestone:** M8 — UI Framework Rewrite
-**Status:** IN PROGRESS — 8.0-8.4 done (2026-07-23–24). 8.0/8.1 verified by manual playtest (user
-confirmed the app runs correctly after those two); 8.2-8.4 verified by build+test only (no
-display in this environment) — user confirmed by a later playtest that 8.2 looked unchanged
-visually, and instructed to continue through the rest of M8 without a pause-and-ask at every
-phase. 8.3.6 (Timeline rebuild, Legends, Toasts, map tooltips) deferred — net-new surfaces, out
-of scope for a kit-migration pass; see the 8.3 phase doc. Window resizing not yet supported
-(GraphicsDeviceManager fixed at 1280x720, pre-existing, unrelated to M8) — deferred; future work
-should add common preset sizes (1080p etc.) rather than just AllowUserResizing. **Next up: 8.5
-(Settings shell)** — see `m8_phase5_settings.md`.
+**Status:** COMPLETE — 2026-07-24. All 6 phases (8.0-8.5) shipped. 8.0/8.1 verified by manual
+playtest (user confirmed the app runs correctly after those two); 8.2-8.5 verified by build+test
+only (no display in this environment) — user confirmed by a later playtest that 8.2 looked
+unchanged visually and instructed to continue through the rest of M8 without a pause-and-ask at
+every phase. Two things deferred out of this milestone (see 8.3/8.5 phase docs for the DECISIONs):
+8.3.6's Timeline rebuild/Legends/Toasts/map tooltips (net-new visual surfaces, out of scope for a
+kit-migration pass) and a Settings gear button in the top bar (keybind-only entry point for now).
+Window resizing also stays unsupported (GraphicsDeviceManager fixed at 1280x720, pre-existing,
+unrelated to M8) — future work should add common preset sizes (1080p etc.) rather than just
+AllowUserResizing. **Next up: M9** — see `docs/roadmap.md`.
 **Design authority:** `docs/ui_design_framework.md` — the *why*. This doc set is the *how*.
 **Roadmap:** `docs/roadmap.md` § "M8 — UI Framework Rewrite".
 
@@ -43,7 +44,7 @@ Cross-cutting: SelectionBus · Presenter · CommandGateway · Keybind/CommandReg
 | 8.2 | `m8_phase2_selection.md` | 8.1 | Sonnet | One `SelectionBus`; delete consume-once polling. **DONE 2026-07-24.** |
 | 8.3 | `m8_phase3_panel_migration.md` | 8.2 (8.3.6 also 8.4) | Haiku* | Rebuild each panel on the kit, one story per panel. **DONE 2026-07-24 (8.3.1-8.3.5; 8.3.6 deferred, see phase doc).** |
 | 8.4 | `m8_phase4_command_registry.md` | 8.2 | Sonnet | `CommandRegistry`; regenerate Help; rebinding. **DONE 2026-07-24.** |
-| 8.5 | `m8_phase5_settings.md` | 8.4 | Sonnet | Settings shell + Display/Controls tabs + prefs persistence. |
+| 8.5 | `m8_phase5_settings.md` | 8.4 | Sonnet | Settings shell + Display/Controls tabs + prefs persistence. **DONE 2026-07-24.** |
 
 \* 8.3 stories are mechanical migrations; Haiku is fine **if** it can build/restore (see the
 worktree gotcha below). If a Haiku worker stalls on restore, hand the story to Sonnet.
@@ -128,3 +129,24 @@ deletes each one. Don't move them early.
   outside `UI/Kit/`.
 - On completion, move each `m8_phase*.md` to `docs/phases/archive/` with `Status: COMPLETE — <date>`
   and set the roadmap M8 row + this index to COMPLETE (per CLAUDE.md).
+
+### Close-out notes (2026-07-24)
+
+- `PanelChrome.cs` and every old panel file (`EventLogPanel.cs`, `TileInspectorPanel.cs`,
+  `CharacterWatchPanel.cs`, `CharacterProfilePanel.cs`, `CivHistoryPanel.cs`, `FilterPanel.cs`,
+  `GodModePanel.cs`, `HelpOverlayPanel.cs`) plus `LegacyPanelAdapter.cs`/`IPanel.cs` are deleted.
+  No `AddLine(string)` call remains anywhere in `WorldEngine.UI`.
+- `using Myra` outside `UI/Kit/` is **not** fully eliminated — `UI/Layout/` (the Layer 4 host) and
+  `UI/Panels/` both legitimately reference Myra `Widget`/`TextButton` types (`IWorkspacePanel.Build()`
+  returns `Widget`; several panels compose small kit-adjacent pieces like the Event Log's tier
+  stripe). This was identified and accepted as early as 8.1 (`NoMyraOutsideKit` is scoped to
+  `UI/Present/` only, not Layout/Panels) — a truly zero-Myra Panels layer would need Build() to
+  return an `IWeWidget` abstraction the kit doesn't have, which is a larger change than this
+  milestone's kit-migration scope. `NoColorLiteralsInPanels` (banning raw `Color`/XNA usage,
+  the actually-risky class of drift) **is** enforced at full strength.
+- Manual smoke test beyond what's recorded above (dock tabs following selection live, God Mode vs
+  Spotlight visibly distinct, etc.) was not re-run for 8.2-8.5 — there is no display in this
+  agent environment. The user tested 8.0-8.2 directly and asked to continue without a pause at
+  every phase from there; 8.3-8.5 rely on build+test green plus careful code review as the
+  verification bar. Recommend a full manual pass before relying on this milestone in front of
+  end users.
