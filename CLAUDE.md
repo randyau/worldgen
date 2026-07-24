@@ -19,11 +19,11 @@ The primary audience is worldbuilders and writers, not traditional gamers. The c
 - `docs/interface_contracts.md` — **index only** — links to 4 split files; load only the relevant one
 - `docs/implementation_plan_m1.md` — M1 phase ordering and story-level guide (archived reference)
 
-**Current milestone status:** Milestone 4 COMPLETE (2026-07-19). All M1–M4 phases archived. Currently in an unstructured balance/tuning phase — no active phase doc.
+**Current milestone status:** M7 (Authoring & Agency — Spotlight + God Mode) COMPLETE (2026-07-23). Next up: **M8 — UI Framework Rewrite**, a `WorldEngine.UI`-only refactor onto a coherent design system (planned, not started). Design authority: `docs/ui_design_framework.md`. Milestones were renumbered on 2026-07-23 when M8 was inserted (old M8→M9, M9→M10, M10→M11) — see `docs/roadmap.md`.
 
 **For coding sessions — read the active phase doc:**
-- `docs/phases/` — active phase docs for the current milestone (currently empty — all M4 phases are in archive/)
-- `docs/phases/archive/` — all M1, M2, M3, and M4 phases archived here for reference
+- `docs/phases/m8_ui_framework_rewrite.md` — **M8 index; read this first**, then only the specific `docs/phases/m8_phaseN_*.md` for the phase in progress (8.0 → 8.5, sequential)
+- `docs/phases/archive/` — all M1–M7 phases archived here for reference
 - `docs/testing/runbook_m1.md` — M1 manual test runbook (reference for regression testing)
 
 **Reusable code patterns and test templates:**
@@ -263,7 +263,7 @@ At the start of each session:
 
 1. Read this file
 2. Run `python3 scripts/scip-query.py stats` — confirms the SCIP index is fresh and tells you the document/symbol counts. If missing, run `scip-dotnet index WorldEngine.sln --skip-dotnet-restore` first.
-3. Read the active phase doc from `docs/phases/` (whichever phase is in progress). If `docs/phases/` is empty (as it is now — balance/tuning phase, no formal milestone), check `docs/tuning_balance_review_2026-07-18.md` for current balance work in progress.
+3. Read the active phase doc from `docs/phases/` (whichever phase is in progress). The current milestone is **M8 — UI Framework Rewrite**: start from `docs/phases/m8_ui_framework_rewrite.md` (the index), then the specific `m8_phaseN_*.md` in progress. `docs/ui_design_framework.md` is the design authority.
 4. Use `docs/codebase_map.md` to orient yourself — one-line description of every source file; skip filesystem scans when possible. This file is generated per-commit and is current.
 5. Check only the relevant `docs/interface_contracts_*.md` split file for interfaces you'll be implementing against.
 6. Use `python3 scripts/scip-query.py defs <TypeName>` to locate types before reading files.

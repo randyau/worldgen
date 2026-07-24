@@ -54,14 +54,20 @@ where the codebase now is.
 |---|------|--------|-------|
 | **M6** | UI Experience & Polish | ✅ COMPLETE 2026-07-21 | All epics 6.1–6.4 done. See archive. |
 | **M7** | Authoring & Agency (Spotlight + God Mode) | ✅ COMPLETE 2026-07-23 | All epics 7.1–7.4 done. See archive. |
-| M8 | Created-Object Unification & Economic Depth | summary | Pay down G-1 debt; deepen crafting/economy. |
-| M9 | Worldgen Preview & Modding | summary | Layered preview + adjustment; player config/data modding. |
-| M10 | Scale & Distribution | summary | 10k+ year performance; local-scale gen; packaging. |
+| **M8** | UI Framework Rewrite | DETAILED | A coherent, maintainable, bug-resistant UI system before feature growth resumes. |
+| M9 | Created-Object Unification & Economic Depth | summary | Pay down G-1 debt; deepen crafting/economy. |
+| M10 | Worldgen Preview & Modding | summary | Layered preview + adjustment; player config/data modding. |
+| M11 | Scale & Distribution | summary | 10k+ year performance; local-scale gen; packaging. |
 
 Ordering rationale: polish (M6) de-risks and clarifies the surfaces that Spotlight/God Mode
-(M7) build on, so we author against a UI that's already coherent. The G-1 refactor (M8) is
-deliberately placed **after** M7 because M7 does not depend on it, and doing it under real
-authoring pressure clarifies the target taxonomy. M9/M10 are the long-tail platform work.
+(M7) build on, so we author against a UI that's already coherent. **M8 (UI Framework Rewrite)
+is inserted before economic depth (M9)** because M6/M7 grew the UI by accretion again and the
+recurring layout defects (panels overflowing off-screen, floating over the map/each other,
+click-through leakage, scrollbar-obstructed content) are now structural. M9 adds several *new*
+surfaces (economic ledger, created-object detail, trade overlay) — doing the framework first
+means those land on the new system instead of adding more debt to migrate later. The design
+authority for M8 is `docs/ui_design_framework.md`. The G-1 refactor (M9) still sits after M7
+because M7 does not depend on it. M10/M11 are the long-tail platform work.
 
 ---
 
@@ -149,7 +155,60 @@ the command/resolve architecture or reproducibility of the un-authored baseline.
 
 ---
 
-## M8 — Created-Object Unification & Economic Depth  *(summary)*
+## M8 — UI Framework Rewrite  *(DETAILED)*
+
+**Design authority:** `docs/ui_design_framework.md` (read it before scoping any phase).
+**Phase docs:** `docs/phases/m8_ui_framework_rewrite.md` (index) + `m8_phase0…5_*.md`.
+
+### Goal
+Replace the accreted, per-panel UI construction in `WorldEngine.UI` with one coherent design
+system: a layered stack (wrapped-Myra widget kit → composite components → panels → a layout
+host that owns all geometry/z-order/hit-testing → screens), a tabbed contextual dock, a single
+selection bus, and a presenter layer. No new sim systems and no change to the sim/UI boundary —
+this is a `WorldEngine.UI`-only refactor. The app stays runnable after every phase.
+
+### Why now
+The recurring layout defects are structural, not cosmetic: panels run off-screen, float over
+the map or over each other, leak clicks through to the map, and hide content behind scrollbars.
+The framework makes these **impossible to express** by moving all geometry/z/hit-testing into a
+layout host that panels cannot bypass (framework P4, §3 Layer 4, §5). Fixing this before M9's
+new surfaces avoids migrating even more debt.
+
+### Success criteria
+- No panel sets absolute geometry; the layout host owns every rectangle, z-band, scroll
+  reserve, and hit-test. The four historic bug classes cannot be reproduced without editing the
+  host (framework §3.2).
+- Panels are built only from the component kit — no `AddLine(string)` walls, no raw Myra above
+  the Kit layer, no color/size/font literals (enforced by new architecture tests).
+- One navigation mechanism: everything routes through `SelectionBus`; the parallel
+  `ConsumePendingX()` polling in `Game1` is deleted.
+- All sim data rendered through the `Presenter` — no raw `0–255` bytes, no enum/type-string leaks.
+- Keybinds are rebindable via a `CommandRegistry`; Help regenerates from it.
+- No regressions: `scripts/test-fast.sh` green, architecture tests pass, UI stays
+  `WorldSnapshot`-only, determinism baseline unaffected (UI-only change).
+
+### Phases (sequential — each shippable, app runnable throughout)
+| Phase | Name | Roadmap epics | Worker model |
+|-------|------|---------------|--------------|
+| **8.0** | Design tokens & component kit | tokens, Layer 1–2 kit, Presenter, arch tests | Sonnet (foundation) |
+| **8.1** | Layout host & tabbed dock | regions, z-bands, scroll reserve, hit-test router, `SimWorkspace`, `ModalHost` | Sonnet (architectural) |
+| **8.2** | Selection unification | promote `SelectionBus`; delete consume-once polling; focus-lens service | Sonnet |
+| **8.3** | Panel migration | rebuild each panel on the kit (one panel per story) | Haiku-friendly (mechanical) |
+| **8.4** | Command registry & Help | `CommandRegistry`; regenerate Help; keybind rebinding | Sonnet |
+| **8.5** | Settings scaffold | Settings screen shell + Display/Controls tabs + UI-prefs persistence | Sonnet |
+
+Sequencing is strict: 8.0 → 8.1 → 8.2 gate everything; 8.3 stories are internally parallel-safe
+(one panel each) but depend on 8.0–8.2; 8.4 precedes the Help rebuild inside 8.3.6; 8.5 last.
+The M9 sim-config settings tab plugs into the 8.5 shell — it is **not** built in M8.
+
+### Moddability posture (framework §10)
+Coherence-first: add named registries (`PanelRegistry`, `OverlayRegistry`, `CommandRegistry`,
+`Presenter` maps) as the touched code passes through them, each marked `// MOD SEAM:`. Do **not**
+build the mod data schema in M8.
+
+---
+
+## M9 — Created-Object Unification & Economic Depth  *(summary)*
 
 Pays down the Session G / G-1 debt and builds economic depth on the cleaned foundation.
 
@@ -157,13 +216,13 @@ Pays down the Session G / G-1 debt and builds economic depth on the cleaned foun
 - **G-2 type variety:** ensure every category has a creation path (battle → weighted Weapon/Armor/Regalia; heroic death → Weapon/Relic/Regalia), folded into the G-1 refactor — not a piecemeal patch.
 - **Economic depth:** goods flow, per-capita demand, richer trade networks and specialization on top of the unified type system. Re-sweep artifact stock against the M5 decay-sink balance bands (`config/balance_invariants.toml [year_300]`) after any new creation source.
 
-## M9 — Worldgen Preview & Modding  *(summary)*
+## M10 — Worldgen Preview & Modding  *(summary)*
 
 - **Layered worldgen preview + adjustment:** build the `WorldGenPipeline` (`RunUpTo`/`RerunFrom`) that M1 deferred; let players tweak sea level / parameters and re-preview per layer before committing.
-- **Player config exposure:** surface `sim_config.toml` tunables through UI; safe presets.
-- **Data modding:** documented, moddable config/data (ancestries, names, biomes, resources) with validation — no plugin/code modding (that stays out of scope per CLAUDE.md).
+- **Player config exposure:** surface `sim_config.toml` tunables through UI; safe presets. Lands as the **sim-config tab in the M8 Settings screen shell** (`docs/ui_design_framework.md` §9.2), reusing the M8 component kit — not a bespoke UI.
+- **Data modding:** documented, moddable config/data (ancestries, names, biomes, resources) with validation — no plugin/code modding (that stays out of scope per CLAUDE.md). Uses the M8 `// MOD SEAM:` registries (framework §10) as the extension points.
 
-## M10 — Scale & Distribution  *(summary)*
+## M11 — Scale & Distribution  *(summary)*
 
 - **Long-run performance:** profile and optimize 10k+ year runs (event volume, DB growth, snapshot cost); confirm the disk-as-record model holds at scale.
 - **Local-scale generation:** activate the `manifests.bin` border-manifest hook (DS-A2) for local/zoomed generation — the long-reserved M4-era capability.
@@ -185,8 +244,8 @@ Pays down the Session G / G-1 debt and builds economic depth on the cleaned foun
     `character.ocean_crossing_enabled` config toggle.
   - Either path needs a `CrossesOcean = true` flag on the resulting `MoveToTile` command
     so history events can record sea voyages distinctly.
-  - Planned for a future phase — file this under sim character mobility alongside M7 or
-    as a standalone story in M8/M9.
+  - Planned for a future phase — file this under sim character mobility as a standalone
+    story in M9/M10 (it is a sim change, so it is **not** part of the M8 UI rewrite).
 - **LLM prose generation** — V2 feature; hook only (per CLAUDE.md), no build.
 - **Magic as physical substrate** — V2; `MagicIntensity` stays a stored, behavior-free layer.
 - **Voxel rendering, plugin/code modding, multiplayer** — out of scope.
