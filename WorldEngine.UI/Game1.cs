@@ -342,6 +342,8 @@ public sealed class Game1 : Game
                 _timeControls?.Update(snapshot);
                 _overlayBar?.Update(snapshot.ActiveOverlay);
 
+                _charWatch?.SetContext(snapshot.SpotlightCharacterId, snapshot.InspectedTile?.Coord);
+
                 if (_workspace is not null && _selectionBus is not null && _presenter is not null && _commandGateway is not null)
                 {
                     _workspace.Bind(new PanelContext(snapshot, _selectionBus, _presenter, _commandGateway));
@@ -473,7 +475,8 @@ public sealed class Game1 : Game
         // pre-M8 keybind/click behavior exactly (Civ History and Watch stay keybind-toggled
         // Summoned panels rather than the framework's illustrative Contextual mapping) —
         // // DECISION: prioritizes zero behavior change during this structural-only phase;
-        // 8.3 can re-home them to Contextual once panels are rebuilt on the kit.
+        // Tile Inspector, Character (Profile), and Watch are migrated onto the kit (8.3.1/8.3.2);
+        // Civ History and God Mode/Help still route through LegacyPanelAdapter pending 8.3.3/8.3.5.
         if (_workspace is not null)
         {
             _workspace.Register(new LegacyPanelAdapter(
@@ -485,15 +488,8 @@ public sealed class Game1 : Game
                 _filterPanel!.Root));
 
             _workspace.Register(_tileInspector!);
-
-            _workspace.Register(new LegacyPanelAdapter(
-                "character", "Character", new PanelPlacement(PanelPlacementKind.Contextual, SelectionKind.Character),
-                _charProfile!.Root));
-
-            _workspace.Register(new LegacyPanelAdapter(
-                "watch", "Watch", new PanelPlacement(PanelPlacementKind.Summoned), _charWatch!.Root,
-                ctx => _charWatch.Refresh(ctx.Snapshot, _spotlightCharacterId, ctx.Snapshot.InspectedTile?.Coord))
-            { OnShow = _charWatch.Show, OnHide = _charWatch.Hide, IsVisibleFunc = () => _charWatch.IsVisible });
+            _workspace.Register(_charProfile!);
+            _workspace.Register(_charWatch!);
 
             _workspace.Register(new LegacyPanelAdapter(
                 "civ", "Civ History", new PanelPlacement(PanelPlacementKind.Summoned), _civHistory!.Root)
@@ -754,7 +750,6 @@ public sealed class Game1 : Game
         _godModePanel = null;
         if (_desktop?.Root is Panel dp && _timeline is not null)
             dp.Widgets.Remove(_timeline.ScrubLabel);
-        _charProfile?.Hide();
         _civHistory?.Hide();
         _focusLens?.Clear();
         _charWatch?.Hide();

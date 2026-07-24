@@ -1,97 +1,95 @@
 using System.Text.Json;
-using Microsoft.Xna.Framework;
 using Myra.Graphics2D.UI;
 using WorldEngine.Sim.Config;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.World;
+using WorldEngine.UI.UI.Kit;
+using WorldEngine.UI.UI.Layout;
+using WorldEngine.UI.UI.Selection;
 using WorldEngine.UI.UI.Theme;
 
-namespace WorldEngine.UI.UI;
+namespace WorldEngine.UI.UI.Panels;
 
+// MAP: Layer 3 — Contextual (Character) panel: static history-derived profile card (M8.3.2).
 /// <summary>
-/// Myra panel showing a structured character profile card.
-/// Populated entirely from IHistoryQuery — no prose generation.
+/// Structured character profile card populated entirely from <see cref="IHistoryQuery"/> — no
+/// prose generation. Shows the currently *selected* character's life summary; the live-tracked
+/// *watched* character's needs/goals/spotlight controls stay on the separate Watch panel.
 /// </summary>
-public sealed class CharacterProfilePanel
+// DECISION: the framework's illustrative 8.3.2 merges Watch+Profile into one Live/History panel.
+// Kept as two panels instead — Watch tracks whichever character is *watched* (a live sim
+// concept, WorldSnapshot.WatchedCharacter) while Profile shows whichever is *selected* (a UI
+// concept, the bus); collapsing them changes real behavior with no way to visually verify the
+// result in this environment. Both are migrated onto the kit here; the merge is deferred.
+public sealed class CharacterProfilePanel : IWorkspacePanel
 {
     private readonly IHistoryQuery _history;
     private readonly AncestryRegistry? _ancestries;
-    private readonly VerticalStackPanel _content;
+    private readonly WeVStack _content = new(UiTheme.Space.Xs);
 
-    public Widget Root { get; }
-    public bool IsVisible { get; private set; }
+    private long _characterId;
+    private bool _hasCharacter;
+
+    public string Id => "character";
+    public string Title => "Character";
+    public PanelPlacement Placement => new(PanelPlacementKind.Contextual, SelectionKind.Character);
 
     public CharacterProfilePanel(IHistoryQuery history, AncestryRegistry? ancestries = null)
     {
         _history    = history;
         _ancestries = ancestries;
-        _content    = new VerticalStackPanel { Spacing = 2 };
-
-        var scroll = new ScrollViewer { Content = _content, Width = UiTheme.ScrollWidth, Height = 380 };
-
-        Root = PanelChrome.Wrap("CHARACTER PROFILE", scroll, Hide);
-        Root.Visible = false;
     }
 
-    /// <summary>Populates the panel with data for the given character and makes it visible.</summary>
+    public Widget Build() => PanelFrame.Build(Title, _content.Root);
+
+    public void Bind(PanelContext ctx) { }
+
+    public EmptyStateSpec? EmptyFor(PanelContext ctx) =>
+        _hasCharacter ? null : new EmptyStateSpec(EmptyStateKind.PreSim, "No character selected.");
+
+    /// <summary>Selects which character's summary to show. Called by the selection bus (M8.2.1).</summary>
     public void ShowCharacter(long characterId)
     {
-        var summary = _history.GetCharacterSummary(new EntityId(characterId));
-        if (summary is null) return;
+        _characterId  = characterId;
+        _hasCharacter = true;
+    }
 
-        _content.Widgets.Clear();
-        IsVisible      = true;
-        Root.Visible   = true;
+    public void Refresh()
+    {
+        _content.Clear();
+        if (!_hasCharacter) { _content.Add(EmptyState.Build(EmptyStateKind.PreSim, "No character selected.")); return; }
+
+        var summary = _history.GetCharacterSummary(new EntityId(_characterId));
+        if (summary is null) { _content.Add(EmptyState.Build(EmptyStateKind.PreSim, "No character selected.")); return; }
 
         // ── Header ──────────────────────────────────────────────────────────
-        string nameStr = summary.NameOrdinal > 0
-            ? $"{summary.Name} {ToRoman(summary.NameOrdinal)}"
-            : summary.Name;
-        if (summary.Epithet is not null)
-            nameStr += $" the {summary.Epithet}";
-        AddLine(nameStr, UiTheme.HeaderText);
+        string nameStr = summary.NameOrdinal > 0 ? $"{summary.Name} {ToRoman(summary.NameOrdinal)}" : summary.Name;
+        if (summary.Epithet is not null) nameStr += $" the {summary.Epithet}";
+        _content.Add(SectionHeader.Build(nameStr));
 
-        // Ancestry + life span
         string ancestry = summary.AncestryId ?? "Unknown";
         string life = $"{ancestry}  |  Born Year {summary.BirthYear}";
-        if (summary.DeathYear > 0)
-        {
-            life += $"  |  Died Year {summary.DeathYear}";
-            if (summary.DeathCause is not null) life += $" ({summary.DeathCause})";
-        }
-        else
-        {
-            life += "  |  Alive";
-        }
-        AddLine(life, Color.LightGray);
+        life += summary.DeathYear > 0
+            ? $"  |  Died Year {summary.DeathYear}" + (summary.DeathCause is not null ? $" ({summary.DeathCause})" : "")
+            : "  |  Alive";
+        _content.Add(new WeText(life, color: UiTheme.ColorRole.TextSecondary));
 
-        // Cultural descriptor from ancestry (M3.5)
-        if (_ancestries is not null && summary.AncestryId is not null)
+        if (_ancestries is not null && summary.AncestryId is not null
+            && _ancestries.Get(summary.AncestryId) is { } anc)
         {
-            var anc = _ancestries.Get(summary.AncestryId);
-            if (anc is not null)
-            {
-                var descriptors = new List<string>();
-                if (!string.IsNullOrEmpty(anc.ArchitecturalStyle))
-                    descriptors.Add(anc.ArchitecturalStyle + " culture");
-                if (anc.ArtisticTraditions.Length > 0)
-                    descriptors.Add("traditions: " + string.Join(", ", anc.ArtisticTraditions));
-                if (descriptors.Count > 0)
-                    AddLine("  " + string.Join("  |  ", descriptors), Color.DarkGray);
-            }
+            var descriptors = new List<string>();
+            if (!string.IsNullOrEmpty(anc.ArchitecturalStyle)) descriptors.Add(anc.ArchitecturalStyle + " culture");
+            if (anc.ArtisticTraditions.Length > 0) descriptors.Add("traditions: " + string.Join(", ", anc.ArtisticTraditions));
+            if (descriptors.Count > 0)
+                _content.Add(new WeText("  " + string.Join("  |  ", descriptors), color: UiTheme.ColorRole.TextMuted));
         }
 
-        // Ruler info
         if (summary.RulerOrdinal > 0)
-            AddLine($"Ruler of {summary.CivName ?? "?"} ({OrdinalLabel(summary.RulerOrdinal)} ruler)", Color.LightBlue);
-
-        AddSeparator();
+            _content.Add(new WeText($"Ruler of {summary.CivName ?? "?"} ({OrdinalLabel(summary.RulerOrdinal)} ruler)", color: UiTheme.ColorRole.AccentInteractive));
 
         // ── Life Events ──────────────────────────────────────────────────────
-        AddLine("LIFE EVENTS", Color.White);
-        var events = _history.GetCharacterHistory(new EntityId(characterId));
-
-        // Sort by significance (desc), then year (desc) to pick top 10, then sort chrono for display
+        _content.Add(SectionHeader.Build("Life Events"));
+        var events = _history.GetCharacterHistory(new EntityId(_characterId));
         var top10 = events
             .OrderByDescending(e => e.SignificanceScore > 0f ? (double)e.SignificanceScore : 0.0)
             .ThenByDescending(e => e.Year)
@@ -100,51 +98,29 @@ public sealed class CharacterProfilePanel
             .ToList();
 
         if (top10.Count == 0)
-            AddLine("  (no events recorded)", Color.DarkGray);
+            _content.Add(EmptyState.Build(EmptyStateKind.PreSim, "(no events recorded)"));
         else
             foreach (var ev in top10)
-                AddLine($"  Year {ev.Year} — {DescribeEvent(ev.Type)}", Color.LightGray);
+                _content.Add(new WeText($"  Year {ev.Year} — {DescribeEvent(ev.Type)}", color: UiTheme.ColorRole.TextSecondary));
 
         // ── Relationships ────────────────────────────────────────────────────
-        var bonds    = events.Where(e => e.Type == EventType.GoalFormed   && IsGoalType(e.PayloadJson, "Bond")).ToList();
+        var bonds     = events.Where(e => e.Type == EventType.GoalFormed && IsGoalType(e.PayloadJson, "Bond")).ToList();
         var rivalries = events.Where(e => e.Type == EventType.RivalryFormed).ToList();
-
         if (bonds.Count > 0 || rivalries.Count > 0)
         {
-            AddSeparator();
-            AddLine("RELATIONSHIPS", Color.White);
+            _content.Add(SectionHeader.Build("Relationships"));
             foreach (var b in bonds)
-                AddLine($"  Bonded with: {ExtractGoalObject(b.PayloadJson)}", Color.LightGreen);
+                _content.Add(new WeText($"  Bonded with: {ExtractGoalObject(b.PayloadJson)}", color: UiTheme.ColorRole.StatePositive));
             foreach (var r in rivalries)
-                AddLine($"  Rival: {ExtractTargetName(r.PayloadJson)}", Color.OrangeRed);
+                _content.Add(new WeText($"  Rival: {ExtractTargetName(r.PayloadJson)}", color: UiTheme.ColorRole.StateNegative));
         }
 
-        AddSeparator();
-
         // ── Narrative hook (V2 stub) ─────────────────────────────────────────
-        var narrativeBtn = new TextButton { Text = "Generate Narrative", Enabled = false };
         // V2: LLM_PROSE_HOOK — pass summary + events to LLM prose generation service
-        _content.Widgets.Add(narrativeBtn);
-
+        _content.Add(new TextButton { Text = "Generate Narrative", Enabled = false });
     }
 
-    public void Hide()
-    {
-        IsVisible    = false;
-        Root.Visible = false;
-    }
-
-    // ── Helpers ────────────────────────────────────────────────────────────────────────────────
-
-    private void AddLine(string text, Color? color = null)
-    {
-        var label = new Label { Text = text };
-        if (color.HasValue) label.TextColor = color.Value;
-        _content.Widgets.Add(label);
-    }
-
-    private void AddSeparator() =>
-        _content.Widgets.Add(new Label { Text = "─────────────────────────────", TextColor = Color.Gray });
+    // ── Helpers (unchanged from the pre-migration panel) ──────────────────────────────────────
 
     private static string ToRoman(int n) => n switch
     {
@@ -215,8 +191,7 @@ public sealed class CharacterProfilePanel
         try
         {
             using var doc = JsonDocument.Parse(payloadJson);
-            if (doc.RootElement.TryGetProperty("GoalObject", out var go))
-                return go.GetString() ?? "Unknown";
+            if (doc.RootElement.TryGetProperty("GoalObject", out var go)) return go.GetString() ?? "Unknown";
         }
         catch { /* ignore */ }
         return "Unknown";
@@ -227,8 +202,7 @@ public sealed class CharacterProfilePanel
         try
         {
             using var doc = JsonDocument.Parse(payloadJson);
-            if (doc.RootElement.TryGetProperty("TargetName", out var tn))
-                return tn.GetString() ?? "Unknown";
+            if (doc.RootElement.TryGetProperty("TargetName", out var tn)) return tn.GetString() ?? "Unknown";
         }
         catch { /* ignore */ }
         return "Unknown";
