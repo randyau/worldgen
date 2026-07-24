@@ -65,6 +65,14 @@ public sealed class SimWorkspace
                 PanelPlacementKind.Summoned       => panel is IToggleablePanel { IsVisible: true },
                 _                                  => false
             };
+
+            // Summoned panels can call Hide() from inside their own [Close] button (PanelFrame's
+            // OnClose), not just through ToggleSummoned/ShowSummoned — sync the built widget's
+            // Visible here every frame so every Hide() path actually hides it (see the bug note
+            // on TryGetToggleable).
+            if (panel.Placement.Kind == PanelPlacementKind.Summoned && _built.TryGetValue(panel.Id, out var widget))
+                widget.Visible = visible;
+
             if (visible) panel.Refresh();
         }
     }
@@ -123,7 +131,11 @@ public sealed class SimWorkspace
         toggleable = null;
         if (!_panels.TryGetValue(id, out var panel) || panel is not IToggleablePanel t) return false;
         if (!_built.ContainsKey(id))
-            _floatStack.Add(GetBuilt(panel));
+        {
+            var widget = GetBuilt(panel);
+            widget.Visible = false; // panels default IsVisible=false; RefreshVisible() keeps this in sync from here on
+            _floatStack.Add(widget);
+        }
         toggleable = t;
         return true;
     }

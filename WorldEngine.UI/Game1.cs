@@ -512,9 +512,10 @@ public sealed class Game1 : Game
                         _workspace?.SetSelection(SelectionKind.Tile);
                         break;
                     case SelectionKind.Character:
+                        // Summoned (Float region), not Contextual — clicking a name used to
+                        // replace the Tile Inspector tab, which was confusing (playtest feedback).
                         _charProfile?.ShowCharacter(snapshot.Id);
                         if (_historyQuery is not null) _focusLens?.FocusCharacter(snapshot.Id, _historyQuery);
-                        _workspace?.SetSelection(SelectionKind.Character);
                         break;
                     case SelectionKind.Civ:
                         _civHistory?.ShowCiv(snapshot.Id);
@@ -569,6 +570,17 @@ public sealed class Game1 : Game
                 _commandQueue.Enqueue(new AuthorNudgeCharacter(_spotlightCharacterId.Value, CharacterNudge.SetSettle));
         };
         _charWatch.OnProfile = id => _selectionBus?.Select(new EntityRef(SelectionKind.Character, id, default));
+
+        // Default camera: fit the whole world into the map viewport area. (Regression fix: this
+        // was dropped during the M8 8.1 StartSim rewrite — restored using LayoutHost's constants
+        // since ApplyLayout may not have run yet this frame.)
+        if (_camera is not null)
+        {
+            int dockWidth = _layoutHost?.DockWidth ?? UiTheme.SidebarWidth;
+            int mapW = GraphicsDevice.Viewport.Width  - dockWidth;
+            int mapH = GraphicsDevice.Viewport.Height - LayoutHost.TopChromeHeight - LayoutHost.TimelineHeight;
+            _camera.FitToWorld(world.Config.TileWidth, world.Config.TileHeight, mapW, mapH);
+        }
     }
 
     /// <summary>
@@ -643,9 +655,11 @@ public sealed class Game1 : Game
             _camera.Pan(-delta);
         }
 
-        // Scroll wheel zoom
+        // Scroll wheel zoom — only when the pointer isn't over a panel/scrollbar, otherwise the
+        // wheel should scroll that panel's content instead (bug: previously fired unconditionally
+        // and zoomed the map even while scrolling the dock).
         int scrollDelta = mouse.ScrollWheelValue - _prevMouse.ScrollWheelValue;
-        if (scrollDelta != 0)
+        if (scrollDelta != 0 && _desktop?.IsMouseOverGUI != true)
         {
             float factor = scrollDelta > 0 ? 1.15f : 1f / 1.15f;
             _camera.ZoomAt(new Vector2(mouse.X, mouse.Y), factor);

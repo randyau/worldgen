@@ -10,7 +10,7 @@ using WorldEngine.UI.UI.Theme;
 
 namespace WorldEngine.UI.UI.Panels;
 
-// MAP: Layer 3 — Contextual (Character) panel: static history-derived profile card (M8.3.2).
+// MAP: Layer 3 — Summoned Character panel: static history-derived profile card (M8.3.2).
 /// <summary>
 /// Structured character profile card populated entirely from <see cref="IHistoryQuery"/> — no
 /// prose generation. Shows the currently *selected* character's life summary; the live-tracked
@@ -21,7 +21,11 @@ namespace WorldEngine.UI.UI.Panels;
 // concept, WorldSnapshot.WatchedCharacter) while Profile shows whichever is *selected* (a UI
 // concept, the bus); collapsing them changes real behavior with no way to visually verify the
 // result in this environment. Both are migrated onto the kit here; the merge is deferred.
-public sealed class CharacterProfilePanel : IWorkspacePanel
+// DECISION (post-8.3 bugfix, playtest feedback): originally Contextual, which meant clicking any
+// character name replaced the Tile Inspector tab — confusing since you lost the tile you were
+// looking at. Moved to Summoned (Float region), same pattern as Civ History, so it layers over
+// rather than replacing another panel.
+public sealed class CharacterProfilePanel : IToggleablePanel
 {
     private readonly IHistoryQuery _history;
     private readonly AncestryRegistry? _ancestries;
@@ -32,7 +36,8 @@ public sealed class CharacterProfilePanel : IWorkspacePanel
 
     public string Id => "character";
     public string Title => "Character";
-    public PanelPlacement Placement => new(PanelPlacementKind.Contextual, SelectionKind.Character);
+    public PanelPlacement Placement => new(PanelPlacementKind.Summoned);
+    public bool IsVisible { get; private set; }
 
     public CharacterProfilePanel(IHistoryQuery history, AncestryRegistry? ancestries = null)
     {
@@ -40,18 +45,22 @@ public sealed class CharacterProfilePanel : IWorkspacePanel
         _ancestries = ancestries;
     }
 
-    public Widget Build() => PanelFrame.Build(Title, _content.Root);
+    public Widget Build() => PanelFrame.Build(Title, _content.Root, new PanelFrameOptions { OnClose = Hide });
 
     public void Bind(PanelContext ctx) { }
 
     public EmptyStateSpec? EmptyFor(PanelContext ctx) =>
         _hasCharacter ? null : new EmptyStateSpec(EmptyStateKind.PreSim, "No character selected.");
 
+    public void Show() => IsVisible = true;
+    public void Hide() => IsVisible = false;
+
     /// <summary>Selects which character's summary to show. Called by the selection bus (M8.2.1).</summary>
     public void ShowCharacter(long characterId)
     {
         _characterId  = characterId;
         _hasCharacter = true;
+        Show();
     }
 
     public void Refresh()
@@ -110,7 +119,7 @@ public sealed class CharacterProfilePanel : IWorkspacePanel
         {
             _content.Add(SectionHeader.Build("Relationships"));
             foreach (var b in bonds)
-                _content.Add(new WeText($"  Bonded with: {ExtractGoalObject(b.PayloadJson)}", color: UiTheme.ColorRole.StatePositive));
+                _content.Add(new WeText($"  Bonded with: {ResolveBondTargetName(b.PayloadJson)}", color: UiTheme.ColorRole.StatePositive));
             foreach (var r in rivalries)
                 _content.Add(new WeText($"  Rival: {ExtractTargetName(r.PayloadJson)}", color: UiTheme.ColorRole.StateNegative));
         }
@@ -186,15 +195,22 @@ public sealed class CharacterProfilePanel : IWorkspacePanel
         return false;
     }
 
-    private static string ExtractGoalObject(string payloadJson)
+    // BUG FIX: the payload's "GoalObject" field is the GoalObject *enum* value (e.g. "Person"),
+    // not a name — that's why this always read "Bonded with: Person". The actual bonded
+    // character's id is in "TargetId"; resolve it through the history query for a real name.
+    private string ResolveBondTargetName(string payloadJson)
     {
         try
         {
             using var doc = JsonDocument.Parse(payloadJson);
-            if (doc.RootElement.TryGetProperty("GoalObject", out var go)) return go.GetString() ?? "Unknown";
+            if (doc.RootElement.TryGetProperty("TargetId", out var t) && t.ValueKind == JsonValueKind.Number)
+            {
+                var summary = _history.GetCharacterSummary(new EntityId(t.GetInt64()));
+                if (summary is not null) return summary.Name;
+            }
         }
-        catch { /* ignore */ }
-        return "Unknown";
+        catch { /* ignore malformed JSON */ }
+        return "someone";
     }
 
     private static string ExtractTargetName(string payloadJson)

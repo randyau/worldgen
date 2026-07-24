@@ -31,7 +31,11 @@ public sealed class EventLogPanel : IWorkspacePanel
     public string Title => "Event Log";
     public PanelPlacement Placement => new(PanelPlacementKind.PinnedDefault);
 
-    public Widget Build() => PanelFrame.Build(Title, _list.Root);
+    // BUG FIX: the pre-migration panel had a fixed-height ScrollViewer (Height=250) around its
+    // rows; the M8.3.4 migration dropped that and let the list grow to fit content, which pushed
+    // Filters/Tile Inspector out of the dock's own outer scroll region. Cap it here with its own
+    // internal scrollbar, same as before.
+    public Widget Build() => PanelFrame.Build(Title, new ScrollViewer { Content = _list.Root, Height = 280 });
 
     public void Bind(PanelContext ctx) => _ctx = ctx;
 
