@@ -254,14 +254,56 @@ public class ArchitectureRuleTests
     {
         var violations = new List<string>();
         var pattern = new System.Text.RegularExpressions.Regex(@"\.(Top|Left|Width|Height)\s*=");
-        foreach (var file in GetUiSourceFiles("Layout"))
+        foreach (var file in GetUiSourceFiles("Layout").Concat(GetUiSourceFiles("Panels")))
         {
             foreach (var match in pattern.Matches(File.ReadAllText(file)).Cast<System.Text.RegularExpressions.Match>())
                 violations.Add($"{Path.GetFileName(file)}: {match.Value}");
         }
         violations.Should().BeEmpty(
             because: "UI/Layout host code computes Region.Bounds rectangles, not per-widget absolute " +
-                     "geometry (M8 framework §3.2); the region→widget application lives in Game1 (orchestration)");
+                     "geometry (M8 framework §3.2); the region→widget application lives in Game1 (orchestration). " +
+                     "UI/Panels/ (migrated in 8.3) never sets geometry post-construction either — the host clamps it.");
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // Rule (g) — M8 Phase 3: every migrated panel implements the Layer 3 contract, and none
+    // reaches for XNA Color literals directly (must go through UiTheme/WeText). Full ban on any
+    // `using Myra` in UI/Panels/ is not enforced — Build() legitimately returns a Myra Widget and
+    // several panels compose raw kit-adjacent widgets (TextButton, tier-stripe Panel), the same
+    // carve-out already made for UI/Layout/ in rule (f)/(e) above.
+    // ─────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void PanelsImplementContract()
+    {
+        // Text-scan rather than reflection: WorldEngine.Tests deliberately has no ProjectReference
+        // to WorldEngine.UI (it would pull in the MonoGame/Myra runtime), matching every other rule
+        // in this class that inspects UI source as text.
+        var violations = new List<string>();
+        var classDecl = new System.Text.RegularExpressions.Regex(@"(?:sealed\s+)?class\s+(\w+)\s*:\s*(I\w+)");
+        foreach (var file in GetUiSourceFiles("Panels"))
+        {
+            var text = File.ReadAllText(file);
+            var match = classDecl.Match(text);
+            if (!match.Success || (match.Groups[2].Value != "IWorkspacePanel" && match.Groups[2].Value != "IToggleablePanel"))
+                violations.Add(Path.GetFileName(file));
+        }
+        violations.Should().BeEmpty(
+            because: "every type in UI/Panels/ must implement IWorkspacePanel or IToggleablePanel (M8 framework §6)");
+    }
+
+    [Fact]
+    public void NoColorLiteralsInPanels()
+    {
+        var violations = new List<string>();
+        foreach (var file in GetUiSourceFiles("Panels"))
+        {
+            if (File.ReadAllText(file).Contains("using Microsoft.Xna.Framework"))
+                violations.Add(Path.GetFileName(file));
+        }
+        violations.Should().BeEmpty(
+            because: "UI/Panels/ must source colors from UiTheme (ColorRole or a themed Color-returning " +
+                     "helper like UiTheme.TierColor), never a raw Microsoft.Xna.Framework.Color literal (M8 framework §4.1)");
     }
 
     private static IEnumerable<string> GetUiSourceFiles(string subfolder)

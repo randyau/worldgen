@@ -1,7 +1,16 @@
 # M8 Phase 2 — Selection Unification
 
 **Milestone:** M8 — UI Framework Rewrite
-**Status:** NOT STARTED
+**Status:** COMPLETE — 2026-07-24. `SelectionBus` (implements `ISelectionSink`) replaces
+`SelectionState`+`SelectionRouter`; all navigation consume-once pollers deleted (Tile Inspector
+Watch, Event Log actor/civ/cause-chain, CharacterWatch spotlight/goal buttons) — each now fires
+a direct callback at the click site instead of being polled by `Game1` each frame. Spotlight/goal
+intents route through `CommandGateway` per the selection-vs-intent split (8.2.3). Focus lens
+(8.2.4) is now actually wired — it existed but nothing ever called `FocusCharacter`/`FocusCiv`
+before this phase; the `SelectionBus.Changed` handler now drives it on Character/Civ selection
+and clears it on deselect. `git grep ConsumePending` shows only the unrelated, justified
+`WorldGenScreen.ConsumePendingStart` (screen transition, not navigation). Build 0 warnings,
+499/499 tests green.
 **Depends on:** 8.1 (`SimWorkspace`, `PanelContext`, `ISelectionSink`)
 **Worker model:** Sonnet (touches `Game1` control flow)
 **Framework refs:** `docs/ui_design_framework.md` §7.1 (one selection bus), §7.2 (links), §7.4 (focus lens)

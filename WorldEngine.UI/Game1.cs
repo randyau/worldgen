@@ -464,9 +464,7 @@ public sealed class Game1 : Game
         // pre-M8 keybind/click behavior exactly (Civ History and Watch stay keybind-toggled
         // Summoned panels rather than the framework's illustrative Contextual mapping) —
         // // DECISION: prioritizes zero behavior change during this structural-only phase;
-        // Event Log, Filters, Tile Inspector, Character (Profile), Watch, Civ History, and God
-        // Mode are migrated onto the kit (8.3.1-8.3.5); Help still routes through
-        // LegacyPanelAdapter pending 8.3.6.
+        // every panel is now migrated onto the kit (8.3.1-8.3.6, LegacyPanelAdapter retired).
         if (_workspace is not null)
         {
             _workspace.Register(_eventLog!);
@@ -476,10 +474,7 @@ public sealed class Game1 : Game
             _workspace.Register(_charWatch!);
             _workspace.Register(_civHistory!);
             _workspace.Register(_godModePanel!);
-
-            _workspace.Register(new LegacyPanelAdapter(
-                "help", "Help (?)", new PanelPlacement(PanelPlacementKind.Summoned), _helpOverlay.Root)
-            { OnShow = _helpOverlay.Show, OnHide = _helpOverlay.Hide, IsVisibleFunc = () => _helpOverlay.IsVisible });
+            _workspace.Register(_helpOverlay!);
         }
 
         if (_desktop?.Root is Panel rootPanelForTimeline)

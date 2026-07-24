@@ -1,7 +1,19 @@
 # M8 Phase 3 — Panel Migration
 
 **Milestone:** M8 — UI Framework Rewrite
-**Status:** NOT STARTED
+**Status:** COMPLETE — 2026-07-24. All 6 panels (Tile Inspector, Character Profile + Watch, Civ
+History, Event Log + Filters, God Mode + dialogs, Help) rebuilt as `IWorkspacePanel`/
+`IToggleablePanel` implementations in `UI/Panels/`. Kept Watch+Profile as two panels rather than
+the illustrative Live/History merge (8.3.2 DECISION — Watch tracks the live `WatchedCharacter`,
+Profile tracks the bus selection; collapsing them is a real behavior change with no way to
+visually verify here). God Mode's 4 dialogs now route through `ModalHost` instead of raw
+`Window.ShowModal`. TimelineBar rebuild, Legends, Toasts, and map marker tooltips (8.3.6) are
+**deferred** — these are net-new surfaces (nothing today violates an arch rule by their absence),
+higher visual risk with no display to verify placement against, out of scope for a kit-migration
+pass. `PanelChrome.cs`, `LegacyPanelAdapter.cs`, and `IPanel.cs` deleted (no remaining consumers).
+Added `PanelsImplementContract` and `NoColorLiteralsInPanels` arch tests (text-scan style, no
+WorldEngine.UI ProjectReference from Tests); extended `PanelsSetNoAbsoluteGeometry` to scan
+`UI/Panels/` too. Build 0 warnings, 501/501 tests green.
 **Depends on:** 8.2 (bus, context, kit). Story 8.3.6's Help sub-part also depends on 8.4.
 **Worker model:** Haiku-friendly per story (mechanical rebuilds) — escalate to Sonnet if a
 worker stalls on restore or a panel has non-trivial data shaping. **One panel per story = one

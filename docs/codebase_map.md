@@ -200,16 +200,10 @@ One-line description of every non-trivial source file. Check here before running
 - `TileMapRenderer.cs` — Draws tiles + entity/settlement/ruin markers; M3.4: territory civ-color tint + improvement icons.
 
 ## WorldEngine.UI/UI/
-- `CharacterProfilePanel.cs` — Myra panel showing a structured character profile card. Populated entirely from IHistoryQuery — no prose generation.
-- `CharacterWatchPanel.cs` — Live panel tracking a single named character. When the character is spotlighted (M7 Phase 7.4) exposes intent controls: enter/exit spotlight, move-to, goal nudges.
-- `CivHistoryPanel.cs` — Myra panel showing the full arc of a civilization — rulers, key wars, major events, traits. Includes a civ selector ComboBox at the top.
-- `EventLogPanel.cs` — Sidebar panel showing recent simulation events. Supports focus lens filtering (dimming events not involving the focus target) and exposes pending requests for the character profile card and causal chain dialog.
-- `FilterPanel.cs` — Immutable snapshot of the active event-log filter criteria. Passed to <see cref="EventLogPanel.Update"/> each frame.
 - `FirstRunOverlay.cs` — Dismissible first-run orientation dialog shown once when the simulation starts for the first time. Points the player at the time controls, overlays, and event log.
-- `GodModePanel.cs` — God Mode panel — allows paused-only authoring actions: place artifact, trigger disaster, spawn character, nudge character. Opens modal dialogs for each action.
 - `HelpOverlayPanel.cs` — "?"-toggled panel listing every keyboard shortcut, grouped by category. Rendered directly from the <see cref="KeybindRegistry"/> so it can never drift from actual input handling (M6 Epic 6.1.3).
+- `IPanel.cs` — A panel that can be shown or hidden; implemented by the pre-M8 Summoned panels.
 - `OverlayBar.cs` — Visible, labeled overlay toolbar (M6 Epic 6.1.1). One button per <see cref="OverlayType"/>; each enqueues <c>SetActiveOverlay</c> — the same command the accelerator keys fire — and the active overlay is highlighted from <c>WorldSnapshot.ActiveOverlay</c>. Restores Temperature, which had been dropped off the keyboard.
-- `TileInspectorPanel.cs` — Sidebar tile inspector; territory/improvement/history sections; [Watch] buttons per character (M3.4).
 - `TimeControlsPanel.cs` — Top toolbar: speed buttons, year/season label.
 - `TimelineBar.cs` — Timeline scrubber bar drawn via SpriteBatch at the bottom of the map area. Shows event density heatmap and allows scrubbing to any historical year. The ScrubLabel is a Myra Label — add it to the root overlay panel in Game1.
 - `WorldGenScreen.cs` — Full-screen world-gen progress overlay with completion state and "Start Simulation" button.
@@ -221,6 +215,7 @@ One-line description of every non-trivial source file. Check here before running
 - `SectionHeader.cs` — Layer 2 — tokenized section divider, replaces the AddLine("--- X ---") idiom.
 - `StatRow.cs` — Layer 2 — aligned label/value row, replaces ad-hoc "Label: value" AddLine calls.
 - `Tooltip.cs` — Standard hover tooltip (framework §4.2/§7.3): consistent delay, cursor-follow, and viewport clamping so no tooltip can render off-screen (the timeline tooltip overflow bug).
+- `WeCheckBox.cs` — Layer 1 — labeled toggle wrapping the CheckBox compat shim.
 - `WeDropdown.cs` — Layer 1 — typed dropdown wrapping the ComboBox compat shim.
 - `WeIcon.cs` — Icon glyph with a mandatory tooltip/label (framework §4.1: "never icon-only for anything non-obvious"). No icon font is currently pinned in the project — renders a short text glyph until one is added.
 - `WeList.cs` — Vertical list of rows built from a data source. Non-virtualized — fine at current scale.
@@ -228,11 +223,30 @@ One-line description of every non-trivial source file. Check here before running
 - `WeStack.cs` — Layer 1 — tokenized-spacing vertical/horizontal stacks wrapping Myra StackPanels.
 - `WeText.cs` — The only way to render text in the M8 kit. Wraps <see cref="Label"/> and accepts only tokenized <see cref="UiTheme.TypographyRole"/> / <see cref="UiTheme.ColorRole"/> — a caller cannot pass a raw <see cref="Microsoft.Xna.Framework.Color"/> (framework §4.1).
 
+## WorldEngine.UI/UI/Layout/
+- `CommandGateway.cs` — The "change the world" half of the two-bus model (framework §7.1) — panels enqueue <see cref="ICommand"/>s through this instead of holding a <see cref="CommandQueue"/> directly.
+- `IWorkspacePanel.cs` — Per-frame context handed to every panel (framework §6): the current snapshot, the selection sink, the formatting service, and the command gateway. A panel needs nothing else.
+- `InputRouter.cs` — Arbitrates one pointer event per frame, top-down by z-band (framework §5.1). A Modal region with content assigned captures unconditionally. Float/Transient regions are click-through by design (legends, tooltips, toasts never block the map). Chrome regions consume when opaque and hit. If nothing consumes, the caller (map/camera) gets the event.
+- `LayoutHost.cs` — Owns every screen rectangle, z-band, and (via <see cref="RegionSlot"/>) hit-test precedence (framework §3.2, §5.1). Panels declare content into a <see cref="Region"/>; they never see or set a raw <c>Top/Left/Width/Height</c>. Fixed grid: <c>TopBar</c> (full width, top chrome strip), <c>Timeline</c> (full width minus dock, bottom strip), <c>RightDock</c> (right column, below TopBar), <c>MapCanvas</c> (remaining — non-opaque, camera/tile-pick owns it). <c>Float</c>/<c>Modal</c> are viewport-sized overlays, not part of the grid.
+- `LegacyPanelAdapter.cs` — Adapts an existing (pre-M8) panel into <see cref="IWorkspacePanel"/> by exposing its current <c>Root</c> widget and forwarding refresh to whatever bespoke <c>Update</c>/<c>Refresh</c> method it already has (framework §12 migration path). Rebuilt panels in 8.3 replace this.
+- `ModalHost.cs` — The single modal surface (framework §5.5): dims the app with <see cref="UiTheme.SurfaceModalScrim"/>, centers content, and captures all input while open (the <see cref="InputRouter"/> treats a Modal region with content as an unconditional catch). Closes on <see cref="Close"/> or Esc.
+- `SimWorkspace.cs` — Owns the <see cref="RegionSlot.RightDock"/> content: a pinned zone (always-visible panels, stacked) and a contextual tab zone where exactly one panel is visible at a time — no cross-panel overflow, no stacking (framework §5.2-5.3). Also drives the Float region's summoned panels (God Mode, Help).
+
+## WorldEngine.UI/UI/Panels/
+- `CharacterProfilePanel.cs` — Structured character profile card populated entirely from <see cref="IHistoryQuery"/> — no prose generation. Shows the currently *selected* character's life summary; the live-tracked *watched* character's needs/goals/spotlight controls stay on the separate Watch panel.
+- `CharacterWatchPanel.cs` — Live panel tracking a single named (watched) character. When spotlighted (M7 Phase 7.4) exposes intent controls: enter/exit spotlight, move-to, goal nudges.
+- `CivHistoryPanel.cs` — Layer 3 — Summoned Civ History panel: civ selector + rulers/wars/major-events (M8.3.3).
+- `EventLogPanel.cs` — Pinned panel showing recent simulation events. Supports focus lens dimming and routes actor/ civ/cause-chain clicks immediately (M8.2.2) instead of a consume-once poll.
+- `FilterPanel.cs` — Immutable snapshot of the active event-log filter criteria. Passed to <see cref="EventLogPanel"/> each frame via <see cref="FilterPanel.CurrentFilter"/>.
+- `GodModePanel.cs` — God Mode panel — allows paused-only authoring actions: place artifact, trigger disaster, spawn character, nudge character. Dialogs route through the shared <see cref="ModalHost"/>.
+- `TileInspectorPanel.cs` — Layer 3 — Contextual (Tile) panel: ruin/settlement/tile facts/seasonal/resources/
+
 ## WorldEngine.UI/UI/Present/
 - `Presenter.cs` — Converts sim data to display strings for every panel and the event log (framework §8.1, P7). No panel formats sim internals itself; unit thresholds and enum→prose mappings live here so they can be retuned in one place. Instance-based (not static) as a localization seam.
 
 ## WorldEngine.UI/UI/Selection/
 - `EntityRef.cs` — Small reference to a selectable entity — the payload EntityLink hands to ISelectionSink.
+- `SelectionBus.cs` — Immutable snapshot of the current selection, broadcast by <see cref="SelectionBus"/>.</summary> public readonly record struct SelectionSnapshot(SelectionKind Kind, long Id, TileCoord Coord); // MAP: The one "what am I looking at" channel (framework §7.1) — replaces SelectionRouter and // every consume-once navigation poller that used to live in Game1/panels (M8 phase 8.2). <summary> Single selection bus for the UI. Panels/composites call <see cref="Select"/> directly at the click site instead of setting a per-panel pending field for <c>Game1</c> to poll each frame. UI-only state — see the determinism note on <see cref="SelectionState"/>: tile inspection still round-trips a sim command because the snapshot must carry tile detail, but "what is selected" needs no sim round-trip.
 
 ## WorldEngine.UI/UI/Theme/
 - `PanelChrome.cs` — Builds the standard docked-panel chrome — a bordered, padded container with a title bar and optional <c>[Close]</c> button — so every panel shares one look instead of each re-inventing its own header/close/background (M6 Epic 6.2.1).
