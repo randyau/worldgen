@@ -23,6 +23,7 @@ using WorldEngine.UI.UI.Layout;
 using WorldEngine.UI.UI.Panels;
 using WorldEngine.UI.UI.Present;
 using WorldEngine.UI.UI.Selection;
+using WorldEngine.UI.UI.Settings;
 using WorldEngine.UI.UI.Theme;
 
 namespace WorldEngine.UI;
@@ -74,7 +75,9 @@ public sealed class Game1 : Game
     // M6.1.3 — keybind registry (single source of truth) + help overlay
     private KeybindRegistry?  _keybinds;
     private HelpPanel? _helpPanel;
+    private SettingsPanel? _settingsPanel;
     private CommandRegistry? _commands;
+    private UiPrefs _uiPrefs = new();
 
     // M6.1.4 / M8.2.1 — unified selection model driving which contextual panel shows
     private SelectionBus? _selectionBus;
@@ -137,7 +140,11 @@ public sealed class Game1 : Game
         _overlayBar   = new OverlayBar(_commandQueue);
         _tileInspector = new TileInspectorPanel();
 
-        _layoutHost      = new LayoutHost();
+        // M8.5.1: UI prefs are global (not per-world) — loaded once here, applied to the layout
+        // host below, and reused across New World resets (unlike per-world sim state).
+        _uiPrefs = UiPrefsStore.Load();
+
+        _layoutHost      = new LayoutHost { DockWidth = _uiPrefs.DockWidth };
         _inputRouter     = new InputRouter();
         _workspace       = new SimWorkspace();
         _modalHost       = new ModalHost();
@@ -458,9 +465,12 @@ public sealed class Game1 : Game
         _godModePanel = new GodModePanel(_modalHost!);
 
         // Build the command/keybind registries now that the workspace/panels exist to target,
-        // then build Help from them (M8.4: named actions replace inline keybind lambdas).
+        // then Help/Settings from them (M8.4: named actions replace inline keybind lambdas;
+        // M8.5: Settings hosts the same KeybindEditor on its Controls tab). A rebind from either
+        // panel persists through the same ApplyAndPersistUiPrefs callback.
         BuildKeybinds();
-        _helpPanel = new HelpPanel(_commands!, _keybinds!);
+        _helpPanel     = new HelpPanel(_commands!, _keybinds!, onKeybindsChanged: () => ApplyAndPersistUiPrefs(_uiPrefs));
+        _settingsPanel = new SettingsPanel(_uiPrefs, _commands!, _keybinds!, ApplyAndPersistUiPrefs);
 
         // M8 8.1.6: register every panel with the SimWorkspace dock instead of the retired
         // PanelManager/absolute-Top-Left placement. Placement here preserves each panel's
@@ -478,6 +488,7 @@ public sealed class Game1 : Game
             _workspace.Register(_civHistory!);
             _workspace.Register(_godModePanel!);
             _workspace.Register(_helpPanel!);
+            _workspace.Register(_settingsPanel!);
         }
 
         if (_desktop?.Root is Panel rootPanelForTimeline)
@@ -582,6 +593,7 @@ public sealed class Game1 : Game
         cmds.Register(new UiCommand("panel.watch",   "Character watch panel", "Panels", () => _workspace?.ToggleSummoned("watch"),   Keys.W));
         cmds.Register(new UiCommand("panel.help",    "This help",             "Panels", () => _workspace?.ToggleSummoned("help"),    Keys.OemQuestion));
         cmds.Register(new UiCommand("panel.godmode", "God Mode panel",        "Panels", () => _workspace?.ToggleSummoned("godmode"), Keys.F2));
+        cmds.Register(new UiCommand("panel.settings", "Settings",             "Panels", () => _workspace?.ToggleSummoned("settings"), Keys.OemComma, DefaultCtrl: true));
 
         // World
         cmds.Register(new UiCommand("world.pause", "Pause / resume", "World", () => _commandQueue.Enqueue(new SetSimSpeed(
@@ -593,6 +605,29 @@ public sealed class Game1 : Game
         _commands = cmds;
         _keybinds = new KeybindRegistry(cmds);
         _keybinds.LoadDefaults();
+        _keybinds.ApplyOverrides(_uiPrefs.KeybindOverrides);
+    }
+
+    /// <summary>
+    /// Applies a changed <see cref="UiPrefs"/> live where feasible (currently: dock width) and
+    /// persists it, always refreshing <see cref="UiPrefs.KeybindOverrides"/> from the live
+    /// registry first — a rebind from either Help or Settings' Controls tab calls this the same
+    /// way, so the two panels can never drift on what's actually saved (M8.5.1/8.5.4).
+    /// </summary>
+    private void ApplyAndPersistUiPrefs(UiPrefs updated)
+    {
+        _uiPrefs = updated with
+        {
+            KeybindOverrides = _keybinds is not null
+                ? new Dictionary<string, string>(_keybinds.ExportOverrides())
+                : updated.KeybindOverrides
+        };
+        if (_layoutHost is not null)
+        {
+            _layoutHost.DockWidth = _uiPrefs.DockWidth;
+            _lastViewport = default; // force ApplyLayout to recompute regions next frame
+        }
+        UiPrefsStore.Save(_uiPrefs);
     }
 
     private void HandleInput(WorldSnapshot snapshot)
@@ -638,17 +673,20 @@ public sealed class Game1 : Game
             }
         }
 
-        // M8.4.4: a pending Help rebind captures the next keypress instead of dispatching it as
-        // a normal shortcut — otherwise rebinding a key would also fire whatever it used to do.
+        // M8.4.4/8.5.4: a pending Help or Settings rebind captures the next keypress instead of
+        // dispatching it as a normal shortcut — otherwise rebinding a key would also fire
+        // whatever it used to do. At most one of the two is ever awaiting at a time in practice
+        // (only one panel is visible/interactive), but both are checked defensively.
         bool capturedForRebind = false;
-        if (_helpPanel is not null)
+        if (_helpPanel is not null || _settingsPanel is not null)
         {
             bool ctrlDown = kb.IsKeyDown(Keys.LeftControl) || kb.IsKeyDown(Keys.RightControl);
             foreach (var key in kb.GetPressedKeys())
             {
                 if (_prevKb.IsKeyDown(key)) continue;
                 if (key is Keys.LeftControl or Keys.RightControl) continue;
-                if (_helpPanel.TryCaptureKey(key, ctrlDown)) { capturedForRebind = true; break; }
+                if (_helpPanel?.TryCaptureKey(key, ctrlDown) == true) { capturedForRebind = true; break; }
+                if (_settingsPanel?.TryCaptureKey(key, ctrlDown) == true) { capturedForRebind = true; break; }
             }
         }
 

@@ -52,6 +52,30 @@ public sealed class KeybindRegistry
 
     public KeyBinding? BindingFor(string commandId) => _byCommandId.TryGetValue(commandId, out var b) ? b : null;
 
+    /// <summary>Command id → serialized key, for every binding that differs from its command's default (M8.5.4/5.1).</summary>
+    public IReadOnlyDictionary<string, string> ExportOverrides()
+    {
+        var result = new Dictionary<string, string>();
+        foreach (var (id, b) in _byCommandId)
+        {
+            var cmd = _commands.ById(id);
+            bool isDefault = cmd?.DefaultKey == b.Key && cmd?.DefaultCtrl == b.Ctrl;
+            if (!isDefault) result[id] = $"{b.Key}|{b.Ctrl}";
+        }
+        return result;
+    }
+
+    /// <summary>Applies previously-exported overrides on top of the current bindings (call after <see cref="LoadDefaults"/>).</summary>
+    public void ApplyOverrides(IReadOnlyDictionary<string, string> overrides)
+    {
+        foreach (var (id, serialized) in overrides)
+        {
+            var parts = serialized.Split('|');
+            if (parts.Length == 2 && Enum.TryParse<Keys>(parts[0], out var key))
+                Bind(id, key, parts[1] == "True");
+        }
+    }
+
     /// <summary>Evaluates every binding against the current and previous keyboard state, invoking
     /// the matching command (edge = key just pressed; hold = key down this frame).</summary>
     public void Process(KeyboardState kb, KeyboardState prev)
