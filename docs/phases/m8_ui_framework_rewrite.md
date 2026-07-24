@@ -1,15 +1,15 @@
 # M8 — UI Framework Rewrite (index)
 
 **Milestone:** M8 — UI Framework Rewrite
-**Status:** IN PROGRESS — 8.0, 8.1, 8.2, 8.3 done (2026-07-23–24). 8.0/8.1 verified by manual
-playtest (user confirmed the app runs correctly after those two); 8.2/8.3 verified by build+test
-only (no display in this environment) — user confirmed by a later playtest that 8.2 looked
-unchanged visually, and instructed to continue through the rest of M8 without a pause-and-ask at
-every phase. 8.3.6 (Timeline rebuild, Legends, Toasts, map tooltips) deferred — net-new surfaces,
-out of scope for a kit-migration pass; see the 8.3 phase doc. Window resizing not yet supported
+**Status:** IN PROGRESS — 8.0-8.4 done (2026-07-23–24). 8.0/8.1 verified by manual playtest (user
+confirmed the app runs correctly after those two); 8.2-8.4 verified by build+test only (no
+display in this environment) — user confirmed by a later playtest that 8.2 looked unchanged
+visually, and instructed to continue through the rest of M8 without a pause-and-ask at every
+phase. 8.3.6 (Timeline rebuild, Legends, Toasts, map tooltips) deferred — net-new surfaces, out
+of scope for a kit-migration pass; see the 8.3 phase doc. Window resizing not yet supported
 (GraphicsDeviceManager fixed at 1280x720, pre-existing, unrelated to M8) — deferred; future work
-should add common preset sizes (1080p etc.) rather than just AllowUserResizing. **Next up: 8.4
-(Command Registry)** — see `m8_phase4_command_registry.md`.
+should add common preset sizes (1080p etc.) rather than just AllowUserResizing. **Next up: 8.5
+(Settings shell)** — see `m8_phase5_settings.md`.
 **Design authority:** `docs/ui_design_framework.md` — the *why*. This doc set is the *how*.
 **Roadmap:** `docs/roadmap.md` § "M8 — UI Framework Rewrite".
 
@@ -42,7 +42,7 @@ Cross-cutting: SelectionBus · Presenter · CommandGateway · Keybind/CommandReg
 | 8.1 | `m8_phase1_layout_host.md` | 8.0 | Sonnet | Regions/z/hit-test host + tabbed dock; port panels as-is. **DONE 2026-07-23 — manual bug-sweep pending.** |
 | 8.2 | `m8_phase2_selection.md` | 8.1 | Sonnet | One `SelectionBus`; delete consume-once polling. **DONE 2026-07-24.** |
 | 8.3 | `m8_phase3_panel_migration.md` | 8.2 (8.3.6 also 8.4) | Haiku* | Rebuild each panel on the kit, one story per panel. **DONE 2026-07-24 (8.3.1-8.3.5; 8.3.6 deferred, see phase doc).** |
-| 8.4 | `m8_phase4_command_registry.md` | 8.2 | Sonnet | `CommandRegistry`; regenerate Help; rebinding. |
+| 8.4 | `m8_phase4_command_registry.md` | 8.2 | Sonnet | `CommandRegistry`; regenerate Help; rebinding. **DONE 2026-07-24.** |
 | 8.5 | `m8_phase5_settings.md` | 8.4 | Sonnet | Settings shell + Display/Controls tabs + prefs persistence. |
 
 \* 8.3 stories are mechanical migrations; Haiku is fine **if** it can build/restore (see the

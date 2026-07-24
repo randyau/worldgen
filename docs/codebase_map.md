@@ -201,8 +201,6 @@ One-line description of every non-trivial source file. Check here before running
 
 ## WorldEngine.UI/UI/
 - `FirstRunOverlay.cs` — Dismissible first-run orientation dialog shown once when the simulation starts for the first time. Points the player at the time controls, overlays, and event log.
-- `HelpOverlayPanel.cs` — "?"-toggled panel listing every keyboard shortcut, grouped by category. Rendered directly from the <see cref="KeybindRegistry"/> so it can never drift from actual input handling (M6 Epic 6.1.3).
-- `IPanel.cs` — A panel that can be shown or hidden; implemented by the pre-M8 Summoned panels.
 - `OverlayBar.cs` — Visible, labeled overlay toolbar (M6 Epic 6.1.1). One button per <see cref="OverlayType"/>; each enqueues <c>SetActiveOverlay</c> — the same command the accelerator keys fire — and the active overlay is highlighted from <c>WorldSnapshot.ActiveOverlay</c>. Restores Temperature, which had been dropped off the keyboard.
 - `TimeControlsPanel.cs` — Top toolbar: speed buttons, year/season label.
 - `TimelineBar.cs` — Timeline scrubber bar drawn via SpriteBatch at the bottom of the map area. Shows event density heatmap and allows scrubbing to any historical year. The ScrubLabel is a Myra Label — add it to the root overlay panel in Game1.
@@ -228,7 +226,6 @@ One-line description of every non-trivial source file. Check here before running
 - `IWorkspacePanel.cs` — Per-frame context handed to every panel (framework §6): the current snapshot, the selection sink, the formatting service, and the command gateway. A panel needs nothing else.
 - `InputRouter.cs` — Arbitrates one pointer event per frame, top-down by z-band (framework §5.1). A Modal region with content assigned captures unconditionally. Float/Transient regions are click-through by design (legends, tooltips, toasts never block the map). Chrome regions consume when opaque and hit. If nothing consumes, the caller (map/camera) gets the event.
 - `LayoutHost.cs` — Owns every screen rectangle, z-band, and (via <see cref="RegionSlot"/>) hit-test precedence (framework §3.2, §5.1). Panels declare content into a <see cref="Region"/>; they never see or set a raw <c>Top/Left/Width/Height</c>. Fixed grid: <c>TopBar</c> (full width, top chrome strip), <c>Timeline</c> (full width minus dock, bottom strip), <c>RightDock</c> (right column, below TopBar), <c>MapCanvas</c> (remaining — non-opaque, camera/tile-pick owns it). <c>Float</c>/<c>Modal</c> are viewport-sized overlays, not part of the grid.
-- `LegacyPanelAdapter.cs` — Adapts an existing (pre-M8) panel into <see cref="IWorkspacePanel"/> by exposing its current <c>Root</c> widget and forwarding refresh to whatever bespoke <c>Update</c>/<c>Refresh</c> method it already has (framework §12 migration path). Rebuilt panels in 8.3 replace this.
 - `ModalHost.cs` — The single modal surface (framework §5.5): dims the app with <see cref="UiTheme.SurfaceModalScrim"/>, centers content, and captures all input while open (the <see cref="InputRouter"/> treats a Modal region with content as an unconditional catch). Closes on <see cref="Close"/> or Esc.
 - `SimWorkspace.cs` — Owns the <see cref="RegionSlot.RightDock"/> content: a pinned zone (always-visible panels, stacked) and a contextual tab zone where exactly one panel is visible at a time — no cross-panel overflow, no stacking (framework §5.2-5.3). Also drives the Float region's summoned panels (God Mode, Help).
 
@@ -239,6 +236,7 @@ One-line description of every non-trivial source file. Check here before running
 - `EventLogPanel.cs` — Pinned panel showing recent simulation events. Supports focus lens dimming and routes actor/ civ/cause-chain clicks immediately (M8.2.2) instead of a consume-once poll.
 - `FilterPanel.cs` — Immutable snapshot of the active event-log filter criteria. Passed to <see cref="EventLogPanel"/> each frame via <see cref="FilterPanel.CurrentFilter"/>.
 - `GodModePanel.cs` — God Mode panel — allows paused-only authoring actions: place artifact, trigger disaster, spawn character, nudge character. Dialogs route through the shared <see cref="ModalHost"/>.
+- `HelpOverlayPanel.cs` — "?"-toggled panel listing every keyboard shortcut, grouped by category. Rendered directly from the <see cref="KeybindRegistry"/> so it can never drift from actual input handling (M6 Epic 6.1.3).
 - `TileInspectorPanel.cs` — Layer 3 — Contextual (Tile) panel: ruin/settlement/tile facts/seasonal/resources/
 
 ## WorldEngine.UI/UI/Present/
@@ -249,7 +247,6 @@ One-line description of every non-trivial source file. Check here before running
 - `SelectionBus.cs` — Immutable snapshot of the current selection, broadcast by <see cref="SelectionBus"/>.</summary> public readonly record struct SelectionSnapshot(SelectionKind Kind, long Id, TileCoord Coord); // MAP: The one "what am I looking at" channel (framework §7.1) — replaces SelectionRouter and // every consume-once navigation poller that used to live in Game1/panels (M8 phase 8.2). <summary> Single selection bus for the UI. Panels/composites call <see cref="Select"/> directly at the click site instead of setting a per-panel pending field for <c>Game1</c> to poll each frame. UI-only state — see the determinism note on <see cref="SelectionState"/>: tile inspection still round-trips a sim command because the snapshot must carry tile detail, but "what is selected" needs no sim round-trip.
 
 ## WorldEngine.UI/UI/Theme/
-- `PanelChrome.cs` — Builds the standard docked-panel chrome — a bordered, padded container with a title bar and optional <c>[Close]</c> button — so every panel shares one look instead of each re-inventing its own header/close/background (M6 Epic 6.2.1).
 - `UiTheme.cs` — Single source of truth for the UI's visual language: colors, spacing, and metrics. Panels pull named tokens from here instead of hardcoding <see cref="Color"/> literals and pixel widths, so the whole UI can be retuned from one place (M6 Epic 6.2.1).
 
 ## WorldEngine.Tests/

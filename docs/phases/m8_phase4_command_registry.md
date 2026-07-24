@@ -1,7 +1,19 @@
 # M8 Phase 4 — Command Registry & Help
 
 **Milestone:** M8 — UI Framework Rewrite
-**Status:** NOT STARTED
+**Status:** COMPLETE — 2026-07-24. `CommandRegistry` (`UI/Input/CommandRegistry.cs`) holds every
+named `UiCommand`; `KeybindRegistry` rewritten to bind `Keys(+Ctrl,Trigger)` to a command id
+(`KeyBinding`) instead of a raw delegate, with `LoadDefaults()` seeding from each command's
+`DefaultKey`. All 14 of `Game1`'s inline keybind lambdas moved into `BuildKeybinds()` as
+`UiCommand` registrations with stable ids (`overlay.biome`, `panel.godmode`, `world.pause`, …).
+Conflict policy on rebind: **last-wins** (DECISION in `KeybindRegistry.cs` — rejecting would need
+a dialog/toast we can't visually verify here). `HelpPanel` (replaces `HelpOverlayPanel`) renders
+grouped rows from both registries with a `[Rebind]` button per row; capture-next-keypress is
+wired through `Game1.HandleInput` via `HelpPanel.TryCaptureKey`, consuming the key so it doesn't
+also fire its old action that frame. Overrides are in-memory only per the doc's `// SEAM: persist
+in 8.5` note — no separate `KeybindEditor` composite extracted yet since only Help hosts rebinding
+so far (extract if/when 8.5's Controls tab needs to share it). Build 0 warnings, 501/501 tests
+green.
 **Depends on:** 8.2 (can run in parallel with most of 8.3; 8.3.6 Help depends on this)
 **Worker model:** Sonnet
 **Framework refs:** `docs/ui_design_framework.md` §9.1 (command registry), §9 (settings home)

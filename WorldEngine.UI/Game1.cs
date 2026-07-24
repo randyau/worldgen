@@ -73,7 +73,8 @@ public sealed class Game1 : Game
 
     // M6.1.3 — keybind registry (single source of truth) + help overlay
     private KeybindRegistry?  _keybinds;
-    private HelpOverlayPanel? _helpOverlay;
+    private HelpPanel? _helpPanel;
+    private CommandRegistry? _commands;
 
     // M6.1.4 / M8.2.1 — unified selection model driving which contextual panel shows
     private SelectionBus? _selectionBus;
@@ -456,8 +457,10 @@ public sealed class Game1 : Game
         // ── God Mode panel (M7 epics 7.2.1–7.2.3) ───────────────────────────
         _godModePanel = new GodModePanel(_modalHost!);
 
-        // ── Help overlay (M6.1.3) ────────────────────────────────────────────
-        _helpOverlay = new HelpOverlayPanel();
+        // Build the command/keybind registries now that the workspace/panels exist to target,
+        // then build Help from them (M8.4: named actions replace inline keybind lambdas).
+        BuildKeybinds();
+        _helpPanel = new HelpPanel(_commands!, _keybinds!);
 
         // M8 8.1.6: register every panel with the SimWorkspace dock instead of the retired
         // PanelManager/absolute-Top-Left placement. Placement here preserves each panel's
@@ -474,15 +477,11 @@ public sealed class Game1 : Game
             _workspace.Register(_charWatch!);
             _workspace.Register(_civHistory!);
             _workspace.Register(_godModePanel!);
-            _workspace.Register(_helpOverlay!);
+            _workspace.Register(_helpPanel!);
         }
 
         if (_desktop?.Root is Panel rootPanelForTimeline)
             rootPanelForTimeline.Widgets.Add(_timeline.ScrubLabel);
-
-        // Build the keybind registry now that panels/commands exist, then feed the help panel.
-        BuildKeybinds();
-        _helpOverlay?.Populate(_keybinds!);
 
         // 6.4.2 — show first-run orientation once after the sim starts, via the ModalHost (8.1.5 proof case)
         if (_modalHost is not null)
@@ -562,35 +561,38 @@ public sealed class Game1 : Game
     }
 
     /// <summary>
-    /// Registers every keyboard shortcut in one place (M6.1.3). Each binding's action is the
-    /// single source of behavior — UI buttons added in later stories wire to these same actions.
+    /// Registers every named user action in one place (M8.4.1-8.4.2). Each command's handler is
+    /// the single source of behavior — UI buttons invoke the same command id as its keybind, so
+    /// keys and visible controls can never diverge (continues M6 Epic 6.1.3's "UI-primary").
     /// </summary>
     private void BuildKeybinds()
     {
-        var reg = new KeybindRegistry();
+        var cmds = new CommandRegistry();
 
         // Overlays — edge-triggered so holding a key doesn't flood the command queue.
-        reg.Register(Keys.B, "Biome overlay",      "Overlays", () => _commandQueue.Enqueue(new SetActiveOverlay(OverlayType.Biome)));
-        reg.Register(Keys.E, "Elevation overlay",  "Overlays", () => _commandQueue.Enqueue(new SetActiveOverlay(OverlayType.Elevation)));
-        reg.Register(Keys.T, "Territory overlay",  "Overlays", () => _commandQueue.Enqueue(new SetActiveOverlay(OverlayType.Territory)));
-        reg.Register(Keys.M, "Moisture overlay",   "Overlays", () => _commandQueue.Enqueue(new SetActiveOverlay(OverlayType.Moisture)));
-        reg.Register(Keys.R, "Resources overlay",  "Overlays", () => _commandQueue.Enqueue(new SetActiveOverlay(OverlayType.Resources)));
-        reg.Register(Keys.G, "Magic overlay",      "Overlays", () => _commandQueue.Enqueue(new SetActiveOverlay(OverlayType.MagicIntensity)));
+        cmds.Register(new UiCommand("overlay.biome",     "Biome overlay",     "Overlays", () => _commandQueue.Enqueue(new SetActiveOverlay(OverlayType.Biome)),          Keys.B));
+        cmds.Register(new UiCommand("overlay.elevation", "Elevation overlay", "Overlays", () => _commandQueue.Enqueue(new SetActiveOverlay(OverlayType.Elevation)),      Keys.E));
+        cmds.Register(new UiCommand("overlay.territory", "Territory overlay", "Overlays", () => _commandQueue.Enqueue(new SetActiveOverlay(OverlayType.Territory)),      Keys.T));
+        cmds.Register(new UiCommand("overlay.moisture",  "Moisture overlay",  "Overlays", () => _commandQueue.Enqueue(new SetActiveOverlay(OverlayType.Moisture)),       Keys.M));
+        cmds.Register(new UiCommand("overlay.resources", "Resources overlay", "Overlays", () => _commandQueue.Enqueue(new SetActiveOverlay(OverlayType.Resources)),      Keys.R));
+        cmds.Register(new UiCommand("overlay.magic",     "Magic overlay",     "Overlays", () => _commandQueue.Enqueue(new SetActiveOverlay(OverlayType.MagicIntensity)), Keys.G));
 
         // Panels — route through the SimWorkspace dock so keys stay in lock-step with clicks.
-        reg.Register(Keys.H,           "Civ history panel",     "Panels", () => _workspace?.ToggleSummoned("civ"));
-        reg.Register(Keys.W,           "Character watch panel", "Panels", () => _workspace?.ToggleSummoned("watch"));
-        reg.Register(Keys.OemQuestion, "This help",             "Panels", () => _workspace?.ToggleSummoned("help"));
-        reg.Register(Keys.F2,         "God Mode panel",         "Panels", () => _workspace?.ToggleSummoned("godmode"));
+        cmds.Register(new UiCommand("panel.civ",     "Civ history panel",     "Panels", () => _workspace?.ToggleSummoned("civ"),     Keys.H));
+        cmds.Register(new UiCommand("panel.watch",   "Character watch panel", "Panels", () => _workspace?.ToggleSummoned("watch"),   Keys.W));
+        cmds.Register(new UiCommand("panel.help",    "This help",             "Panels", () => _workspace?.ToggleSummoned("help"),    Keys.OemQuestion));
+        cmds.Register(new UiCommand("panel.godmode", "God Mode panel",        "Panels", () => _workspace?.ToggleSummoned("godmode"), Keys.F2));
 
         // World
-        reg.Register(Keys.Space,  "Pause / resume",  "World", () => _commandQueue.Enqueue(new SetSimSpeed(
-            _lastSnapshot?.IsPaused == true ? SimSpeed.Normal : SimSpeed.Paused)));
-        reg.Register(Keys.N,      "New world",       "World", ResetToNewWorld);
-        reg.Register(Keys.S,      "Save world",      "World", () => _commandQueue.Enqueue(new SaveWorld(SaveDir)), ctrl: true);
-        reg.Register(Keys.Escape, "Deselect tile",   "World", () => _commandQueue.Enqueue(new SetInspectedTile(null)));
+        cmds.Register(new UiCommand("world.pause", "Pause / resume", "World", () => _commandQueue.Enqueue(new SetSimSpeed(
+            _lastSnapshot?.IsPaused == true ? SimSpeed.Normal : SimSpeed.Paused)), Keys.Space));
+        cmds.Register(new UiCommand("world.newworld",   "New world",      "World", ResetToNewWorld, Keys.N));
+        cmds.Register(new UiCommand("world.save",       "Save world",     "World", () => _commandQueue.Enqueue(new SaveWorld(SaveDir)), Keys.S, DefaultCtrl: true));
+        cmds.Register(new UiCommand("select.clear",     "Deselect tile",  "World", () => _commandQueue.Enqueue(new SetInspectedTile(null)), Keys.Escape));
 
-        _keybinds = reg;
+        _commands = cmds;
+        _keybinds = new KeybindRegistry(cmds);
+        _keybinds.LoadDefaults();
     }
 
     private void HandleInput(WorldSnapshot snapshot)
@@ -636,10 +638,25 @@ public sealed class Game1 : Game
             }
         }
 
+        // M8.4.4: a pending Help rebind captures the next keypress instead of dispatching it as
+        // a normal shortcut — otherwise rebinding a key would also fire whatever it used to do.
+        bool capturedForRebind = false;
+        if (_helpPanel is not null)
+        {
+            bool ctrlDown = kb.IsKeyDown(Keys.LeftControl) || kb.IsKeyDown(Keys.RightControl);
+            foreach (var key in kb.GetPressedKeys())
+            {
+                if (_prevKb.IsKeyDown(key)) continue;
+                if (key is Keys.LeftControl or Keys.RightControl) continue;
+                if (_helpPanel.TryCaptureKey(key, ctrlDown)) { capturedForRebind = true; break; }
+            }
+        }
+
         // All keyboard shortcuts flow through the single registry (M6.1.3), so keys and the
         // visible UI controls added in later stories share one code path.
         // DECISION: T is Territory overlay (M3 Phase 3.4). Temperature moved off keyboard.
-        _keybinds?.Process(kb, _prevKb);
+        if (!capturedForRebind)
+            _keybinds?.Process(kb, _prevKb);
 
         // Timeline scrubber
         if (_timeline is not null && _layoutHost is not null)
