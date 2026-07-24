@@ -343,6 +343,7 @@ public sealed class Game1 : Game
                 _overlayBar?.Update(snapshot.ActiveOverlay);
 
                 _charWatch?.SetContext(snapshot.SpotlightCharacterId, snapshot.InspectedTile?.Coord);
+                _eventLog?.SetContext(_focusLens, _filterPanel?.CurrentFilter);
 
                 if (_workspace is not null && _selectionBus is not null && _presenter is not null && _commandGateway is not null)
                 {
@@ -475,18 +476,13 @@ public sealed class Game1 : Game
         // pre-M8 keybind/click behavior exactly (Civ History and Watch stay keybind-toggled
         // Summoned panels rather than the framework's illustrative Contextual mapping) —
         // // DECISION: prioritizes zero behavior change during this structural-only phase;
-        // Tile Inspector, Character (Profile), and Watch are migrated onto the kit (8.3.1/8.3.2);
-        // Civ History and God Mode/Help still route through LegacyPanelAdapter pending 8.3.3/8.3.5.
+        // Event Log, Filters, Tile Inspector, Character (Profile), Watch, and Civ History are
+        // migrated onto the kit (8.3.1-8.3.4); God Mode/Help still route through
+        // LegacyPanelAdapter pending 8.3.5/8.3.6.
         if (_workspace is not null)
         {
-            _workspace.Register(new LegacyPanelAdapter(
-                "eventlog", "Event Log", new PanelPlacement(PanelPlacementKind.PinnedDefault),
-                _eventLog!.Root, ctx => _eventLog.Update(ctx.Snapshot, _focusLens, _filterPanel?.CurrentFilter)));
-
-            _workspace.Register(new LegacyPanelAdapter(
-                "filter", "Filters", new PanelPlacement(PanelPlacementKind.PinnedDefault),
-                _filterPanel!.Root));
-
+            _workspace.Register(_eventLog!);
+            _workspace.Register(_filterPanel!);
             _workspace.Register(_tileInspector!);
             _workspace.Register(_charProfile!);
             _workspace.Register(_charWatch!);

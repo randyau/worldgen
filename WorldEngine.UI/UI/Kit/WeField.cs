@@ -15,11 +15,14 @@ public sealed class WeField : IWeWidget
 
     public Widget Root => _root;
 
+    public event Action? Changed;
+
     public WeField(string label, string? placeholder = null)
     {
         _root = new HorizontalStackPanel { Spacing = UiTheme.Space.Sm };
         _root.Widgets.Add(new Label { Text = label, TextColor = UiTheme.TextSecondary });
         _box.HintText = placeholder ?? string.Empty;
+        _box.TextChangedByUser += (_, _) => Changed?.Invoke();
         _root.Widgets.Add(_box);
     }
 

@@ -1,3 +1,4 @@
+using Microsoft.Xna.Framework;
 using Myra.Graphics2D.UI;
 using WorldEngine.UI.UI.Theme;
 
@@ -36,4 +37,14 @@ public sealed class WeText : IWeWidget
     }
 
     public void SetColor(UiTheme.ColorRole color) => _label.TextColor = UiTheme.Resolve(color);
+
+    // Escape hatch for themed-but-dynamic lookups (e.g. UiTheme.TierColor(tier)) that don't map
+    // to a single ColorRole — not for hand-picked literals; callers must still source the Color
+    // from a UiTheme helper.
+    public WeText(string text, Color themedColor, UiTheme.TypographyRole role = UiTheme.TypographyRole.Body)
+    {
+        Role = role;
+        _label.Text = text;
+        _label.TextColor = themedColor;
+    }
 }
