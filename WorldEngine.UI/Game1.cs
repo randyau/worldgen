@@ -20,6 +20,7 @@ using WorldEngine.UI.UI;
 using WorldEngine.UI.UI.Input;
 using WorldEngine.UI.UI.Kit;
 using WorldEngine.UI.UI.Layout;
+using WorldEngine.UI.UI.Panels;
 using WorldEngine.UI.UI.Present;
 using WorldEngine.UI.UI.Selection;
 using WorldEngine.UI.UI.Theme;
@@ -483,9 +484,7 @@ public sealed class Game1 : Game
                 "filter", "Filters", new PanelPlacement(PanelPlacementKind.PinnedDefault),
                 _filterPanel!.Root));
 
-            _workspace.Register(new LegacyPanelAdapter(
-                "tile", "Tile Inspector", new PanelPlacement(PanelPlacementKind.Contextual, SelectionKind.Tile),
-                _tileInspector!.Root, ctx => _tileInspector.Update(ctx.Snapshot.InspectedTile, ctx.Snapshot)));
+            _workspace.Register(_tileInspector!);
 
             _workspace.Register(new LegacyPanelAdapter(
                 "character", "Character", new PanelPlacement(PanelPlacementKind.Contextual, SelectionKind.Character),

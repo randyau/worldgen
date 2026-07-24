@@ -22,6 +22,12 @@ public sealed class Presenter
     /// <summary>Raw 0–255 temperature byte to Fahrenheit.</summary>
     public float TempF(byte raw) => TempC(raw) * 9f / 5f + 32f;
 
+    /// <summary>Float-precision variant of <see cref="TempC(byte)"/> (same 0–255 scale, e.g. <c>EffectiveTemperature</c>).</summary>
+    public float TempC(float raw) => raw * (100f / 255f) - 50f;
+
+    /// <summary>Float-precision variant of <see cref="TempF(byte)"/>.</summary>
+    public float TempF(float raw) => TempC(raw) * 9f / 5f + 32f;
+
     /// <summary>Raw signed temperature delta byte to Celsius delta.</summary>
     public float TempDeltaC(float rawDelta) => rawDelta * (100f / 255f);
 
