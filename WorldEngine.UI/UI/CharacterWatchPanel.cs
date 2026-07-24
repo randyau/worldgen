@@ -18,27 +18,15 @@ public sealed class CharacterWatchPanel : IPanel
     public Widget Root { get; }
     public bool IsVisible { get; private set; }
 
-    // Consume-once flags for profile navigation
-    private long _pendingProfileCharacterId;
-    public long ConsumePendingProfile()
-    {
-        var id = _pendingProfileCharacterId;
-        _pendingProfileCharacterId = 0;
-        return id;
-    }
-
-    // Consume-once spotlight intent flags (M7 Phase 7.4)
-    private EntityId? _pendingEnterSpotlight;
-    private bool      _pendingExitSpotlight;
-    private bool      _pendingMoveIntent;
-    private bool      _pendingWanderGoal;
-    private bool      _pendingSettleGoal;
-
-    public EntityId? ConsumePendingEnterSpotlight() { var v = _pendingEnterSpotlight; _pendingEnterSpotlight = null; return v; }
-    public bool ConsumePendingExitSpotlight()   { var v = _pendingExitSpotlight;  _pendingExitSpotlight = false;  return v; }
-    public bool ConsumePendingMoveIntent()      { var v = _pendingMoveIntent;      _pendingMoveIntent = false;     return v; }
-    public bool ConsumePendingWanderGoal()      { var v = _pendingWanderGoal;      _pendingWanderGoal = false;     return v; }
-    public bool ConsumePendingSettleGoal()      { var v = _pendingSettleGoal;      _pendingSettleGoal = false;     return v; }
+    // M8.2.3: these are world/character intents, not "what am I looking at", so they are
+    // dispatched immediately as commands via these callbacks rather than flowing through the
+    // selection bus (framework §7.1). Selection = what I'm looking at; intent = change the world.
+    public Action<EntityId>? OnEnterSpotlight;
+    public Action?           OnExitSpotlight;
+    public Action?           OnMoveIntent;
+    public Action?           OnWanderGoal;
+    public Action?           OnSettleGoal;
+    public Action<long>?     OnProfile;
 
     public CharacterWatchPanel()
     {
@@ -132,7 +120,7 @@ public sealed class CharacterWatchPanel : IPanel
             EntityId capturedSpotId = watch.Id;
 
             var exitBtn = new TextButton { Text = "[Exit Spotlight]", Padding = new Myra.Graphics2D.Thickness(4) };
-            exitBtn.Click += (_, _) => _pendingExitSpotlight = true;
+            exitBtn.Click += (_, _) => OnExitSpotlight?.Invoke();
             _content.Widgets.Add(exitBtn);
 
             AddLine("SPOTLIGHT ACTIVE", Color.Cyan);
@@ -143,14 +131,14 @@ public sealed class CharacterWatchPanel : IPanel
                 Padding = new Myra.Graphics2D.Thickness(4),
                 Enabled = inspectedTile.HasValue
             };
-            moveBtn.Click += (_, _) => _pendingMoveIntent = true;
+            moveBtn.Click += (_, _) => OnMoveIntent?.Invoke();
             _content.Widgets.Add(moveBtn);
 
             var goalRow = new HorizontalStackPanel { Spacing = 4 };
             var wanderBtn = new TextButton { Text = "[Goal: Wander]", Padding = new Myra.Graphics2D.Thickness(4) };
-            wanderBtn.Click += (_, _) => _pendingWanderGoal = true;
+            wanderBtn.Click += (_, _) => OnWanderGoal?.Invoke();
             var settleBtn = new TextButton { Text = "[Goal: Settle]", Padding = new Myra.Graphics2D.Thickness(4) };
-            settleBtn.Click += (_, _) => _pendingSettleGoal = true;
+            settleBtn.Click += (_, _) => OnSettleGoal?.Invoke();
             goalRow.Widgets.Add(wanderBtn);
             goalRow.Widgets.Add(settleBtn);
             _content.Widgets.Add(goalRow);
@@ -161,14 +149,14 @@ public sealed class CharacterWatchPanel : IPanel
             AddLine("overriding survival autonomy. Click tile → move intent.", UiTheme.MutedText);
             EntityId capturedWatchId = watch.Id;
             var enterBtn = new TextButton { Text = "[Enter Spotlight]", Padding = new Myra.Graphics2D.Thickness(4) };
-            enterBtn.Click += (_, _) => _pendingEnterSpotlight = capturedWatchId;
+            enterBtn.Click += (_, _) => OnEnterSpotlight?.Invoke(capturedWatchId);
             _content.Widgets.Add(enterBtn);
         }
 
         // ── Full Profile + Close ─────────────────────────────────────────────
         long capturedId = watch.Id.Value;
         var profileBtn = new TextButton { Text = "[Full Profile]", Padding = new Myra.Graphics2D.Thickness(4) };
-        profileBtn.Click += (_, _) => _pendingProfileCharacterId = capturedId;
+        profileBtn.Click += (_, _) => OnProfile?.Invoke(capturedId);
         _content.Widgets.Add(profileBtn);
 
         var closeBtn = new TextButton { Text = "[Close]", Padding = new Myra.Graphics2D.Thickness(4) };

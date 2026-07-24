@@ -18,10 +18,10 @@ public sealed class EventLogPanel
     private readonly VerticalStackPanel _rows;
     private readonly ScrollViewer _scroll;
 
-    // Consumed by Game1 each frame — cleared after reading
-    private long? _pendingCauseChainEventId;
-    private long? _pendingCharacterProfileId;
-    private long? _pendingCivId;
+    // M8.2.2: fired immediately at the click site instead of polled by Game1 each frame.
+    public Action<long>? OnCauseChain;
+    public Action<long>? OnCharacterProfile;
+    public Action<long>? OnCiv;
 
     public EventLogPanel()
     {
@@ -97,7 +97,7 @@ public sealed class EventLogPanel
                     Text  = ev.ActorName,
                     Width = 85
                 };
-                actorBtn.Click += (_, _) => _pendingCharacterProfileId = capturedActorId;
+                actorBtn.Click += (_, _) => OnCharacterProfile?.Invoke(capturedActorId);
                 actorWidget = actorBtn;
             }
 
@@ -107,14 +107,14 @@ public sealed class EventLogPanel
             {
                 long capturedCivId = ev.CivId;
                 var civBtn = new TextButton { Text = $"[{civName}]", Height = 20 };
-                civBtn.Click += (_, _) => _pendingCivId = capturedCivId;
+                civBtn.Click += (_, _) => OnCiv?.Invoke(capturedCivId);
                 civWidget = civBtn;
             }
 
             // Cause chain button
             long capturedEvId = ev.Id.Value;
             var causeBtn = new TextButton { Text = "->", Width = 24, Height = 20 };
-            causeBtn.Click += (_, _) => _pendingCauseChainEventId = capturedEvId;
+            causeBtn.Click += (_, _) => OnCauseChain?.Invoke(capturedEvId);
 
             // First-of-kind badge
             Widget? badgeWidget = ev.IsFirstOfKind
@@ -146,36 +146,6 @@ public sealed class EventLogPanel
                 : "(no events match filter)";
             _rows.Widgets.Add(new Label { Text = msg, TextColor = UiTheme.MutedText });
         }
-    }
-
-    /// <summary>
-    /// Returns the event ID for which a causal chain was requested, then clears it.
-    /// Call from Game1.Update each frame.
-    /// </summary>
-    public long? ConsumePendingCauseChain()
-    {
-        var val = _pendingCauseChainEventId;
-        _pendingCauseChainEventId = null;
-        return val;
-    }
-
-    /// <summary>Returns the civ ID clicked for navigation, then clears it.</summary>
-    public long? ConsumePendingCiv()
-    {
-        var val = _pendingCivId;
-        _pendingCivId = null;
-        return val;
-    }
-
-    /// <summary>
-    /// Returns the character ID for which a profile was requested, then clears it.
-    /// Call from Game1.Update each frame.
-    /// </summary>
-    public long? ConsumePendingCharacterProfile()
-    {
-        var val = _pendingCharacterProfileId;
-        _pendingCharacterProfileId = null;
-        return val;
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────────────────────────

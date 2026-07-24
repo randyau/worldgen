@@ -74,10 +74,8 @@ public sealed class Game1 : Game
     private KeybindRegistry?  _keybinds;
     private HelpOverlayPanel? _helpOverlay;
 
-    // M6.1.4 — unified selection model driving which contextual panel shows
-    private SelectionState?  _selection;
-    private SelectionRouter? _selectionRouter;
-    private ISelectionSink?  _selectionSink;
+    // M6.1.4 / M8.2.1 — unified selection model driving which contextual panel shows
+    private SelectionBus? _selectionBus;
 
     // M6.3.1 — first-class filter panel above the event log
     private FilterPanel? _filterPanel;
@@ -143,6 +141,7 @@ public sealed class Game1 : Game
         _modalHost       = new ModalHost();
         _presenter       = new Presenter();
         _commandGateway  = new CommandGateway(_commandQueue);
+        _selectionBus    = new SelectionBus();
 
         var rootPanel = BuildRootPanel();
         _desktop = new Desktop { Root = rootPanel };
@@ -342,9 +341,9 @@ public sealed class Game1 : Game
                 _timeControls?.Update(snapshot);
                 _overlayBar?.Update(snapshot.ActiveOverlay);
 
-                if (_workspace is not null && _selectionSink is not null && _presenter is not null && _commandGateway is not null)
+                if (_workspace is not null && _selectionBus is not null && _presenter is not null && _commandGateway is not null)
                 {
-                    _workspace.Bind(new PanelContext(snapshot, _selectionSink, _presenter, _commandGateway));
+                    _workspace.Bind(new PanelContext(snapshot, _selectionBus, _presenter, _commandGateway));
                     _workspace.RefreshVisible();
                 }
 
@@ -375,32 +374,6 @@ public sealed class Game1 : Game
                     snapshot.IsPaused);
             }
 
-            // Consume Watch button clicks from the tile inspector
-            if (_tileInspector is not null)
-            {
-                long watchId = _tileInspector.ConsumePendingWatch();
-                if (watchId != 0)
-                {
-                    _commandQueue.Enqueue(new WatchCharacter(new EntityId(watchId)));
-                    _workspace?.ShowSummoned("watch");
-                }
-            }
-
-            // Process spotlight intent commands from CharacterWatchPanel (M7 Phase 7.4)
-            if (_charWatch is not null)
-            {
-                if (_charWatch.ConsumePendingEnterSpotlight() is { } enterSpotId)
-                    _commandQueue.Enqueue(new EnterSpotlight(enterSpotId));
-                if (_charWatch.ConsumePendingExitSpotlight())
-                    _commandQueue.Enqueue(new ExitSpotlight());
-                if (_charWatch.ConsumePendingMoveIntent() && snapshot.InspectedTile?.Coord is { } moveTarget)
-                    _commandQueue.Enqueue(new SetSpotlightMoveIntent(moveTarget));
-                if (_charWatch.ConsumePendingWanderGoal() && _spotlightCharacterId.HasValue)
-                    _commandQueue.Enqueue(new AuthorNudgeCharacter(_spotlightCharacterId.Value, CharacterNudge.SetWander));
-                if (_charWatch.ConsumePendingSettleGoal() && _spotlightCharacterId.HasValue)
-                    _commandQueue.Enqueue(new AuthorNudgeCharacter(_spotlightCharacterId.Value, CharacterNudge.SetSettle));
-            }
-
             // Camera follow in spotlight mode (M7 Phase 7.4.3)
             if (_spotlightCharacterId.HasValue && snapshot.WatchedCharacter?.Location is { } charLoc && _camera is not null && _layoutHost is not null)
             {
@@ -408,24 +381,8 @@ public sealed class Game1 : Game
                 _camera.CenterOn(charLoc, mapBounds.Width, mapBounds.Height);
             }
 
-            // Process pending event log interactions (consume-once pattern)
-            if (_eventLog is not null && _historyQuery is not null && _desktop is not null)
-            {
-                if (_eventLog.ConsumePendingCharacterProfile() is long charId)
-                    _selection?.SelectCharacter(charId);
-
-                if (_eventLog.ConsumePendingCiv() is long civId)
-                {
-                    _selection?.SelectCiv(civId);
-                    _workspace?.ShowSummoned("civ");
-                }
-
-                if (_eventLog.ConsumePendingCauseChain() is long evId)
-                    ShowCauseChainDialog(evId);
-            }
-
-            // Apply any selection change to the contextual panels (M6.1.4).
-            _selectionRouter?.Apply();
+            // Apply any selection change to the contextual panels (M6.1.4 / M8.2.1).
+            _selectionBus?.Apply();
         }
 
         _desktop?.UpdateLayout();
@@ -565,17 +522,77 @@ public sealed class Game1 : Game
         if (_modalHost is not null)
             FirstRunOverlay.Show(_modalHost);
 
-        // Unified selection model (M6.1.4): one "selected thing" drives which contextual tab shows.
-        _selection = new SelectionState();
-        _selectionSink = new SelectionStateSink(_selection);
-        _selectionRouter = new SelectionRouter(_selection)
+        // Unified selection model (M6.1.4 / M8.2.1): one "selected thing" drives which contextual
+        // tab shows. One Changed handler replaces the old SelectionRouter callback set.
+        if (_selectionBus is not null)
         {
-            // Tile inspection stays a sim command — the snapshot must carry tile detail.
-            OnTile      = coord => { _commandQueue.Enqueue(new SetInspectedTile(coord)); _workspace?.SetSelection(SelectionKind.Tile); },
-            OnCharacter = id    => { _charProfile?.ShowCharacter(id); _workspace?.SetSelection(SelectionKind.Character); },
-            OnCiv       = id    => { _civHistory?.ShowCiv(id); _workspace?.ShowSummoned("civ"); },
-            OnClear     = ()    => { _commandQueue.Enqueue(new SetInspectedTile(null)); _workspace?.SetSelection(SelectionKind.None); },
+            _selectionBus.Changed += snapshot =>
+            {
+                switch (snapshot.Kind)
+                {
+                    // Tile inspection stays a sim command — the snapshot must carry tile detail.
+                    case SelectionKind.Tile:
+                        _commandQueue.Enqueue(new SetInspectedTile(snapshot.Coord));
+                        _workspace?.SetSelection(SelectionKind.Tile);
+                        break;
+                    case SelectionKind.Character:
+                        _charProfile?.ShowCharacter(snapshot.Id);
+                        if (_historyQuery is not null) _focusLens?.FocusCharacter(snapshot.Id, _historyQuery);
+                        _workspace?.SetSelection(SelectionKind.Character);
+                        break;
+                    case SelectionKind.Civ:
+                        _civHistory?.ShowCiv(snapshot.Id);
+                        if (_historyQuery is not null) _focusLens?.FocusCiv(snapshot.Id, _historyQuery);
+                        _workspace?.ShowSummoned("civ");
+                        break;
+                    case SelectionKind.None:
+                        _commandQueue.Enqueue(new SetInspectedTile(null));
+                        _focusLens?.Clear();
+                        _workspace?.SetSelection(SelectionKind.None);
+                        break;
+                }
+            };
+        }
+
+        // M8.2.2: navigation clicks call the bus directly instead of Game1 polling a pending
+        // field each frame. Tile Inspector [Watch] and Civ History/Character Watch keep their
+        // pre-M8 Summoned-panel behavior exactly (see the DECISION above panel registration) —
+        // // DECISION: only the polling mechanism changes here, not panel placement.
+        _tileInspector!.OnWatch = id =>
+        {
+            _commandQueue.Enqueue(new WatchCharacter(new EntityId(id)));
+            _workspace?.ShowSummoned("watch");
         };
+
+        _eventLog!.OnCharacterProfile = id => _selectionBus?.Select(new EntityRef(SelectionKind.Character, id, default));
+        _eventLog.OnCiv               = id => _selectionBus?.Select(new EntityRef(SelectionKind.Civ, id, default));
+        _eventLog.OnCauseChain        = evId => ShowCauseChainDialog(evId);
+
+        // M8.2.3: spotlight/goal intents change the world, so they enqueue commands directly
+        // rather than flowing through the selection bus. Entering spotlight also selects the
+        // character so the Character contextual tab follows — that part is a selection.
+        _charWatch!.OnEnterSpotlight = id =>
+        {
+            _commandQueue.Enqueue(new EnterSpotlight(id));
+            _selectionBus?.Select(new EntityRef(SelectionKind.Character, id.Value, default));
+        };
+        _charWatch.OnExitSpotlight = () => _commandQueue.Enqueue(new ExitSpotlight());
+        _charWatch.OnMoveIntent = () =>
+        {
+            if (_lastSnapshot?.InspectedTile?.Coord is { } moveTarget)
+                _commandQueue.Enqueue(new SetSpotlightMoveIntent(moveTarget));
+        };
+        _charWatch.OnWanderGoal = () =>
+        {
+            if (_spotlightCharacterId.HasValue)
+                _commandQueue.Enqueue(new AuthorNudgeCharacter(_spotlightCharacterId.Value, CharacterNudge.SetWander));
+        };
+        _charWatch.OnSettleGoal = () =>
+        {
+            if (_spotlightCharacterId.HasValue)
+                _commandQueue.Enqueue(new AuthorNudgeCharacter(_spotlightCharacterId.Value, CharacterNudge.SetSettle));
+        };
+        _charWatch.OnProfile = id => _selectionBus?.Select(new EntityRef(SelectionKind.Character, id, default));
     }
 
     /// <summary>
@@ -646,7 +663,7 @@ public sealed class Game1 : Game
                 if (coord.X < 0 || coord.X >= snapshot.WorldTileWidth
                  || coord.Y < 0 || coord.Y >= snapshot.WorldTileHeight)
                     return;
-                _selection?.SelectTile(coord);
+                _selectionBus?.Select(new EntityRef(SelectionKind.Tile, 0, coord));
                 // In spotlight mode: map click also sets move intent
                 if (_spotlightCharacterId.HasValue)
                     _commandQueue.Enqueue(new SetSpotlightMoveIntent(coord));

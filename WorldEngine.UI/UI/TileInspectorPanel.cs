@@ -11,15 +11,8 @@ public sealed class TileInspectorPanel
     public readonly Panel Root;
     private readonly VerticalStackPanel _content;
 
-    // Consume-once: set when user clicks [Watch] next to a character name.
-    // Game1 reads this each frame and clears it after consuming.
-    private long _pendingWatchCharacterId;
-    public long ConsumePendingWatch()
-    {
-        var id = _pendingWatchCharacterId;
-        _pendingWatchCharacterId = 0;
-        return id;
-    }
+    /// <summary>Invoked immediately when the user clicks [Watch] next to a character name (M8.2.2).</summary>
+    public Action<long>? OnWatch;
 
     public TileInspectorPanel()
     {
@@ -197,7 +190,7 @@ public sealed class TileInspectorPanel
                 Text    = "[Watch]",
                 Padding = new Myra.Graphics2D.Thickness(2)
             };
-            watchBtn.Click += (_, _) => _pendingWatchCharacterId = capturedId;
+            watchBtn.Click += (_, _) => OnWatch?.Invoke(capturedId);
             row.Widgets.Add(watchBtn);
             _content.Widgets.Add(row);
 

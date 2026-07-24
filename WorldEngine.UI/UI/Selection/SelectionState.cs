@@ -40,37 +40,3 @@ public sealed class SelectionState
         Dirty = true;
     }
 }
-
-/// <summary>
-/// Applies <see cref="SelectionState"/> changes by invoking the wired callbacks — one central
-/// dispatch point that replaces the scattered per-panel click handlers in <c>Game1</c>. The
-/// callbacks are supplied by <c>Game1</c> (later routed through the panel manager), so this
-/// class stays decoupled from concrete panels.
-/// </summary>
-public sealed class SelectionRouter
-{
-    private readonly SelectionState _state;
-
-    public Action<TileCoord>? OnTile;
-    public Action<long>?      OnSettlement;
-    public Action<long>?      OnCharacter;
-    public Action<long>?      OnCiv;
-    public Action?            OnClear;
-
-    public SelectionRouter(SelectionState state) => _state = state;
-
-    /// <summary>If the selection changed since last frame, dispatch it to the matching callback.</summary>
-    public void Apply()
-    {
-        if (!_state.Dirty) return;
-        _state.MarkHandled();
-        switch (_state.Kind)
-        {
-            case SelectionKind.Tile:       OnTile?.Invoke(_state.Coord);   break;
-            case SelectionKind.Settlement: OnSettlement?.Invoke(_state.Id); break;
-            case SelectionKind.Character:  OnCharacter?.Invoke(_state.Id);  break;
-            case SelectionKind.Civ:        OnCiv?.Invoke(_state.Id);        break;
-            case SelectionKind.None:       OnClear?.Invoke();               break;
-        }
-    }
-}
