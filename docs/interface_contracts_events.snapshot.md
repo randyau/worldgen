@@ -182,6 +182,7 @@ public enum EventType
     GodModeCharacterCreated     = 9003,
     GodModeArtifactPlaced       = 9004,
     GodModeCivilizationForced   = 9005,
+    GodModeCharacterNudged      = 9006,
 
     // M4 Phase 1 — Diplomatic emissary events (5000-range)
     EmissaryDispatched          = 5001,  // civ sent an emissary to a known civ
@@ -191,4 +192,4 @@ public enum EventType
 }
 ```
 
-<!-- content-hash: d0289aa89d78a313 -->
+<!-- content-hash: de8cebd29715b981 -->

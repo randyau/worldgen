@@ -96,6 +96,11 @@ public interface IWorldStateReadOnly
     int CountAlliances(EntityId id);
     int CountRivals(EntityId id);
 
+    // === SPOTLIGHT (M7+) ===
+    EntityId? SpotlightCharacterId { get; }
+    TileCoord? SpotlightMoveTarget { get; }
+    GoalType?  SpotlightGoalIntent { get; }
+
     // === RELATIONSHIPS / HISTORY (M3+) ===
     // float GetRelationshipTrust(EntityId from, EntityId to);
     // IEnumerable<SimEvent> GetRecentEvents(int withinYears);
@@ -115,4 +120,4 @@ public sealed class StateCache
 }
 ```
 
-<!-- content-hash: 0082e3c27a289147 -->
+<!-- content-hash: 23e83742914daf13 -->
