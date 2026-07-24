@@ -1,7 +1,11 @@
 # M8 — UI Framework Rewrite (index)
 
 **Milestone:** M8 — UI Framework Rewrite
-**Status:** NOT STARTED
+**Status:** IN PROGRESS — 8.0 and 8.1 done (2026-07-23), verified by manual playtest
+(app runs, panels/overlays/event log/tile inspector/cause-chain dialog all functioning). Window
+resizing not yet supported (GraphicsDeviceManager fixed at 1280x720, pre-existing, unrelated to
+M8) — deferred; future work should add common preset sizes (1080p etc.) rather than just
+AllowUserResizing. **Next up: 8.2 (Selection Bus)** — see `m8_phase2_selection.md`.
 **Design authority:** `docs/ui_design_framework.md` — the *why*. This doc set is the *how*.
 **Roadmap:** `docs/roadmap.md` § "M8 — UI Framework Rewrite".
 

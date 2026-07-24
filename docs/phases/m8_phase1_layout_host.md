@@ -1,8 +1,11 @@
 # M8 Phase 1 — Layout Host & Tabbed Dock
 
 **Milestone:** M8 — UI Framework Rewrite
-**Status:** COMPLETE — 2026-07-23 (compile + full test suite verified; manual bug-sweep in
-§Verification is pending a human pass with a display — this environment has none)
+**Status:** COMPLETE — 2026-07-23. Compile + full test suite verified in-session; user confirmed
+by manual playtest that the app runs correctly (panels, overlays, event log, tile inspector, and
+the cause-chain modal all functioning). Window resize specifically not exercised (app window is
+fixed-size, pre-existing and unrelated to M8 — see milestone doc); full resize-bug-sweep deferred
+until resizing is supported.
 **Depends on:** 8.0 (tokens, `WeScroll`, `PanelFrame`, `Tooltip`)
 **Worker model:** Sonnet (architectural — this is where the historic bugs die)
 **Framework refs:** `docs/ui_design_framework.md` §3 (Layer 4), §5 (workspace), §6 (panel contract)
