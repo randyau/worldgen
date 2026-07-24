@@ -18,16 +18,17 @@ using WorldEngine.Sim.WorldGen.Layers;
 using WorldEngine.UI.Rendering;
 using WorldEngine.UI.UI;
 using WorldEngine.UI.UI.Input;
+using WorldEngine.UI.UI.Kit;
+using WorldEngine.UI.UI.Layout;
+using WorldEngine.UI.UI.Present;
 using WorldEngine.UI.UI.Selection;
+using WorldEngine.UI.UI.Theme;
 
 namespace WorldEngine.UI;
 
 // MAP: MonoGame entry: update/draw loop, StateCache reads, input routing; H=civ history, W=watch panel, T=territory overlay.
 public sealed class Game1 : Game
 {
-    private const int SidebarWidth   = UI.Theme.UiTheme.SidebarWidth;   // must match sidebar VerticalStackPanel Width
-    private const int TimelineHeight  = 40;    // px reserved at bottom for timeline bar
-
     private GraphicsDeviceManager _graphics;
     private SpriteBatch? _spriteBatch;
     private Desktop? _desktop;
@@ -76,12 +77,24 @@ public sealed class Game1 : Game
     // M6.1.4 — unified selection model driving which contextual panel shows
     private SelectionState?  _selection;
     private SelectionRouter? _selectionRouter;
-
-    // M6.1.2 — unified panel show/hide + visible toggle bar
-    private PanelManager? _panelManager;
+    private ISelectionSink?  _selectionSink;
 
     // M6.3.1 — first-class filter panel above the event log
     private FilterPanel? _filterPanel;
+
+    // M8 8.1 — layout host: owns every screen rectangle, z-band, and hit-test; SimWorkspace is
+    // the tabbed right dock; ModalHost is the one modal surface. Replaces PanelManager/ToggleBar
+    // and the ad-hoc absolute Top/Left placement below (framework §3, §5).
+    private LayoutHost?    _layoutHost;
+    private InputRouter?   _inputRouter;
+    private SimWorkspace?  _workspace;
+    private ModalHost?     _modalHost;
+    private Presenter?     _presenter;
+    private CommandGateway? _commandGateway;
+    private WeVStack?      _topBarStack;
+    private Panel?         _topBarBoundWidget;
+    private WeScroll?      _dockScroll;
+    private Rectangle      _lastViewport;
 
     // Phase 3.6 — save / resume
     private const string SaveDir = "worldsave";
@@ -122,8 +135,14 @@ public sealed class Game1 : Game
         _eventLog     = new EventLogPanel();
         _filterPanel  = new FilterPanel();
         _overlayBar   = new OverlayBar(_commandQueue);
-        _panelManager = new PanelManager();
         _tileInspector = new TileInspectorPanel();
+
+        _layoutHost      = new LayoutHost();
+        _inputRouter     = new InputRouter();
+        _workspace       = new SimWorkspace();
+        _modalHost       = new ModalHost();
+        _presenter       = new Presenter();
+        _commandGateway  = new CommandGateway(_commandQueue);
 
         var rootPanel = BuildRootPanel();
         _desktop = new Desktop { Root = rootPanel };
@@ -145,6 +164,10 @@ public sealed class Game1 : Game
         StartNewWorldGen();
     }
 
+    // M8 8.1: composes the fixed region grid (framework §3.2, §5.1). Panel *content* never sets
+    // its own absolute geometry any more — the handful of Top/Left/Width/Height assignments here
+    // are the single, centralized place that turns LayoutHost region rectangles into on-screen
+    // widget bounds (see ApplyLayout). This is orchestration wiring, not panel geometry.
     private Panel BuildRootPanel()
     {
         var root = new Panel();
@@ -157,64 +180,44 @@ public sealed class Game1 : Game
         var mainUI = new Panel { Visible = false, Id = "MainUI" };
         _mainUI = mainUI;
 
-        // Time controls: full-width bar docked to the top
-        if (_timeControls is not null)
-        {
-            _timeControls.Root.HorizontalAlignment = HorizontalAlignment.Stretch;
-            _timeControls.Root.VerticalAlignment   = VerticalAlignment.Top;
-            mainUI.Widgets.Add(_timeControls.Root);
-        }
-
-        // Semi-transparent backing panel behind the left-side toolbar rows (BUG-2/3).
-        // Covers the two rows of buttons (overlay bar + panel toggle bar) that would
-        // otherwise float over the map with no visual separation.
-        var leftToolbarBacking = new Panel
+        // TopBar region content: time controls + overlay bar stacked, one backed strip.
+        _topBarStack = new WeVStack(UiTheme.Space.Xs);
+        if (_timeControls is not null) _topBarStack.Add(_timeControls.Root);
+        if (_overlayBar   is not null) _topBarStack.Add(_overlayBar.Root);
+        var topBarPanel = new Panel
         {
             HorizontalAlignment = HorizontalAlignment.Left,
             VerticalAlignment   = VerticalAlignment.Top,
-            Top     = UI.Theme.UiTheme.TopBarClearance,
-            Left    = 0,
-            Width   = 520,
-            Height  = 80,
-            Background = new Myra.Graphics2D.Brushes.SolidBrush(UI.Theme.UiTheme.PanelBackground)
+            Background = new Myra.Graphics2D.Brushes.SolidBrush(UiTheme.SurfacePanel)
         };
-        mainUI.Widgets.Add(leftToolbarBacking);
+        topBarPanel.Widgets.Add(_topBarStack.Root);
+        mainUI.Widgets.Add(topBarPanel);
+        _topBarBoundWidget = topBarPanel;
 
-        // Overlay control bar (M6.1.1): visible, labeled overlay toggles below the time bar.
-        if (_overlayBar is not null)
+        // RightDock region content: SimWorkspace's tabbed dock, scrolled (WeScroll reserves
+        // scrollbar width so dock content is never hidden behind it — framework §3.2).
+        _dockScroll = new WeScroll();
+        _dockScroll.Root.HorizontalAlignment = HorizontalAlignment.Left;
+        _dockScroll.Root.VerticalAlignment   = VerticalAlignment.Top;
+        mainUI.Widgets.Add(_dockScroll.Root);
+
+        // Float region content: summoned panels (God Mode, Help, Watch, Civ History).
+        if (_workspace is not null)
         {
-            _overlayBar.Root.HorizontalAlignment = HorizontalAlignment.Left;
-            _overlayBar.Root.VerticalAlignment   = VerticalAlignment.Top;
-            _overlayBar.Root.Top  = UI.Theme.UiTheme.TopBarClearance + 4;
-            _overlayBar.Root.Left = 4;
-            mainUI.Widgets.Add(_overlayBar.Root);
+            _workspace.FloatRoot.HorizontalAlignment = HorizontalAlignment.Left;
+            _workspace.FloatRoot.VerticalAlignment   = VerticalAlignment.Top;
+            mainUI.Widgets.Add(_workspace.FloatRoot);
         }
-
-        // Panel toggle bar (M6.1.2): visible show/hide affordances, below the overlay bar.
-        if (_panelManager is not null)
-        {
-            _panelManager.ToggleBar.HorizontalAlignment = HorizontalAlignment.Left;
-            _panelManager.ToggleBar.VerticalAlignment   = VerticalAlignment.Top;
-            _panelManager.ToggleBar.Top  = 84;   // clear the overlay bar
-            _panelManager.ToggleBar.Left = 4;
-            mainUI.Widgets.Add(_panelManager.ToggleBar);
-        }
-
-        // Sidebar: fixed 360px wide, docked to top-right, below time controls
-        var sidebar = new VerticalStackPanel
-        {
-            Width                = SidebarWidth,
-            Spacing              = 4,
-            HorizontalAlignment  = HorizontalAlignment.Right,
-            VerticalAlignment    = VerticalAlignment.Top,
-            Top                  = 44,   // clear the time controls bar (~40px tall)
-        };
-        if (_tileInspector is not null) sidebar.Widgets.Add(_tileInspector.Root);
-        if (_filterPanel   is not null) sidebar.Widgets.Add(_filterPanel.Root);
-        if (_eventLog      is not null) sidebar.Widgets.Add(_eventLog.Root);
-        mainUI.Widgets.Add(sidebar);
 
         root.Widgets.Add(mainUI);
+
+        // Modal region — one scrim + centered content surface, fills the whole root.
+        if (_modalHost is not null)
+        {
+            _modalHost.Root.HorizontalAlignment = HorizontalAlignment.Stretch;
+            _modalHost.Root.VerticalAlignment   = VerticalAlignment.Stretch;
+            root.Widgets.Add(_modalHost.Root);
+        }
 
         // Crash overlay — hidden until sim thread dies
         _crashLabel = new Label
@@ -240,6 +243,38 @@ public sealed class Game1 : Game
         root.Widgets.Add(_savingLabel);
 
         return root;
+    }
+
+    /// <summary>Recomputes region rectangles on resize and applies them to the region-hosted widgets.</summary>
+    private void ApplyLayout()
+    {
+        if (_layoutHost is null) return;
+        var vp = new Rectangle(0, 0, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height);
+        if (vp == _lastViewport) return;
+        _lastViewport = vp;
+        _layoutHost.SetViewport(vp);
+
+        var topBar = _layoutHost.Slot(RegionSlot.TopBar).Bounds;
+        if (_topBarBoundWidget is not null)
+        {
+            _topBarBoundWidget.Left = topBar.X; _topBarBoundWidget.Top = topBar.Y;
+            _topBarBoundWidget.Width = topBar.Width; _topBarBoundWidget.Height = topBar.Height;
+        }
+
+        var dock = _layoutHost.Slot(RegionSlot.RightDock).Bounds;
+        if (_dockScroll is not null && _workspace is not null)
+        {
+            _dockScroll.Root.Left = dock.X; _dockScroll.Root.Top = dock.Y;
+            _dockScroll.SetContent(_workspace.DockRoot, dock.Width, dock.Height);
+        }
+
+        var floatBounds = _layoutHost.Slot(RegionSlot.Float).Bounds;
+        if (_workspace is not null)
+        {
+            _workspace.FloatRoot.Left = 4;
+            _workspace.FloatRoot.Top  = topBar.Bottom + 4;
+        }
+        _ = floatBounds; // Float region is viewport-sized; content self-sizes, only anchored top-left.
     }
 
     private static WorldState GenerateWorld(WorldConfig cfg, SimConfig simCfg, IProgress<(string, float)> progress)
@@ -294,6 +329,8 @@ public sealed class Game1 : Game
             }
         }
 
+        ApplyLayout();
+
         var snapshot = _stateCache.Read();
         if (snapshot is not null && _simStarted)
         {
@@ -304,16 +341,18 @@ public sealed class Game1 : Game
                 _lastSnapshot = snapshot;
                 _timeControls?.Update(snapshot);
                 _overlayBar?.Update(snapshot.ActiveOverlay);
-                _panelManager?.Sync();   // reconcile toggle-bar buttons with self-closed panels
-                _eventLog?.Update(snapshot, _focusLens, _filterPanel?.CurrentFilter);
-                _tileInspector?.Update(snapshot.InspectedTile, snapshot);
+
+                if (_workspace is not null && _selectionSink is not null && _presenter is not null && _commandGateway is not null)
+                {
+                    _workspace.Bind(new PanelContext(snapshot, _selectionSink, _presenter, _commandGateway));
+                    _workspace.RefreshVisible();
+                }
 
                 // Phase 3.6: show/hide saving overlay
                 if (_savingLabel is not null)
                     _savingLabel.Visible = snapshot.IsSaving;
 
                 _spotlightCharacterId = snapshot.SpotlightCharacterId;
-                _charWatch?.Refresh(snapshot, _spotlightCharacterId, snapshot.InspectedTile?.Coord);
 
                 // Refresh timeline event buckets every 50 sim years
                 if (_timeline is not null && _historyQuery is not null
@@ -325,7 +364,7 @@ public sealed class Game1 : Game
                 }
             }
 
-            // Update GodMode panel context each frame
+            // Update GodMode panel context each frame (regardless of visibility, for pause gating)
             if (_godModePanel is not null)
             {
                 var watchChar = snapshot.WatchedCharacter;
@@ -343,7 +382,7 @@ public sealed class Game1 : Game
                 if (watchId != 0)
                 {
                     _commandQueue.Enqueue(new WatchCharacter(new EntityId(watchId)));
-                    _panelManager?.Show("watch");
+                    _workspace?.ShowSummoned("watch");
                 }
             }
 
@@ -363,11 +402,10 @@ public sealed class Game1 : Game
             }
 
             // Camera follow in spotlight mode (M7 Phase 7.4.3)
-            if (_spotlightCharacterId.HasValue && snapshot.WatchedCharacter?.Location is { } charLoc && _camera is not null)
+            if (_spotlightCharacterId.HasValue && snapshot.WatchedCharacter?.Location is { } charLoc && _camera is not null && _layoutHost is not null)
             {
-                int mapW = GraphicsDevice.Viewport.Width  - SidebarWidth;
-                int mapH = GraphicsDevice.Viewport.Height - TimelineHeight;
-                _camera.CenterOn(charLoc, mapW, mapH);
+                var mapBounds = _layoutHost.Slot(RegionSlot.MapCanvas).Bounds;
+                _camera.CenterOn(charLoc, mapBounds.Width, mapBounds.Height);
             }
 
             // Process pending event log interactions (consume-once pattern)
@@ -379,7 +417,7 @@ public sealed class Game1 : Game
                 if (_eventLog.ConsumePendingCiv() is long civId)
                 {
                     _selection?.SelectCiv(civId);
-                    _panelManager?.Show("civ");
+                    _workspace?.ShowSummoned("civ");
                 }
 
                 if (_eventLog.ConsumePendingCauseChain() is long evId)
@@ -469,68 +507,74 @@ public sealed class Game1 : Game
         _godModePanel = new GodModePanel(_commandQueue);
         _godModePanel.Desktop = _desktop;
 
-        if (_mainUI is not null && _desktop is not null)
+        // ── Help overlay (M6.1.3) ────────────────────────────────────────────
+        _helpOverlay = new HelpOverlayPanel();
+
+        // M8 8.1.6: register every panel with the SimWorkspace dock instead of the retired
+        // PanelManager/absolute-Top-Left placement. Placement here preserves each panel's
+        // pre-M8 keybind/click behavior exactly (Civ History and Watch stay keybind-toggled
+        // Summoned panels rather than the framework's illustrative Contextual mapping) —
+        // // DECISION: prioritizes zero behavior change during this structural-only phase;
+        // 8.3 can re-home them to Contextual once panels are rebuilt on the kit.
+        if (_workspace is not null)
         {
-            // Left-docked contextual panels sit below the overlay + panel-toggle bars.
-            const int leftPanelTop = 124;
+            _workspace.Register(new LegacyPanelAdapter(
+                "eventlog", "Event Log", new PanelPlacement(PanelPlacementKind.PinnedDefault),
+                _eventLog!.Root, ctx => _eventLog.Update(ctx.Snapshot, _focusLens, _filterPanel?.CurrentFilter)));
 
-            _charProfile.Root.HorizontalAlignment = HorizontalAlignment.Left;
-            _charProfile.Root.VerticalAlignment   = VerticalAlignment.Top;
-            _charProfile.Root.Top  = leftPanelTop;
-            _charProfile.Root.Left = 4;
-            _mainUI.Widgets.Add(_charProfile.Root);
+            _workspace.Register(new LegacyPanelAdapter(
+                "filter", "Filters", new PanelPlacement(PanelPlacementKind.PinnedDefault),
+                _filterPanel!.Root));
 
-            _civHistory.Root.HorizontalAlignment = HorizontalAlignment.Left;
-            _civHistory.Root.VerticalAlignment   = VerticalAlignment.Top;
-            _civHistory.Root.Top  = leftPanelTop;
-            _civHistory.Root.Left = 4;
-            _mainUI.Widgets.Add(_civHistory.Root);
+            _workspace.Register(new LegacyPanelAdapter(
+                "tile", "Tile Inspector", new PanelPlacement(PanelPlacementKind.Contextual, SelectionKind.Tile),
+                _tileInspector!.Root, ctx => _tileInspector.Update(ctx.Snapshot.InspectedTile, ctx.Snapshot)));
 
-            _charWatch.Root.HorizontalAlignment = HorizontalAlignment.Left;
-            _charWatch.Root.VerticalAlignment   = VerticalAlignment.Top;
-            _charWatch.Root.Top  = leftPanelTop;
-            _charWatch.Root.Left = 4;
-            _mainUI.Widgets.Add(_charWatch.Root);
+            _workspace.Register(new LegacyPanelAdapter(
+                "character", "Character", new PanelPlacement(PanelPlacementKind.Contextual, SelectionKind.Character),
+                _charProfile!.Root));
 
-            _godModePanel.Root.HorizontalAlignment = HorizontalAlignment.Left;
-            _godModePanel.Root.VerticalAlignment   = VerticalAlignment.Top;
-            _godModePanel.Root.Top  = leftPanelTop + 440;
-            _godModePanel.Root.Left = 4;
-            _mainUI.Widgets.Add(_godModePanel.Root);
+            _workspace.Register(new LegacyPanelAdapter(
+                "watch", "Watch", new PanelPlacement(PanelPlacementKind.Summoned), _charWatch!.Root,
+                ctx => _charWatch.Refresh(ctx.Snapshot, _spotlightCharacterId, ctx.Snapshot.InspectedTile?.Coord))
+            { OnShow = _charWatch.Show, OnHide = _charWatch.Hide, IsVisibleFunc = () => _charWatch.IsVisible });
 
-            // ── Help overlay (M6.1.3) — centered modal-style panel ───────────────
-            _helpOverlay = new HelpOverlayPanel();
-            _helpOverlay.Root.HorizontalAlignment = HorizontalAlignment.Center;
-            _helpOverlay.Root.VerticalAlignment   = VerticalAlignment.Center;
-            _mainUI.Widgets.Add(_helpOverlay.Root);
+            _workspace.Register(new LegacyPanelAdapter(
+                "civ", "Civ History", new PanelPlacement(PanelPlacementKind.Summoned), _civHistory!.Root)
+            { OnShow = _civHistory.Show, OnHide = _civHistory.Hide, IsVisibleFunc = () => _civHistory.IsVisible });
 
-            if (_desktop.Root is Panel rootPanel)
-                rootPanel.Widgets.Add(_timeline.ScrubLabel);
+            _workspace.Register(new LegacyPanelAdapter(
+                "godmode", "God Mode", new PanelPlacement(PanelPlacementKind.Summoned), _godModePanel!.Root)
+            { OnShow = _godModePanel.Show, OnHide = _godModePanel.Hide, IsVisibleFunc = () => _godModePanel.IsVisible });
+
+            _workspace.Register(new LegacyPanelAdapter(
+                "help", "Help (?)", new PanelPlacement(PanelPlacementKind.Summoned), _helpOverlay.Root)
+            { OnShow = _helpOverlay.Show, OnHide = _helpOverlay.Hide, IsVisibleFunc = () => _helpOverlay.IsVisible });
         }
 
-        // Register toggleable panels with the manager (restores remembered open/closed state).
-        _panelManager?.Register("civ",     "Civ History", _civHistory!);
-        _panelManager?.Register("watch",   "Watch",       _charWatch!);
-        _panelManager?.Register("help",    "Help (?)",    _helpOverlay!);
-        _panelManager?.Register("godmode", "God Mode",    _godModePanel!);
+        _godModePanel.Desktop = _desktop;
+
+        if (_desktop?.Root is Panel rootPanelForTimeline)
+            rootPanelForTimeline.Widgets.Add(_timeline.ScrubLabel);
 
         // Build the keybind registry now that panels/commands exist, then feed the help panel.
         BuildKeybinds();
         _helpOverlay?.Populate(_keybinds!);
 
-        // 6.4.2 — show first-run orientation once after the sim starts
-        if (_desktop is not null)
-            FirstRunOverlay.Show(_desktop);
+        // 6.4.2 — show first-run orientation once after the sim starts, via the ModalHost (8.1.5 proof case)
+        if (_modalHost is not null)
+            FirstRunOverlay.Show(_modalHost);
 
-        // Unified selection model (M6.1.4): one "selected thing" drives which panel shows.
+        // Unified selection model (M6.1.4): one "selected thing" drives which contextual tab shows.
         _selection = new SelectionState();
+        _selectionSink = new SelectionStateSink(_selection);
         _selectionRouter = new SelectionRouter(_selection)
         {
             // Tile inspection stays a sim command — the snapshot must carry tile detail.
-            OnTile      = coord => _commandQueue.Enqueue(new SetInspectedTile(coord)),
-            OnCharacter = id    => _charProfile?.ShowCharacter(id),
-            OnCiv       = id    => _civHistory?.ShowCiv(id),
-            OnClear     = ()    => _commandQueue.Enqueue(new SetInspectedTile(null)),
+            OnTile      = coord => { _commandQueue.Enqueue(new SetInspectedTile(coord)); _workspace?.SetSelection(SelectionKind.Tile); },
+            OnCharacter = id    => { _charProfile?.ShowCharacter(id); _workspace?.SetSelection(SelectionKind.Character); },
+            OnCiv       = id    => { _civHistory?.ShowCiv(id); _workspace?.ShowSummoned("civ"); },
+            OnClear     = ()    => { _commandQueue.Enqueue(new SetInspectedTile(null)); _workspace?.SetSelection(SelectionKind.None); },
         };
     }
 
@@ -550,11 +594,11 @@ public sealed class Game1 : Game
         reg.Register(Keys.R, "Resources overlay",  "Overlays", () => _commandQueue.Enqueue(new SetActiveOverlay(OverlayType.Resources)));
         reg.Register(Keys.G, "Magic overlay",      "Overlays", () => _commandQueue.Enqueue(new SetActiveOverlay(OverlayType.MagicIntensity)));
 
-        // Panels — route through the manager so keys and toggle-bar buttons share one path.
-        reg.Register(Keys.H,           "Civ history panel",     "Panels", () => _panelManager?.Toggle("civ"));
-        reg.Register(Keys.W,           "Character watch panel", "Panels", () => _panelManager?.Toggle("watch"));
-        reg.Register(Keys.OemQuestion, "This help",             "Panels", () => _panelManager?.Toggle("help"));
-        reg.Register(Keys.F2,         "God Mode panel",         "Panels", () => _panelManager?.Toggle("godmode"));
+        // Panels — route through the SimWorkspace dock so keys stay in lock-step with clicks.
+        reg.Register(Keys.H,           "Civ history panel",     "Panels", () => _workspace?.ToggleSummoned("civ"));
+        reg.Register(Keys.W,           "Character watch panel", "Panels", () => _workspace?.ToggleSummoned("watch"));
+        reg.Register(Keys.OemQuestion, "This help",             "Panels", () => _workspace?.ToggleSummoned("help"));
+        reg.Register(Keys.F2,         "God Mode panel",         "Panels", () => _workspace?.ToggleSummoned("godmode"));
 
         // World
         reg.Register(Keys.Space,  "Pause / resume",  "World", () => _commandQueue.Enqueue(new SetSimSpeed(
@@ -587,15 +631,15 @@ public sealed class Game1 : Game
             _camera.ZoomAt(new Vector2(mouse.X, mouse.Y), factor);
         }
 
-        // Left-click → inspect tile (only if click is in the map area, not the sidebar or Myra widgets)
-        if (mouse.LeftButton == ButtonState.Released && _prevMouse.LeftButton == ButtonState.Pressed)
+        // Left-click → inspect tile. The InputRouter is the single click-leak fix (framework
+        // §5.1/§3.2): a null route means no opaque Chrome/Modal region claimed the point, so
+        // it falls through to the map. MapCanvas itself is non-opaque and never claims input.
+        if (mouse.LeftButton == ButtonState.Released && _prevMouse.LeftButton == ButtonState.Pressed
+            && _layoutHost is not null && _inputRouter is not null)
         {
-            int   mapWidth  = GraphicsDevice.Viewport.Width - SidebarWidth;
-            int   mapHeight = GraphicsDevice.Viewport.Height - TimelineHeight;
-            bool inMapArea  = mouse.X >= 0 && mouse.X < mapWidth
-                           && mouse.Y >= 0 && mouse.Y < mapHeight;
-            bool overGui   = _desktop?.IsMouseOverGUI == true;
-            if (inMapArea && !overGui)
+            var routed = _inputRouter.Route(new Point(mouse.X, mouse.Y), _layoutHost);
+            bool overGui = _desktop?.IsMouseOverGUI == true;
+            if (routed is null && !overGui)
             {
                 var coord = _camera.ScreenToTile(new Vector2(mouse.X, mouse.Y));
                 // Discard clicks that land outside the valid tile grid (zoomed-out empty space)
@@ -615,10 +659,9 @@ public sealed class Game1 : Game
         _keybinds?.Process(kb, _prevKb);
 
         // Timeline scrubber
-        if (_timeline is not null)
+        if (_timeline is not null && _layoutHost is not null)
         {
-            var vp = GraphicsDevice.Viewport;
-            var timelineRect = new Rectangle(0, vp.Height - TimelineHeight, vp.Width - SidebarWidth, TimelineHeight);
+            var timelineRect = _layoutHost.Slot(RegionSlot.Timeline).Bounds;
             _timeline.Update(snapshot.CurrentYear, mouse, _prevMouse, timelineRect);
         }
     }
@@ -685,21 +728,11 @@ public sealed class Game1 : Game
         _timeline?.Dispose();
         _timeline = null;
 
-        // Capture which managed panels were open (into remembered state) and clear the toggle
-        // bar before detaching panels, so the next world restores the same open/closed set.
-        _panelManager?.ResetRegistrations();
+        // Drop all dock/float registrations so the next StartSim rebuilds them from scratch
+        // without stale roots accumulating (M8 8.1: replaces PanelManager.ResetRegistrations).
+        _workspace?.Reset();
         _keybinds = null;   // rebuilt by StartSim against the fresh panels
 
-        // Hide and detach old narrative/watch panels from the widget tree so
-        // StartSim can add fresh ones without stale roots accumulating.
-        if (_mainUI is not null)
-        {
-            if (_charProfile  is not null) _mainUI.Widgets.Remove(_charProfile.Root);
-            if (_civHistory   is not null) _mainUI.Widgets.Remove(_civHistory.Root);
-            if (_charWatch    is not null) _mainUI.Widgets.Remove(_charWatch.Root);
-            if (_helpOverlay  is not null) _mainUI.Widgets.Remove(_helpOverlay.Root);
-            if (_godModePanel is not null) _mainUI.Widgets.Remove(_godModePanel.Root);
-        }
         _commandQueue.Enqueue(new ExitSpotlight());
         _spotlightCharacterId = null;
         _godModePanel = null;
@@ -797,21 +830,20 @@ public sealed class Game1 : Game
         GraphicsDevice.Clear(Color.Black);
 
         var snapshot = _stateCache.Read();
-        if (_simStarted && snapshot is not null && _tileRenderer is not null && _spriteBatch is not null)
+        if (_simStarted && snapshot is not null && _tileRenderer is not null && _spriteBatch is not null && _layoutHost is not null)
         {
-            var vp = GraphicsDevice.Viewport;
-
-            // Scissor-clip tile rendering to the map area (leave sidebar + timeline bar uncovered)
-            GraphicsDevice.ScissorRectangle = new Rectangle(0, 0, vp.Width - SidebarWidth, vp.Height - TimelineHeight);
+            // Scissor-clip tile rendering to the MapCanvas region (framework §3.2: the region
+            // that owns the rectangle also owns what draws inside it — chrome above it is opaque
+            // anyway, so this is a clip, not a coordinate shift; nothing moves on screen).
+            GraphicsDevice.ScissorRectangle = _layoutHost.Slot(RegionSlot.MapCanvas).Bounds;
             _spriteBatch.Begin(rasterizerState: new RasterizerState { ScissorTestEnable = true });
             _tileRenderer.Draw(_spriteBatch, snapshot);
             _spriteBatch.End();
 
-
             // Timeline bar — drawn below the map, no scissor
             if (_timeline is not null)
             {
-                var timelineRect = new Rectangle(0, vp.Height - TimelineHeight, vp.Width - SidebarWidth, TimelineHeight);
+                var timelineRect = _layoutHost.Slot(RegionSlot.Timeline).Bounds;
                 _spriteBatch.Begin();
                 _timeline.Draw(_spriteBatch, timelineRect, snapshot.CurrentYear);
                 _spriteBatch.End();

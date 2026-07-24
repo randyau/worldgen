@@ -156,6 +156,7 @@ One-line description of every non-trivial source file. Check here before running
 - `RuinRecord.cs` — Records the history of a tile that once held a settlement. Persists when a settlement is destroyed or abandoned; accumulates each time the same tile cycles.
 - `SimEvent.cs` — An event in the simulation history log. Immutable once written. Created by Phase 7 (EventGeneration) after enriching a PendingEvent.
 - `SnapshotBuilder.cs` — Constructs a WorldSnapshot from WorldState. Called by the sim thread at the end of each tick. Only touches WorldState — never called from the UI thread.
+- `SpotlightIntent.cs` — Current spotlight player intent: what the player wants the spotlit character to do.
 - `StateCache.cs` — Thread-safe snapshot bridge. Sim thread calls Commit() after each tick. UI thread calls Read() every frame. Lock held for microseconds only.
 - `TileDisplayData.cs` — Per-tile rendering data in WorldSnapshot.AllTiles (index: y * WorldTileWidth + x). Contains effective (current) values, not genesis base values. Created by the sim thread for the full world grid each tick. HasActiveDisaster is computed from ActiveTileDisasters registry.
 - `TileImprovement.cs` — ImprovementType enum (Farm/Mine/etc.) and TileImprovement record for territory-based improvements (M3.0).
@@ -212,6 +213,26 @@ One-line description of every non-trivial source file. Check here before running
 - `TimeControlsPanel.cs` — Top toolbar: speed buttons, year/season label.
 - `TimelineBar.cs` — Timeline scrubber bar drawn via SpriteBatch at the bottom of the map area. Shows event density heatmap and allows scrubbing to any historical year. The ScrubLabel is a Myra Label — add it to the root overlay panel in Game1.
 - `WorldGenScreen.cs` — Full-screen world-gen progress overlay with completion state and "Start Simulation" button.
+
+## WorldEngine.UI/UI/Kit/
+- `EntityLink.cs` — Layer 2 — clickable entity reference; every nameable thing should render through this.
+- `IWeWidget.cs` — Layer 1 — common surface so Layer 2 composites can nest any We* widget.
+- `Meter.cs` — Layer 2 — labeled n-segment bar with numeric readout, serves needs/traits/health meters.
+- `SectionHeader.cs` — Layer 2 — tokenized section divider, replaces the AddLine("--- X ---") idiom.
+- `StatRow.cs` — Layer 2 — aligned label/value row, replaces ad-hoc "Label: value" AddLine calls.
+- `Tooltip.cs` — Standard hover tooltip (framework §4.2/§7.3): consistent delay, cursor-follow, and viewport clamping so no tooltip can render off-screen (the timeline tooltip overflow bug).
+- `WeDropdown.cs` — Layer 1 — typed dropdown wrapping the ComboBox compat shim.
+- `WeIcon.cs` — Icon glyph with a mandatory tooltip/label (framework §4.1: "never icon-only for anything non-obvious"). No icon font is currently pinned in the project — renders a short text glyph until one is added.
+- `WeList.cs` — Vertical list of rows built from a data source. Non-virtualized — fine at current scale.
+- `WeScroll.cs` — Scroll container wrapping <see cref="ScrollViewer"/>. Content width is always <c>available width - UiTheme.ScrollReserve</c>, and the viewer clamps to its assigned height rather than growing past it — the single fix for the scrollbar-obstruction bug (framework §3.2).
+- `WeStack.cs` — Layer 1 — tokenized-spacing vertical/horizontal stacks wrapping Myra StackPanels.
+- `WeText.cs` — The only way to render text in the M8 kit. Wraps <see cref="Label"/> and accepts only tokenized <see cref="UiTheme.TypographyRole"/> / <see cref="UiTheme.ColorRole"/> — a caller cannot pass a raw <see cref="Microsoft.Xna.Framework.Color"/> (framework §4.1).
+
+## WorldEngine.UI/UI/Present/
+- `Presenter.cs` — Converts sim data to display strings for every panel and the event log (framework §8.1, P7). No panel formats sim internals itself; unit thresholds and enum→prose mappings live here so they can be retuned in one place. Instance-based (not static) as a localization seam.
+
+## WorldEngine.UI/UI/Selection/
+- `EntityRef.cs` — Small reference to a selectable entity — the payload EntityLink hands to ISelectionSink.
 
 ## WorldEngine.UI/UI/Theme/
 - `PanelChrome.cs` — Builds the standard docked-panel chrome — a bordered, padded container with a title bar and optional <c>[Close]</c> button — so every panel shares one look instead of each re-inventing its own header/close/background (M6 Epic 6.2.1).

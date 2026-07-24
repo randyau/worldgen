@@ -1,7 +1,8 @@
 # M8 Phase 1 — Layout Host & Tabbed Dock
 
 **Milestone:** M8 — UI Framework Rewrite
-**Status:** NOT STARTED
+**Status:** COMPLETE — 2026-07-23 (compile + full test suite verified; manual bug-sweep in
+§Verification is pending a human pass with a display — this environment has none)
 **Depends on:** 8.0 (tokens, `WeScroll`, `PanelFrame`, `Tooltip`)
 **Worker model:** Sonnet (architectural — this is where the historic bugs die)
 **Framework refs:** `docs/ui_design_framework.md` §3 (Layer 4), §5 (workspace), §6 (panel contract)

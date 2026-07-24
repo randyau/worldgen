@@ -1,5 +1,6 @@
 using Microsoft.Xna.Framework;
 using Myra.Graphics2D.UI;
+using WorldEngine.UI.UI.Layout;
 using WorldEngine.UI.UI.Theme;
 
 namespace WorldEngine.UI.UI;
@@ -18,14 +19,15 @@ public static class FirstRunOverlay
     public static bool ShouldShow => !File.Exists(_flagFile);
 
     /// <summary>
-    /// Shows the orientation dialog on the given desktop and marks it as seen when dismissed.
-    /// Call once after the simulation starts and the desktop is ready.
+    /// Shows the orientation dialog via the shared <see cref="ModalHost"/> (M8 8.1.5 proof case)
+    /// and marks it as seen when dismissed. Call once after the simulation starts.
     /// </summary>
-    public static void Show(Desktop desktop)
+    public static void Show(ModalHost modal)
     {
         if (!ShouldShow) return;
 
-        var content = new VerticalStackPanel { Spacing = 6 };
+        var content = new VerticalStackPanel { Spacing = 6, Width = 460 };
+        content.Widgets.Add(new Label { Text = "Getting Started", TextColor = UiTheme.HeaderText });
 
         void AddTip(string icon, string text)
         {
@@ -35,11 +37,7 @@ public static class FirstRunOverlay
             content.Widgets.Add(row);
         }
 
-        content.Widgets.Add(new Label
-        {
-            Text      = "Welcome to World Engine",
-            TextColor = UiTheme.HeaderText
-        });
+        content.Widgets.Add(new Label { Text = "Welcome to World Engine", TextColor = UiTheme.BodyText });
         content.Widgets.Add(new Label { Text = " ", Height = 4 });
 
         AddTip("▶", "Time Controls (top bar) — pause, play, or fast-forward history.");
@@ -58,23 +56,9 @@ public static class FirstRunOverlay
 
         content.Widgets.Add(dismissBtn);
 
-        var window = new Window
-        {
-            Title   = "Getting Started",
-            Content = content,
-            Width   = 460,
-            Height  = 290
-        };
+        dismissBtn.Click += (_, _) => modal.Close();
 
-        dismissBtn.Click += (_, _) =>
-        {
-            window.Close();
-            MarkSeen();
-        };
-
-        window.Closed += (_, _) => MarkSeen();
-
-        window.ShowModal(desktop);
+        modal.Show(content, onClose: MarkSeen);
     }
 
     private static void MarkSeen()

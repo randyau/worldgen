@@ -205,9 +205,10 @@ public class ArchitectureRuleTests
 
     // ─────────────────────────────────────────────────────────────────
     // Rule (e) — M8 Phase 0: Kit isolation.
-    //   NoMyraOutsideKit: `UI/Present/` and `UI/Layout/` (folders that exist so far) must not
-    //   reference Myra. The full ban (no `UI/Panels/*` outside `UI/Kit/`) lands in 8.3 when
-    //   `UI/Panels/` exists — enforced-fully-in-8.3.
+    //   NoMyraOutsideKit: `UI/Present/` (the only folder in scope so far — panels and the Layer 4
+    //   host legitimately consume Myra Widget types) must not reference Myra. The full ban (no
+    //   Myra outside `UI/Kit/` anywhere, including `UI/Panels/`/`UI/Layout/`) lands in 8.3 when
+    //   panels are rebuilt on the kit — enforced-fully-in-8.3 (framework §3.1, phase 8.0.5 doc).
     //   PresenterHasNoMyra: `UI/Present/` has no Myra usings and no XNA Color literals.
     // ─────────────────────────────────────────────────────────────────
 
@@ -215,17 +216,14 @@ public class ArchitectureRuleTests
     public void NoMyraOutsideKit()
     {
         var violations = new List<string>();
-        foreach (var scanDir in new[] { "Present", "Layout" })
+        foreach (var file in GetUiSourceFiles("Present"))
         {
-            foreach (var file in GetUiSourceFiles(scanDir))
-            {
-                if (File.ReadAllText(file).Contains("using Myra"))
-                    violations.Add(Path.GetFileName(file));
-            }
+            if (File.ReadAllText(file).Contains("using Myra"))
+                violations.Add(Path.GetFileName(file));
         }
         violations.Should().BeEmpty(
-            because: "UI/Present and UI/Layout must not reference Myra directly (M8 framework §3.1); " +
-                     "only UI/Kit is allowed to see Myra (full panel ban lands in 8.3)");
+            because: "UI/Present must not reference Myra directly (M8 framework §3.1); " +
+                     "only UI/Kit is allowed to see Myra (full ban across Layout/Panels lands in 8.3)");
     }
 
     [Fact]
@@ -242,6 +240,28 @@ public class ArchitectureRuleTests
         }
         violations.Should().BeEmpty(
             because: "Presenter is a pure formatting layer with no Myra/XNA dependency (M8 framework §8.1)");
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // Rule (f) — M8 Phase 1: no absolute Myra geometry in the Layout host itself. Game1 (the
+    // orchestrator, per rule (d)'s existing exclusion) is where the small, centralized set of
+    // region→widget bounds assignments live — that's the point of the host, not a violation of it.
+    // Full ban on UI/Panels/ setting absolute geometry lands in 8.3.
+    // ─────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void PanelsSetNoAbsoluteGeometry()
+    {
+        var violations = new List<string>();
+        var pattern = new System.Text.RegularExpressions.Regex(@"\.(Top|Left|Width|Height)\s*=");
+        foreach (var file in GetUiSourceFiles("Layout"))
+        {
+            foreach (var match in pattern.Matches(File.ReadAllText(file)).Cast<System.Text.RegularExpressions.Match>())
+                violations.Add($"{Path.GetFileName(file)}: {match.Value}");
+        }
+        violations.Should().BeEmpty(
+            because: "UI/Layout host code computes Region.Bounds rectangles, not per-widget absolute " +
+                     "geometry (M8 framework §3.2); the region→widget application lives in Game1 (orchestration)");
     }
 
     private static IEnumerable<string> GetUiSourceFiles(string subfolder)
