@@ -1,7 +1,7 @@
 # M8 Phase 0 — Design Tokens & Component Kit
 
 **Milestone:** M8 — UI Framework Rewrite
-**Status:** NOT STARTED
+**Status:** COMPLETE — 2026-07-23
 **Depends on:** nothing (first phase)
 **Worker model:** Sonnet (foundation — every later phase builds on this)
 **Roadmap:** `docs/roadmap.md` § M8, phase 8.0

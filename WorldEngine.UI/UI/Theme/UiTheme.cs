@@ -29,6 +29,72 @@ public static class UiTheme
     public static readonly Color PanelBackground = new Color(20, 22, 28) * 0.92f;
     public static readonly Color PanelBorder     = new(70, 80, 95);
 
+    // ── M8 color roles (framework §2.1) ─────────────────────────────────────
+    // Canonical role names; several alias the pre-M8 members above during migration.
+    public static readonly Color TextPrimary      = BodyText;
+    public static readonly Color TextSecondary    = MutedText;
+    public static readonly Color TextMuted        = Color.Gray;
+    public static readonly Color TextDisabled     = DisabledText;
+    public static readonly Color TextHeader       = HeaderText;
+    public static readonly Color AccentInteractive = Accent;
+    /// <summary>God Mode authoring surfaces — gold/amber (framework §7.7).</summary>
+    public static readonly Color AccentGodMode    = new(230, 180, 60);
+    /// <summary>Spotlight surfaces — cyan (framework §7.7).</summary>
+    public static readonly Color AccentSpotlight  = new(80, 220, 220);
+    public static readonly Color StatePositive    = Color.LightGreen;
+    public static readonly Color StateWarning     = new(230, 180, 60);
+    public static readonly Color StateNegative    = new(230, 90, 70);
+    public static readonly Color SurfacePanel     = PanelBackground;
+    public static readonly Color SurfaceRaised    = new Color(32, 35, 43) * 0.95f;
+    public static readonly Color SurfaceModalScrim = new Color(0, 0, 0) * 0.55f;
+    public static readonly Color BorderPanel      = PanelBorder;
+    public static readonly Color BorderFocus      = Accent;
+
+    // ── Typography roles (framework §2.2) ───────────────────────────────────
+    /// <summary>Named text roles; Layer 1 (<c>UI/Kit/WeText.cs</c>) maps these to Myra font/scale.</summary>
+    public enum TypographyRole { Display, Title, SectionHeader, Body, BodyStrong, Caption, Mono }
+
+    /// <summary>Named color roles; Layer 1 widgets accept only this, never a raw <see cref="Color"/>.</summary>
+    public enum ColorRole
+    {
+        TextPrimary, TextSecondary, TextMuted, TextDisabled, TextHeader,
+        AccentInteractive, AccentGodMode, AccentSpotlight,
+        StatePositive, StateWarning, StateNegative
+    }
+
+    /// <summary>Resolves a <see cref="ColorRole"/> to its current <see cref="Color"/> value.</summary>
+    public static Color Resolve(ColorRole role) => role switch
+    {
+        ColorRole.TextPrimary       => TextPrimary,
+        ColorRole.TextSecondary     => TextSecondary,
+        ColorRole.TextMuted         => TextMuted,
+        ColorRole.TextDisabled      => TextDisabled,
+        ColorRole.TextHeader        => TextHeader,
+        ColorRole.AccentInteractive => AccentInteractive,
+        ColorRole.AccentGodMode     => AccentGodMode,
+        ColorRole.AccentSpotlight   => AccentSpotlight,
+        ColorRole.StatePositive     => StatePositive,
+        ColorRole.StateWarning      => StateWarning,
+        ColorRole.StateNegative     => StateNegative,
+        _                           => TextPrimary
+    };
+
+    // ── Spacing ramp (framework §2.3) ───────────────────────────────────────
+    public static class Space
+    {
+        public const int Xs = 2;
+        public const int Sm = 4;
+        public const int Md = 8;
+        public const int Lg = 12;
+        public const int Xl = 16;
+    }
+
+    // ── Z-bands (framework §2.4 / §5.1; consumed by the layout host in 8.1) ─
+    public enum ZBand { Base = 0, Chrome = 100, Float = 200, Transient = 300, Modal = 400 }
+
+    /// <summary>Pixels reserved for the scrollbar so content never hides behind it (framework §3.2).</summary>
+    public const int ScrollReserve = 16;
+
     // ── Metrics ──────────────────────────────────────────────────────────────
     /// <summary>Width reserved for the right-hand sidebar (map area = viewport - this).</summary>
     public const int SidebarWidth = 360;

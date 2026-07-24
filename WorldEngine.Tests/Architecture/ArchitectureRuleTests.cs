@@ -204,6 +204,56 @@ public class ArchitectureRuleTests
     }
 
     // ─────────────────────────────────────────────────────────────────
+    // Rule (e) — M8 Phase 0: Kit isolation.
+    //   NoMyraOutsideKit: `UI/Present/` and `UI/Layout/` (folders that exist so far) must not
+    //   reference Myra. The full ban (no `UI/Panels/*` outside `UI/Kit/`) lands in 8.3 when
+    //   `UI/Panels/` exists — enforced-fully-in-8.3.
+    //   PresenterHasNoMyra: `UI/Present/` has no Myra usings and no XNA Color literals.
+    // ─────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void NoMyraOutsideKit()
+    {
+        var violations = new List<string>();
+        foreach (var scanDir in new[] { "Present", "Layout" })
+        {
+            foreach (var file in GetUiSourceFiles(scanDir))
+            {
+                if (File.ReadAllText(file).Contains("using Myra"))
+                    violations.Add(Path.GetFileName(file));
+            }
+        }
+        violations.Should().BeEmpty(
+            because: "UI/Present and UI/Layout must not reference Myra directly (M8 framework §3.1); " +
+                     "only UI/Kit is allowed to see Myra (full panel ban lands in 8.3)");
+    }
+
+    [Fact]
+    public void PresenterHasNoMyra()
+    {
+        var violations = new List<string>();
+        foreach (var file in GetUiSourceFiles("Present"))
+        {
+            string text = File.ReadAllText(file);
+            if (text.Contains("using Myra"))
+                violations.Add($"{Path.GetFileName(file)}: uses Myra");
+            if (text.Contains("Microsoft.Xna.Framework.Color") || text.Contains("using Microsoft.Xna.Framework"))
+                violations.Add($"{Path.GetFileName(file)}: references XNA Color");
+        }
+        violations.Should().BeEmpty(
+            because: "Presenter is a pure formatting layer with no Myra/XNA dependency (M8 framework §8.1)");
+    }
+
+    private static IEnumerable<string> GetUiSourceFiles(string subfolder)
+    {
+        string dir = Path.Combine(RepoRoot, "WorldEngine.UI", "UI", subfolder);
+        return Directory.Exists(dir) ? Directory.GetFiles(dir, "*.cs", SearchOption.AllDirectories) : Enumerable.Empty<string>();
+    }
+
+    private static string RepoRoot =>
+        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
+
+    // ─────────────────────────────────────────────────────────────────
     // Helpers
     // ─────────────────────────────────────────────────────────────────
 

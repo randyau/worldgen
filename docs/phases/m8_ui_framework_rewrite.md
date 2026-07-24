@@ -30,7 +30,7 @@ Cross-cutting: SelectionBus · Presenter · CommandGateway · Keybind/CommandReg
 
 | Phase | Doc | Depends on | Worker | One-line deliverable |
 |-------|-----|-----------|--------|----------------------|
-| 8.0 | `m8_phase0_tokens_kit.md` | — | Sonnet | Tokens, Layer 1–2 kit, Presenter, arch tests. No visible change. |
+| 8.0 | `m8_phase0_tokens_kit.md` | — | Sonnet | Tokens, Layer 1–2 kit, Presenter, arch tests. No visible change. **DONE 2026-07-23.** |
 | 8.1 | `m8_phase1_layout_host.md` | 8.0 | Sonnet | Regions/z/hit-test host + tabbed dock; port panels as-is. |
 | 8.2 | `m8_phase2_selection.md` | 8.1 | Sonnet | One `SelectionBus`; delete consume-once polling. |
 | 8.3 | `m8_phase3_panel_migration.md` | 8.2 (8.3.6 also 8.4) | Haiku* | Rebuild each panel on the kit, one story per panel. |
