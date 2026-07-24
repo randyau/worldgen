@@ -490,10 +490,7 @@ public sealed class Game1 : Game
             _workspace.Register(_tileInspector!);
             _workspace.Register(_charProfile!);
             _workspace.Register(_charWatch!);
-
-            _workspace.Register(new LegacyPanelAdapter(
-                "civ", "Civ History", new PanelPlacement(PanelPlacementKind.Summoned), _civHistory!.Root)
-            { OnShow = _civHistory.Show, OnHide = _civHistory.Hide, IsVisibleFunc = () => _civHistory.IsVisible });
+            _workspace.Register(_civHistory!);
 
             _workspace.Register(new LegacyPanelAdapter(
                 "godmode", "God Mode", new PanelPlacement(PanelPlacementKind.Summoned), _godModePanel!.Root)
