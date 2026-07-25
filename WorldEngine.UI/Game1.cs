@@ -53,6 +53,7 @@ public sealed class Game1 : Game
     private TimeControlsPanel? _timeControls;
     private EventLogPanel? _eventLog;
     private OverlayBar? _overlayBar;
+    private PanelMenuBar? _panelMenuBar;
     private TileInspectorPanel? _tileInspector;
     private Panel? _mainUI;       // reference to the mainUI panel for post-sim panel injection
 
@@ -151,6 +152,7 @@ public sealed class Game1 : Game
         _presenter       = new Presenter();
         _commandGateway  = new CommandGateway(_commandQueue);
         _selectionBus    = new SelectionBus();
+        _panelMenuBar    = new PanelMenuBar(_workspace, _commandQueue);
 
         var rootPanel = BuildRootPanel();
         _desktop = new Desktop { Root = rootPanel };
@@ -192,6 +194,7 @@ public sealed class Game1 : Game
         _topBarStack = new WeVStack(UiTheme.Space.Xs);
         if (_timeControls is not null) _topBarStack.Add(_timeControls.Root);
         if (_overlayBar   is not null) _topBarStack.Add(_overlayBar.Root);
+        if (_panelMenuBar is not null) _topBarStack.Add(_panelMenuBar.Root);
         var topBarPanel = new Panel
         {
             HorizontalAlignment = HorizontalAlignment.Left,
@@ -349,6 +352,7 @@ public sealed class Game1 : Game
                 _lastSnapshot = snapshot;
                 _timeControls?.Update(snapshot);
                 _overlayBar?.Update(snapshot.ActiveOverlay);
+                _panelMenuBar?.Update(snapshot.SpotlightCharacterId.HasValue ? snapshot.WatchedCharacter?.Name : null);
 
                 _charWatch?.SetContext(snapshot.SpotlightCharacterId, snapshot.InspectedTile?.Coord);
                 _eventLog?.SetContext(_focusLens, _filterPanel?.CurrentFilter);

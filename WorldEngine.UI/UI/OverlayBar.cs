@@ -1,28 +1,28 @@
 using Myra.Graphics2D.UI;
 using WorldEngine.Sim.Commands;
 using WorldEngine.Sim.Core;
+using WorldEngine.UI.UI.Kit;
 using WorldEngine.UI.UI.Theme;
 
 namespace WorldEngine.UI.UI;
 
 /// <summary>
-/// Visible, labeled overlay toolbar (M6 Epic 6.1.1). One button per <see cref="OverlayType"/>;
-/// each enqueues <c>SetActiveOverlay</c> — the same command the accelerator keys fire — and the
-/// active overlay is highlighted from <c>WorldSnapshot.ActiveOverlay</c>. Restores Temperature,
-/// which had been dropped off the keyboard.
+/// Top-bar "Map Display" control (M6 Epic 6.1.1; collapsed to a dropdown per playtest feedback —
+/// was a 7-button, 2-row grid). Selecting an overlay enqueues <c>SetActiveOverlay</c> — the same
+/// command the accelerator keys fire — and the dropdown reflects <c>WorldSnapshot.ActiveOverlay</c>.
 /// </summary>
-// MAP: Labeled overlay toggle bar; enqueues SetActiveOverlay and highlights the active overlay.
+// MAP: Top-bar Map Display dropdown; enqueues SetActiveOverlay and reflects the active overlay.
 public sealed class OverlayBar
 {
-    public readonly VerticalStackPanel Root;
-    private readonly Dictionary<OverlayType, TextButton> _buttons = new();
-    private OverlayType _active = (OverlayType)(-1);   // force first Update to apply
+    public readonly Widget Root;
+    private readonly WeDropdown<OverlayType> _dropdown = new();
+    private OverlayType _active = (OverlayType)(-1); // force first Update to apply
 
     private static readonly (OverlayType Type, string Label)[] Overlays =
     {
         (OverlayType.Biome,          "Biome"),
         (OverlayType.Elevation,      "Elevation"),
-        (OverlayType.Temperature,    "Temp"),
+        (OverlayType.Temperature,    "Temperature"),
         (OverlayType.Moisture,       "Moisture"),
         (OverlayType.Resources,      "Resources"),
         (OverlayType.MagicIntensity, "Magic"),
@@ -31,29 +31,22 @@ public sealed class OverlayBar
 
     public OverlayBar(CommandQueue queue)
     {
-        var row1 = new HorizontalStackPanel { Spacing = UiTheme.PanelSpacing };
-        var row2 = new HorizontalStackPanel { Spacing = UiTheme.PanelSpacing };
-        Root = new VerticalStackPanel { Spacing = UiTheme.PanelSpacing };
-        Root.Widgets.Add(row1);
-        Root.Widgets.Add(row2);
+        var row = new WeHStack(UiTheme.Space.Sm);
+        row.Add(new WeText("Map:"));
 
-        for (int i = 0; i < Overlays.Length; i++)
-        {
-            var (type, label) = Overlays[i];
-            var captured = type;
-            var btn = new TextButton { Text = label };
-            btn.Click += (_, _) => queue.Enqueue(new SetActiveOverlay(captured));
-            _buttons[type] = btn;
-            (i < 4 ? row1 : row2).Widgets.Add(btn);
-        }
+        _dropdown.Render(t => Overlays.First(o => o.Type == t).Label);
+        _dropdown.SetItems(Overlays.Select(o => o.Type));
+        _dropdown.OnChanged += t => queue.Enqueue(new SetActiveOverlay(t));
+        row.Add(_dropdown);
+
+        Root = row.Root;
     }
 
-    /// <summary>Highlights the button for the currently active overlay (called each snapshot).</summary>
+    /// <summary>Reflects the currently active overlay in the dropdown (called each snapshot).</summary>
     public void Update(OverlayType active)
     {
         if (active == _active) return;
         _active = active;
-        foreach (var (type, btn) in _buttons)
-            btn.TextColor = type == active ? UiTheme.Accent : UiTheme.BodyText;
+        _dropdown.Selected = active;
     }
 }

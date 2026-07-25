@@ -126,6 +126,10 @@ public sealed class SimWorkspace
             toggleable.Show();
     }
 
+    /// <summary>True if the given Summoned panel is currently visible — for highlighting a menu button.</summary>
+    public bool IsSummonedVisible(string id) =>
+        _panels.TryGetValue(id, out var panel) && panel is IToggleablePanel { IsVisible: true };
+
     private bool TryGetToggleable(string id, out IToggleablePanel? toggleable)
     {
         toggleable = null;
