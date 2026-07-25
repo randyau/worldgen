@@ -51,12 +51,21 @@ public sealed class PanelMenuBar
         row.Widgets.Add(btn);
     }
 
-    /// <summary>Refreshes button highlight + Spotlight status (called each snapshot).</summary>
-    public void Update(string? spotlightCharacterName)
+    /// <summary>
+    /// Refreshes which buttons are highlighted open/closed. UI interaction state, not sim data —
+    /// call every render frame regardless of sim tick cadence (a click must highlight instantly,
+    /// including while paused; see the SimWorkspace.SyncVisibility bug note for the same class of
+    /// issue this mirrors).
+    /// </summary>
+    public void RefreshHighlights()
     {
         foreach (var (id, btn) in _buttons)
             btn.TextColor = _workspace.IsSummonedVisible(id) ? UiTheme.Accent : UiTheme.BodyText;
+    }
 
+    /// <summary>Reflects Spotlight state — genuine sim data, fine to update only on a fresh snapshot.</summary>
+    public void UpdateSpotlightStatus(string? spotlightCharacterName)
+    {
         bool spotlightActive = spotlightCharacterName is not null;
         _spotlightLabel.Visible   = spotlightActive;
         _exitSpotlightBtn.Visible = spotlightActive;

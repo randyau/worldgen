@@ -53,29 +53,35 @@ public sealed class SimWorkspace
         foreach (var panel in _panels.Values) panel.Bind(ctx);
     }
 
-    /// <summary>Refreshes pinned panels, the active contextual panel, and any visible summoned panel.</summary>
+    /// <summary>Refreshes pinned panels, the active contextual panel, and any visible summoned panel.
+    /// Only call when a fresh snapshot arrives — content Refresh() reads the bound snapshot.</summary>
     public void RefreshVisible()
     {
         foreach (var panel in _panels.Values)
-        {
-            bool visible = panel.Placement.Kind switch
-            {
-                PanelPlacementKind.PinnedDefault => true,
-                PanelPlacementKind.Contextual     => panel.Id == _activeContextualId,
-                PanelPlacementKind.Summoned       => panel is IToggleablePanel { IsVisible: true },
-                _                                  => false
-            };
-
-            // Summoned panels can call Hide() from inside their own [Close] button (PanelFrame's
-            // OnClose), not just through ToggleSummoned/ShowSummoned — sync the built widget's
-            // Visible here every frame so every Hide() path actually hides it (see the bug note
-            // on TryGetToggleable).
-            if (panel.Placement.Kind == PanelPlacementKind.Summoned && _built.TryGetValue(panel.Id, out var widget))
-                widget.Visible = visible;
-
-            if (visible) panel.Refresh();
-        }
+            if (IsVisible(panel)) panel.Refresh();
     }
+
+    /// <summary>
+    /// Syncs every built widget's Myra Visible from its panel's current IsVisible/active state.
+    /// Call every render frame regardless of whether a new snapshot arrived — a Show()/Hide()
+    /// (from a click on [Close], a top-bar button, or a keybind) must take effect immediately
+    /// even while the sim is paused and no new snapshot is coming (bug: previously this only
+    /// happened inside RefreshVisible(), so panels stayed stuck open/closed until the next tick).
+    /// </summary>
+    public void SyncVisibility()
+    {
+        foreach (var panel in _panels.Values)
+            if (panel.Placement.Kind == PanelPlacementKind.Summoned && _built.TryGetValue(panel.Id, out var widget))
+                widget.Visible = IsVisible(panel);
+    }
+
+    private bool IsVisible(IWorkspacePanel panel) => panel.Placement.Kind switch
+    {
+        PanelPlacementKind.PinnedDefault => true,
+        PanelPlacementKind.Contextual     => panel.Id == _activeContextualId,
+        PanelPlacementKind.Summoned       => panel is IToggleablePanel { IsVisible: true },
+        _                                  => false
+    };
 
     /// <summary>Routes a selection to its matching contextual panel, or clears the contextual zone if none match.</summary>
     public void SetSelection(SelectionKind kind)
@@ -116,14 +122,26 @@ public sealed class SimWorkspace
     public void ToggleSummoned(string id)
     {
         if (!TryGetToggleable(id, out var toggleable)) return;
-        if (toggleable!.IsVisible) toggleable.Hide(); else toggleable.Show();
+        if (toggleable!.IsVisible) { toggleable.Hide(); return; }
+        toggleable.Show();
+        RefreshNow(toggleable);
     }
 
     /// <summary>Ensures a Summoned panel is shown (not a toggle — used when a click should always reveal it).</summary>
     public void ShowSummoned(string id)
     {
-        if (TryGetToggleable(id, out var toggleable) && !toggleable!.IsVisible)
-            toggleable.Show();
+        if (!TryGetToggleable(id, out var toggleable) || toggleable!.IsVisible) return;
+        toggleable.Show();
+        RefreshNow(toggleable);
+    }
+
+    // BUG FIX: content Refresh() normally only runs from RefreshVisible(), which is gated behind
+    // "a new sim snapshot arrived" for performance — while paused, that gate never opens, so a
+    // freshly-opened panel would sit visible but empty until the next tick. Refresh immediately
+    // on open instead, using the last-bound context (already fresh as of this frame's Bind()).
+    private void RefreshNow(IWorkspacePanel panel)
+    {
+        if (_ctx.Snapshot is not null) panel.Refresh();
     }
 
     /// <summary>True if the given Summoned panel is currently visible — for highlighting a menu button.</summary>

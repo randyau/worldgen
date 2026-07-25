@@ -346,13 +346,22 @@ public sealed class Game1 : Game
         if (snapshot is not null && _simStarted)
         {
             HandleInput(snapshot);
+
+            // Every frame, regardless of whether a new sim snapshot arrived — UI interaction
+            // state must respond immediately, including while paused (bug: was gated behind the
+            // snapshot-changed check below, so panels stayed stuck open/closed and the top-bar
+            // highlight lagged until the next tick). Only the *content* a panel displays is sim
+            // data and stays tick-gated below.
+            _workspace?.SyncVisibility();
+            _panelMenuBar?.RefreshHighlights();
+
             // Only rebuild Myra widgets when the sim has committed a new snapshot
             if (!ReferenceEquals(snapshot, _lastSnapshot))
             {
                 _lastSnapshot = snapshot;
                 _timeControls?.Update(snapshot);
                 _overlayBar?.Update(snapshot.ActiveOverlay);
-                _panelMenuBar?.Update(snapshot.SpotlightCharacterId.HasValue ? snapshot.WatchedCharacter?.Name : null);
+                _panelMenuBar?.UpdateSpotlightStatus(snapshot.SpotlightCharacterId.HasValue ? snapshot.WatchedCharacter?.Name : null);
 
                 _charWatch?.SetContext(snapshot.SpotlightCharacterId, snapshot.InspectedTile?.Coord);
                 _eventLog?.SetContext(_focusLens, _filterPanel?.CurrentFilter);
