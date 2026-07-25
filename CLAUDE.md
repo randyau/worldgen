@@ -163,7 +163,32 @@ If you need a new constant, add it to the appropriate config section and the TOM
 
 `WorldState` is never accessed from the UI thread. The UI reads `WorldSnapshot` via `StateCache`. If you find yourself passing `WorldState` to anything in `WorldEngine.UI`, stop — you're violating the architecture.
 
-### 4. Plain Data Commands and Events
+### 4. UI Interaction Is Decoupled from Sim Tick Cadence
+
+The sim can be paused, running at any speed, or between ticks at any moment. A user action's **visible effect** — a panel opening/closing, a button's highlight state, anything that is the direct consequence of a click/key rather than a reflection of sim data — must take effect on the very next render frame, unconditionally. It must never be gated behind "a new `WorldSnapshot` arrived," because while paused no new snapshot ever arrives and the UI appears to hang.
+
+Split any per-frame `Update`/`Refresh` method in two:
+- **Interaction state** (open/closed, highlighted/not, anything a click just changed): update every render frame, unconditionally.
+- **Displayed data** (event log rows, character stats, anything read from `WorldSnapshot`): fine to update only when a fresh snapshot arrives — that's genuinely tick-linked.
+
+```csharp
+// CORRECT — visibility/highlight sync runs every frame regardless of tick cadence
+_workspace?.SyncVisibility();
+_panelMenuBar?.RefreshHighlights();
+
+if (!ReferenceEquals(snapshot, _lastSnapshot))
+{
+    // WRONG to put SyncVisibility()/RefreshHighlights() here — while paused this
+    // block never runs again, so a Hide() click just sits there until the next tick.
+    _workspace.RefreshVisible(); // OK here: rebuilds *data-driven* panel content
+}
+```
+
+Also: a panel opened for the first time must have its content populated immediately at open
+time (using the already-bound context), not wait for the next gated data refresh — otherwise it
+renders empty until a tick happens to land.
+
+### 5. Plain Data Commands and Events
 
 `ICommand` implementations are sealed records with value-type fields only. No callbacks, no delegates, no references to mutable objects.
 
@@ -178,7 +203,7 @@ public sealed record MoveTo(EntityId EntityId, TileCoord Destination,
 
 Same rule applies to `SimEvent` payloads.
 
-### 5. Disk as System of Record
+### 6. Disk as System of Record
 
 The SQLite database (`world.db`) is always current — Phase 7 writes every tick. `state.bin` is the operational snapshot written periodically. Never treat in-memory state as the authoritative record for anything that needs to survive a crash.
 

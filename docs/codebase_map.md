@@ -201,7 +201,8 @@ One-line description of every non-trivial source file. Check here before running
 
 ## WorldEngine.UI/UI/
 - `FirstRunOverlay.cs` — Dismissible first-run orientation dialog shown once when the simulation starts for the first time. Points the player at the time controls, overlays, and event log.
-- `OverlayBar.cs` — Visible, labeled overlay toolbar (M6 Epic 6.1.1). One button per <see cref="OverlayType"/>; each enqueues <c>SetActiveOverlay</c> — the same command the accelerator keys fire — and the active overlay is highlighted from <c>WorldSnapshot.ActiveOverlay</c>. Restores Temperature, which had been dropped off the keyboard.
+- `OverlayBar.cs` — Top-bar "Map Display" control (M6 Epic 6.1.1; collapsed to a dropdown per playtest feedback — was a 7-button, 2-row grid). Selecting an overlay enqueues <c>SetActiveOverlay</c> — the same command the accelerator keys fire — and the dropdown reflects <c>WorldSnapshot.ActiveOverlay</c>.
+- `PanelMenuBar.cs` — Row of buttons that toggle the Summoned panels (Watch, Character, Civ History, God Mode, Settings, Help) directly from the top bar, highlighting whichever are open, plus a Spotlight status/exit indicator. Moves primary panel access off the fixed right dock (playtest feedback: "that way we move away from everything being locked to the fixed right panel").
 - `TimeControlsPanel.cs` — Top toolbar: speed buttons, year/season label.
 - `TimelineBar.cs` — Timeline scrubber bar drawn via SpriteBatch at the bottom of the map area. Shows event density heatmap and allows scrubbing to any historical year. The ScrubLabel is a Myra Label — add it to the root overlay panel in Game1.
 - `WorldGenScreen.cs` — Full-screen world-gen progress overlay with completion state and "Start Simulation" button.
