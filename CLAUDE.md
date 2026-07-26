@@ -19,7 +19,7 @@ The primary audience is worldbuilders and writers, not traditional gamers. The c
 - `docs/interface_contracts.md` — **index only** — links to 4 split files; load only the relevant one
 - `docs/implementation_plan_m1.md` — M1 phase ordering and story-level guide (archived reference)
 
-**Current milestone status:** M8 (UI Framework Rewrite) COMPLETE (2026-07-24) — all phases 8.0–8.5 shipped; see `docs/phases/archive/m8_ui_framework_rewrite.md` for close-out notes (a couple of net-new visual surfaces and a gear button were deliberately deferred, not part of the panel-migration scope). Next up: **M9 — Created-Object Unification & Economic Depth**; see `docs/roadmap.md` § "M9". Milestones were renumbered on 2026-07-23 when M8 was inserted (old M8→M9, M9→M10, M10→M11) — see `docs/roadmap.md`.
+**Current milestone status:** M9 (Created-Object Unification & Economic Depth) COMPLETE (2026-07-26) — phases 9.0–9.2 shipped; see `docs/phases/archive/m9_created_object_unification.md` for close-out notes (trade-network topology and 3 inert `bonus_*` keys deliberately left out of scope). Next up: **M10 — Worldgen Preview & Modding**; see `docs/roadmap.md` § "M10". Milestones were renumbered on 2026-07-23 when M8 was inserted (old M8→M9, M9→M10, M10→M11) — see `docs/roadmap.md`.
 
 **For coding sessions — read the active phase doc:**
 - `docs/phases/m8_ui_framework_rewrite.md` — **M8 index; read this first**, then only the specific `docs/phases/m8_phaseN_*.md` for the phase in progress (8.0 → 8.5, sequential)
@@ -288,7 +288,7 @@ At the start of each session:
 
 1. Read this file
 2. Run `python3 scripts/scip-query.py stats` — confirms the SCIP index is fresh and tells you the document/symbol counts. If missing, run `scip-dotnet index WorldEngine.sln --skip-dotnet-restore` first.
-3. Read the active phase doc from `docs/phases/` (whichever phase is in progress). M8 is complete (archived); the current milestone is **M9 — Created-Object Unification & Economic Depth** — check `docs/roadmap.md` § "M9" and `docs/phases/` for whether a phase doc exists yet.
+3. Read the active phase doc from `docs/phases/` (whichever phase is in progress). M8 and M9 are complete (archived); the current milestone is **M10 — Worldgen Preview & Modding** — check `docs/roadmap.md` § "M10" and `docs/phases/` for whether a phase doc exists yet.
 4. Use `docs/codebase_map.md` to orient yourself — one-line description of every source file; skip filesystem scans when possible. This file is generated per-commit and is current.
 5. Check only the relevant `docs/interface_contracts_*.md` split file for interfaces you'll be implementing against.
 6. Use `python3 scripts/scip-query.py defs <TypeName>` to locate types before reading files.

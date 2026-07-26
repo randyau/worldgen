@@ -2,7 +2,7 @@
 
 **Status:** COMPLETE — 2026-07-26.
 **Depends on:** 9.1 (`docs/phases/archive/m9_phase1_economic_depth.md`) — done.
-**Read first:** `docs/phases/m9_created_object_unification.md` (index), then this doc.
+**Read first:** `docs/phases/archive/m9_created_object_unification.md` (index), then this doc.
 
 ## Goal
 

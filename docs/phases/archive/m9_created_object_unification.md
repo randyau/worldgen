@@ -1,10 +1,12 @@
 # M9 — Created-Object Unification & Economic Depth (index)
 
 **Milestone:** M9 — Created-Object Unification & Economic Depth
-**Status:** IN PROGRESS — Phase 9.0 (G-1 + G-2) done 2026-07-26 (see
+**Status: COMPLETE — 2026-07-26.** Phase 9.0 (G-1 + G-2) done 2026-07-26 (see
 `docs/phases/archive/m9_phase0_taxonomy_unification.md`). Phase 9.1 (economic depth) done
 2026-07-26 — see `docs/phases/archive/m9_phase1_economic_depth.md`. Phase 9.2 (settlement
 specialization) done 2026-07-26 — see `docs/phases/archive/m9_phase2_settlement_specialization.md`.
+No further phase was scoped — see "Post-9.2 note" below for the closeout rationale. Next
+milestone: M10 — Worldgen Preview & Modding (`docs/roadmap.md` § "M10").
 **Design authority:** `docs/design_session_decisions.md` § "Design Session G — Created Objects &
 Artifacts" (G-1 through G-4) — the *why*. This doc set is the *how*.
 **Roadmap:** `docs/roadmap.md` § "M9".
@@ -42,10 +44,19 @@ Economic depth (goods flow, per-capita demand, richer trade/specialization) is s
 
 Do not start a phase until the previous one is merged and green (`scripts/test-fast.sh`).
 
-**Post-9.2 note:** full trade-network topology (named routes, travel time/caravans,
-price/currency) remains explicitly out of scope — Merchant trade stays the existing
-teleport-style store-to-store transfer. No further M9 phase is currently scoped; revisit after a
-longer balance sweep if deeper trade-network mechanics still look warranted.
+**Post-9.2 note (closeout, 2026-07-26):** two remaining candidates were considered and rejected as
+M9 scope, not deferred by oversight:
+- Full trade-network topology (named routes, travel time/caravans, price/currency) — Merchant
+  trade stays the existing teleport-style store-to-store transfer. Revisit only if a longer
+  balance sweep shows the current model genuinely limiting.
+- The 3 still-inert `bonus_*` keys (`bonus_construction_speed`, `bonus_navigation`,
+  `bonus_exploration_range`, see `// DECISION` in `CreatedGoodTaxonomy.cs`) — these are blocked on
+  mechanics (build-time-over-ticks, travel speed, exploration range) that don't exist anywhere in
+  the sim yet. Wiring them now would mean inventing a subsystem to justify a config knob, backwards
+  from how 9.1/9.2 worked. Not economic depth — a new-feature design decision, to be scoped
+  separately if/when those mechanics land.
+
+**M9 is closed.** Next milestone is M10 — Worldgen Preview & Modding (`docs/roadmap.md` § "M10").
 
 ## Non-negotiable constraints (every phase)
 

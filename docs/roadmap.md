@@ -221,11 +221,12 @@ build the mod data schema in M8.
 
 ## M9 — Created-Object Unification & Economic Depth  *(summary)*
 
-**Status:** Phase 9.0 (G-1 + G-2) COMPLETE — 2026-07-26. Phase 9.1 (economic depth) COMPLETE —
-2026-07-26 — see `docs/phases/archive/m9_phase1_economic_depth.md`. Phase 9.2 (settlement
-specialization) COMPLETE — 2026-07-26 — see
-`docs/phases/archive/m9_phase2_settlement_specialization.md`. No further M9 phase is currently
-scoped.
+**Status: COMPLETE — 2026-07-26.** Phase 9.0 (G-1 + G-2), Phase 9.1 (economic depth), and Phase 9.2
+(settlement specialization) all shipped and green — see
+`docs/phases/archive/m9_created_object_unification.md` (index) and its linked phase docs. Three
+`bonus_*` keys (construction_speed, navigation, exploration_range) and full trade-network topology
+were considered and deliberately left out of scope — see the index doc's closeout note for why.
+Next milestone: **M10 — Worldgen Preview & Modding** (below).
 
 Pays down the Session G / G-1 debt and builds economic depth on the cleaned foundation.
 
@@ -235,6 +236,9 @@ Pays down the Session G / G-1 debt and builds economic depth on the cleaned foun
 - **Settlement specialization — 9.2 DONE:** settlements EMA-track their dominant non-vital resource (`SettlementStub.Specialization`/`SpecializationStrength`, `ResourcePressurePhase.UpdateSpecialization`) and get a capped production multiplier on it (`ResourcePressureConfig.SpecializationBonusScale`/`Cap`); `Tier2BehaviorPhase.RunMerchant` adds a matching export-side routing bonus (`CharacterSimConfig.MerchantSpecializationBonusScale`) so a settlement's merchants preferentially trade what it's known for. Full trade-network topology (named routes, travel time/caravans, price/currency) stays out of scope — trade remains the existing teleport-style transfer. See `docs/phases/archive/m9_phase2_settlement_specialization.md`. Balance sweep re-run and green.
 
 ## M10 — Worldgen Preview & Modding  *(summary)*
+
+**Status:** SCOPED — 2026-07-26. Phase sequence (10.0–10.3) defined in
+`docs/phases/m10_worldgen_preview_modding.md`; no phase started yet.
 
 - **Layered worldgen preview + adjustment:** build the `WorldGenPipeline` (`RunUpTo`/`RerunFrom`) that M1 deferred; let players tweak sea level / parameters and re-preview per layer before committing.
 - **Player config exposure:** surface `sim_config.toml` tunables through UI; safe presets. Lands as the **sim-config tab in the M8 Settings screen shell** (`docs/ui_design_framework.md` §9.2), reusing the M8 component kit — not a bespoke UI.

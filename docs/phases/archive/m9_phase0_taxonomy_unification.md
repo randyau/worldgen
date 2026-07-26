@@ -2,7 +2,7 @@
 
 **Status:** COMPLETE — 2026-07-26.
 **Depends on:** —
-**Read first:** `docs/phases/m9_created_object_unification.md` (index), then
+**Read first:** `docs/phases/archive/m9_created_object_unification.md` (index), then
 `docs/design_session_decisions.md` § Design Session G (G-1, G-2).
 
 ## Goal
