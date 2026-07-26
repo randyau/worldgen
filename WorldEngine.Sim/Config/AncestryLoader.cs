@@ -22,6 +22,7 @@ public static class AncestryLoader
         };
 
         var file = Toml.ToModel<AncestryFile>(toml, null, options);
+        AncestryValidator.Validate(file.Ancestry);
         var dict = file.Ancestry.ToDictionary(a => a.Id, a => a);
         return new AncestryRegistry(dict);
     }

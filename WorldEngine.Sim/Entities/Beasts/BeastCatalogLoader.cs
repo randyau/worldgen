@@ -21,6 +21,7 @@ public static class BeastCatalogLoader
             IgnoreMissingProperties = true,
         };
         var file = Toml.ToModel<BeastCatalogFile>(toml, null, options);
+        BeastCatalogValidator.Validate(file);
         return new BeastCatalog(file);
     }
 
