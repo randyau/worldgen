@@ -145,7 +145,7 @@ public sealed class Civilization
     public int TotalSettlementsFounded { get; set; } = 0;
     public int NearCollapseCount { get; set; } = 0;
     public int TotalScholarDiscoveries { get; set; } = 0;
-    public HashSet<string> CulturalTraits { get; } = new(StringComparer.OrdinalIgnoreCase);
+    public HashSet<CulturalTrait> CulturalTraits { get; } = new();
     public CulturalProfile? CulturalProfile { get; set; }
     public Dictionary<CivId, int> WarBattleWins { get; } = new();
     public Dictionary<CivId, CivContact> KnownCivs { get; } = new();
@@ -260,4 +260,4 @@ public sealed record CharacterWatchSnapshot(
     IReadOnlyList<GoalWatchEntry> Goals);
 ```
 
-<!-- content-hash: ac892e1dbfd01d3a -->
+<!-- content-hash: b861eb96a6cb1b77 -->
