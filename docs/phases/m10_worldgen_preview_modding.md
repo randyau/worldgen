@@ -1,7 +1,8 @@
 # M10 — Worldgen Preview & Modding (index)
 
 **Milestone:** M10 — Worldgen Preview & Modding
-**Status:** SCOPED — 2026-07-26. No phase started yet.
+**Status:** SCOPED — 2026-07-26. Open design questions resolved 2026-07-26 (see "Design decisions"
+below). No phase started yet.
 **Design authority:** `docs/ui_design_framework.md` §9 (Settings screen home) and §11 ("Worldgen
 screen" row) for the UI shape; §10 (modding seams) for the data-modding approach.
 **Roadmap:** `docs/roadmap.md` § "M10".
@@ -49,18 +50,56 @@ From `CLAUDE.md`:
 5. Data-modding validation (10.3) is a load-time gate, not a runtime one — invalid mod data should
    fail fast with a clear message, not silently degrade simulation behavior.
 
-## Open questions to resolve at each phase's start (not pre-decided here)
+## Design decisions (resolved 2026-07-26)
 
-- **10.0:** does `RerunFrom` need to invalidate/recompute downstream `WorldGenContext` fields
-  automatically, or does the caller pass an explicit "these layers are now stale" list? Affects
-  whether this is a small targeted change or a bigger context-dependency-tracking feature.
-- **10.1:** are per-layer preview thumbnails rendered from existing overlay/color logic
-  (`OverlayRegistry`) or do they need their own lightweight raster path? Reuse is strongly
-  preferred (§10 coherence-first rule).
-- **10.2:** does "diff-from-default" compare against `SimConfig`'s hardcoded defaults or against
-  the shipped `sim_config.toml`? These can diverge if the TOML has been hand-tuned past the
-  in-code defaults — needs a decision before the diff view is built.
-- **10.3:** which data files are actually moddable today (ancestries, names, biomes, resources per
-  the roadmap line) vs. which are structural code data (e.g. `CreatedGoodTaxonomy`'s category
-  tables, explicitly marked non-tunable in M9) — enumerate the exact file list before writing
-  validation.
+These were flagged as open when this doc was first scoped; resolved now against the actual
+codebase rather than left for each phase to rediscover.
+
+### DECISION (10.0): `RerunFrom` invalidates automatically — no caller-supplied stale list
+
+`WorldGenContext` (`WorldEngine.Sim/WorldGen/WorldGenContext.cs`) is a strictly linear
+accumulator: `Tectonic → Elevation → Ocean → River → Magic → Climate → Biome → Resource → Poi`,
+each layer reading only completed predecessors (per its own doc comment — "never from layers that
+haven't run yet"). There is no diamond dependency graph to track. `RerunFrom(layerIndex, ctx)`
+therefore just nulls out every result field from `layerIndex` onward and re-invokes
+`WorldGenPipeline`'s existing loop starting there — a mechanical slice of `RunFullAsync`, not a new
+dependency-tracking feature. If a future layer ever reads a non-adjacent predecessor, revisit.
+
+### DECISION (10.1): preview thumbnails reuse `OverlayRenderer`, not a new raster path
+
+`WorldEngine.UI/Rendering/OverlayRenderer.GetColor` already maps biome/elevation/temperature/
+moisture/resource/magic values to `Color` per tile, keyed by `OverlayType` — exactly the palette
+logic a layer-preview thumbnail needs. It currently takes `TileDisplayData` (post-assembly), while
+preview needs to render straight from in-progress `WorldGenContext` layer results (e.g.
+`ElevationResult` before `Ocean`/`Biome` exist). 10.1 adds small adapters that build a minimal
+per-layer color input from whatever `WorldGenContext` fields are populated so far and calls the
+same `GetColor`-style helpers — reuse the palette functions, don't fork them, and don't invent a
+second rendering path (coherence-first, framework §10).
+
+### DECISION (10.2): "default" for diff/reset means the shipped `sim_config.toml`, not the C# property initializers
+
+`SimConfigLoader.LoadFromToml` deserializes TOML values directly onto `SimConfig` properties
+(`Toml.ToModel<SimConfig>`); the C# property initializers are only a fallback for keys absent from
+the file, not the intended "factory" values. `sim_config.toml` is the actual tuned baseline —
+it's what the balance sweep (`scripts/test-balance.sh`) validates against, and it's expected to
+drift from bare `new SimConfig()` over time as knobs get tuned. "Reset to default" / "diff from
+default" must therefore snapshot the loaded config immediately after `SimConfigLoader.Load()` at
+startup and diff/reset against *that* snapshot — not against `SimConfig.Default()`. This also
+composes correctly with the existing profile system (`config/profiles/`): the snapshot is
+post-profile-merge, so "default" means "what this session actually started with."
+
+### DECISION (10.3): only `ancestries.toml` and `beasts.toml` are in scope for 10.3; biomes/resources are a separate, larger lift
+
+Enumerated the actual data files: `config/ancestries.toml` (ancestry definitions, including
+first-name lists and `civ_name_suffix` — "names" in the roadmap line isn't a separate file, it's
+inside ancestries) and `config/beasts.toml` (species catalog) are already TOML-loaded, data-driven
+catalogs (`AncestryLoader`, and the beast-spawn loader) — these are what 10.3 documents and adds
+load-time validation to. Biomes (`BiomeType`) and resource type identity are **not** data-driven
+today — they're hardcoded C# enums with logic keyed off them throughout the sim (`OverlayRenderer`,
+`ResourceDeposit`, etc.), not TOML catalogs. Converting them to moddable data is a real feature
+(new schema + loader + every enum-keyed switch statement in the codebase), not a validation pass
+on an existing file, and is **out of scope for 10.3** as originally worded. If biome/resource
+modding is wanted, it needs its own follow-up phase (10.4+) scoped separately, not folded into this
+one. Structural code-data tables that stay non-tunable regardless (e.g. `CreatedGoodTaxonomy`'s
+category-weight *structure*, `ArtifactNameGenerator.NounsFor`) are explicitly out of scope per
+their existing `// DECISION` comments from M9.
