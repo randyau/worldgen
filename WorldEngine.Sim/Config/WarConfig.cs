@@ -93,6 +93,14 @@ public sealed class WarConfig
     /// </summary>
     public float CampaignBattleBaseStrength { get; set; } = 0.5f;
 
+    /// <summary>
+    /// bonus_military_strength (M9 9.1): additive to attacker/defender strength in campaign battle
+    /// rolls, read from that side's capital settlement store. Capped so a single stockpile can't
+    /// make battles a foregone conclusion.
+    /// </summary>
+    public float MilitaryStrengthBonusScale { get; set; } = 1.0f;
+    public float MilitaryStrengthBonusCap   { get; set; } = 0.3f;
+
     /// <summary>Territory tiles transferred from loser to winner per net battle win at war end.</summary>
     public int TilesPerBattleWin { get; set; } = 2;
 

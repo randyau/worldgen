@@ -32,6 +32,7 @@ public sealed class CharacterWatchPanel : IToggleablePanel
     public Action?           OnWanderGoal;
     public Action?           OnSettleGoal;
     public Action<long>?     OnProfile;
+    public Action<long>?     OnWatchCharacter;
 
     public Widget Build() => PanelFrame.Build(Title, _content.Root, new PanelFrameOptions { OnClose = Hide });
 
@@ -54,7 +55,27 @@ public sealed class CharacterWatchPanel : IToggleablePanel
     {
         _content.Clear();
         var watch = _ctx.Snapshot.WatchedCharacter;
-        if (watch is null) { _content.Add(EmptyState.Build(EmptyStateKind.PreSim, "No character watched.")); return; }
+
+        // Whichever character is currently selected via SelectionBus (e.g. clicked in Tile
+        // Inspector or Event Log) can be watched directly from here — the only prior entry point
+        // was the Tile Inspector's own [Watch] button, which left this panel with no way to pick
+        // or change its own target.
+        var selected = _ctx.Selection.Current;
+        bool hasDifferentCharacterSelected = selected.Kind == SelectionKind.Character
+            && (watch is null || selected.Id != watch.Id.Value);
+
+        if (watch is null)
+        {
+            _content.Add(EmptyState.Build(EmptyStateKind.PreSim, "No character watched."));
+            if (hasDifferentCharacterSelected)
+            {
+                long selId = selected.Id;
+                var watchSelBtn = new WeButton("[Watch Selected Character]", () => OnWatchCharacter?.Invoke(selId))
+                    { Padding = new Myra.Graphics2D.Thickness(4) };
+                _content.Add(watchSelBtn);
+            }
+            return;
+        }
 
         var present = _ctx.Present;
         bool isSpotlighted = _spotlightCharacterId.HasValue && _spotlightCharacterId.Value == watch.Id;
@@ -137,6 +158,14 @@ public sealed class CharacterWatchPanel : IToggleablePanel
         var profileBtn = new WeButton("[Full Profile]", () => OnProfile?.Invoke(capturedId))
             { Padding = new Myra.Graphics2D.Thickness(4) };
         _content.Add(profileBtn);
+
+        if (hasDifferentCharacterSelected)
+        {
+            long selId = selected.Id;
+            var watchSelBtn = new WeButton("[Watch Selected Character Instead]", () => OnWatchCharacter?.Invoke(selId))
+                { Padding = new Myra.Graphics2D.Thickness(4) };
+            _content.Add(watchSelBtn);
+        }
     }
 
     private static string PersTick(float v)

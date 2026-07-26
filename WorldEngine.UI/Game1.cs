@@ -582,6 +582,10 @@ public sealed class Game1 : Game
                 _commandQueue.Enqueue(new AuthorNudgeCharacter(_spotlightCharacterId.Value, CharacterNudge.SetSettle));
         };
         _charWatch.OnProfile = id => _selectionBus?.Select(new EntityRef(SelectionKind.Character, id, default));
+        _charWatch.OnWatchCharacter = id =>
+        {
+            _commandQueue.Enqueue(new WatchCharacter(new EntityId(id)));
+        };
 
         // Default camera: fit the whole world into the map viewport area. (Regression fix: this
         // was dropped during the M8 8.1 StartSim rewrite — restored using LayoutHost's constants

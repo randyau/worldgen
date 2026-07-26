@@ -210,6 +210,15 @@ public static partial class CivTracker
                 float attackerStr = bestAttacker?.Skills.Combat ?? wCfg.CampaignBattleBaseStrength;
                 float defenderStr = 0.3f + (target.Health / (float)world.SimConfig.Settlement.MaxHealth) * 0.5f;
 
+                // bonus_military_strength (M9 9.1, Scholar Metallurgy discovery): additive from
+                // each side's capital stockpile, capped so it nudges rather than decides battles.
+                if (world.Settlements.TryGetValue(civA.CapitalTile, out var attackerCapital))
+                    attackerStr += Math.Min(wCfg.MilitaryStrengthBonusCap,
+                        attackerCapital.GetStore("bonus_military_strength") * wCfg.MilitaryStrengthBonusScale);
+                if (world.Settlements.TryGetValue(civB.CapitalTile, out var defenderCapital))
+                    defenderStr += Math.Min(wCfg.MilitaryStrengthBonusCap,
+                        defenderCapital.GetStore("bonus_military_strength") * wCfg.MilitaryStrengthBonusScale);
+
                 // Deterministic roll seeded by world seed, year, and the pair
                 float roll = WorldRng.FloatAt(world.WorldSeed, world.CurrentYear,
                     civA.Id.Value, enemyCivId.Value, SaltWarCampaign);

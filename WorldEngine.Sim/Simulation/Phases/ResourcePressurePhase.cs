@@ -96,11 +96,14 @@ public sealed class ResourcePressurePhase
             float effectiveWaterRatio = ApplyVitalStore("water", GoalObject.Water,
                 ledger, newStores, maxVitalStore, _cfg.WaterSpoilageRate, _cfg);
 
-            // Process non-vital resources: minerals, timber, gold, trade goods
-            // These just accumulate from surplus tile production; no demand draw.
+            // Process non-vital resources: minerals, timber, gold, trade goods.
+            // M9 9.1: `supply` here is now a per-capita demand ratio (BuildLedger), not raw tile
+            // yield — banking scales with how well production clears population-scaled demand,
+            // not just absolute tile output. bonus_* keys are stores, not ledger entries — skip.
             foreach (var (res, supply) in ledger)
             {
                 if (res is "food" or "water") continue; // already handled above
+                if (res.StartsWith("bonus_", StringComparison.OrdinalIgnoreCase)) continue;
 
                 float spoilage = res is "gold" or "gems" or "silver" ? _cfg.WealthSpoilageRate
                                : _cfg.StockpileSpoilageRate;
@@ -153,6 +156,11 @@ public sealed class ResourcePressurePhase
 
         int w = world.TileGrid.TileWidth;
 
+        // bonus_food_yield (M9 9.1, Scholar Agriculture discovery): flat multiplier on every
+        // tile's food contribution, capped so accumulated discoveries can't runaway-multiply food.
+        float foodYieldMult = 1f + Math.Min(_cfg.FoodYieldBonusCap,
+            stub.GetStore("bonus_food_yield") * _cfg.FoodYieldBonusScale);
+
         // Iterate owned territory tiles (replacing old radius-circle iteration).
         // Tiles are claimed at founding and maintained by TerritoryPhase, so only land tiles appear here.
         foreach (var coord in territoryTiles)
@@ -194,7 +202,7 @@ public sealed class ResourcePressurePhase
                 }
             }
 
-            float foodContrib = tileCapacity * foodMult;
+            float foodContrib = tileCapacity * foodMult * foodYieldMult;
             Accumulate(supply, "food", foodContrib);
 
             // Audit capture: record per-tile factors if an audit sink is attached.
@@ -263,7 +271,17 @@ public sealed class ResourcePressurePhase
         float population = Math.Max(1f, stub.Population);
         if (supply.TryGetValue("food",  out float fs)) supply["food"]  = fs / population;
         if (supply.TryGetValue("water", out float ws)) supply["water"] = ws / population;
-        // Minerals: leave as absolute supply (surplus if > 0, demand driven by artisans)
+
+        // Non-vital resources (minerals, timber, gold, ...): same per-capita normalization as
+        // food/water, using one generic demand rate rather than a per-resource table. Ledger
+        // value becomes a demand-clearing ratio (>1 = surplus, <1 = deficit) instead of raw
+        // tile yield — consumed by Execute's stockpile-accumulation loop and by merchant routing.
+        foreach (var key in supply.Keys.ToList())
+        {
+            if (key is "food" or "water") continue;
+            if (key.StartsWith("bonus_", StringComparison.OrdinalIgnoreCase)) continue; // not a physical good
+            supply[key] = supply[key] / (population * _cfg.NonVitalDemandPerCapita);
+        }
 
         // Audit rollup: record settlement totals after normalization.
         if (audit is not null)

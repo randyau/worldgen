@@ -39,3 +39,6 @@ IPanel
 
 # M9-planned config toggle — mentioned in roadmap.md, not yet implemented
 character.ocean_crossing_enabled
+
+# M9 Phase 9.1 doc — private helper method, not a SCIP-indexed type
+ApplyVitalStore

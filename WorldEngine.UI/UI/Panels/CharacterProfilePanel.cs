@@ -62,6 +62,10 @@ public sealed class CharacterProfilePanel : IToggleablePanel
         _characterId  = characterId;
         _hasCharacter = true;
         Show();
+        // BUG FIX: content is history-query-driven, not sim-snapshot-driven — it must populate
+        // immediately, not wait for the next tick-gated RefreshVisible() (Mandatory Pattern #4).
+        // Without this, clicking a character name while paused looked like the click did nothing.
+        Refresh();
     }
 
     public void Refresh()

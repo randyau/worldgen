@@ -10,4 +10,8 @@ public readonly record struct EntityRef(SelectionKind Kind, long Id, TileCoord C
 public interface ISelectionSink
 {
     void Select(EntityRef target);
+
+    /// <summary>The current selection, so a panel can act on "whatever's selected" (e.g. a
+    /// "Watch Selected" button) without needing its own separate targeting mechanism.</summary>
+    SelectionSnapshot Current { get; }
 }

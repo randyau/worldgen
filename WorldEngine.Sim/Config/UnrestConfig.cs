@@ -50,6 +50,14 @@ public sealed class UnrestConfig
     /// </summary>
     public float UnrestSuccessionMult     { get; set; } = 1.5f;
 
+    // ── Bonus-store cohesion (M9 9.1) ──────────────────────────────────────────
+    /// <summary>
+    /// bonus_civ_cohesion (from Artisan notable work): subtracted from unrest accrual before
+    /// clamping, scaled and capped so accumulated cohesion can dampen but never fully cancel drivers.
+    /// </summary>
+    public float CohesionBonusScale       { get; set; } = 1.0f;
+    public float CohesionBonusCap         { get; set; } = 0.1f;
+
     // ── Decay ─────────────────────────────────────────────────────────────────
     /// <summary>
     /// Fraction of unrest that decays each year when no drivers apply.

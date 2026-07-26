@@ -278,6 +278,18 @@ public sealed class Tier2BehaviorPhase
                 float destAmount  = dest.GetStore(res);
                 float opportunity = homeAmount - destAmount;
                 if (isAllyDest) opportunity += homeAmount * _cfg.MerchantAllyOpportunityBonus;
+
+                // Demand-aware routing (M9 9.1): weight by the destination's per-capita demand
+                // ratio for this resource (fresh — ResourcePressurePhase runs earlier this tick).
+                // Ratio < 1 = destination is deficient → amplify; missing/vital-exempt → neutral.
+                float demandWeight = 1f;
+                if (dest.ResourceLedger is { } destLedger
+                    && destLedger.TryGetValue(res, out float destRatio) && destRatio < 1f)
+                {
+                    demandWeight = Math.Min(_cfg.MerchantMaxDemandWeight, 1f / Math.Max(0.05f, destRatio));
+                }
+                opportunity *= demandWeight;
+
                 if (opportunity > bestScore)
                 {
                     bestScore    = opportunity;
@@ -298,8 +310,12 @@ public sealed class Tier2BehaviorPhase
         // Transfer resources (always, silent)
         if (bestResource is not null && world.Settlements.TryGetValue(bestDest.Value, out var destStub))
         {
+            // bonus_trade_income (M9 9.1, Scholar Mathematics discovery): scales the transfer
+            // fraction for the merchant's home settlement, capped so it can't drain a store in one trade.
+            float tradeIncomeMult = 1f + Math.Min(_cfg.TradeIncomeBonusCap,
+                home.GetStore("bonus_trade_income") * _cfg.TradeIncomeBonusScale);
             float available = home.GetStore(bestResource);
-            float transfer  = available * _cfg.MerchantTradeTransfer;
+            float transfer  = available * _cfg.MerchantTradeTransfer * tradeIncomeMult;
             if (transfer > 0f)
             {
                 var newHomeStores = home.ResourceStores is null

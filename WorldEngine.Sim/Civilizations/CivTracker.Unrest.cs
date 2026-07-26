@@ -61,6 +61,12 @@ public static partial class CivTracker
                          && world.CurrentYear < civ.SuccessionCrisisEndYear;
             if (inCrisis) accrual *= cfg.UnrestSuccessionMult;
 
+            // bonus_civ_cohesion (M9 9.1, Artisan notable work): dampens accrual, capped so
+            // accumulated cohesion can reduce but never fully cancel unrest drivers.
+            if (accrual > 0f)
+                accrual = Math.Max(0f, accrual - Math.Min(cfg.CohesionBonusCap,
+                    stub.GetStore("bonus_civ_cohesion") * cfg.CohesionBonusScale));
+
             float unrest = stub.Unrest;
             if (accrual > 0f)
                 unrest = Math.Clamp(unrest + accrual, 0f, 1f);

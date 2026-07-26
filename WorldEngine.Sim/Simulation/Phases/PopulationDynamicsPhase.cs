@@ -302,7 +302,12 @@ public sealed class PopulationDynamicsPhase
                 bool inFamine    = stub.FoodPressureRatio < _cfg.DiseaseFamineThreshold;
                 float famineFactor = inFamine ? _cfg.DiseaseFamineMult : 1f;
 
-                float outbreakChance = _cfg.DiseaseBaseChance * densityFactor * contactFactor * famineFactor;
+                // bonus_disease_resistance (M9 9.1, Scholar Medicine discovery): reduces outbreak
+                // chance, capped so accumulated resistance can dampen but never eliminate risk.
+                float resistanceFactor = 1f - Math.Min(_cfg.DiseaseResistanceBonusCap,
+                    stub.GetStore("bonus_disease_resistance") * _cfg.DiseaseResistanceBonusScale);
+                float outbreakChance = _cfg.DiseaseBaseChance * densityFactor * contactFactor
+                                     * famineFactor * resistanceFactor;
                 float roll = WorldRng.FloatAt(world.WorldSeed, year, coord.X * 31 + coord.Y, 0, S.PopDiseaseOutbreak);
                 if (roll < outbreakChance)
                 {

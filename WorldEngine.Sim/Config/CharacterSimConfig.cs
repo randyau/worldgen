@@ -390,6 +390,13 @@ public sealed class CharacterSimConfig
     public float MerchantAllyOpportunityBonus   { get; set; } = 0.3f;
     // Status gain for the merchant on completing a trade.
     public float MerchantTradeStatusGain        { get; set; } = 0.05f;
+    // bonus_trade_income (M9 9.1): scales the transfer fraction for the merchant's home settlement.
+    public float TradeIncomeBonusScale          { get; set; } = 1.0f;
+    public float TradeIncomeBonusCap            { get; set; } = 0.5f;
+    // Cap on the per-capita-demand routing weight (M9 9.1) — how much a starved destination's
+    // demand can amplify raw opportunity score. Prevents a merchant from chasing one deficit
+    // settlement while ignoring larger absolute surpluses elsewhere.
+    public float MerchantMaxDemandWeight        { get; set; } = 3.0f;
 
     // ─── General ───────────────────────────────────────────────────────────────
     // Safety bonus applied to a co-located Tier1 employer each tick (ambient guard presence).

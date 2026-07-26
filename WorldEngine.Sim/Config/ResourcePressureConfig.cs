@@ -63,4 +63,16 @@ public sealed class ResourcePressureConfig
 
     // Fraction of ALL stores destroyed per point of raid damage (granaries/vaults burn).
     public float StoreRaidDestructionPerDamage  { get; set; } = 0.008f;
+
+    // ─── Per-capita non-vital demand (M9 9.1) ────────────────────────────────
+    // Generalizes the food/water per-capita normalization to every other resource
+    // (minerals, timber, gold, etc.): ledger[key] becomes supply / (population × this rate)
+    // instead of raw tile yield, so non-vital stockpile growth reflects how well tile
+    // production clears population-scaled demand rather than banking absolute surplus.
+    public float NonVitalDemandPerCapita        { get; set; } = 0.05f;
+
+    // ─── Bonus-store consumer scales (M9 9.1) ────────────────────────────────
+    // bonus_food_yield: foodContrib *= 1 + min(cap, store × scale).
+    public float FoodYieldBonusScale            { get; set; } = 1.0f;
+    public float FoodYieldBonusCap              { get; set; } = 0.5f;
 }

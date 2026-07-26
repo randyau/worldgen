@@ -221,14 +221,15 @@ build the mod data schema in M8.
 
 ## M9 — Created-Object Unification & Economic Depth  *(summary)*
 
-**Status:** Phase 9.0 (G-1 + G-2) COMPLETE — 2026-07-26. Economic depth (9.1+) not yet scoped —
-see `docs/phases/m9_created_object_unification.md`.
+**Status:** Phase 9.0 (G-1 + G-2) COMPLETE — 2026-07-26. Phase 9.1 (economic depth) COMPLETE —
+2026-07-26 — see `docs/phases/archive/m9_phase1_economic_depth.md`. 9.2 (settlement
+specialization) not yet scoped.
 
 Pays down the Session G / G-1 debt and builds economic depth on the cleaned foundation.
 
 - **G-1 unification (north-star) — DONE:** collapsed the four divergent taxonomies (`ArtisanGoodType`, `ArtType`, `DiscoveryType`, `ArtifactCategory`) into one shared `CreatedGoodType` (`WorldEngine.Sim/Core/Enumerations.cs`) plus `CreatedGoodTaxonomy` (`WorldEngine.Sim/Entities/Artifacts/CreatedGoodTaxonomy.cs`). A creative act yields a *product of type X*; quality drives persistence (routine → transient economic good, exceptional → an `Artifact` weighted-derived from that same type X). The `RoleToArtifactCategory` stopgap is deleted (trimmed to a `FallbackRoleCategory` for the roles — General/Governor/Merchant/Physician — that have no "product").
 - **G-2 type variety — DONE:** every masterwork good now weighted-rolls across plausible categories (Armor is reachable from Metalwork/Leatherwork/Metallurgy); battle-forged and heroic-death artifacts roll from independent weighted tables (`sim_config.toml [artifacts] battle_category_weight_*` / `heroic_death_category_weight_*`) instead of hardcoded `Weapon`.
-- **Economic depth (not yet scoped):** goods flow, per-capita demand, richer trade networks and specialization on top of the unified type system. Re-sweep artifact stock against the M5 decay-sink balance bands (`config/balance_invariants.toml [year_300]`) after any new creation source — 9.0 changed only category *mix*, not totals, so a re-sweep wasn't needed for this phase.
+- **Economic depth — 9.1 DONE:** per-capita demand for non-vital resources (minerals/timber previously had supply but no demand draw — a pre-existing gap flagged since Session F-3, now generalized via `ResourcePressureConfig.NonVitalDemandPerCapita`); 5 of 8 previously write-only `bonus_*` store keys (`bonus_food_yield`, `bonus_disease_resistance`, `bonus_civ_cohesion`, `bonus_military_strength`, `bonus_trade_income`) now wired to real, capped effects — the remaining three (`bonus_construction_speed`, `bonus_navigation`, `bonus_exploration_range`) stay intentionally inert pending mechanics that don't exist yet (see `// DECISION` in `CreatedGoodTaxonomy.cs`); demand-aware merchant routing weights trade opportunity by the destination's per-capita deficiency. See `docs/phases/archive/m9_phase1_economic_depth.md`. Settlement specialization / trade-network topology stay deferred to a possible 9.2 (not yet re-scoped). Balance regression suite (`scripts/test-balance.sh`, `config/balance_invariants.toml [year_300]`) re-run and green — 9.0 changed only artifact category *mix*, not totals, so it needed no re-sweep; 9.1 touches stockpile growth, disease, war, and unrest rates and was re-swept.
 
 ## M10 — Worldgen Preview & Modding  *(summary)*
 

@@ -53,10 +53,15 @@ public sealed class CivHistoryPanel : IToggleablePanel
     /// <summary>Selects and shows a specific civilization. Called by the selection bus (M8.2.1).</summary>
     public void ShowCiv(long civId)
     {
-        Show();
+        Show(); // rebuilds the dropdown item list and clears _content
         var match = _civSummaries.FirstOrDefault(c => c.CivId == civId);
         if (match is not null) _civCombo.Selected = civId;
-        else PopulateCivContent(civId);
+        // BUG FIX: don't rely solely on the dropdown's SelectedIndexChanged to populate content —
+        // if the computed index equals the ComboBox's already-current SelectedIndex (e.g. Show()
+        // just rebuilt the list and auto-selected the same slot), the underlying Myra ComboBox does
+        // not re-fire the event, so PopulateCivContent silently never ran and the pane stayed blank
+        // even though the dropdown visibly showed the right civ selected.
+        PopulateCivContent(civId);
     }
 
     public void Refresh() { /* content is rebuilt on dropdown change, not per-frame */ }

@@ -528,6 +528,12 @@ merchant_trade_chance             = 0.15  # per-tick probability a merchant atte
 merchant_trade_transfer           = 0.1   # fraction of home's surplus transferred per trade
 merchant_ally_opportunity_bonus   = 0.3   # opportunity-score bonus (fraction of surplus) for allied destinations
 merchant_trade_status_gain        = 0.05  # merchant Status gain on completing a trade
+# M9 9.1: bonus_trade_income (Scholar Mathematics discovery) scales transfer fraction; capped.
+trade_income_bonus_scale          = 1.0
+trade_income_bonus_cap            = 0.5
+# M9 9.1: cap on per-capita-demand routing weight — how much a starved destination's deficit
+# can amplify raw opportunity score over a larger absolute surplus elsewhere.
+merchant_max_demand_weight        = 3.0
 
 # General role
 general_guard_safety_bonus = 0.03  # Safety bonus applied to a co-located Tier1 employer each tick
@@ -616,6 +622,9 @@ disease_spread_radius        = 12     # tile radius within which disease can spr
 disease_spread_chance        = 0.08   # reduced from 0.20 — disease is regional, not instantly global
 disease_max_duration_years   = 8      # infection auto-clears after this many years
 disease_recovery_chance      = 0.30   # natural recovery probability per year
+# bonus_disease_resistance (Scholar Medicine discovery): outbreakChance *= 1 - min(cap, store × scale)
+disease_resistance_bonus_scale = 1.0
+disease_resistance_bonus_cap   = 0.5
 
 # Settlement health recovery — passive repair between raids
 # At 1 HP/tick and 16 ticks/year, a fully destroyed settlement (0 HP) recovers to 100 in ~6 years.
@@ -687,6 +696,15 @@ wealth_spoilage_rate               = 0.0001 # gold/gems essentially permanent
 stockpile_spoilage_rate            = 0.0005 # iron/copper/timber decay slowly
 wealth_accumulate_rate             = 0.2    # fraction of non-vital ledger supply that banks into stores per tick
 store_raid_destruction_per_damage  = 0.008  # fraction of ALL stores destroyed per point of raid damage (granaries/vaults burn)
+
+# M9 9.1: per-capita demand model for non-vital resources (minerals, timber, gold, ...).
+# ledger[key] becomes supply / (population × this rate) instead of raw tile yield — one generic
+# rate rather than a per-resource table. Tuned so a mid-size settlement's typical mineral/timber
+# tile yield lands ratio ~1.0-2.0 under current world-gen densities (see balance sweep notes).
+non_vital_demand_per_capita         = 0.05
+# bonus_food_yield (Scholar Agriculture discovery): foodContrib *= 1 + min(cap, store × scale).
+food_yield_bonus_scale               = 1.0
+food_yield_bonus_cap                 = 0.5
 
 # =============================================================================
 # TERRITORY (Phase 3.0 — City-State Territory Model)
@@ -826,6 +844,10 @@ personal_war_tension_fraction = 0.6   # fraction of tension_war_threshold at whi
 territory_tension_per_adjacent_pair = 0.015
 campaign_battle_damage        = 15    # health damage dealt to target settlement per campaign victory
 campaign_battle_base_strength = 0.5   # attacker strength when no character combatant is available
+# bonus_military_strength (Scholar Metallurgy discovery): additive from each side's capital
+# stockpile in campaign battle rolls, capped so it nudges rather than decides battles.
+military_strength_bonus_scale = 1.0
+military_strength_bonus_cap   = 0.3
 tiles_per_battle_win          = 2     # tiles transferred per net battle victory (aWins - bWins)
 max_tiles_transferred_per_war = 12    # cap; prevents one decisive war from reshaping the world
 
@@ -889,6 +911,10 @@ unrest_famine_bonus          = 0.15  # extra unrest/yr when settlement is in foo
 
 # Succession crisis multiplier (integrates with existing SuccessionCrisisEndYear)
 unrest_succession_mult       = 1.5   # multiplier on all unrest sources during crisis
+
+# bonus_civ_cohesion (Artisan notable work): subtracted from accrual before clamping, capped.
+cohesion_bonus_scale         = 1.0
+cohesion_bonus_cap           = 0.1
 
 # Decay: unrest drops when no drivers apply
 unrest_decay_rate            = 0.10  # fraction decayed per year (10%/yr → half-life ~7 years)

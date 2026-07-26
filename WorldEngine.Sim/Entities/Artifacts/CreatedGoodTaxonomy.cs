@@ -46,6 +46,15 @@ public static class CreatedGoodTaxonomy
             [CreatedGoodType.Metallurgy]   = "bonus_military_strength",
         };
 
+    // DECISION (M9 9.1): bonus_construction_speed, bonus_navigation, and bonus_exploration_range
+    // are intentionally inert — written by Scholar discoveries but never consumed. There is no
+    // build-time-over-ticks concept (improvements are placed instantly), no travel-speed concept,
+    // and no exploration-range concept anywhere in the sim for these to hook into. Wiring them
+    // now would mean inventing a mechanic to justify a config knob rather than the reverse; they
+    // cost nothing sitting unused (bonus_* keys never enter ResourcePressurePhase's ledger, so
+    // they accumulate unspoiled and unbounded — harmless while unread). Revisit once/if those
+    // mechanics land.
+
     // DECISION: this table is taxonomy *structure* (which categories a good can plausibly
     // become at all), not a tunable rate — same precedent as ArtifactNameGenerator.NounsFor and
     // the old DiscoveryBonusKey array. The weight values are illustrative game-balance numbers

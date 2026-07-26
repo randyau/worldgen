@@ -63,6 +63,10 @@ public sealed class SettlementConfig
     // Annual probability of spontaneous recovery before max duration.
     public float DiseaseRecoveryChance   { get; set; } = 0.30f;
 
+    // bonus_disease_resistance (M9 9.1): outbreakChance *= 1 - min(cap, store × scale).
+    public float DiseaseResistanceBonusScale { get; set; } = 1.0f;
+    public float DiseaseResistanceBonusCap   { get; set; } = 0.5f;
+
     // ─── Settlement health recovery ───────────────────────────────────────────
     // Health drains to 0 under sustained raids and then the settlement is destroyed.
     // Between raids, settlements passively repair at this rate per tick.

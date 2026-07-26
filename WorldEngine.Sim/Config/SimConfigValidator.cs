@@ -64,6 +64,13 @@ public static class SimConfigValidator
         // raid_damage_min/max moved to WarConfig (D5) — validated in ValidateWar below
         CheckMinMax("character.softmax_temp_min/max",
             c.SoftmaxTempMin, c.SoftmaxTempMax, errors);
+
+        if (c.TradeIncomeBonusScale < 0f)
+            errors.Add($"[character] trade_income_bonus_scale must be ≥ 0 (got {c.TradeIncomeBonusScale})");
+        if (c.TradeIncomeBonusCap < 0f)
+            errors.Add($"[character] trade_income_bonus_cap must be ≥ 0 (got {c.TradeIncomeBonusCap})");
+        if (c.MerchantMaxDemandWeight < 1f)
+            errors.Add($"[character] merchant_max_demand_weight must be ≥ 1 (got {c.MerchantMaxDemandWeight})");
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -93,6 +100,13 @@ public static class SimConfigValidator
 
         if (rp.PeoplePerTilePeak <= 0f)
             errors.Add($"[resource_pressure] people_per_tile_peak must be > 0 (got {rp.PeoplePerTilePeak})");
+
+        if (rp.NonVitalDemandPerCapita <= 0f)
+            errors.Add($"[resource_pressure] non_vital_demand_per_capita must be > 0 (got {rp.NonVitalDemandPerCapita})");
+        if (rp.FoodYieldBonusScale < 0f)
+            errors.Add($"[resource_pressure] food_yield_bonus_scale must be ≥ 0 (got {rp.FoodYieldBonusScale})");
+        if (rp.FoodYieldBonusCap < 0f)
+            errors.Add($"[resource_pressure] food_yield_bonus_cap must be ≥ 0 (got {rp.FoodYieldBonusCap})");
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -131,6 +145,11 @@ public static class SimConfigValidator
 
         if (s.PopMinViable >= s.PopMax)
             errors.Add($"[settlement] pop_min_viable ({s.PopMinViable}) must be less than pop_max ({s.PopMax})");
+
+        if (s.DiseaseResistanceBonusScale < 0f)
+            errors.Add($"[settlement] disease_resistance_bonus_scale must be ≥ 0 (got {s.DiseaseResistanceBonusScale})");
+        if (s.DiseaseResistanceBonusCap < 0f)
+            errors.Add($"[settlement] disease_resistance_bonus_cap must be ≥ 0 (got {s.DiseaseResistanceBonusCap})");
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -166,6 +185,11 @@ public static class SimConfigValidator
             errors.Add($"[war] max_war_duration_years must be ≥ 1 (got {w.MaxWarDurationYears})");
         if (w.PeaceCooldownYears < 0)
             errors.Add($"[war] peace_cooldown_years must be ≥ 0 (got {w.PeaceCooldownYears})");
+
+        if (w.MilitaryStrengthBonusScale < 0f)
+            errors.Add($"[war] military_strength_bonus_scale must be ≥ 0 (got {w.MilitaryStrengthBonusScale})");
+        if (w.MilitaryStrengthBonusCap < 0f)
+            errors.Add($"[war] military_strength_bonus_cap must be ≥ 0 (got {w.MilitaryStrengthBonusCap})");
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -285,6 +309,11 @@ public static class SimConfigValidator
             errors.Add($"[unrest] secession_min_civ_pop must be ≥ 0 (got {u.SecessionMinCivPop})");
         if (u.SecessionPopRampRange <= 0)
             errors.Add($"[unrest] secession_pop_ramp_range must be > 0 (got {u.SecessionPopRampRange})");
+
+        if (u.CohesionBonusScale < 0f)
+            errors.Add($"[unrest] cohesion_bonus_scale must be ≥ 0 (got {u.CohesionBonusScale})");
+        if (u.CohesionBonusCap < 0f)
+            errors.Add($"[unrest] cohesion_bonus_cap must be ≥ 0 (got {u.CohesionBonusCap})");
     }
 
     // ─────────────────────────────────────────────────────────────────────────
