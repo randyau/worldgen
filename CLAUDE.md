@@ -19,7 +19,7 @@ The primary audience is worldbuilders and writers, not traditional gamers. The c
 - `docs/interface_contracts.md` — **index only** — links to 4 split files; load only the relevant one
 - `docs/implementation_plan_m1.md` — M1 phase ordering and story-level guide (archived reference)
 
-**Current milestone status:** M9 (Created-Object Unification & Economic Depth) COMPLETE (2026-07-26) — phases 9.0–9.2 shipped; see `docs/phases/archive/m9_created_object_unification.md` for close-out notes (trade-network topology and 3 inert `bonus_*` keys deliberately left out of scope). Next up: **M10 — Worldgen Preview & Modding**; see `docs/roadmap.md` § "M10". Milestones were renumbered on 2026-07-23 when M8 was inserted (old M8→M9, M9→M10, M10→M11) — see `docs/roadmap.md`.
+**Current milestone status:** M10 — Worldgen Preview & Modding IN PROGRESS (started 2026-07-26). Phases 10.0 (pipeline resume/replay) and 10.1 (preview screen) done; see `docs/phases/m10_worldgen_preview_modding.md` for phase sequence and `docs/phases/archive/m10_phase0_pipeline_resume.md` / `m10_phase1_worldgen_preview_screen.md` for what shipped. Next: 10.2 (sim-config settings tab) or 10.3 (data modding). M9 (Created-Object Unification & Economic Depth) COMPLETE (2026-07-26) — see `docs/phases/archive/m9_created_object_unification.md`. Milestones were renumbered on 2026-07-23 when M8 was inserted (old M8→M9, M9→M10, M10→M11) — see `docs/roadmap.md`.
 
 **For coding sessions — read the active phase doc:**
 - `docs/phases/m8_ui_framework_rewrite.md` — **M8 index; read this first**, then only the specific `docs/phases/m8_phaseN_*.md` for the phase in progress (8.0 → 8.5, sequential)

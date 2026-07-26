@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -13,8 +12,6 @@ using WorldEngine.Sim.Events;
 using WorldEngine.Sim.Persistence;
 using WorldEngine.Sim.Simulation;
 using WorldEngine.Sim.World;
-using WorldEngine.Sim.WorldGen;
-using WorldEngine.Sim.WorldGen.Layers;
 using WorldEngine.UI.Rendering;
 using WorldEngine.UI.UI;
 using WorldEngine.UI.UI.Input;
@@ -38,18 +35,16 @@ public sealed class Game1 : Game
     // Sim wiring
     private readonly CommandQueue _commandQueue = new();
     private readonly StateCache _stateCache = new();
-    private readonly ConcurrentQueue<(string Layer, float Fraction)> _genProgress = new();
     private SimLoop? _simLoop;
     private EventStore? _eventStore;
     private IHistoryQuery? _historyQuery;
-    private Task<WorldState>? _genTask;
 
     // Rendering
     private Camera2D? _camera;
     private TileMapRenderer? _tileRenderer;
 
     // UI panels (created in LoadContent)
-    private WorldGenScreen? _genScreen;
+    private WorldGenPreviewScreen? _genScreen;
     private TimeControlsPanel? _timeControls;
     private EventLogPanel? _eventLog;
     private OverlayBar? _overlayBar;
@@ -134,7 +129,8 @@ public sealed class Game1 : Game
         _tileRenderer = new TileMapRenderer(GraphicsDevice, _camera);
 
 
-        _genScreen    = new WorldGenScreen();
+        _genScreen    = new WorldGenPreviewScreen();
+        _genScreen.Initialize(GraphicsDevice);
         _timeControls = new TimeControlsPanel(_commandQueue);
         _eventLog     = new EventLogPanel();
         _filterPanel  = new FilterPanel();
@@ -320,44 +316,16 @@ public sealed class Game1 : Game
         _ = floatBounds; // Float region is viewport-sized; content self-sizes, only anchored top-left.
     }
 
-    private static WorldState GenerateWorld(WorldConfig cfg, SimConfig simCfg, IProgress<(string, float)> progress)
-    {
-        var ctx = new WorldGenContext(cfg, simCfg);
-        var layers = new (string name, Action run)[]
-        {
-            ("Tectonics",  () => ctx.Tectonic  = new TectonicLayer().Generate(ctx)),
-            ("Elevation",  () => ctx.Elevation  = new ElevationLayer().Generate(ctx)),
-            ("Ocean",      () => ctx.Ocean       = new OceanLayer().Generate(ctx)),
-            ("Rivers",     () => ctx.River       = new RiverLayer().Generate(ctx)),
-            ("Magic",      () => ctx.Magic       = new MagicLayer().Generate(ctx)),
-            ("Climate",    () => ctx.Climate     = new ClimateLayer().Generate(ctx)),
-            ("Biomes",     () => ctx.Biome       = new BiomeLayer().Generate(ctx)),
-            ("Resources",  () => ctx.Resource    = new ResourceLayer().Generate(ctx)),
-            ("POI",        () => ctx.Poi         = new PoiCandidateLayer().Generate(ctx)),
-        };
-
-        for (int i = 0; i < layers.Length; i++)
-        {
-            progress.Report((layers[i].name, (float)i / layers.Length));
-            layers[i].run();
-        }
-        progress.Report(("Assembling", 1f));
-        return TileGridAssembler.Assemble(ctx);
-    }
-
     protected override void Update(GameTime gameTime)
     {
-        DrainGenProgress();
-
         // Resume path: load task completed
         if (!_simStarted && _loadTask?.IsCompletedSuccessfully == true)
             StartSimFromLoad(_loadTask.Result);
 
-        // Gen path: show completion screen when ready, then start sim on button click
-        if (!_simStarted && _genTask?.IsCompletedSuccessfully == true)
-            _genScreen?.ShowComplete();
-        if (!_simStarted && _genTask?.IsCompletedSuccessfully == true && _genScreen?.ConsumePendingStart() == true)
-            StartSim(_genTask.Result);
+        // Gen path: preview screen owns pipeline progress, thumbnails and "rerun from layer";
+        // Update() returns a WorldState the one frame the player clicks Commit.
+        if (!_simStarted && _genScreen?.Update() is { } committedWorld)
+            StartSim(committedWorld);
 
         // Surface sim thread crashes to a visible label and log file
         if (!_simCrashReported && _simLoop?.LastException is Exception simEx)
@@ -435,12 +403,6 @@ public sealed class Game1 : Game
         _prevMouse = Mouse.GetState();
         _prevKb    = Keyboard.GetState();
         base.Update(gameTime);
-    }
-
-    private void DrainGenProgress()
-    {
-        while (_genProgress.TryDequeue(out var p))
-            _genScreen?.Update(p.Layer, p.Fraction);
     }
 
     /// <param name="world">World to simulate.</param>
@@ -830,8 +792,7 @@ public sealed class Game1 : Game
     {
         var worldCfg = new WorldConfig { Seed = Environment.TickCount, WidthKm = 2000, HeightKm = 1600, TileWidthKm = 10 };
         var simCfg   = SimConfigLoader.LoadOrCreateDefault();
-        var progress = new Progress<(string, float)>(p => _genProgress.Enqueue(p));
-        _genTask = Task.Run(() => GenerateWorld(worldCfg, simCfg, progress));
+        _genScreen?.BeginGeneration(worldCfg, simCfg);
     }
 
     /// <summary>Shows a modal "Resume saved world?" prompt when a save exists at startup.</summary>
@@ -854,8 +815,7 @@ public sealed class Game1 : Game
             (_desktop.Root as Panel)?.Widgets
                 .OfType<Window>().FirstOrDefault()?.Close();
             var simCfg = SimConfigLoader.LoadOrCreateDefault();
-            _genScreen?.Update("Loading save...", 0.5f);
-            _genScreen!.Root.Visible = true;
+            _genScreen?.ShowMessage("Loading save...");
             _loadTask = Task.Run(() => WorldStateSaver.Load(SaveDir, simCfg));
         });
 
@@ -915,6 +875,13 @@ public sealed class Game1 : Game
             }
         }
 
+        if (!_simStarted && _genScreen is not null && _spriteBatch is not null)
+        {
+            _spriteBatch.Begin();
+            _genScreen.Draw(_spriteBatch);
+            _spriteBatch.End();
+        }
+
         _desktop?.Render();
         base.Draw(gameTime);
     }
@@ -925,5 +892,6 @@ public sealed class Game1 : Game
         _eventStore?.Dispose();
         _tileRenderer?.Dispose();
         _timeline?.Dispose();
+        _genScreen?.Dispose();
     }
 }

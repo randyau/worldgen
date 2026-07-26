@@ -199,6 +199,7 @@ One-line description of every non-trivial source file. Check here before running
 - `Camera2D.cs` — Pan/zoom camera for the tile map.
 - `OverlayRenderer.cs` — Per-tile color for each OverlayType (Biome/Elevation/Temp/Moisture/Resources/Magic/Territory).
 - `TileMapRenderer.cs` — Draws tiles + entity/settlement/ruin markers; M3.4: territory civ-color tint + improvement icons.
+- `WorldGenPreviewRenderer.cs` — Builds a per-tile thumbnail color buffer for a single worldgen layer, straight from the in-progress <see cref="WorldGenContext"/> (before <see cref="TileGridAssembler"/> has run). Reuses <see cref="OverlayRenderer.GetColor"/> — the same palette functions the live map uses — by feeding it a minimal <see cref="TileDisplayData"/> built from whatever layer results are available so far (per M10 10.1 design decision: don't fork the palette).
 
 ## WorldEngine.UI/UI/
 - `FirstRunOverlay.cs` — Dismissible first-run orientation dialog shown once when the simulation starts for the first time. Points the player at the time controls, overlays, and event log.
@@ -206,7 +207,7 @@ One-line description of every non-trivial source file. Check here before running
 - `PanelMenuBar.cs` — Row of buttons that toggle the Summoned panels (Watch, Character, Civ History, God Mode, Settings, Help) directly from the top bar, highlighting whichever are open, plus a Spotlight status/exit indicator. Moves primary panel access off the fixed right dock (playtest feedback: "that way we move away from everything being locked to the fixed right panel").
 - `TimeControlsPanel.cs` — Top toolbar: speed buttons, year/season label.
 - `TimelineBar.cs` — Timeline scrubber bar drawn via SpriteBatch at the bottom of the map area. Shows event density heatmap and allows scrubbing to any historical year. The ScrubLabel is a Myra Label — add it to the root overlay panel in Game1.
-- `WorldGenScreen.cs` — Full-screen world-gen progress overlay with completion state and "Start Simulation" button.
+- `WorldGenPreviewScreen.cs` — M10 10.1 — worldgen preview screen: per-layer thumbnails (WorldGenPreviewRenderer),
 
 ## WorldEngine.UI/UI/Input/
 - `CommandRegistry.cs` — The set of all named user actions. <see cref="KeybindRegistry"/> binds keys to command ids and invokes them here; UI buttons can invoke the same id directly.
