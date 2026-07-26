@@ -149,7 +149,9 @@ public sealed record SettlementStubDto(
     bool   IsInfected,
     int    InfectedSinceYear,
     float  SmoothedCapacity = 0f,   // EMA of food-derived capacity; 0 triggers re-init from raw on first tick
-    float  Unrest = 0f);            // S2: settlement unrest scalar (0=content, 1=rebellious)
+    float  Unrest = 0f,             // S2: settlement unrest scalar (0=content, 1=rebellious)
+    string? Specialization = null,  // M9 9.2: non-vital resource key this settlement specializes in
+    float  SpecializationStrength = 0f); // M9 9.2: EMA confidence [0,1] in Specialization
 
 public sealed record RuinRecordDto(
     string Tile,

@@ -288,7 +288,14 @@ public sealed class Tier2BehaviorPhase
                 {
                     demandWeight = Math.Min(_cfg.MerchantMaxDemandWeight, 1f / Math.Max(0.05f, destRatio));
                 }
-                opportunity *= demandWeight;
+
+                // Specialization export bonus (M9 9.2): home settlements trade best in what
+                // they're known for producing.
+                float specWeight = string.Equals(res, home.Specialization, StringComparison.OrdinalIgnoreCase)
+                    ? 1f + home.SpecializationStrength * _cfg.MerchantSpecializationBonusScale
+                    : 1f;
+
+                opportunity *= demandWeight * specWeight;
 
                 if (opportunity > bestScore)
                 {

@@ -397,6 +397,9 @@ public sealed class CharacterSimConfig
     // demand can amplify raw opportunity score. Prevents a merchant from chasing one deficit
     // settlement while ignoring larger absolute surpluses elsewhere.
     public float MerchantMaxDemandWeight        { get; set; } = 3.0f;
+    // Export bonus (M9 9.2) when the traded resource matches the home settlement's
+    // Specialization: opportunity *= 1 + SpecializationStrength × this scale.
+    public float MerchantSpecializationBonusScale { get; set; } = 0.5f;
 
     // ─── General ───────────────────────────────────────────────────────────────
     // Safety bonus applied to a co-located Tier1 employer each tick (ambient guard presence).

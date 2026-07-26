@@ -155,7 +155,7 @@ internal static class WorldStateMapper
                 s.FertilityMultiplier, s.ConqueredYear, s.ConqueredFromCivId,
                 s.ResourceStores is null ? null : new Dictionary<string, float>(s.ResourceStores),
                 s.CarryingCapacity, s.IsColony, s.IsInfected, s.InfectedSinceYear,
-                s.SmoothedCapacity, s.Unrest);
+                s.SmoothedCapacity, s.Unrest, s.Specialization, s.SpecializationStrength);
         return result;
     }
 
@@ -351,7 +351,7 @@ internal static class WorldStateMapper
                 s.FertilityMultiplier, s.ConqueredYear, s.ConqueredFromCivId,
                 s.ResourceStores is null ? null : (IReadOnlyDictionary<string, float>)s.ResourceStores,
                 s.CarryingCapacity, s.SmoothedCapacity, s.IsColony, s.IsInfected, s.InfectedSinceYear,
-                s.Unrest);
+                s.Unrest, s.Specialization, s.SpecializationStrength);
             world.Settlements[tile] = stub;
 
         }

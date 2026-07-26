@@ -75,4 +75,16 @@ public sealed class ResourcePressureConfig
     // bonus_food_yield: foodContrib *= 1 + min(cap, store × scale).
     public float FoodYieldBonusScale            { get; set; } = 1.0f;
     public float FoodYieldBonusCap              { get; set; } = 0.5f;
+
+    // ─── Settlement specialization (M9 9.2) ──────────────────────────────────
+    // EMA alpha for SpecializationStrength: how fast a settlement's dominant non-vital
+    // resource converges/decays. Same damping rationale as CapacitySmoothingAlpha —
+    // prevents flip-flopping when two resources are near-tied tick to tick.
+    public float SpecializationSmoothingAlpha   { get; set; } = 0.05f;
+    // A resource's per-capita ratio must exceed this to be eligible as a specialization
+    // candidate — a settlement with no meaningful surplus of anything shouldn't specialize.
+    public float SpecializationMinRatio         { get; set; } = 1.0f;
+    // Production multiplier for the specialized resource: stockpile growth *= 1 + min(cap, strength × scale).
+    public float SpecializationBonusScale       { get; set; } = 0.6f;
+    public float SpecializationBonusCap         { get; set; } = 0.5f;
 }

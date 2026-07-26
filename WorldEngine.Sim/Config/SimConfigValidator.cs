@@ -71,6 +71,8 @@ public static class SimConfigValidator
             errors.Add($"[character] trade_income_bonus_cap must be ≥ 0 (got {c.TradeIncomeBonusCap})");
         if (c.MerchantMaxDemandWeight < 1f)
             errors.Add($"[character] merchant_max_demand_weight must be ≥ 1 (got {c.MerchantMaxDemandWeight})");
+        if (c.MerchantSpecializationBonusScale < 0f)
+            errors.Add($"[character] merchant_specialization_bonus_scale must be ≥ 0 (got {c.MerchantSpecializationBonusScale})");
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -107,6 +109,14 @@ public static class SimConfigValidator
             errors.Add($"[resource_pressure] food_yield_bonus_scale must be ≥ 0 (got {rp.FoodYieldBonusScale})");
         if (rp.FoodYieldBonusCap < 0f)
             errors.Add($"[resource_pressure] food_yield_bonus_cap must be ≥ 0 (got {rp.FoodYieldBonusCap})");
+
+        CheckProbability("resource_pressure.specialization_smoothing_alpha", rp.SpecializationSmoothingAlpha, errors);
+        if (rp.SpecializationMinRatio < 0f)
+            errors.Add($"[resource_pressure] specialization_min_ratio must be ≥ 0 (got {rp.SpecializationMinRatio})");
+        if (rp.SpecializationBonusScale < 0f)
+            errors.Add($"[resource_pressure] specialization_bonus_scale must be ≥ 0 (got {rp.SpecializationBonusScale})");
+        if (rp.SpecializationBonusCap < 0f)
+            errors.Add($"[resource_pressure] specialization_bonus_cap must be ≥ 0 (got {rp.SpecializationBonusCap})");
     }
 
     // ─────────────────────────────────────────────────────────────────────────

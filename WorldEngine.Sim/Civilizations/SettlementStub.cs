@@ -29,7 +29,9 @@ public sealed record SettlementStub(
     bool IsColony = false,                                       // true when founded beyond ColonyMinDistance from all same-civ settlements
     bool IsInfected = false,                                    // currently suffering a disease outbreak
     int  InfectedSinceYear = 0,                                 // year the current infection started
-    float Unrest = 0f)                                          // S2: 0=content, 1=fully rebellious; drives secession
+    float Unrest = 0f,                                          // S2: 0=content, 1=fully rebellious; drives secession
+    string? Specialization = null,                              // M9 9.2: non-vital resource key this settlement specializes in
+    float SpecializationStrength = 0f)                          // M9 9.2: EMA confidence [0,1] in Specialization
                                            // vital (food, water): measured in seasons of supply; draws during deficit
                                            // wealth (gold, minerals, timber): raw accumulated units; no demand draw
 {

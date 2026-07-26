@@ -534,6 +534,9 @@ trade_income_bonus_cap            = 0.5
 # M9 9.1: cap on per-capita-demand routing weight — how much a starved destination's deficit
 # can amplify raw opportunity score over a larger absolute surplus elsewhere.
 merchant_max_demand_weight        = 3.0
+# M9 9.2: export opportunity bonus when the traded resource matches the home settlement's
+# Specialization: opportunity *= 1 + SpecializationStrength × this scale.
+merchant_specialization_bonus_scale = 0.5
 
 # General role
 general_guard_safety_bonus = 0.03  # Safety bonus applied to a co-located Tier1 employer each tick
@@ -705,6 +708,15 @@ non_vital_demand_per_capita         = 0.05
 # bonus_food_yield (Scholar Agriculture discovery): foodContrib *= 1 + min(cap, store × scale).
 food_yield_bonus_scale               = 1.0
 food_yield_bonus_cap                 = 0.5
+
+# M9 9.2: settlement specialization — EMA-tracked dominant non-vital resource. A resource must
+# clear this per-capita ratio to be a specialization candidate; strength grows/decays via EMA at
+# the given alpha (same damping rationale as capacity_smoothing_alpha) and grants a production
+# multiplier on the specialized resource, capped.
+specialization_smoothing_alpha       = 0.05
+specialization_min_ratio             = 1.0
+specialization_bonus_scale           = 0.6
+specialization_bonus_cap             = 0.5
 
 # =============================================================================
 # TERRITORY (Phase 3.0 — City-State Territory Model)

@@ -80,6 +80,8 @@ public sealed class ResourcePressurePhase
             var (ledger, carryingCapacity, smoothedCapacity) = BuildLedger(coord, stub, territoryTiles, world,
                 audit?.Captures(coord) == true ? audit : null);
 
+            var (specialization, specializationStrength) = UpdateSpecialization(stub, ledger);
+
             // ─── Update resource stores ──────────────────────────────────────
             // Build new stores dict from existing stores, applying spoilage and accumulating
             // from this tick's tile yields. Vital resources (food, water) also draw during deficit.
@@ -107,20 +109,26 @@ public sealed class ResourcePressurePhase
 
                 float spoilage = res is "gold" or "gems" or "silver" ? _cfg.WealthSpoilageRate
                                : _cfg.StockpileSpoilageRate;
+                // M9 9.2: specialized resource gets a production multiplier on top of accumulation.
+                float specMult = res == specialization
+                    ? 1f + Math.Min(_cfg.SpecializationBonusCap, specializationStrength * _cfg.SpecializationBonusScale)
+                    : 1f;
                 float current  = newStores.GetValueOrDefault(res, 0f);
                 current *= (1f - spoilage);
-                current += supply * _cfg.WealthAccumulateRate;
+                current += supply * _cfg.WealthAccumulateRate * specMult;
                 newStores[res] = Math.Max(0f, current);
             }
 
             world.Settlements[coord] = stub with
             {
-                FoodPressureRatio  = effectiveFoodRatio,
-                WaterPressureRatio = effectiveWaterRatio,
-                ResourceLedger     = ledger,
-                ResourceStores     = newStores,
-                CarryingCapacity   = (int)smoothedCapacity,
-                SmoothedCapacity   = smoothedCapacity
+                FoodPressureRatio      = effectiveFoodRatio,
+                WaterPressureRatio     = effectiveWaterRatio,
+                ResourceLedger         = ledger,
+                ResourceStores         = newStores,
+                CarryingCapacity       = (int)smoothedCapacity,
+                SmoothedCapacity       = smoothedCapacity,
+                Specialization         = specialization,
+                SpecializationStrength = specializationStrength
             };
 
             // Shortage response (based on effective ratios after store draw)
@@ -298,6 +306,38 @@ public sealed class ResourcePressurePhase
         }
 
         return (supply, capacity, smoothed);
+    }
+
+    /// <summary>
+    /// M9 9.2: tracks which non-vital resource a settlement is specializing in. Finds this tick's
+    /// highest-ratio eligible candidate; if it matches the current specialization, strength grows
+    /// toward 1 via EMA, otherwise it decays toward 0 and — once negligible — the specialization
+    /// switches to the new candidate. Prevents tick-to-tick flip-flopping on near-tied resources.
+    /// </summary>
+    private (string? Specialization, float Strength) UpdateSpecialization(
+        SettlementStub stub, Dictionary<string, float> ledger)
+    {
+        string? bestKey   = null;
+        float   bestRatio = _cfg.SpecializationMinRatio;
+        foreach (var (key, ratio) in ledger)
+        {
+            if (key is "food" or "water") continue;
+            if (key.StartsWith("bonus_", StringComparison.OrdinalIgnoreCase)) continue;
+            if (ratio > bestRatio) { bestRatio = ratio; bestKey = key; }
+        }
+
+        float alpha = _cfg.SpecializationSmoothingAlpha;
+        if (bestKey is not null && bestKey == stub.Specialization)
+        {
+            float strength = stub.SpecializationStrength + alpha * (1f - stub.SpecializationStrength);
+            return (stub.Specialization, strength);
+        }
+
+        float decayed = stub.SpecializationStrength * (1f - alpha);
+        if (decayed < 0.01f)
+            return (bestKey, bestKey is null ? 0f : alpha);
+
+        return (stub.Specialization, decayed);
     }
 
     private static void Accumulate(Dictionary<string, float> dict, string key, float value)

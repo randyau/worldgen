@@ -3,8 +3,8 @@
 **Milestone:** M9 — Created-Object Unification & Economic Depth
 **Status:** IN PROGRESS — Phase 9.0 (G-1 + G-2) done 2026-07-26 (see
 `docs/phases/archive/m9_phase0_taxonomy_unification.md`). Phase 9.1 (economic depth) done
-2026-07-26 — see `docs/phases/archive/m9_phase1_economic_depth.md`. 9.2 (settlement
-specialization) not yet scoped — see note at the end of the phase table below.
+2026-07-26 — see `docs/phases/archive/m9_phase1_economic_depth.md`. Phase 9.2 (settlement
+specialization) done 2026-07-26 — see `docs/phases/archive/m9_phase2_settlement_specialization.md`.
 **Design authority:** `docs/design_session_decisions.md` § "Design Session G — Created Objects &
 Artifacts" (G-1 through G-4) — the *why*. This doc set is the *how*.
 **Roadmap:** `docs/roadmap.md` § "M9".
@@ -38,14 +38,14 @@ Economic depth (goods flow, per-capita demand, richer trade/specialization) is s
 |-------|-----|-----------|----------------------|
 | 9.0 | `archive/m9_phase0_taxonomy_unification.md` | — | `CreatedGoodType` taxonomy; weighted good→category persistence; delete `RoleToArtifactCategory`; fix Armor spawn gap (G-1 + G-2). **DONE 2026-07-26.** |
 | 9.1 | `archive/m9_phase1_economic_depth.md` | 9.0 | Per-capita demand for non-vital resources; wire 5 of 8 write-only `bonus_*` store keys to real effects; demand-aware merchant routing. **DONE 2026-07-26.** |
-| 9.2 | TBD | 9.1 | Settlement specialization / trade network depth, if still in scope after 9.1. |
+| 9.2 | `archive/m9_phase2_settlement_specialization.md` | 9.1 | EMA-tracked settlement resource specialization (production bonus) + matching merchant export-side routing bonus. **DONE 2026-07-26.** |
 
 Do not start a phase until the previous one is merged and green (`scripts/test-fast.sh`).
 
-**9.2 scoping note (post-9.1):** 9.1 shipped per-capita demand + 5/8 bonus consumers + demand-aware
-merchant routing without touching settlement specialization or trade-network topology — those
-stay explicitly out of scope per the 9.1 phase doc. Whether 9.2 is still warranted depends on how
-the per-capita demand model plays out under longer balance sweeps; not re-scoped as part of 9.1.
+**Post-9.2 note:** full trade-network topology (named routes, travel time/caravans,
+price/currency) remains explicitly out of scope — Merchant trade stays the existing
+teleport-style store-to-store transfer. No further M9 phase is currently scoped; revisit after a
+longer balance sweep if deeper trade-network mechanics still look warranted.
 
 ## Non-negotiable constraints (every phase)
 
