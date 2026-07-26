@@ -1,26 +1,19 @@
 namespace WorldEngine.Sim.Core;
 
 /// <summary>All enums: BiomeType, Season, SimPhase, EntityKind, EventType, EventTier, VerbClass, etc.</summary>
-public enum DiscoveryType
+/// <summary>
+/// Unified taxonomy for everything a character can create (M9 G-1). Routine output is a transient
+/// event; exceptional output persists as an <see cref="WorldEngine.Sim.Entities.Artifacts.Artifact"/>
+/// whose category is derived from the specific good (see CreatedGoodTaxonomy), not the creator's role.
+/// </summary>
+public enum CreatedGoodType
 {
-    Agriculture    = 0,
-    Medicine       = 1,
-    Astronomy      = 2,
-    Mathematics    = 3,
-    Engineering    = 4,
-    Philosophy     = 5,
-    Navigation     = 6,
-    Metallurgy     = 7,
-}
-
-public enum ArtType
-{
-    Monument   = 0,
-    Epic       = 1,
-    Song       = 2,
-    Tapestry   = 3,
-    Sculpture  = 4,
-    Painting   = 5,
+    // Artisan goods (Tier2 Artisan)
+    Textiles, Pottery, Metalwork, Woodcraft, Leatherwork, Stonework,
+    // Art (Tier1 Create goal)
+    Monument, Epic, Song, Tapestry, Sculpture, Painting,
+    // Discoveries (Tier2 Scholar)
+    Agriculture, Medicine, Astronomy, Mathematics, Engineering, Philosophy, Navigation, Metallurgy,
 }
 
 public enum Season { Spring = 0, Summer = 1, Autumn = 2, Winter = 3 }

@@ -1035,3 +1035,12 @@ covet_max_goals               = 2
 lost_artifact_annual_decay    = 0.008
 # Annual probability an owned artifact is destroyed by accident/disaster/war (owners protect relics).
 owned_artifact_annual_decay   = 0.001
+# M9 G-2: weighted category roll for battle-forged artifacts (no CreatedGoodType context exists
+# for combat-triggered forging, so these are independent weights; must sum to ~1.0).
+battle_category_weight_weapon   = 0.5
+battle_category_weight_armor    = 0.35
+battle_category_weight_regalia  = 0.15
+# M9 G-2: weighted category roll for heroic-death artifacts (must sum to ~1.0).
+heroic_death_category_weight_weapon  = 0.5
+heroic_death_category_weight_relic   = 0.3
+heroic_death_category_weight_regalia = 0.2

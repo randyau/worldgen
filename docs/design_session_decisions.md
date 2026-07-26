@@ -422,7 +422,12 @@ Context: the M5 Artifacts system shipped (persistent legendary items — creatio
 
 ### G-1: An artifact is a *persisted, exceptional instance of a created object* — not a parallel system
 
-**Decision (design north-star, not yet fully realized):** artifacts must share type taxonomy and creation code with the ordinary goods characters produce. An artifact is "a created object that persisted because it was exceptional." Tier2 artisans producing *normal* versions of those same object types must flow through the same path.
+**RESOLVED — M9 phase 9.0, 2026-07-26.** See `docs/phases/archive/m9_phase0_taxonomy_unification.md`.
+`CreatedGoodType` (`Core/Enumerations.cs`) + `CreatedGoodTaxonomy` (`Entities/Artifacts/CreatedGoodTaxonomy.cs`)
+replace the four taxonomies below; `RoleToArtifactCategory` is deleted (trimmed to a
+`FallbackRoleCategory` for the few roles with no "product" — General/Governor/Merchant/Physician).
+
+**Decision (design north-star):** artifacts must share type taxonomy and creation code with the ordinary goods characters produce. An artifact is "a created object that persisted because it was exceptional." Tier2 artisans producing *normal* versions of those same object types must flow through the same path.
 
 **Why:** two separate systems (ordinary creative output vs. artifacts) with independent vocabularies will diverge and confuse. The value of the sim is narrative coherence — a legendary blade and an everyday blade should be the same kind of thing at different quality tiers.
 
@@ -439,9 +444,13 @@ Tell-tale bug of the split: `Tier2BehaviorPhase.RoleToArtifactCategory` types a 
 2. A creative act yields a *product of type X*; **quality drives persistence** — routine → transient economic good (as today), exceptional → an `Artifact` of the *same type X*.
 3. `Artifact` becomes "a `CreatedObject` that persisted," sharing the type enum, `ArtifactNameGenerator` category pools, and the emission path. The `RoleToArtifactCategory` stopgap is deleted (type derives from the crafted good).
 
-### G-2: Deferred — artifact type variety
+### G-2: Artifact type variety
 
-Forged artifacts are currently always `Weapon`; `Armor` has no reliable spawn source. Expanding type variety (e.g. battle → weighted Weapon/Armor/Regalia; heroic death → Weapon/Relic/Regalia; ensuring every category has a creation path) is **deferred and folded into the G-1 unification** — do it there, not as a piecemeal patch beforehand.
+**RESOLVED — M9 phase 9.0, 2026-07-26**, folded into the G-1 pass as originally planned. Masterwork
+categories now weighted-derive from the actual good (Armor reachable via Metalwork/Leatherwork/
+Metallurgy); battle-forged and heroic-death artifacts roll from independent weighted tables
+(`sim_config.toml [artifacts] battle_category_weight_*` / `heroic_death_category_weight_*`)
+instead of a hardcoded `Weapon`.
 
 ### G-3: Deferred — God Mode artifact placement
 

@@ -185,6 +185,14 @@ public static class SimConfigValidator
         CheckProbability("artifacts.owned_artifact_annual_decay",    a.OwnedArtifactAnnualDecay,    errors);
         if (a.CovetMaxGoals < 1)
             errors.Add($"[artifacts] covet_max_goals must be ≥ 1 (got {a.CovetMaxGoals})");
+
+        // M9 G-2: category weights must sum to ~1.0
+        float battleSum = a.BattleCategoryWeightWeapon + a.BattleCategoryWeightArmor + a.BattleCategoryWeightRegalia;
+        if (Math.Abs(battleSum - 1.0f) > 0.001f)
+            errors.Add($"[artifacts] battle_category_weight_* must sum to 1.0 (got {battleSum:F4})");
+        float heroicSum = a.HeroicDeathCategoryWeightWeapon + a.HeroicDeathCategoryWeightRelic + a.HeroicDeathCategoryWeightRegalia;
+        if (Math.Abs(heroicSum - 1.0f) > 0.001f)
+            errors.Add($"[artifacts] heroic_death_category_weight_* must sum to 1.0 (got {heroicSum:F4})");
     }
 
     // ─────────────────────────────────────────────────────────────────────────

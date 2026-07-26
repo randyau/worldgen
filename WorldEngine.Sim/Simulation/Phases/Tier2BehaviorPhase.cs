@@ -180,7 +180,7 @@ public sealed class Tier2BehaviorPhase
     private bool TryEmitNotableWork(
         Tier2Character c, WorldState world, long tick,
         EventType eventType, string payload, long[]? primaryIds, long[]? secondaryIds,
-        List<PendingEvent> pending)
+        List<PendingEvent> pending, CreatedGoodType? good = null)
     {
         if (tick - c.LastNotableWorkTick <= _cfg.Tier2NotableCooldownTicks) return false;
 
@@ -201,7 +201,12 @@ public sealed class Tier2BehaviorPhase
                 // Quality derived from the exceptional roll (higher roll → higher quality within the masterwork band).
                 float quality = Math.Clamp(
                     _cfg.MasterworkQualityBase + excepRoll * _cfg.MasterworkQualityRollScale, 0f, 1f);
-                var cat = RoleToArtifactCategory(c.Livelihood.Role);
+                // M9 G-1: category derives from the actual good being made when one exists
+                // (Artisan/Scholar); roles without a "product" (General/Governor/Merchant/
+                // Physician) fall back to a role-based category — see FallbackRoleCategory.
+                var cat = good is { } g
+                    ? CreatedGoodTaxonomy.PickCategory(world, c.Id, g)
+                    : FallbackRoleCategory(c.Livelihood.Role);
                 var name = ArtifactNameGenerator.Generate(world, cat, (int)c.Id.Value);
                 var artifact = ArtifactRegistry.Create(world, name, cat, world.CurrentYear,
                     creatorId:   c.Id.Value,
@@ -230,22 +235,17 @@ public sealed class Tier2BehaviorPhase
         _                   => S.T2ArtisanExcep,
     };
 
-    // DECISION: No Weaponsmith/Jeweler roles exist; map available Tier2 roles to artifact categories
-    // that best reflect each specialist's domain. General → Weapon (military), Governor → Regalia (rule),
-    // Merchant → Jewelry (wealth), Scholar → Tome (knowledge), Physician → Relic (healing), Artisan → Artwork.
-    // FUTURE (created-object unification): this role→category map is a stopgap. An artifact
-    // should be the *exceptional persisted instance* of the ordinary product the character was
-    // making, inheriting that product's type — not a role-blind category. When ArtisanGoodType /
-    // ArtType / ArtifactCategory are collapsed into one shared CraftedGoodType taxonomy, derive
-    // the artifact's type from the crafted good (e.g. metalwork→Weapon/Armor), and delete this map.
-    private static ArtifactCategory RoleToArtifactCategory(Tier2Role role) => role switch
+    // DECISION (M9 G-1): General/Governor/Merchant/Physician notable work is an *act*, not a
+    // *product* — there's no CreatedGoodType to derive a category from, so these roles keep a
+    // direct role→category map. General → Weapon (military), Governor → Regalia (rule),
+    // Merchant → Jewelry (wealth), Physician → Relic (healing). Artisan/Scholar are no longer
+    // routed here — they always pass a CreatedGoodType and use CreatedGoodTaxonomy.PickCategory.
+    private static ArtifactCategory FallbackRoleCategory(Tier2Role role) => role switch
     {
         Tier2Role.General   => ArtifactCategory.Weapon,
         Tier2Role.Governor  => ArtifactCategory.Regalia,
         Tier2Role.Merchant  => ArtifactCategory.Jewelry,
-        Tier2Role.Scholar   => ArtifactCategory.Tome,
         Tier2Role.Physician => ArtifactCategory.Relic,
-        Tier2Role.Artisan   => ArtifactCategory.Artwork,
         _                   => ArtifactCategory.Relic,
     };
 
@@ -341,17 +341,6 @@ public sealed class Tier2BehaviorPhase
         return false;
     }
 
-    private static readonly string[] DiscoveryBonusKey = [
-        "bonus_food_yield",          // Agriculture
-        "bonus_disease_resistance",  // Medicine
-        "bonus_navigation",          // Astronomy
-        "bonus_trade_income",        // Mathematics
-        "bonus_construction_speed",  // Engineering
-        "bonus_civ_cohesion",        // Philosophy
-        "bonus_exploration_range",   // Navigation
-        "bonus_military_strength",   // Metallurgy
-    ];
-
     private void RunScholar(Tier2Character c, WorldState world, List<PendingEvent> pending, long tick)
     {
         float r = world.GetRandomFloat(c.Id, S.T2Scholar);
@@ -359,10 +348,10 @@ public sealed class Tier2BehaviorPhase
         if (r > discoveryChance) return;
 
         // Pick discovery type weighted by personality
-        int typeCount = Enum.GetValues<DiscoveryType>().Length;
-        int typeIndex = (int)(world.GetRandomFloat(c.Id, S.T2Scholar + 1) * typeCount) % typeCount;
-        var discovery = (DiscoveryType)typeIndex;
-        string bonusKey = DiscoveryBonusKey[typeIndex];
+        var goods = CreatedGoodTaxonomy.DiscoveryGoods;
+        int typeIndex = (int)(world.GetRandomFloat(c.Id, S.T2Scholar + 1) * goods.Length) % goods.Length;
+        var discovery = goods[typeIndex];
+        string bonusKey = CreatedGoodTaxonomy.DiscoveryBonusKeys[discovery];
 
         // Apply discovery bonus silently (always)
         if (c.Livelihood.SettlementTile != default
@@ -387,7 +376,7 @@ public sealed class Tier2BehaviorPhase
         var payload = JsonSerializer.Serialize(new ScholarDiscoveryPayload(
             c.Id.Value, c.Name, discovery.ToString(), bonusKey, _cfg.ScholarDiscoveryBonusAmount));
         TryEmitNotableWork(c, world, tick, EventType.ScholarDiscovery,
-            payload, [c.Id.Value], null, pending);
+            payload, [c.Id.Value], null, pending, discovery);
     }
 
     private void RunGeneral(Tier2Character c, WorldState world)
@@ -433,10 +422,6 @@ public sealed class Tier2BehaviorPhase
             { Health = (int)Math.Min(100f, stub.Health + healRate) };
     }
 
-    private static readonly string[] ArtisanGoodType = [
-        "textiles", "pottery", "metalwork", "woodcraft", "leatherwork", "stonework",
-    ];
-
     private void RunArtisan(Tier2Character c, WorldState world, List<PendingEvent> pending, long tick)
     {
         // Artisans work every tick (ambient economic contribution), but notable craftsmanship
@@ -444,9 +429,9 @@ public sealed class Tier2BehaviorPhase
         float r = world.GetRandomFloat(c.Id, S.T2General);
         if (r > _cfg.ArtisanCraftChance) return;  // most ticks produce silent routine goods
 
-        int goodCount = ArtisanGoodType.Length;
-        int goodIndex = (int)(world.GetRandomFloat(c.Id, S.T2General + 1) * goodCount) % goodCount;
-        string goodType = ArtisanGoodType[goodIndex];
+        var goods = CreatedGoodTaxonomy.ArtisanGoods;
+        int goodIndex = (int)(world.GetRandomFloat(c.Id, S.T2General + 1) * goods.Length) % goods.Length;
+        var goodType = goods[goodIndex];
 
         // Ambient bonus: slightly raise settlement Status recovery via crafted goods
         if (world.Settlements.TryGetValue(c.Location, out var homeStub))
@@ -459,9 +444,9 @@ public sealed class Tier2BehaviorPhase
         }
 
         var payload = JsonSerializer.Serialize(new ArtisanCraftedPayload(
-            c.Id.Value, c.Name, goodType));
+            c.Id.Value, c.Name, goodType.ToString()));
         TryEmitNotableWork(c, world, tick, EventType.ArtisanCrafted,
-            payload, [c.Id.Value], null, pending);
+            payload, [c.Id.Value], null, pending, goodType);
     }
 
     // ─── Crystallization ──────────────────────────────────────────────────────

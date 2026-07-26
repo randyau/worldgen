@@ -479,7 +479,15 @@ public static partial class CivTracker
         }
 
         float quality = Math.Clamp(0.5f + forgeRoll * 0.5f, 0f, 1f);
-        var cat  = ArtifactCategory.Weapon; // battle-forged artifacts are weapons
+        // M9 G-2: weighted category roll (no CreatedGoodType context for combat-triggered forging)
+        float categoryRoll = WorldRng.FloatAt(world.WorldSeed, world.CurrentYear,
+            (int)victorCivId.Value, uniqueSeed, S.ArtifactBattleCategory);
+        var cat = CreatedGoodTaxonomy.WeightedPick(
+            [
+                (ArtifactCategory.Weapon, artCfg.BattleCategoryWeightWeapon),
+                (ArtifactCategory.Armor, artCfg.BattleCategoryWeightArmor),
+                (ArtifactCategory.Regalia, artCfg.BattleCategoryWeightRegalia),
+            ], categoryRoll);
         var name = ArtifactNameGenerator.Generate(world, cat, (int)(attackerEntityId ^ (uniqueSeed & 0xFF)));
         var artifact = ArtifactRegistry.Create(world, name, cat, year,
             creatorId:   0,

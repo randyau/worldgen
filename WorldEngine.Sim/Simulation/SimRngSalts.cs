@@ -71,4 +71,7 @@ internal static class SimRngSalts
     public const int ArtifactHeroicDeath      = 5001; // legendary character combat-death forge roll
     public const int ArtifactDeathInheritance = 5002; // per-artifact roll: Lost vs inherited
     public const int ArtifactDecay            = 5003; // per-artifact annual decay (lost-to-history) roll
+    public const int ArtifactCategoryPick     = 5004; // CreatedGoodTaxonomy.PickCategory weighted roll (masterwork)
+    public const int ArtifactBattleCategory   = 5005; // battle-forged weighted category roll (G-2)
+    public const int ArtifactHeroicCategory   = 5006; // heroic-death weighted category roll (G-2)
 }

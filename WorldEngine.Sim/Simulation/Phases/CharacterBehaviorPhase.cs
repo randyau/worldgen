@@ -394,7 +394,15 @@ public sealed class CharacterBehaviorPhase
             owner = ArtifactOwner.Lost;
 
         float quality = Math.Clamp(0.55f + c.Skills.Combat * 0.4f, 0f, 1f);
-        var cat      = ArtifactCategory.Weapon; // heroic death → weapon artifact
+        // M9 G-2: weighted category roll (no CreatedGoodType context for combat-triggered forging)
+        float categoryRoll = WorldRng.FloatAt(world.WorldSeed, world.CurrentTick,
+            (int)(c.Id.Value & 0xFFFF), (int)(c.Id.Value >> 16), S.ArtifactHeroicCategory);
+        var cat = CreatedGoodTaxonomy.WeightedPick(
+            [
+                (ArtifactCategory.Weapon, artCfg.HeroicDeathCategoryWeightWeapon),
+                (ArtifactCategory.Relic, artCfg.HeroicDeathCategoryWeightRelic),
+                (ArtifactCategory.Regalia, artCfg.HeroicDeathCategoryWeightRegalia),
+            ], categoryRoll);
         var name     = ArtifactNameGenerator.Generate(world, cat, (int)c.Id.Value);
         var artifact = ArtifactRegistry.Create(world, name, cat, world.CurrentYear,
             creatorId:   0,
@@ -748,9 +756,9 @@ public sealed class CharacterBehaviorPhase
         // Art type weighted toward character personality:
         // high Compassion → Epic/Song (social/emotional), high Ingenuity → Sculpture/Painting,
         // high Aggression → Monument (assertive permanence)
-        int artCount = Enum.GetValues<ArtType>().Length;
-        int artIndex = (int)(world.GetRandomFloat(c.Id, S.CharArtType) * artCount) % artCount;
-        var artType = (ArtType)artIndex;
+        var artGoods = CreatedGoodTaxonomy.ArtGoods;
+        int artIndex = (int)(world.GetRandomFloat(c.Id, S.CharArtType) * artGoods.Length) % artGoods.Length;
+        var artType = artGoods[artIndex];
 
         // Apply a small culture cohesion bonus to the settlement where the artwork is created.
         if (world.Settlements.TryGetValue(c.Location, out var homeStub))

@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using FluentAssertions;
@@ -184,13 +185,20 @@ public sealed class ArtifactTests
         artifact.Origin.Should().Be("masterwork");
         artifact.Owner.Kind.Should().Be(ArtifactOwnerKind.Character);
         artifact.Owner.CharacterId.Should().Be(artisan.Id.Value);
-        artifact.Category.Should().Be(ArtifactCategory.Artwork); // artisan → Artwork
+        // M9 G-1: category derives from the artisan good's weighted table (CreatedGoodTaxonomy),
+        // not a fixed role→Artwork mapping — assert it's one of the categories the artisan
+        // goods taxonomy can ever produce.
+        var allArtisanCategories = WorldEngine.Sim.Entities.Artifacts.CreatedGoodTaxonomy.ArtisanGoods
+            .SelectMany(g => WorldEngine.Sim.Entities.Artifacts.CreatedGoodTaxonomy.CategoryWeights[g])
+            .Select(w => w.Category)
+            .ToHashSet();
+        allArtisanCategories.Should().Contain(artifact.Category);
 
         allPending.Should().Contain(e => e.Type == EventType.ArtifactCreated);
     }
 
     [Fact]
-    public void MasterworkScholar_CreatesArtifactWithTomeCategory()
+    public void MasterworkScholar_CreatesArtifactWithDiscoveryDerivedCategory()
     {
         var cfg = DefaultConfig();
         cfg.Character.Tier2ExceptionalWorkChance = 1.0f;
@@ -204,14 +212,14 @@ public sealed class ArtifactTests
             EntityId.New(), tile, "Scribe",
             PersonalityVector6.Default,
             new LivelihoodData(Tier2Role.Scholar, null, tile, 0.8f),
-            maxHealth: 100, maxAgeSeason: 200);
+            // maxAgeSeason must comfortably exceed the tick budget below — AgeSeason++ every
+            // tick means a low cap kills the scholar (and stops role behavior) before the ~2%
+            // per-tick discovery roll is likely to land.
+            maxHealth: 100, maxAgeSeason: 6000);
         world.Entities.Add(scholar);
 
         var phase    = new Tier2BehaviorPhase(cfg);
         var tickProp = typeof(WorldState).GetProperty("CurrentTick")!;
-        // Scholar notable-work (discovery) fires far less often than the artisan's 25% gate,
-        // and the roll keys on the entity id (EntityId.New()), so a large tick budget keeps
-        // this deterministic regardless of entity-creation order across the suite.
         for (long tick = 0; tick < 5000 && !scholar.HasMasterwork; tick++)
         {
             tickProp.SetValue(world, tick);
@@ -219,8 +227,14 @@ public sealed class ArtifactTests
         }
 
         scholar.HasMasterwork.Should().BeTrue();
+        // M9 G-1: category derives from the discovery's weighted table (CreatedGoodTaxonomy),
+        // not a fixed Tome — assert it's one of the categories that table can ever produce.
+        var allDiscoveryCategories = WorldEngine.Sim.Entities.Artifacts.CreatedGoodTaxonomy.DiscoveryGoods
+            .SelectMany(g => WorldEngine.Sim.Entities.Artifacts.CreatedGoodTaxonomy.CategoryWeights[g])
+            .Select(w => w.Category)
+            .ToHashSet();
         if (world.Artifacts.Count > 0)
-            world.Artifacts.Values.First().Category.Should().Be(ArtifactCategory.Tome);
+            allDiscoveryCategories.Should().Contain(world.Artifacts.Values.First().Category);
     }
 
     // ─── Conquest transfer ────────────────────────────────────────────────────

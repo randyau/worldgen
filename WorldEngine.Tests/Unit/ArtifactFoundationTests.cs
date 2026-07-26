@@ -246,4 +246,28 @@ public class ArtifactFoundationTests
         var act = () => SimConfigValidator.Validate(config);
         act.Should().NotThrow("default artifact config values are all valid probabilities");
     }
+
+    // ─── M9 G-2: battle/heroic-death category weight config ───────────────────
+
+    [Fact]
+    public void ArtifactConfig_CategoryWeights_BindFromToml_AndSumToOne()
+    {
+        var config = SimConfigLoader.LoadOrCreateDefault();
+        var a = config.Artifacts;
+
+        (a.BattleCategoryWeightWeapon + a.BattleCategoryWeightArmor + a.BattleCategoryWeightRegalia)
+            .Should().BeApproximately(1.0f, 0.001f);
+        (a.HeroicDeathCategoryWeightWeapon + a.HeroicDeathCategoryWeightRelic + a.HeroicDeathCategoryWeightRegalia)
+            .Should().BeApproximately(1.0f, 0.001f);
+    }
+
+    [Fact]
+    public void ArtifactConfig_Validator_RejectsCategoryWeightsNotSummingToOne()
+    {
+        var config = SimConfigLoader.LoadOrCreateDefault();
+        config.Artifacts.BattleCategoryWeightWeapon = 0.9f; // now sums to > 1.0
+        var act = () => SimConfigValidator.Validate(config);
+        act.Should().Throw<SimConfigValidationException>()
+            .WithMessage("*battle_category_weight_* must sum to 1.0*");
+    }
 }

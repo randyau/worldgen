@@ -51,4 +51,18 @@ public sealed class ArtifactConfig
     /// by accident, disaster, or war. Much lower than the Lost rate — owners protect their relics.
     /// </summary>
     public float OwnedArtifactAnnualDecay     { get; set; } = 0.001f;
+
+    /// <summary>
+    /// M9 G-2: weighted category roll for battle-forged artifacts (decisive campaign victory).
+    /// No CreatedGoodType context exists for combat-triggered forging, so these are independent
+    /// tunable weights (must sum to ~1.0) rather than derived from CreatedGoodTaxonomy.
+    /// </summary>
+    public float BattleCategoryWeightWeapon   { get; set; } = 0.5f;
+    public float BattleCategoryWeightArmor    { get; set; } = 0.35f;
+    public float BattleCategoryWeightRegalia  { get; set; } = 0.15f;
+
+    /// <summary>M9 G-2: weighted category roll for heroic-death artifacts (must sum to ~1.0).</summary>
+    public float HeroicDeathCategoryWeightWeapon  { get; set; } = 0.5f;
+    public float HeroicDeathCategoryWeightRelic   { get; set; } = 0.3f;
+    public float HeroicDeathCategoryWeightRegalia { get; set; } = 0.2f;
 }

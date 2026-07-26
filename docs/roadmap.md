@@ -221,11 +221,14 @@ build the mod data schema in M8.
 
 ## M9 — Created-Object Unification & Economic Depth  *(summary)*
 
+**Status:** Phase 9.0 (G-1 + G-2) COMPLETE — 2026-07-26. Economic depth (9.1+) not yet scoped —
+see `docs/phases/m9_created_object_unification.md`.
+
 Pays down the Session G / G-1 debt and builds economic depth on the cleaned foundation.
 
-- **G-1 unification (north-star):** collapse the four divergent taxonomies (`ArtisanGoodType`, `ArtType`, `DiscoveryType`, `ArtifactCategory`) into one shared `CraftedGoodType`/`CreatedObjectType`. A creative act yields a *product of type X*; **quality drives persistence** (routine → transient economic good, exceptional → an `Artifact` of the same type X). Delete the `RoleToArtifactCategory` stopgap.
-- **G-2 type variety:** ensure every category has a creation path (battle → weighted Weapon/Armor/Regalia; heroic death → Weapon/Relic/Regalia), folded into the G-1 refactor — not a piecemeal patch.
-- **Economic depth:** goods flow, per-capita demand, richer trade networks and specialization on top of the unified type system. Re-sweep artifact stock against the M5 decay-sink balance bands (`config/balance_invariants.toml [year_300]`) after any new creation source.
+- **G-1 unification (north-star) — DONE:** collapsed the four divergent taxonomies (`ArtisanGoodType`, `ArtType`, `DiscoveryType`, `ArtifactCategory`) into one shared `CreatedGoodType` (`WorldEngine.Sim/Core/Enumerations.cs`) plus `CreatedGoodTaxonomy` (`WorldEngine.Sim/Entities/Artifacts/CreatedGoodTaxonomy.cs`). A creative act yields a *product of type X*; quality drives persistence (routine → transient economic good, exceptional → an `Artifact` weighted-derived from that same type X). The `RoleToArtifactCategory` stopgap is deleted (trimmed to a `FallbackRoleCategory` for the roles — General/Governor/Merchant/Physician — that have no "product").
+- **G-2 type variety — DONE:** every masterwork good now weighted-rolls across plausible categories (Armor is reachable from Metalwork/Leatherwork/Metallurgy); battle-forged and heroic-death artifacts roll from independent weighted tables (`sim_config.toml [artifacts] battle_category_weight_*` / `heroic_death_category_weight_*`) instead of hardcoded `Weapon`.
+- **Economic depth (not yet scoped):** goods flow, per-capita demand, richer trade networks and specialization on top of the unified type system. Re-sweep artifact stock against the M5 decay-sink balance bands (`config/balance_invariants.toml [year_300]`) after any new creation source — 9.0 changed only category *mix*, not totals, so a re-sweep wasn't needed for this phase.
 
 ## M10 — Worldgen Preview & Modding  *(summary)*
 
