@@ -70,6 +70,7 @@ One-line description of every non-trivial source file. Check here before running
 - `Artifact.cs` — Category of legendary item — drives name generation and narrative significance.
 - `ArtifactNameGenerator.cs` — Deterministic legendary-item name generator seeded via WorldRng. Same world seed + same invocation parameters produce identical names. Style: "<Epithet> <Noun>" — e.g. "Dawnbreaker", "The Sundered Crown".
 - `ArtifactRegistry.cs` — Static operations helper for the artifact registry on
+- `CreatedGoodTaxonomy.cs` — Groups and category-derivation for
 
 ## WorldEngine.Sim/Entities/Beasts/
 - `BeastCatalog.cs` — Queryable, in-memory view of the beast species catalog loaded from config/beasts.toml.

@@ -1,7 +1,7 @@
 # M9 — Created-Object Unification & Economic Depth (index)
 
 **Milestone:** M9 — Created-Object Unification & Economic Depth
-**Status:** IN PROGRESS — Phase 9.0 (G-1 + G-2) COMPLETE 2026-07-26 (see
+**Status:** IN PROGRESS — Phase 9.0 (G-1 + G-2) done 2026-07-26 (see
 `docs/phases/archive/m9_phase0_taxonomy_unification.md`). Phase 9.1 (economic depth) not yet
 scoped.
 **Design authority:** `docs/design_session_decisions.md` § "Design Session G — Created Objects &

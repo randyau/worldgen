@@ -93,17 +93,10 @@ public interface IHistoryQuery
 
 ## EventType
 **File:** `WorldEngine.Sim/Core/Enumerations.cs:97`  
-**Kind:** `enum`
+**Kind:** `class`
 
 ```csharp
-public enum EventType
-{
-    // Environmental (1000–1099) — locked, never renumber
-    VolcanicEruption    = 1001,
-    EarthquakeOccurred  = 1002,
-    WildfireOccurred    = 1003,
-    FloodOccurred       = 1004,
-    DroughtBegan        = 1005,
+DroughtBegan        = 1005,
     DroughtEnded        = 1006,
     SeaLevelChanged     = 1007,
     BiomeChanged        = 1008,
@@ -190,6 +183,10 @@ public enum EventType
     ReligiousEmissaryArrived    = 5003,  // successful religious mission; awe seeds planted
     CivIntelGathered            = 5004,  // spy emissary returned with intelligence
 }
+
+public static class VerbClassification
+{
+}
 ```
 
-<!-- content-hash: de8cebd29715b981 -->
+<!-- content-hash: c2e572ab519dccec -->
