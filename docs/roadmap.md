@@ -238,11 +238,11 @@ Pays down the Session G / G-1 debt and builds economic depth on the cleaned foun
 ## M10 — Worldgen Preview & Modding  *(summary)*
 
 **Status:** SCOPED — 2026-07-26. Phase sequence (10.0–10.3) defined in
-`docs/phases/m10_worldgen_preview_modding.md`; no phase started yet.
+`docs/phases/archive/m10_worldgen_preview_modding.md`; no phase started yet.
 
 - **Layered worldgen preview + adjustment:** build the `WorldGenPipeline` (`RunUpTo`/`RerunFrom`) that M1 deferred; let players tweak sea level / parameters and re-preview per layer before committing.
 - **Player config exposure:** surface `sim_config.toml` tunables through UI; safe presets. Lands as the **sim-config tab in the M8 Settings screen shell** (`docs/ui_design_framework.md` §9.2), reusing the M8 component kit — not a bespoke UI.
-- **Data modding:** documented, moddable config/data with validation — no plugin/code modding (that stays out of scope per CLAUDE.md). Uses the M8 `// MOD SEAM:` registries (framework §10) as the extension points. Scoped down to the data that's actually TOML-driven today (`config/ancestries.toml`, `config/beasts.toml`); biomes/resources are still hardcoded C# enums and would need their own follow-up phase to become data-driven — see `docs/phases/m10_worldgen_preview_modding.md` DECISION (10.3).
+- **Data modding:** documented, moddable config/data with validation — no plugin/code modding (that stays out of scope per CLAUDE.md). Uses the M8 `// MOD SEAM:` registries (framework §10) as the extension points. Scoped down to the data that's actually TOML-driven today (`config/ancestries.toml`, `config/beasts.toml`); biomes/resources are still hardcoded C# enums and would need their own follow-up phase to become data-driven — see `docs/phases/archive/m10_worldgen_preview_modding.md` DECISION (10.3).
 
 ## M11 — Scale & Distribution  *(summary)*
 

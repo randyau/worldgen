@@ -23,6 +23,7 @@ One-line description of every non-trivial source file. Check here before running
 - `AncestryConfig.cs` — All data for one ancestry, loaded from config/ancestries.toml. Personality and aptitude fields are bias offsets added to the Gaussian mean (base 0.5).
 - `AncestryLoader.cs` — Loads ancestries.toml into AncestryConfig instances.
 - `AncestryRegistry.cs` — Loaded set of all ancestry configs. Accessible via world.SimConfig.AncestryRegistry. Provides biome-weighted ancestry sampling and cross-ancestry trust lookups.
+- `AncestryValidator.cs` — Validates ancestries.toml after deserialization. Called automatically by <see cref="AncestryLoader.LoadOrDefault"/>. Throws <see cref="AncestryValidationException"/> listing every violation found — a load-time gate per M10 10.3 (fail fast, not silent degradation of simulation behavior).
 - `ArtifactConfig.cs` — Artifact generation and ownership constants. Loaded from the [artifacts] section of sim_config.toml.
 - `BeastsSimConfig.cs` — Beast lifecycle constants from the [beasts] section of sim_config.toml. Species-specific values (health, strength, etc.) live in config/beasts.toml.
 - `BiomeThresholdConfig.cs` — Elevation, temperature, and moisture thresholds for biome classification.
@@ -77,6 +78,7 @@ One-line description of every non-trivial source file. Check here before running
 - `BeastCatalog.cs` — Queryable, in-memory view of the beast species catalog loaded from config/beasts.toml.
 - `BeastCatalogFile.cs` — Top-level wrapper for beasts.toml deserialization. Tomlyn maps [[beasts]] arrays to the Beasts list via snake_case conversion.
 - `BeastCatalogLoader.cs` — Loads beasts.toml into BeastCatalog instances.
+- `BeastCatalogValidator.cs` — Validates beasts.toml after deserialization. Called automatically by <see cref="BeastCatalogLoader.LoadOrCreateDefault"/>. Throws <see cref="BeastCatalogValidationException"/> listing every violation found — a load-time gate per M10 10.3 (fail fast, not silent degradation of simulation behavior).
 - `BeastFactory.cs` — Creates LegendaryBeast instances from a species config and placement parameters. All randomness is seeded via WorldRng for reproducibility.
 - `BeastSpawnConfig.cs` — Global beast spawn settings from the [beast_spawn] section of config/beasts.toml.
 - `BeastSpawner.cs` — Populates EntityRegistry with initial beasts and builds the BeastEmergenceSchedule for deferred mythological creature spawns. Called once, after world gen, before the first sim tick.
