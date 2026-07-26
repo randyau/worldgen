@@ -31,3 +31,11 @@ ArtifactSnapshot
 # M6 Phase 1 types — declared in the phase doc, implemented in later stories of the phase
 KeybindRegistry
 PanelManager
+
+# M9/M10-planned UI architecture — proposed in ui_design_framework.md / roadmap.md, not yet built
+PanelRegistry
+OverlayRegistry
+IPanel
+
+# M9-planned config toggle — mentioned in roadmap.md, not yet implemented
+character.ocean_crossing_enabled
