@@ -14,6 +14,17 @@ namespace WorldEngine.UI.UI.Present;
 // MOD SEAM: localizable via Presenter — swap the instance for a localized one later.
 public sealed class Presenter
 {
+    // ── Names ────────────────────────────────────────────────────────────────
+
+    /// <summary>Roman numeral for a name ordinal (e.g. "Robert III"). Falls back to Arabic past XX.</summary>
+    public string ToRoman(int n)
+    {
+        if (n <= 0 || n > 20) return n.ToString();
+        string[] ones = { "", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX" };
+        string[] tens = { "", "X", "XX" };
+        return tens[n / 10] + ones[n % 10];
+    }
+
     // ── Units (moved from TileInspectorPanel) ───────────────────────────────
 
     /// <summary>Raw 0–255 temperature byte to Celsius.</summary>

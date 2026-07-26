@@ -18,6 +18,7 @@ public sealed class CivHistoryPanel : IToggleablePanel
     private readonly WeDropdown<long> _civCombo = new();
     private readonly WeVStack _content = new(UiTheme.Space.Xs);
     private readonly List<CivSummary> _civSummaries = new();
+    private PanelContext _ctx;
 
     public string Id => "civ";
     public string Title => "Civ History";
@@ -39,7 +40,7 @@ public sealed class CivHistoryPanel : IToggleablePanel
         return PanelFrame.Build(Title, body.Root, new PanelFrameOptions { OnClose = Hide });
     }
 
-    public void Bind(PanelContext ctx) { }
+    public void Bind(PanelContext ctx) => _ctx = ctx;
 
     public EmptyStateSpec? EmptyFor(PanelContext ctx) =>
         _civSummaries.Count == 0
@@ -138,7 +139,7 @@ public sealed class CivHistoryPanel : IToggleablePanel
         else
             foreach (var ruler in rulers)
             {
-                string nameStr = ruler.NameOrdinal > 0 ? $"{ruler.Name} {ToRoman(ruler.NameOrdinal)}" : ruler.Name;
+                string nameStr = ruler.NameOrdinal > 0 ? $"{ruler.Name} {_ctx.Present.ToRoman(ruler.NameOrdinal)}" : ruler.Name;
                 if (ruler.Epithet is not null) nameStr += $" the {ruler.Epithet}";
                 string lifeStr = ruler.DeathYear > 0
                     ? $"  {nameStr}  ({ruler.BirthYear}–{ruler.DeathYear})"
@@ -175,13 +176,6 @@ public sealed class CivHistoryPanel : IToggleablePanel
             foreach (var ev in headlineEvents)
                 _content.Add(new WeText($"  Year {ev.Year} — {ev.TypeName}", color: UiTheme.ColorRole.TextSecondary));
     }
-
-    private static string ToRoman(int n) => n switch
-    {
-        1 => "I", 2 => "II", 3 => "III", 4 => "IV", 5 => "V",
-        6 => "VI", 7 => "VII", 8 => "VIII", 9 => "IX", 10 => "X",
-        _ => n.ToString()
-    };
 
     private static string ExtractWarOpponent(string payloadJson, long civId)
     {

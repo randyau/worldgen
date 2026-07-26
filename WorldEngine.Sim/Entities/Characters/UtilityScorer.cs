@@ -571,6 +571,11 @@ public sealed class UtilityScorer
                 }
                 if (!nearAnySettlement)
                     score += cfg.ColonyFrontierBonus;
+
+                // Resource deposits and trade-route positioning make a frontier site more
+                // attractive than bare fertility alone would suggest.
+                score += (int)(ComputeDepositValue(coord, world) * cfg.FoundingDepositWeight);
+                score += (int)(ComputeRouteBonus(coord, world) * cfg.FoundingRouteWeight);
             }
 
             // When shelter is critically low, prefer terrain that provides natural cover.
@@ -613,28 +618,6 @@ public sealed class UtilityScorer
             if (distSq < bestDistSq) { bestDistSq = distSq; best = cand; }
         }
         return best;
-    }
-
-    // ─── Founding cooldown ────────────────────────────────────────────────────
-
-    /// <summary>
-    /// Returns true when the character's civ is still in its founding cooldown.
-    /// The cooldown compresses as civ population grows — a large civ can send settlers
-    /// sooner because it has more surplus people to draw from.
-    /// Formula: effectiveCooldown = max(Min, Base / (1 + civPop / PopScale))
-    /// </summary>
-    private static bool InCivFoundingCooldown(
-        Tier1Character c, IWorldStateReadOnly world, CharacterSimConfig cfg)
-    {
-        if (!c.Identity.CivId.IsValid) return false;
-        var civ = world.GetCivilization(c.Identity.CivId);
-        if (civ is null) return false;
-
-        // TotalPopulation is maintained by PopulationDynamicsPhase — O(1) read instead of O(settlements) scan
-        float effective = cfg.BaseFoundingCooldownYears
-                        / (1f + civ.TotalPopulation / (float)cfg.FoundingCooldownPopScale);
-        int cooldown = Math.Max(cfg.MinFoundingCooldownYears, (int)effective);
-        return world.CurrentYear - civ.LastSettlementFoundedYear < cooldown;
     }
 
     // ─── Ruin penalty ─────────────────────────────────────────────────────────

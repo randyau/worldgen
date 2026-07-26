@@ -52,7 +52,7 @@ public static class BiomeClassifier
         {
             if (moisture >= t.WetMoisture) return BiomeType.TropicalRainforest;
             if (moisture >= t.DryMoisture) return BiomeType.Savanna;
-            if (moisture >= t.AridMoisture) return BiomeType.Savanna;
+            if (moisture >= t.AridMoisture) return BiomeType.Plains;
             return BiomeType.Desert;
         }
 

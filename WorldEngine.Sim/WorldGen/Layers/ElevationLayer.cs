@@ -22,9 +22,9 @@ public sealed class ElevationLayer : IWorldGenLayer<ElevationResult>
         noise.SetNoiseType(FastNoiseLite.NoiseType.OpenSimplex2);
         noise.SetFrequency(cfg.NoiseScale * 0.01f);
         noise.SetFractalType(FastNoiseLite.FractalType.FBm);
-        noise.SetFractalOctaves(5);
-        noise.SetFractalLacunarity(2.0f);
-        noise.SetFractalGain(0.5f);
+        noise.SetFractalOctaves(cfg.FractalOctaves);
+        noise.SetFractalLacunarity(cfg.FractalLacunarity);
+        noise.SetFractalGain(cfg.FractalGain);
 
         float[] raw = new float[ctx.TileCount];
         float ti = cfg.TectonicIntensity;
@@ -46,29 +46,29 @@ public sealed class ElevationLayer : IWorldGenLayer<ElevationResult>
                     if (tec.IsContinentalTile[idx])
                     {
                         // Continental fault → mountain ridge
-                        tectonic = 0.6f * ti;
+                        tectonic = cfg.ContinentalFaultWeight * ti;
                     }
                     else if (tec.IsVolcanic[idx])
                     {
                         // Volcanic/subduction → trench on the oceanic side, but also volcanic peaks
                         // DECISION: volcanic tiles get a large positive boost (volcanic mountains)
-                        tectonic = 0.5f * ti;
+                        tectonic = cfg.VolcanicFaultWeight * ti;
                     }
                     else
                     {
                         // Oceanic non-volcanic fault → slight trench
-                        tectonic = -0.3f * ti;
+                        tectonic = cfg.OceanicFaultWeight * ti;
                     }
                 }
                 else if (tec.IsContinentalTile[idx])
                 {
                     // Continental interior → highland bias
-                    tectonic = 0.15f * ti;
+                    tectonic = cfg.ContinentalInteriorWeight * ti;
                 }
                 else
                 {
                     // Oceanic interior → slight basin
-                    tectonic = -0.10f * ti;
+                    tectonic = cfg.OceanicInteriorWeight * ti;
                 }
 
                 raw[idx] = n + tectonic;

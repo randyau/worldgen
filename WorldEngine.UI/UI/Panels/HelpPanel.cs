@@ -45,7 +45,10 @@ public sealed class HelpPanel : IToggleablePanel
     public void Bind(PanelContext ctx) { }
     public EmptyStateSpec? EmptyFor(PanelContext ctx) => null;
 
-    public void Show() => IsVisible = true;
+    // Rebuild on open: SettingsPanel hosts a separate KeybindEditor instance over the same
+    // KeybindRegistry, so a rebind made there wouldn't otherwise reach this editor until its
+    // own rebind/reset handlers fire.
+    public void Show() { IsVisible = true; _editor.Rebuild(); }
     public void Hide() => IsVisible = false;
 
     public void Refresh() { /* rebuilt reactively by the editor's own rebind/reset handlers */ }

@@ -39,10 +39,8 @@ public sealed class SettingsPanel : IToggleablePanel
     public Widget Build()
     {
         var tabRow = new WeHStack(UiTheme.Space.Sm);
-        var displayBtn  = new TextButton { Text = "[Display]" };
-        var controlsBtn = new TextButton { Text = "[Controls]" };
-        displayBtn.Click  += (_, _) => { _activeTab = "display";  RebuildBody(); };
-        controlsBtn.Click += (_, _) => { _activeTab = "controls"; RebuildBody(); };
+        var displayBtn  = new WeButton("[Display]",  () => { _activeTab = "display";  RebuildBody(); });
+        var controlsBtn = new WeButton("[Controls]", () => { _activeTab = "controls"; RebuildBody(); });
         tabRow.Add(displayBtn);
         tabRow.Add(controlsBtn);
 
@@ -56,7 +54,10 @@ public sealed class SettingsPanel : IToggleablePanel
     public void Bind(PanelContext ctx) { }
     public EmptyStateSpec? EmptyFor(PanelContext ctx) => null;
 
-    public void Show() => IsVisible = true;
+    // Rebuild on open: HelpPanel hosts a separate KeybindEditor instance over the same
+    // KeybindRegistry, so a rebind made there wouldn't otherwise reach this editor until its
+    // own rebind/reset handlers fire.
+    public void Show() { IsVisible = true; _editor.Rebuild(); }
     public void Hide() => IsVisible = false;
 
     public void Refresh() { /* rebuilt reactively by tab clicks and field/editor callbacks */ }
@@ -77,12 +78,11 @@ public sealed class SettingsPanel : IToggleablePanel
 
         var dockWidthField = new WeField("Dock width (px):", _prefs.DockWidth.ToString());
         dockWidthField.Value = _prefs.DockWidth.ToString();
-        var applyBtn = new TextButton { Text = "[Apply]" };
-        applyBtn.Click += (_, _) =>
+        var applyBtn = new WeButton("[Apply]", () =>
         {
             if (int.TryParse(dockWidthField.Value, out int width))
                 Persist(_prefs with { DockWidth = Math.Clamp(width, LayoutHost.MinDockWidth, LayoutHost.MaxDockWidth) });
-        };
+        });
         var dockRow = new WeHStack(UiTheme.Space.Sm);
         dockRow.Add(dockWidthField);
         dockRow.Add(applyBtn);

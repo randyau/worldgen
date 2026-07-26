@@ -181,7 +181,7 @@ public static partial class CivTracker
             if (activeFoundCityDelegates >= 2) continue;
 
             // Pick the most ambitious non-ruler, non-founder living member.
-            // Use the same effective-cooldown formula as InCivFoundingCooldown so delegation
+            // This is the sole place the founding-cooldown formula is evaluated — delegation
             // only fires when the delegate can actually establish (avoids goal-prune cycles).
             Tier1Character? best = null;
             float bestAmbition = cfg.CityFoundingAmbitionThreshold;
@@ -794,8 +794,8 @@ public static partial class CivTracker
         bool qualifies)
     {
         if (!qualifies) return;
+        if (!civ.CulturalTraits.Add(trait)) return;  // already assigned — no duplicate event
         string traitName = trait.ToString();
-        if (!civ.CulturalTraits.Add(traitName)) return;  // already assigned — no duplicate event
 
         string reason = trait switch
         {
@@ -850,7 +850,6 @@ public static partial class CivTracker
 
     // ─── Civ knowledge system (M4.1) ─────────────────────────────────────────
 
-    private const int SaltEmissaryDispatch   = 4102;
     private const int SaltEmissaryResolution = 4103;
 
     /// <summary>
@@ -977,10 +976,14 @@ public static partial class CivTracker
 
         if (trust < cfg.SpyDispatchMaxTrust && cunning > 0.5f)
             return EmissaryPurpose.Spy;
-        if (trust >= cfg.TradeDispatchMinTrust)
-            return EmissaryPurpose.Trade;
+        // Diplomacy is checked before Trade: it's the higher-trust, more exclusive purpose
+        // (feeds alliance formation). DiplomacyDispatchMinTrust must stay meaningfully above
+        // TradeDispatchMinTrust or Trade's broad catch-all range swallows it entirely and
+        // Diplomacy emissaries — and the alliances they lead to — can never be dispatched.
         if (trust >= cfg.DiplomacyDispatchMinTrust && !civ.IsAtWarWith(targetCivId))
             return EmissaryPurpose.Diplomacy;
+        if (trust >= cfg.TradeDispatchMinTrust)
+            return EmissaryPurpose.Trade;
         if (piety > 0.6f)
             return EmissaryPurpose.Religious;
         return null;

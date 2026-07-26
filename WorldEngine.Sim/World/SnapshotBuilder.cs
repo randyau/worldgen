@@ -159,7 +159,7 @@ public sealed class SnapshotBuilder
         var tile = world.TileGrid.GetTile(coord);
         int idx = world.TileGrid.FlatIndex(coord);
 
-        byte effectiveTemp = ComputeEffectiveTemperature(world, coord, tile, idx);
+        byte effectiveTemp = TileTemperature.Effective(tile, idx, world);
         bool hasDisaster = world.ActiveTileDisasters.ContainsKey(coord);
         bool hasRuin     = world.Ruins.ContainsKey(coord);
 
@@ -178,23 +178,6 @@ public sealed class SnapshotBuilder
         );
     }
 
-    private static byte ComputeEffectiveTemperature(
-        WorldState world, TileCoord coord, TileData tile, int idx)
-    {
-        // Pattern #9 from docs/snippets/patterns.md
-        int h = world.TileGrid.TileHeight;
-        float normalizedLat = coord.Y / (float)h;
-        float latitudeScale = 1.0f + MathF.Abs(normalizedLat - 0.5f) * 1.4f;
-
-        int seasonalDelta = world.SeasonalProfiles.Length > idx
-            ? GetSeasonalTempDelta(world.SeasonalProfiles[idx], world.CurrentSeason)
-            : 0;
-
-        float anomalyContrib = world.GlobalTemperatureAnomaly * latitudeScale;
-        int raw = tile.BaseTemperature + seasonalDelta + (int)anomalyContrib;
-        return (byte)Math.Clamp(raw, 0, 255);
-    }
-
     private static int GetSeasonalTempDelta(SeasonalProfile profile, Season season) =>
         season switch
         {
@@ -210,18 +193,12 @@ public sealed class SnapshotBuilder
     {
         var tile = world.TileGrid.GetTile(coord);
         int idx = world.TileGrid.FlatIndex(coord);
-        int h = world.TileGrid.TileHeight;
 
         var profile = world.SeasonalProfiles.Length > idx
             ? world.SeasonalProfiles[idx]
             : default;
 
-        float normalizedLat = coord.Y / (float)h;
-        float latitudeScale = 1.0f + MathF.Abs(normalizedLat - 0.5f) * 1.4f;
-
-        float seasonTempDelta = GetSeasonalTempDelta(profile, world.CurrentSeason);
-        float effectiveTemp   = tile.BaseTemperature + seasonTempDelta
-                              + world.GlobalTemperatureAnomaly * latitudeScale;
+        float effectiveTemp = TileTemperature.Effective(tile, idx, world);
 
         int seasonMoistDelta = GetSeasonalMoistDelta(profile, world.CurrentSeason);
         float baseMoist = tile.CurrentMoisture + seasonMoistDelta;

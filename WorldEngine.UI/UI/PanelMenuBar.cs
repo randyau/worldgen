@@ -1,6 +1,7 @@
 using Myra.Graphics2D.UI;
 using WorldEngine.Sim.Commands;
 using WorldEngine.Sim.Core;
+using WorldEngine.UI.UI.Kit;
 using WorldEngine.UI.UI.Layout;
 using WorldEngine.UI.UI.Theme;
 
@@ -17,9 +18,9 @@ public sealed class PanelMenuBar
 {
     public readonly Widget Root;
     private readonly SimWorkspace _workspace;
-    private readonly Dictionary<string, TextButton> _buttons = new();
+    private readonly Dictionary<string, WeButton> _buttons = new();
     private readonly Label _spotlightLabel;
-    private readonly TextButton _exitSpotlightBtn;
+    private readonly WeButton _exitSpotlightBtn;
 
     public PanelMenuBar(SimWorkspace workspace, CommandQueue queue)
     {
@@ -35,20 +36,19 @@ public sealed class PanelMenuBar
         AddToggle(row, "help",      "Help (?)");
 
         _spotlightLabel = new Label { Text = "", TextColor = UiTheme.AccentSpotlight, Visible = false };
-        _exitSpotlightBtn = new TextButton { Text = "[Exit Spotlight]", Visible = false };
-        _exitSpotlightBtn.Click += (_, _) => queue.Enqueue(new ExitSpotlight());
+        _exitSpotlightBtn = new WeButton("[Exit Spotlight]", () => queue.Enqueue(new ExitSpotlight()), WeButtonVariant.Danger)
+            { Visible = false };
         row.Widgets.Add(_spotlightLabel);
-        row.Widgets.Add(_exitSpotlightBtn);
+        row.Widgets.Add(_exitSpotlightBtn.Root);
 
         Root = row;
     }
 
     private void AddToggle(HorizontalStackPanel row, string id, string label)
     {
-        var btn = new TextButton { Text = label };
-        btn.Click += (_, _) => _workspace.ToggleSummoned(id);
+        var btn = new WeButton(label, () => _workspace.ToggleSummoned(id));
         _buttons[id] = btn;
-        row.Widgets.Add(btn);
+        row.Widgets.Add(btn.Root);
     }
 
     /// <summary>
@@ -60,7 +60,7 @@ public sealed class PanelMenuBar
     public void RefreshHighlights()
     {
         foreach (var (id, btn) in _buttons)
-            btn.TextColor = _workspace.IsSummonedVisible(id) ? UiTheme.Accent : UiTheme.BodyText;
+            btn.Active = _workspace.IsSummonedVisible(id);
     }
 
     /// <summary>Reflects Spotlight state — genuine sim data, fine to update only on a fresh snapshot.</summary>

@@ -98,7 +98,7 @@ public sealed class Civilization
     public int TotalScholarDiscoveries { get; set; } = 0;
 
     /// <summary>Permanent cultural traits assigned once thresholds are crossed. Maintained by CivTracker.EvaluateCulturalTraits.</summary>
-    public HashSet<string> CulturalTraits { get; } = new(StringComparer.OrdinalIgnoreCase);
+    public HashSet<CulturalTrait> CulturalTraits { get; } = new();
 
     /// <summary>
     /// Cultural profile derived from the founding ancestry and active traits (M3.5).

@@ -45,6 +45,10 @@ public sealed class TerritoryPhase
                 }
 
                 int owned = ownedTiles.Count;
+                int pop = stub!.Population;
+                int effectiveRadius = EffectiveTerritoryRadius(pop, world.SimConfig.Territory);
+                int supportableTiles = Math.Max(_cfg.MinCityTiles,
+                    (int)(Math.PI * effectiveRadius * effectiveRadius));
 
                 // Territory expands freely up to the radius cap (enforced inside ExpandTerritory)
                 // and the MaxCityTiles ceiling. Population is NOT used as a gate here — the
@@ -56,6 +60,14 @@ public sealed class TerritoryPhase
                     ExpandTerritory(cityTile, civId, civ, ownedTiles, canExpand, world, pending);
                 }
 
+                if (owned > supportableTiles)
+                {
+                    // Population has dropped below what the current territory needs to support it —
+                    // release the tiles farthest from the city center.
+                    int canRelease = Math.Min(_cfg.TerritoryGrowthPerYear, owned - supportableTiles);
+                    ContractTerritory(cityTile, civId, civ, ownedTiles, canRelease, world, pending);
+                }
+
                 // Prune tiles disconnected from the city center (islands cut off by rival territory).
                 PruneDisconnectedTiles(cityTile, ownedTiles, world);
             }
@@ -63,6 +75,11 @@ public sealed class TerritoryPhase
 
         return pending;
     }
+
+    private static int EffectiveTerritoryRadius(int pop, TerritoryConfig tcfg) => Math.Min(
+        tcfg.MaxTerritoryRadius,
+        Math.Max(tcfg.MinTerritoryRadius,
+                 tcfg.MinTerritoryRadius + pop / Math.Max(1, tcfg.PopPerTerritoryRadiusTile)));
 
     // ─── Expansion ────────────────────────────────────────────────────────────
 
@@ -77,12 +94,8 @@ public sealed class TerritoryPhase
         int[] dy = { 0, 0, -1, 1 };
 
         // Population-scaled radius: a village of 150 gets radius 4; a city of 1350 gets radius 12.
-        var tcfg = world.SimConfig.Territory;
         int pop = world.Settlements.TryGetValue(cityTile, out var settStub) ? settStub.Population : 0;
-        int effectiveRadius = Math.Min(
-            tcfg.MaxTerritoryRadius,
-            Math.Max(tcfg.MinTerritoryRadius,
-                     tcfg.MinTerritoryRadius + pop / Math.Max(1, tcfg.PopPerTerritoryRadiusTile)));
+        int effectiveRadius = EffectiveTerritoryRadius(pop, world.SimConfig.Territory);
         int maxRadiusSq = effectiveRadius * effectiveRadius;
 
         int claimed = 0;

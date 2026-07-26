@@ -164,19 +164,9 @@ public static class CausalEdgeBuilder
                 if (battle.Year < wd.Year || battle.Year > warEndYear) continue;
                 if (battle.CivId != declCivId && battle.CivId != targetCivId) continue;
 
-                // Check battle payload involves the correct target
-                bool matchesPair = false;
-                try
-                {
-                    using var doc = JsonDocument.Parse(battle.PayloadJson ?? "{}");
-                    // RaiderId won't tell us the target civ — we use location CivId proximity
-                    // DECISION: match by CivId being one of the war parties; approximation
-                    matchesPair = true;
-                }
-                catch (JsonException) { matchesPair = true; }
-
-                if (!matchesPair) continue;
-
+                // DECISION: battle payloads don't carry the opposing civ id, so we match by
+                // the battle's CivId being one of the two war parties (checked above) rather
+                // than parsing the payload further; approximation.
                 conn.Execute(
                     "INSERT OR IGNORE INTO CausalEdges (PredecessorId, SuccessorId, EdgeType) VALUES (@P, @S, @E)",
                     new { P = wd.Id, S = battle.Id, E = "war_battle" }, tx);

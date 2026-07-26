@@ -114,8 +114,7 @@ public sealed class EventLogPanel : IWorkspacePanel
         }
 
         long capturedEvId = ev.Id.Value;
-        var causeBtn = new TextButton { Text = "->", Width = 24, Height = 20 };
-        causeBtn.Click += (_, _) => OnCauseChain?.Invoke(capturedEvId);
+        var causeBtn = new WeButton("->", () => OnCauseChain?.Invoke(capturedEvId)) { Width = 24, Height = 20 };
         row.Add(causeBtn);
 
         if (ev.IsFirstOfKind) row.Add(new WeText("★", color: UiTheme.ColorRole.AccentGodMode));

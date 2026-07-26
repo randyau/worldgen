@@ -66,19 +66,17 @@ public sealed class KeybindEditor : IWeWidget
                 row.Add(new WeText(cmd.Label, color: UiTheme.ColorRole.TextSecondary));
 
                 string capturedId = cmd.Id;
-                var rebindBtn = new TextButton { Text = "[Rebind]" };
-                rebindBtn.Click += (_, _) => { _awaitingCommandId = capturedId; Rebuild(); };
+                var rebindBtn = new WeButton("[Rebind]", () => { _awaitingCommandId = capturedId; Rebuild(); });
                 row.Add(rebindBtn);
 
                 if (cmd.DefaultKey is { } defaultKey)
                 {
-                    var resetBtn = new TextButton { Text = "[Reset]" };
-                    resetBtn.Click += (_, _) =>
+                    var resetBtn = new WeButton("[Reset]", () =>
                     {
                         _keybinds.Bind(capturedId, defaultKey, cmd.DefaultCtrl, cmd.Trigger);
                         Rebuild();
                         _onChanged?.Invoke();
-                    };
+                    }, WeButtonVariant.Ghost);
                     row.Add(resetBtn);
                 }
 
@@ -86,8 +84,8 @@ public sealed class KeybindEditor : IWeWidget
             }
         }
 
-        var resetAllBtn = new TextButton { Text = "[Reset All to Defaults]" };
-        resetAllBtn.Click += (_, _) => { _keybinds.LoadDefaults(); Rebuild(); _onChanged?.Invoke(); };
+        var resetAllBtn = new WeButton("[Reset All to Defaults]",
+            () => { _keybinds.LoadDefaults(); Rebuild(); _onChanged?.Invoke(); }, WeButtonVariant.Danger);
         _root.Add(resetAllBtn);
     }
 }

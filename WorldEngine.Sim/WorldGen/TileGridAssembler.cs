@@ -24,8 +24,18 @@ public static class TileGridAssembler
         int w = ctx.TileWidth, h = ctx.TileHeight;
         var grid = new TileGrid(w, h);
 
-        Parallel.For(0, h, y =>
+        // Partition by chunk-row bands (TileChunk.Size rows at a time), not individual rows.
+        // TileChunk.SetTile accumulates SummaryFlags with a non-atomic |=; a single chunk spans
+        // TileChunk.Size consecutive rows, so if the row-level Parallel.For let two different
+        // worker threads touch the same chunk concurrently, that OR could silently lose bits
+        // (non-deterministic between runs of the same seed). Chunk-row banding guarantees every
+        // chunk is owned by exactly one thread for its whole 16-row extent.
+        int chunkRows = (h + TileChunk.Size - 1) / TileChunk.Size;
+        Parallel.For(0, chunkRows, chunkRow =>
         {
+            int yStart = chunkRow * TileChunk.Size;
+            int yEnd   = Math.Min(h, yStart + TileChunk.Size);
+            for (int y = yStart; y < yEnd; y++)
             for (int x = 0; x < w; x++)
             {
                 int i = ctx.IndexOf(x, y);

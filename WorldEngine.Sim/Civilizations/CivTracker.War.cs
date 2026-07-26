@@ -87,7 +87,7 @@ public static partial class CivTracker
         };
         var eventTile = declRuler?.Location ?? declCiv.CapitalTile;
         string[]? declarerTraits = declCiv.CulturalTraits.Count > 0
-            ? declCiv.CulturalTraits.ToArray()
+            ? declCiv.CulturalTraits.Select(t => t.ToString()).ToArray()
             : null;
         var payload = JsonSerializer.Serialize(new WarDeclaredPayload(
             declCiv.RulerId.Value, declRuler?.Identity.Name ?? declCiv.Name,
@@ -181,13 +181,13 @@ public static partial class CivTracker
                 foreach (var (tile, stub) in world.Settlements)
                 {
                     if (stub.CivId != enemyCivId) continue;
-                    float dist = 0f;
+                    float dist = float.MaxValue;
                     foreach (var (aTile, aStub) in world.Settlements)
                     {
                         if (aStub.CivId != civA.Id) continue;
                         int dx = aTile.X - tile.X, dy = aTile.Y - tile.Y;
                         float d = MathF.Sqrt(dx * dx + dy * dy);
-                        if (d < dist || dist == 0f) dist = d;
+                        if (d < dist) dist = d;
                     }
                     if (dist < nearestDist) { nearestDist = dist; target = stub; targetTile = tile; }
                 }
@@ -273,9 +273,13 @@ public static partial class CivTracker
 
                         bool anyLeft = world.Settlements.Values.Any(s => s.CivId == previousCivId);
                         if (!anyLeft)
+                        {
+                            if (world.Civilizations.TryGetValue(previousCivId, out var collapsedCiv))
+                                collapsedCiv.IsCollapsed = true;
                             pending.Add(new PendingEvent(EventType.CivilizationCollapsed, targetTile, null,
                                 JsonSerializer.Serialize(new CivCollapsedPayload(previousCivId.Value, "conquered")),
                                 CivId: previousCivId.Value));
+                        }
                     }
                 }
                 else
@@ -415,12 +419,15 @@ public static partial class CivTracker
                     TransferConquestArtifacts(world, pending, cmd.SettlementTile, raider.Identity.CivId,
                         raider.Id.Value, raider.Identity.Name);
 
-                // If the losing civ has no settlements left, it collapses.
-                bool anyLeft = losingCiv != null && losingCiv.SettlementCount > 0;
+                // If the losing civ has no settlements or colonies left, it collapses.
+                bool anyLeft = losingCiv != null && (losingCiv.SettlementCount > 0 || losingCiv.ColonyCount > 0);
                 if (!anyLeft)
+                {
+                    if (losingCiv != null) losingCiv.IsCollapsed = true;
                     pending.Add(new PendingEvent(EventType.CivilizationCollapsed, cmd.SettlementTile, null,
                         JsonSerializer.Serialize(new CivCollapsedPayload(previousCivId.Value, "conquered")),
                         CivId: previousCivId.Value));
+                }
             }
             else
             {

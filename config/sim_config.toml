@@ -36,6 +36,8 @@ chunk_size              = 16      # Tile grid chunk dimensions (16×16 tiles per
 magic_intensity_scale       = 1.0  # Multiplier on magic intensity peaks (V2 stub)
 fertility_micro_variance    = 20   # ±range of high-freq noise applied to tile fertility at world gen;
                                    # breaks intra-biome tile homogeneity so characters prefer specific tiles
+fertility_micro_frequency  = 0.07  # FastNoiseLite frequency for the fertility micro-variation noise
+fertility_micro_octaves    = 3     # FastNoiseLite fractal octave count for the fertility micro-variation noise
 
 [world_gen.elevation]
 noise_scale             = 0.3     # How much noise varies elevation around tectonic baseline
@@ -43,6 +45,16 @@ mountain_threshold      = 0.7     # Elevation above which terrain is classified 
 tectonic_intensity      = 0.8     # How dramatic plate collision effects are (0=gentle, 1=extreme)
 smoothing_passes        = 3       # Box-blur passes on elevation after normalization.
                                    # Softens fault-line steps so rivers curve naturally. 0=off.
+# Tectonic contribution weights, each multiplied by tectonic_intensity above.
+continental_fault_weight    = 0.6   # continental fault line → mountain ridge
+volcanic_fault_weight       = 0.5   # volcanic/subduction fault → volcanic peaks
+oceanic_fault_weight        = -0.3  # oceanic non-volcanic fault → slight trench
+continental_interior_weight = 0.15  # continental interior (no fault) → highland bias
+oceanic_interior_weight     = -0.10 # oceanic interior (no fault) → slight basin
+# FastNoiseLite fractal parameters for the base elevation noise
+fractal_octaves         = 5
+fractal_lacunarity       = 2.0
+fractal_gain             = 0.5
 
 [world_gen.ocean]
 default_sea_level       = 0.40    # Fraction of tiles (by elevation rank) that are ocean
@@ -57,6 +69,13 @@ copper_density          = 0.04    # Fraction of volcanic-adjacent tiles with cop
 tin_density             = 0.015   # Fraction of eligible tiles with tin (rare by design)
 precious_metal_density  = 0.005   # Fraction of volcanic tiles with precious metals
 rare_resource_density   = 0.003   # Fraction of tiles with rare/magical resources
+# Absolute roll cutoffs for the deposit-selection chain (see ResourceLayer) — not summed with the
+# density fractions above. Keep each threshold above the preceding density sum in its branch or
+# tuning iron/copper/rare density upward can silently starve the Stone/Coal branch.
+stone_on_fault_threshold   = 0.35  # continental fault, after Iron/Copper rolls
+volcanic_sulfur_threshold  = 0.25  # volcanic tile, after Obsidian roll
+hill_coal_threshold        = 0.15  # mountain/hill tile, after Gold roll
+hill_stone_threshold       = 0.3   # mountain/hill tile, after Gold/Coal rolls
 
 # Surface organic resource densities (biome-multiplied per tile; create intra-biome variation)
 herb_density            = 0.35    # Base fraction of eligible tiles with Herbs (forests/grassland/swamp)
@@ -299,6 +318,8 @@ global_settlement_min_dist  = 3    # minimum tiles from ANY existing settlement 
 colony_frontier_bonus       = 120  # tile score bonus for candidate tiles in frontier territory
 colonize_ambition_threshold = 0.5  # min Ambition to form a Colonize goal (was 0.72 — too restrictive; S1 2026-07-18)
 max_colonies_per_civ        = 5    # hard cap on live colonies (was 3; S1 growth overhaul 2026-07-18)
+founding_deposit_weight     = 6    # founding-site score weight for resource deposit value (0-1 normalized, capped 2.0 before scaling)
+founding_route_weight       = 4    # founding-site score weight for trade-route positioning (0-1 normalized)
 max_cities_per_civ          = 15   # total city cap per civ (was 8; soft backstop, splinter is real limiter; S1 2026-07-18)
 city_founding_ambition_threshold = 0.3  # min Ambition for delegation (was 0.5 — blocked ~60% of chars; S1 2026-07-18)
 shelter_seek_threshold    = 0.35  # below this shelter level, characters prefer terrain with natural cover when choosing where to move
@@ -314,6 +335,12 @@ belonging_foreign_settlement_recovery  = 0.01   # foreign settlement: partial be
 status_own_settlement_recovery         = 0.03   # recognized by civ peers (balances decay)
 purpose_own_settlement_recovery        = 0.02   # shared work and goals (rest makes up the rest)
 spiritual_settlement_recovery          = 0.01   # any settlement: shared ritual, culture
+# Ambient recovery — background regeneration every tick, independent of location
+ambient_safety_recovery       = 0.05
+ambient_food_recovery         = 0.07
+settlement_shelter_recovery   = 0.10   # shelter recovery while on a settlement tile
+ally_presence_belonging_bonus = 0.05   # belonging bonus for standing near an allied character
+default_biome_shelter_recovery = 0.01  # fallback for biomes not listed in [character.biome_shelter_recovery]
 needs_weight              = 0.5
 goals_weight              = 0.3
 personality_weight        = 0.2
@@ -485,6 +512,32 @@ tier2_needs_decay_food      = 0.06
 tier2_needs_decay_safety    = 0.04
 tier2_needs_decay_belonging = 0.03
 tier2_needs_decay_status    = 0.04
+tier2_ambient_food_recovery         = 0.07  # lower food web
+tier2_ambient_safety_recovery       = 0.05  # ambient safety
+tier2_settlement_belonging_recovery = 0.05  # extra Belonging recovery while on a settlement tile
+tier2_settlement_status_recovery_base = 0.03  # Status recovery at settlement = this × Diligence
+tier2_crystal_ambition_threshold    = 0.8   # min Ambition to roll for crystallization into Tier1
+tier2_crystal_status_threshold      = 0.7   # min Status to roll for crystallization into Tier1
+
+# Masterwork artifact quality: base + exceptional-work roll × rollScale, clamped [0,1]
+masterwork_quality_base       = 0.6
+masterwork_quality_roll_scale = 0.4
+
+# Merchant role
+merchant_trade_chance             = 0.15  # per-tick probability a merchant attempts a trade
+merchant_trade_transfer           = 0.1   # fraction of home's surplus transferred per trade
+merchant_ally_opportunity_bonus   = 0.3   # opportunity-score bonus (fraction of surplus) for allied destinations
+merchant_trade_status_gain        = 0.05  # merchant Status gain on completing a trade
+
+# General role
+general_guard_safety_bonus = 0.03  # Safety bonus applied to a co-located Tier1 employer each tick
+
+# Physician role
+physician_heal_fraction = 0.1  # fraction of MaxHealth healed per treatment tick
+
+# Artisan role
+artisan_craft_chance    = 0.25  # per-tick probability of producing a notable (vs. silent) good
+artisan_cohesion_bonus  = 0.01  # settlement cohesion bonus added to ResourceStores per notable craft
 
 # Scholar discovery settings
 scholar_discovery_chance       = 0.04  # per-tick chance = this × Rationality
@@ -503,6 +556,24 @@ create_goal_cooldown_ticks = 80        # ticks after completing a Create goal be
 
 # Artwork event cooldown — min years between ArtworkCreated events per character
 artwork_cooldown_years = 10            # one artwork event per character per decade at most
+
+# Natural shelter recovery per tick when NOT on a settlement tile, by biome.
+# Dense canopy and rocky terrain provide real cover; open plains and desert offer very little.
+# Any biome not listed falls back to default_biome_shelter_recovery above.
+[character.biome_shelter_recovery]
+temperate_forest    = 0.05  # canopy + deadfall = functional camp; near-settlement recovery
+tropical_rainforest = 0.05
+boreal_forest        = 0.04  # good shelter, brutal temperature (offset by cold pressure)
+swamp                = 0.03  # cover but wet; net mediocre
+mountain             = 0.04  # rock faces, overhangs, natural caves
+high_mountain        = 0.02  # excluded from movement so characters won't be there; kept for completeness
+grassland            = 0.02  # can make a lean-to or windbreak but nothing substantial
+plains               = 0.015
+savanna              = 0.015
+tundra               = 0.015
+beach                = 0.01  # exposed / hostile — minimal shelter
+desert               = 0.01
+volcanic             = 0.01
 
 # =============================================================================
 # SETTLEMENT (Phase 2.4 — Population Dynamics)
@@ -705,7 +776,7 @@ dispatch_check_years            = 5     # ruler considers dispatching per this m
 max_active_emissaries_per_civ   = 3     # cap on simultaneous in-transit emissaries
 emissary_travel_speed_tiles_per_year = 8.0  # how fast emissaries travel; affects delay and mortality
 trade_dispatch_min_trust        = -0.1  # min character trust to send trade emissary
-diplomacy_dispatch_min_trust    = 0.1   # min trust for diplomatic mission
+diplomacy_dispatch_min_trust    = 0.6   # min trust for diplomatic mission (must stay above trade_dispatch_min_trust, checked second)
 spy_dispatch_max_trust          = 0.2   # spy missions target civs you don't trust well
 
 # Emissary mortality

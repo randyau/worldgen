@@ -55,13 +55,13 @@ public sealed class GodModePanel : IToggleablePanel
         _content.Add(new WeText($"Status: {statusText}", color: statusColor));
 
         var row1 = new WeHStack(UiTheme.Space.Xs);
-        row1.Add(MakeButton("Place Artifact",   OpenPlaceArtifactDialog));
-        row1.Add(MakeButton("Trigger Disaster", OpenTriggerDisasterDialog));
+        row1.Add(MakeButton("Place Artifact",   OpenPlaceArtifactDialog, _isPaused));
+        row1.Add(MakeButton("Trigger Disaster", OpenTriggerDisasterDialog, _isPaused));
         _content.Add(row1);
 
         var row2 = new WeHStack(UiTheme.Space.Xs);
-        row2.Add(MakeButton("Spawn Character", OpenSpawnCharacterDialog));
-        row2.Add(MakeButton("Nudge Character", OpenNudgeCharacterDialog));
+        row2.Add(MakeButton("Spawn Character", OpenSpawnCharacterDialog, _isPaused));
+        row2.Add(MakeButton("Nudge Character", OpenNudgeCharacterDialog, _isPaused));
         _content.Add(row2);
 
         _content.Add(SectionHeader.Build("How to Use"));
@@ -73,10 +73,9 @@ public sealed class GodModePanel : IToggleablePanel
 
     // ── Private ─────────────────────────────────────────────────────────────
 
-    private static TextButton MakeButton(string text, Action onClick)
+    private static WeButton MakeButton(string text, Action onClick, bool enabled)
     {
-        var btn = new TextButton { Text = text, Width = 140 };
-        btn.Click += (_, _) => onClick();
+        var btn = new WeButton(text, onClick) { Width = 140, Enabled = enabled };
         return btn;
     }
 
@@ -92,10 +91,8 @@ public sealed class GodModePanel : IToggleablePanel
     private void AddConfirmCancel(WeVStack stack, Action onConfirm)
     {
         var btnRow = new WeHStack(UiTheme.Space.Sm);
-        var confirm = new TextButton { Text = "Confirm" };
-        confirm.Click += (_, _) => { onConfirm(); _modalHost.Close(); };
-        var cancel = new TextButton { Text = "Cancel" };
-        cancel.Click += (_, _) => _modalHost.Close();
+        var confirm = new WeButton("Confirm", () => { onConfirm(); _modalHost.Close(); });
+        var cancel  = new WeButton("Cancel", () => _modalHost.Close(), WeButtonVariant.Ghost);
         btnRow.Add(confirm);
         btnRow.Add(cancel);
         stack.Add(btnRow);

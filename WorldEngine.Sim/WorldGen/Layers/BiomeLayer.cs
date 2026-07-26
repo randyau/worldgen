@@ -48,9 +48,9 @@ public sealed class BiomeLayer : IWorldGenLayer<BiomeResult>
         // naturally prefer some tiles over others rather than picking the first one they walk to.
         var microNoise = new FastNoiseLite(ctx.Config.Seed ^ LayerSeeds.MicroVariation);
         microNoise.SetNoiseType(FastNoiseLite.NoiseType.OpenSimplex2);
-        microNoise.SetFrequency(0.07f);
+        microNoise.SetFrequency(cfg.WorldGen.FertilityMicroFrequency);
         microNoise.SetFractalType(FastNoiseLite.FractalType.FBm);
-        microNoise.SetFractalOctaves(3);
+        microNoise.SetFractalOctaves(cfg.WorldGen.FertilityMicroOctaves);
         int microVariance = cfg.WorldGen.FertilityMicroVariance;
 
         var result = new BiomeResult(n);

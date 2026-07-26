@@ -78,8 +78,8 @@ public class CulturalTraitsTests
         CulturalTraitsConfig cfg, List<PendingEvent> pending, bool qualifies)
     {
         if (!qualifies) return;
+        if (!civ.CulturalTraits.Add(trait)) return;
         string traitName = trait.ToString();
-        if (!civ.CulturalTraits.Add(traitName)) return;
 
         string reason = trait switch
         {
@@ -136,7 +136,7 @@ public class CulturalTraitsTests
 
         var pending = RunEvaluation(civ, currentYear: 60, cfg);  // 60 years → 6 decades → 12/6 = 2.0 warsPerDecade
 
-        civ.CulturalTraits.Should().Contain("Militaristic");
+        civ.CulturalTraits.Should().Contain(CulturalTrait.Militaristic);
         pending.Should().Contain(p => p.Type == EventType.CivTraitAcquired);
     }
 
@@ -169,7 +169,7 @@ public class CulturalTraitsTests
         var pending2 = RunEvaluation(civ, currentYear: 61, cfg);  // second evaluation
 
         // Trait should be in the set only once
-        civ.CulturalTraits.Count(t => t == "Militaristic").Should().Be(1);
+        civ.CulturalTraits.Count(t => t == CulturalTrait.Militaristic).Should().Be(1);
         // Second evaluation fires no new CivTraitAcquired event
         pending2.Should().NotContain(p => p.Type == EventType.CivTraitAcquired);
     }
@@ -189,7 +189,7 @@ public class CulturalTraitsTests
         RunEvaluation(civ, currentYear: 50, cfg);
         var pending = RunEvaluation(civ, currentYear: 51, cfg);
 
-        civ.CulturalTraits.Should().Contain("Resilient");
+        civ.CulturalTraits.Should().Contain(CulturalTrait.Resilient);
     }
 
     [Fact]
@@ -202,7 +202,7 @@ public class CulturalTraitsTests
 
         var pending = RunEvaluation(civ, currentYear: 50, cfg);
 
-        civ.CulturalTraits.Should().Contain("WarWeary");
+        civ.CulturalTraits.Should().Contain(CulturalTrait.WarWeary);
         pending.Should().Contain(p => p.Type == EventType.CivTraitAcquired);
     }
 

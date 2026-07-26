@@ -148,11 +148,43 @@ public sealed class Game1 : Game
         _layoutHost      = new LayoutHost { DockWidth = _uiPrefs.DockWidth };
         _inputRouter     = new InputRouter();
         _workspace       = new SimWorkspace();
-        _modalHost       = new ModalHost();
+        _modalHost       = new ModalHost(_layoutHost.Slot(RegionSlot.Modal));
         _presenter       = new Presenter();
         _commandGateway  = new CommandGateway(_commandQueue);
         _selectionBus    = new SelectionBus();
         _panelMenuBar    = new PanelMenuBar(_workspace, _commandQueue);
+
+        // Unified selection model (M6.1.4 / M8.2.1): one "selected thing" drives which contextual
+        // tab shows. One Changed handler replaces the old SelectionRouter callback set. Subscribed
+        // once here (not per-StartSim) — _selectionBus lives for the app's lifetime across "New
+        // World" resets, and re-subscribing on every reset would stack duplicate handlers.
+        _selectionBus.Changed += snapshot =>
+        {
+            switch (snapshot.Kind)
+            {
+                // Tile inspection stays a sim command — the snapshot must carry tile detail.
+                case SelectionKind.Tile:
+                    _commandQueue.Enqueue(new SetInspectedTile(snapshot.Coord));
+                    _workspace?.SetSelection(SelectionKind.Tile);
+                    break;
+                case SelectionKind.Character:
+                    // Summoned (Float region), not Contextual — clicking a name used to
+                    // replace the Tile Inspector tab, which was confusing (playtest feedback).
+                    _charProfile?.ShowCharacter(snapshot.Id);
+                    if (_historyQuery is not null) _focusLens?.FocusCharacter(snapshot.Id, _historyQuery);
+                    break;
+                case SelectionKind.Civ:
+                    _civHistory?.ShowCiv(snapshot.Id);
+                    if (_historyQuery is not null) _focusLens?.FocusCiv(snapshot.Id, _historyQuery);
+                    _workspace?.ShowSummoned("civ");
+                    break;
+                case SelectionKind.None:
+                    _commandQueue.Enqueue(new SetInspectedTile(null));
+                    _focusLens?.Clear();
+                    _workspace?.SetSelection(SelectionKind.None);
+                    break;
+            }
+        };
 
         var rootPanel = BuildRootPanel();
         _desktop = new Desktop { Root = rootPanel };
@@ -511,39 +543,6 @@ public sealed class Game1 : Game
         if (_modalHost is not null)
             FirstRunOverlay.Show(_modalHost);
 
-        // Unified selection model (M6.1.4 / M8.2.1): one "selected thing" drives which contextual
-        // tab shows. One Changed handler replaces the old SelectionRouter callback set.
-        if (_selectionBus is not null)
-        {
-            _selectionBus.Changed += snapshot =>
-            {
-                switch (snapshot.Kind)
-                {
-                    // Tile inspection stays a sim command — the snapshot must carry tile detail.
-                    case SelectionKind.Tile:
-                        _commandQueue.Enqueue(new SetInspectedTile(snapshot.Coord));
-                        _workspace?.SetSelection(SelectionKind.Tile);
-                        break;
-                    case SelectionKind.Character:
-                        // Summoned (Float region), not Contextual — clicking a name used to
-                        // replace the Tile Inspector tab, which was confusing (playtest feedback).
-                        _charProfile?.ShowCharacter(snapshot.Id);
-                        if (_historyQuery is not null) _focusLens?.FocusCharacter(snapshot.Id, _historyQuery);
-                        break;
-                    case SelectionKind.Civ:
-                        _civHistory?.ShowCiv(snapshot.Id);
-                        if (_historyQuery is not null) _focusLens?.FocusCiv(snapshot.Id, _historyQuery);
-                        _workspace?.ShowSummoned("civ");
-                        break;
-                    case SelectionKind.None:
-                        _commandQueue.Enqueue(new SetInspectedTile(null));
-                        _focusLens?.Clear();
-                        _workspace?.SetSelection(SelectionKind.None);
-                        break;
-                }
-            };
-        }
-
         // M8.2.2: navigation clicks call the bus directly instead of Game1 polling a pending
         // field each frame. Tile Inspector [Watch] and Civ History/Character Watch keep their
         // pre-M8 Summoned-panel behavior exactly (see the DECISION above panel registration) —
@@ -845,8 +844,7 @@ public sealed class Game1 : Game
 
         var btnRow = new HorizontalStackPanel { Spacing = 8, HorizontalAlignment = HorizontalAlignment.Center };
 
-        var resumeBtn = new TextButton { Text = "Resume World" };
-        resumeBtn.Click += (_, _) =>
+        var resumeBtn = new WeButton("Resume World", () =>
         {
             // Dismiss dialog, start background load
             (_desktop.Root as Panel)?.Widgets
@@ -855,19 +853,18 @@ public sealed class Game1 : Game
             _genScreen?.Update("Loading save...", 0.5f);
             _genScreen!.Root.Visible = true;
             _loadTask = Task.Run(() => WorldStateSaver.Load(SaveDir, simCfg));
-        };
+        });
 
-        var newBtn = new TextButton { Text = "New World" };
-        newBtn.Click += (_, _) =>
+        var newBtn = new WeButton("New World", () =>
         {
             (_desktop.Root as Panel)?.Widgets
                 .OfType<Window>().FirstOrDefault()?.Close();
             WorldStateSaver.DeleteSave(SaveDir);
             StartNewWorldGen();
-        };
+        }, WeButtonVariant.Ghost);
 
-        btnRow.Widgets.Add(resumeBtn);
-        btnRow.Widgets.Add(newBtn);
+        btnRow.Widgets.Add(resumeBtn.Root);
+        btnRow.Widgets.Add(newBtn.Root);
         content.Widgets.Add(btnRow);
 
         var window = new Window

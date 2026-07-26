@@ -291,7 +291,9 @@ public sealed class CharacterBehaviorPhase
                     civ.TotalSuccessions++;
                     var successor = (Tier1Character)world.GetEntity(successorId.Value)!;
                     successor.Identity = successor.Identity with { RulerOrdinal = civ.RulerCount };
-                    string[]? civTraits = civ.CulturalTraits.Count > 0 ? civ.CulturalTraits.ToArray() : null;
+                    string[]? civTraits = civ.CulturalTraits.Count > 0
+                        ? civ.CulturalTraits.Select(t => t.ToString()).ToArray()
+                        : null;
                     var succPayload = JsonSerializer.Serialize(new SuccessionPayload(
                         c.Id.Value, c.Identity.Name, c.Identity.RulerOrdinal,
                         successorId.Value.Value, successor.Identity.Name, civ.RulerCount,

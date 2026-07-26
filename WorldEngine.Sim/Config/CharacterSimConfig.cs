@@ -1,3 +1,5 @@
+using WorldEngine.Sim.Core;
+
 namespace WorldEngine.Sim.Config;
 
 /// <summary>Character behavior constants: needs decay, skill growth, diplomacy (war knobs in WarConfig).</summary>
@@ -43,6 +45,12 @@ public sealed class CharacterSimConfig
     // Hard cap on live colonies per civ; Colonize goals stop forming beyond this
     public int   MaxColoniesPerCiv         { get; set; } = 5;
 
+    // Founding-site scoring — additional score weight for FoundCity delegates in BestAdjacentTile.
+    // Both inputs are pre-normalized 0–1 (ComputeDepositValue caps at 2.0, ComputeRouteBonus at 1.0)
+    // before being scaled by these weights, so the weight is directly the max score contribution.
+    public float FoundingDepositWeight     { get; set; } = 6f;
+    public float FoundingRouteWeight       { get; set; } = 4f;
+
     // City-State model (M3 Phase 3.0): ruler-delegated city founding
     // Total city cap per civ (settlements + colonies combined)
     public int   MaxCitiesPerCiv               { get; set; } = 15;
@@ -66,6 +74,60 @@ public sealed class CharacterSimConfig
     public float StatusOwnSettlementRecovery        { get; set; } = 0.03f;  // recognized by community peers
     public float PurposeOwnSettlementRecovery       { get; set; } = 0.02f;  // shared goals and work
     public float SpiritualSettlementRecovery        { get; set; } = 0.01f;  // any settlement: ritual, culture
+
+    // Ambient recovery — background regeneration every tick, independent of location (NeedsUpdater).
+    public float AmbientSafetyRecovery              { get; set; } = 0.05f;
+    public float AmbientFoodRecovery                { get; set; } = 0.07f;
+    // Shelter recovery at a settlement (vs. BiomeShelterRecovery below when not at a settlement).
+    public float SettlementShelterRecovery          { get; set; } = 0.10f;
+    // Belonging bonus for standing on the same tile as an allied character.
+    public float AllyPresenceBelongingBonus         { get; set; } = 0.05f;
+
+    /// <summary>
+    /// Per-biome natural shelter recovery (no settlement present), keyed by BiomeType name in
+    /// snake_case (e.g. "temperate_forest"). TOML section: [character.biome_shelter_recovery]
+    /// Same table pattern as <see cref="WildlifeRiskConfig"/>.
+    /// </summary>
+    public Dictionary<string, float> BiomeShelterRecovery { get; set; } = new();
+    public float DefaultBiomeShelterRecovery        { get; set; } = 0.01f;
+
+    private float[]? _biomeShelterTable;
+    /// <summary>Pre-baked float[16] indexed by (int)BiomeType, built once and cached.</summary>
+    public float[] BiomeShelterTable => _biomeShelterTable ??= BuildBiomeShelterTable();
+
+    private float[] BuildBiomeShelterTable()
+    {
+        var table = new float[16];
+        for (int i = 0; i < 16; i++) table[i] = DefaultBiomeShelterRecovery;
+        foreach (var (name, value) in BiomeShelterRecovery)
+            if (TryParseBiome(name, out int bi)) table[bi] = value;
+        return table;
+    }
+
+    private static bool TryParseBiome(string name, out int index)
+    {
+        index = name.ToLowerInvariant() switch
+        {
+            "ocean"               => (int)BiomeType.Ocean,
+            "coastal_water"       => (int)BiomeType.CoastalWater,
+            "beach"               => (int)BiomeType.Beach,
+            "tundra"              => (int)BiomeType.Tundra,
+            "boreal_forest"       => (int)BiomeType.BorealForest,
+            "temperate_forest"    => (int)BiomeType.TemperateForest,
+            "tropical_rainforest" => (int)BiomeType.TropicalRainforest,
+            "grassland"           => (int)BiomeType.Grassland,
+            "savanna"             => (int)BiomeType.Savanna,
+            "desert"              => (int)BiomeType.Desert,
+            "swamp"               => (int)BiomeType.Swamp,
+            "high_mountain"       => (int)BiomeType.HighMountain,
+            "mountain"            => (int)BiomeType.Mountain,
+            "hills"               => (int)BiomeType.Hills,
+            "plains"              => (int)BiomeType.Plains,
+            "volcanic"            => (int)BiomeType.Volcanic,
+            _                     => -1,
+        };
+        return index >= 0;
+    }
 
     // Utility weights
     public float NeedsWeight            { get; set; } = 0.5f;
@@ -303,6 +365,45 @@ public sealed class CharacterSimConfig
     public float Tier2NeedsDecaySafety  { get; set; } = 0.04f;
     public float Tier2NeedsDecayBelonging { get; set; } = 0.03f;
     public float Tier2NeedsDecayStatus   { get; set; } = 0.04f;
+    // Ambient recovery — background regeneration every tick, independent of location.
+    public float Tier2AmbientFoodRecovery       { get; set; } = 0.07f;
+    public float Tier2AmbientSafetyRecovery     { get; set; } = 0.05f;
+    // Extra recovery while on a settlement tile.
+    public float Tier2SettlementBelongingRecovery { get; set; } = 0.05f;
+    // Status recovery at a settlement scales with Diligence: this × Diligence.
+    public float Tier2SettlementStatusRecoveryBase { get; set; } = 0.03f;
+    // Ambition/Status thresholds a Tier2 must clear before it can roll to crystallize into Tier1.
+    public float Tier2CrystalAmbitionThreshold  { get; set; } = 0.8f;
+    public float Tier2CrystalStatusThreshold    { get; set; } = 0.7f;
+
+    // ─── Masterwork artifact quality ──────────────────────────────────────────
+    // Quality = base + roll × rollScale, clamped [0,1]. Higher exceptional-work roll → higher quality.
+    public float MasterworkQualityBase          { get; set; } = 0.6f;
+    public float MasterworkQualityRollScale     { get; set; } = 0.4f;
+
+    // ─── Merchant ──────────────────────────────────────────────────────────────
+    // Per-tick probability a merchant attempts a trade.
+    public float MerchantTradeChance            { get; set; } = 0.15f;
+    // Fraction of the home settlement's surplus of the chosen resource transferred per trade.
+    public float MerchantTradeTransfer          { get; set; } = 0.1f;
+    // Opportunity-score bonus (as a fraction of home's surplus) when the destination is allied.
+    public float MerchantAllyOpportunityBonus   { get; set; } = 0.3f;
+    // Status gain for the merchant on completing a trade.
+    public float MerchantTradeStatusGain        { get; set; } = 0.05f;
+
+    // ─── General ───────────────────────────────────────────────────────────────
+    // Safety bonus applied to a co-located Tier1 employer each tick (ambient guard presence).
+    public float GeneralGuardSafetyBonus        { get; set; } = 0.03f;
+
+    // ─── Physician ─────────────────────────────────────────────────────────────
+    // Fraction of MaxHealth healed per treatment tick.
+    public float PhysicianHealFraction          { get; set; } = 0.1f;
+
+    // ─── Artisan ───────────────────────────────────────────────────────────────
+    // Per-tick probability an artisan produces a notable (vs. silent routine) good.
+    public float ArtisanCraftChance             { get; set; } = 0.25f;
+    // Settlement cohesion bonus added to ResourceStores per notable craft.
+    public float ArtisanCohesionBonus           { get; set; } = 0.01f;
 
     // ─── Scholar discoveries ──────────────────────────────────────────────────
     // Per-tick discovery probability = this × Rationality

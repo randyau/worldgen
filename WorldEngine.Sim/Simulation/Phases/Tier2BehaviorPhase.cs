@@ -142,13 +142,13 @@ public sealed class Tier2BehaviorPhase
         n.Status    = Math.Max(0f, n.Status    - _cfg.Tier2NeedsDecayStatus);
 
         // Recovery stubs
-        n.Food   = Math.Min(1f, n.Food   + 0.07f); // lower food web
-        n.Safety = Math.Min(1f, n.Safety + 0.05f); // ambient safety
+        n.Food   = Math.Min(1f, n.Food   + _cfg.Tier2AmbientFoodRecovery);   // lower food web
+        n.Safety = Math.Min(1f, n.Safety + _cfg.Tier2AmbientSafetyRecovery); // ambient safety
 
         if (world.Settlements.ContainsKey(c.Location))
         {
-            n.Belonging = Math.Min(1f, n.Belonging + 0.05f);
-            n.Status    = Math.Min(1f, n.Status    + 0.03f * c.Personality.Diligence);
+            n.Belonging = Math.Min(1f, n.Belonging + _cfg.Tier2SettlementBelongingRecovery);
+            n.Status    = Math.Min(1f, n.Status    + _cfg.Tier2SettlementStatusRecoveryBase * c.Personality.Diligence);
         }
 
         c.Needs = n;
@@ -199,7 +199,8 @@ public sealed class Tier2BehaviorPhase
 
                 // Forge a masterwork artifact and emit ArtifactCreated.
                 // Quality derived from the exceptional roll (higher roll → higher quality within the masterwork band).
-                float quality = Math.Clamp(0.6f + excepRoll * 0.4f, 0f, 1f);
+                float quality = Math.Clamp(
+                    _cfg.MasterworkQualityBase + excepRoll * _cfg.MasterworkQualityRollScale, 0f, 1f);
                 var cat = RoleToArtifactCategory(c.Livelihood.Role);
                 var name = ArtifactNameGenerator.Generate(world, cat, (int)c.Id.Value);
                 var artifact = ArtifactRegistry.Create(world, name, cat, world.CurrentYear,
@@ -248,13 +249,11 @@ public sealed class Tier2BehaviorPhase
         _                   => ArtifactCategory.Relic,
     };
 
-    private const float MerchantTradeTransfer = 0.1f;  // fraction of surplus transferred per trade
-
     private void RunMerchant(Tier2Character c, WorldState world, List<PendingEvent> pending, long tick)
     {
         if (world.Settlements.Count < 2) return;
         float r = world.GetRandomFloat(c.Id, S.T2Merchant);
-        if (r > 0.15f) return;
+        if (r > _cfg.MerchantTradeChance) return;
 
         var homeTile = c.Livelihood.SettlementTile;
         if (!world.Settlements.TryGetValue(homeTile, out var home)) return;
@@ -278,7 +277,7 @@ public sealed class Tier2BehaviorPhase
                 if (homeAmount <= 0f) continue;
                 float destAmount  = dest.GetStore(res);
                 float opportunity = homeAmount - destAmount;
-                if (isAllyDest) opportunity += homeAmount * 0.3f;
+                if (isAllyDest) opportunity += homeAmount * _cfg.MerchantAllyOpportunityBonus;
                 if (opportunity > bestScore)
                 {
                     bestScore    = opportunity;
@@ -300,7 +299,7 @@ public sealed class Tier2BehaviorPhase
         if (bestResource is not null && world.Settlements.TryGetValue(bestDest.Value, out var destStub))
         {
             float available = home.GetStore(bestResource);
-            float transfer  = available * MerchantTradeTransfer;
+            float transfer  = available * _cfg.MerchantTradeTransfer;
             if (transfer > 0f)
             {
                 var newHomeStores = home.ResourceStores is null
@@ -318,7 +317,7 @@ public sealed class Tier2BehaviorPhase
             }
         }
 
-        c.Needs = c.Needs with { Status = Math.Min(1f, c.Needs.Status + 0.05f) };
+        c.Needs = c.Needs with { Status = Math.Min(1f, c.Needs.Status + _cfg.MerchantTradeStatusGain) };
 
         // Notable event: only when cooldown has cleared (most trades are silent)
         var payload = JsonSerializer.Serialize(new MerchantTradePayload(
@@ -391,7 +390,7 @@ public sealed class Tier2BehaviorPhase
             payload, [c.Id.Value], null, pending);
     }
 
-    private static void RunGeneral(Tier2Character c, WorldState world)
+    private void RunGeneral(Tier2Character c, WorldState world)
     {
         // Ambient: slightly boost Safety need of nearby Tier1 ally
         if (c.Livelihood.EmployerId is { } eid
@@ -400,7 +399,7 @@ public sealed class Tier2BehaviorPhase
             if (employer.Location == c.Location)
             {
                 employer.Needs = employer.Needs with
-                    { Safety = Math.Min(1f, employer.Needs.Safety + 0.03f) };
+                    { Safety = Math.Min(1f, employer.Needs.Safety + _cfg.GeneralGuardSafetyBonus) };
             }
         }
     }
@@ -414,7 +413,7 @@ public sealed class Tier2BehaviorPhase
             if (e is not Entities.Characters.Tier1Character t1) continue;
             if (t1.Health >= t1.MaxHealth) continue;
 
-            int healed = (int)(t1.MaxHealth * 0.1f);
+            int healed = (int)(t1.MaxHealth * _cfg.PhysicianHealFraction);
             t1.Health = Math.Min(t1.MaxHealth, t1.Health + healed);
 
             var payload = JsonSerializer.Serialize(new PhysicianHealedPayload(
@@ -443,7 +442,7 @@ public sealed class Tier2BehaviorPhase
         // Artisans work every tick (ambient economic contribution), but notable craftsmanship
         // is occasional. The exceptional (masterwork) path is once per lifetime.
         float r = world.GetRandomFloat(c.Id, S.T2General);
-        if (r > 0.25f) return;  // most ticks produce silent routine goods
+        if (r > _cfg.ArtisanCraftChance) return;  // most ticks produce silent routine goods
 
         int goodCount = ArtisanGoodType.Length;
         int goodIndex = (int)(world.GetRandomFloat(c.Id, S.T2General + 1) * goodCount) % goodCount;
@@ -455,7 +454,7 @@ public sealed class Tier2BehaviorPhase
             var stores = homeStub.ResourceStores is null
                 ? new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase)
                 : new Dictionary<string, float>(homeStub.ResourceStores, StringComparer.OrdinalIgnoreCase);
-            stores["bonus_civ_cohesion"] = (stores.TryGetValue("bonus_civ_cohesion", out var cur) ? cur : 0f) + 0.01f;
+            stores["bonus_civ_cohesion"] = (stores.TryGetValue("bonus_civ_cohesion", out var cur) ? cur : 0f) + _cfg.ArtisanCohesionBonus;
             world.Settlements[c.Location] = homeStub with { ResourceStores = stores };
         }
 
@@ -470,7 +469,8 @@ public sealed class Tier2BehaviorPhase
     private void TryCrystallize(
         Tier2Character c, WorldState world, List<PendingEvent> pending, long tick)
     {
-        if (c.Personality.Ambition < 0.8f || c.Needs.Status < 0.7f) return;
+        if (c.Personality.Ambition < _cfg.Tier2CrystalAmbitionThreshold
+            || c.Needs.Status < _cfg.Tier2CrystalStatusThreshold) return;
         float r = world.GetRandomFloat(c.Id, S.T2General);
         if (r > _cfg.Tier2CrystalChance) return;
 

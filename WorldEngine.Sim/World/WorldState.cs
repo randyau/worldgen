@@ -105,8 +105,8 @@ public sealed class WorldState : IWorldStateReadOnly
     /// <summary>Width of the storm corridor band (normalized). May drift.</summary>
     public float StormCorridorHalfWidth { get; internal set; }
 
-    /// <summary>Monsoon season moisture multiplier. Starts at config value.</summary>
-    public float MonsoonIntensityMultiplier { get; internal set; } = 1.5f;
+    /// <summary>Monsoon season moisture multiplier. Set from config in the constructor below.</summary>
+    public float MonsoonIntensityMultiplier { get; internal set; }
 
     /// <summary>Global scaling of volcanic event probability. Starts at 1.0.</summary>
     public float VolcanicActivityMultiplier { get; internal set; } = 1.0f;

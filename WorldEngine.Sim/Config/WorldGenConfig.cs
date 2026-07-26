@@ -17,6 +17,11 @@ public class WorldGenConfig
     /// </summary>
     public int FertilityMicroVariance { get; set; } = 20;
 
+    /// <summary>FastNoiseLite frequency for the fertility micro-variation noise.</summary>
+    public float FertilityMicroFrequency { get; set; } = 0.07f;
+    /// <summary>FastNoiseLite fractal octave count for the fertility micro-variation noise.</summary>
+    public int   FertilityMicroOctaves   { get; set; } = 3;
+
     public TectonicsConfig Tectonics { get; set; } = new();
     public ElevationConfig Elevation { get; set; } = new();
     public OceanConfig Ocean { get; set; } = new();

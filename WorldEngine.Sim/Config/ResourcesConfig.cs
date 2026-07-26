@@ -9,6 +9,15 @@ public class ResourcesConfig
     public float PreciousMetalDensity { get; set; } = 0.005f;
     public float RareResourceDensity  { get; set; } = 0.003f;
 
+    // Absolute roll cutoffs (not summed with density above — see ResourceLayer). Expressed as
+    // absolute thresholds rather than relative to the preceding density sum, so tuning
+    // Iron/CopperDensity upward can push past these and silently starve the Stone/Coal branch —
+    // keep StoneOnFaultThreshold > IronDensity + CopperDensity and similarly for the others.
+    public float StoneOnFaultThreshold      { get; set; } = 0.35f;
+    public float VolcanicSulfurThreshold    { get; set; } = 0.25f;
+    public float HillCoalThreshold          { get; set; } = 0.15f;
+    public float HillStoneThreshold         { get; set; } = 0.3f;
+
     // Surface organic resources — create per-tile variation within biome patches
     public float HerbDensity          { get; set; } = 0.35f;
     public float WildGameDensity      { get; set; } = 0.30f;

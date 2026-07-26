@@ -33,6 +33,7 @@ public sealed class CharacterProfilePanel : IToggleablePanel
 
     private long _characterId;
     private bool _hasCharacter;
+    private PanelContext _ctx;
 
     public string Id => "character";
     public string Title => "Character";
@@ -47,7 +48,7 @@ public sealed class CharacterProfilePanel : IToggleablePanel
 
     public Widget Build() => PanelFrame.Build(Title, _content.Root, new PanelFrameOptions { OnClose = Hide });
 
-    public void Bind(PanelContext ctx) { }
+    public void Bind(PanelContext ctx) => _ctx = ctx;
 
     public EmptyStateSpec? EmptyFor(PanelContext ctx) =>
         _hasCharacter ? null : new EmptyStateSpec(EmptyStateKind.PreSim, "No character selected.");
@@ -72,7 +73,7 @@ public sealed class CharacterProfilePanel : IToggleablePanel
         if (summary is null) { _content.Add(EmptyState.Build(EmptyStateKind.PreSim, "No character selected.")); return; }
 
         // ── Header ──────────────────────────────────────────────────────────
-        string nameStr = summary.NameOrdinal > 0 ? $"{summary.Name} {ToRoman(summary.NameOrdinal)}" : summary.Name;
+        string nameStr = summary.NameOrdinal > 0 ? $"{summary.Name} {_ctx.Present.ToRoman(summary.NameOrdinal)}" : summary.Name;
         if (summary.Epithet is not null) nameStr += $" the {summary.Epithet}";
         _content.Add(SectionHeader.Build(nameStr));
 
@@ -130,14 +131,6 @@ public sealed class CharacterProfilePanel : IToggleablePanel
     }
 
     // ── Helpers (unchanged from the pre-migration panel) ──────────────────────────────────────
-
-    private static string ToRoman(int n) => n switch
-    {
-        1 => "I", 2 => "II", 3 => "III", 4 => "IV", 5 => "V",
-        6 => "VI", 7 => "VII", 8 => "VIII", 9 => "IX", 10 => "X",
-        11 => "XI", 12 => "XII", 13 => "XIII", 14 => "XIV", 15 => "XV",
-        _ => n.ToString()
-    };
 
     private static string OrdinalLabel(int n)
     {

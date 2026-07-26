@@ -252,8 +252,17 @@ public sealed class EnvironmentalPhase
                 }
                 else if (!shouldBeOcean && isOcean)
                 {
-                    // Rising land — reclassification to previous biome is handled by BiomeClassifier
+                    // Rising land — assign a real biome now, otherwise it stays permanently
+                    // stuck as Ocean/CoastalWater and can never be settled or farmed.
+                    int idx = x + y * w;
+                    byte effectiveTemp = TileTemperature.Effective(tile, idx, world);
                     tile.StaticFlags &= ~TileStaticFlags.IsCoastal;
+                    tile.BiomeType = (byte)BiomeClassifier.Classify(
+                        effectiveTemp,
+                        tile.CurrentMoisture,
+                        tile.Elevation,
+                        tile.StaticFlags,
+                        world.SimConfig);
                     world.TileGrid.SetTile(coord, tile);
                 }
             }

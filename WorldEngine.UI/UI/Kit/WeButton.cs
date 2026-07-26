@@ -1,3 +1,4 @@
+using Myra.Graphics2D;
 using Myra.Graphics2D.UI;
 using WorldEngine.UI.UI.Theme;
 
@@ -28,6 +29,43 @@ public sealed class WeButton : IWeWidget
     {
         get => _button.TextColor == UiTheme.AccentInteractive;
         set => _button.TextColor = value ? UiTheme.AccentInteractive : UiTheme.TextPrimary;
+    }
+
+    /// <summary>Disabled buttons render dimmed and stop firing Click (framework §4.1 affordance rule).</summary>
+    public bool Enabled
+    {
+        get => _button.Enabled;
+        set => _button.Enabled = value;
+    }
+
+    public bool Visible
+    {
+        get => _button.Visible;
+        set => _button.Visible = value;
+    }
+
+    public int? Width
+    {
+        get => _button.Width;
+        set => _button.Width = value;
+    }
+
+    public int? Height
+    {
+        get => _button.Height;
+        set => _button.Height = value;
+    }
+
+    public Thickness Padding
+    {
+        get => _button.Padding;
+        set => _button.Padding = value;
+    }
+
+    public string Text
+    {
+        get => _button.Text;
+        set => _button.Text = value;
     }
 
     private void ApplyVariant()

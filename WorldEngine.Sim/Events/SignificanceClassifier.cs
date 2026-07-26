@@ -142,8 +142,8 @@ public static class SignificanceClassifier
         float score = tier switch
         {
             EventTier.Headline   => 0.8f,
-            EventTier.Regional   => 0.3f,
-            EventTier.Character  => 0.5f,
+            EventTier.Regional   => 0.5f,
+            EventTier.Character  => 0.3f,
             EventTier.Background => 0.1f,
             _                    => 0.1f
         };

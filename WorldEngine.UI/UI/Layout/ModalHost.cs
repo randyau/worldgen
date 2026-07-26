@@ -14,6 +14,7 @@ public sealed class ModalHost
 {
     private readonly Panel _scrim;
     private readonly Panel _contentSlot;
+    private readonly Region? _modalRegion;
     private Action? _onClose;
 
     /// <summary>Root widget for this host; add once to the Modal region's content.</summary>
@@ -21,8 +22,14 @@ public sealed class ModalHost
 
     public bool IsOpen { get; private set; }
 
-    public ModalHost()
+    /// <param name="modalRegion">
+    /// The LayoutHost's Modal-band <see cref="Region"/>, if wired. <see cref="InputRouter"/>
+    /// checks this region's <see cref="Region.Content"/> to decide whether an open modal should
+    /// unconditionally capture the pointer, so Show/Close must keep it in sync.
+    /// </param>
+    public ModalHost(Region? modalRegion = null)
     {
+        _modalRegion = modalRegion;
         _contentSlot = new Panel { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
         _scrim = new Panel
         {
@@ -39,6 +46,7 @@ public sealed class ModalHost
         _onClose = onClose;
         _scrim.Visible = true;
         IsOpen = true;
+        if (_modalRegion is not null) _modalRegion.Content = content;
     }
 
     public void Close()
@@ -48,5 +56,6 @@ public sealed class ModalHost
         _scrim.Visible = false;
         _contentSlot.Widgets.Clear();
         _onClose?.Invoke();
+        if (_modalRegion is not null) _modalRegion.Content = null;
     }
 }

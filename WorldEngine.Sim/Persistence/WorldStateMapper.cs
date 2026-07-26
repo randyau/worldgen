@@ -127,7 +127,7 @@ internal static class WorldStateMapper
             WarsAgainst:             c.WarsAgainst.ToDictionary(kv => kv.Key.Value.ToString(), kv => kv.Value),
             PeaceTreaties:           c.PeaceTreaties.ToDictionary(kv => kv.Key.Value.ToString(), kv => kv.Value),
             WarHistory:              c.WarHistory.ToDictionary(kv => kv.Key.Value.ToString(), kv => kv.Value),
-            CulturalTraits:          c.CulturalTraits.ToList(),
+            CulturalTraits:          c.CulturalTraits.Select(t => t.ToString()).ToList(),
             CityTerritories:         cityTerr,
             CulturalProfile:         c.CulturalProfile is null ? null : new CulturalProfileDto(
                 c.CulturalProfile.AncestryId,
@@ -462,7 +462,8 @@ internal static class WorldStateMapper
         foreach (var kv in dto.WarsAgainst)   civ.WarsAgainst[new CivId(int.Parse(kv.Key))]   = kv.Value;
         foreach (var kv in dto.PeaceTreaties) civ.PeaceTreaties[new CivId(int.Parse(kv.Key))] = kv.Value;
         foreach (var kv in dto.WarHistory)    civ.WarHistory[new CivId(int.Parse(kv.Key))]     = kv.Value;
-        foreach (var t in dto.CulturalTraits) civ.CulturalTraits.Add(t);
+        foreach (var t in dto.CulturalTraits)
+            if (Enum.TryParse<CulturalTrait>(t, out var parsed)) civ.CulturalTraits.Add(parsed);
 
         foreach (var (cityKey, tilePaths) in dto.CityTerritories)
         {

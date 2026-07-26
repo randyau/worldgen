@@ -21,6 +21,10 @@ public static class SimConfigValidator
         ValidateReligion(cfg.Religion, errors);
         ValidateWar(cfg.War, errors);
         ValidateArtifacts(cfg.Artifacts, errors);
+        ValidateEmissary(cfg.Emissary, errors);
+        ValidateTerritory(cfg.Territory, errors);
+        ValidateUnrest(cfg.Unrest, errors);
+        ValidateCulturalTraits(cfg.CulturalTraits, errors);
 
         if (errors.Count > 0)
             throw new SimConfigValidationException(errors);
@@ -184,6 +188,126 @@ public static class SimConfigValidator
     }
 
     // ─────────────────────────────────────────────────────────────────────────
+    // [emissary]
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private static void ValidateEmissary(EmissaryConfig e, List<string> errors)
+    {
+        CheckProbability("emissary.rumor_confidence_gain", e.RumorConfidenceGain, errors);
+        CheckProbability("emissary.encounter_confidence_gain", e.EncounterConfidenceGain, errors);
+        CheckProbability("emissary.confidence_decay_per_year", e.ConfidenceDecayPerYear, errors);
+        CheckProbability("emissary.rumor_chain_probability", e.RumorChainProbability, errors);
+        CheckProbability("emissary.rumor_chain_confidence_factor", e.RumorChainConfidenceFactor, errors);
+        CheckProbability("emissary.emissary_death_per_tile", e.EmissaryDeathPerTile, errors);
+        CheckProbability("emissary.emissary_min_survival_chance", e.EmissaryMinSurvivalChance, errors);
+        CheckProbability("emissary.trade_trust_gain", e.TradeTrustGain, errors);
+        CheckProbability("emissary.spy_confidence_boost", e.SpyConfidenceBoost, errors);
+        CheckProbability("emissary.religious_spread_awe_boost", e.ReligiousSpreadAweBoost, errors);
+
+        // Trust fields (unlike the probabilities above) span the Trust scale, [-1, 1].
+        CheckTrust("emissary.trade_dispatch_min_trust", e.TradeDispatchMinTrust, errors);
+        CheckTrust("emissary.diplomacy_dispatch_min_trust", e.DiplomacyDispatchMinTrust, errors);
+        CheckTrust("emissary.spy_dispatch_max_trust", e.SpyDispatchMaxTrust, errors);
+        CheckTrust("emissary.diplomacy_alliance_min_trust", e.DiplomacyAllianceMinTrust, errors);
+
+        // DiplomacyDispatchMinTrust is checked before TradeDispatchMinTrust in SelectEmissaryPurpose
+        // (CivTracker.Diplomacy.cs) specifically because it must be the higher, more exclusive bar —
+        // otherwise Trade's broader range swallows it and Diplomacy emissaries can never dispatch.
+        if (e.DiplomacyDispatchMinTrust <= e.TradeDispatchMinTrust)
+            errors.Add($"[emissary] diplomacy_dispatch_min_trust ({e.DiplomacyDispatchMinTrust}) must be greater than trade_dispatch_min_trust ({e.TradeDispatchMinTrust}), or Diplomacy emissaries can never be dispatched");
+
+        if (e.KnowledgeSpreadRadius <= 0)
+            errors.Add($"[emissary] knowledge_spread_radius must be > 0 (got {e.KnowledgeSpreadRadius})");
+        if (e.DispatchCheckYears < 1)
+            errors.Add($"[emissary] dispatch_check_years must be ≥ 1 (got {e.DispatchCheckYears})");
+        if (e.MaxActiveEmissariesPerCiv < 1)
+            errors.Add($"[emissary] max_active_emissaries_per_civ must be ≥ 1 (got {e.MaxActiveEmissariesPerCiv})");
+        if (e.EmissaryTravelSpeedTilesPerYear <= 0f)
+            errors.Add($"[emissary] emissary_travel_speed_tiles_per_year must be > 0 (got {e.EmissaryTravelSpeedTilesPerYear})");
+        if (e.TradeMinPopForGoods < 0)
+            errors.Add($"[emissary] trade_min_pop_for_goods must be ≥ 0 (got {e.TradeMinPopForGoods})");
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // [territory]
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private static void ValidateTerritory(TerritoryConfig t, List<string> errors)
+    {
+        if (t.MinCityTiles > t.MaxCityTiles)
+            errors.Add($"[territory] min_city_tiles ({t.MinCityTiles}) must be ≤ max_city_tiles ({t.MaxCityTiles})");
+        CheckMinMax("territory.min_territory_radius/max_territory_radius", t.MinTerritoryRadius, t.MaxTerritoryRadius, errors);
+        if (t.ClaimTilesPerPerson <= 0)
+            errors.Add($"[territory] claim_tiles_per_person must be > 0 (got {t.ClaimTilesPerPerson})");
+        if (t.PopPerTerritoryRadiusTile <= 0)
+            errors.Add($"[territory] pop_per_territory_radius_tile must be > 0 (got {t.PopPerTerritoryRadiusTile})");
+        if (t.TerritoryGrowthPerYear < 0)
+            errors.Add($"[territory] territory_growth_per_year must be ≥ 0 (got {t.TerritoryGrowthPerYear})");
+        if (t.InitialCityClaimRadius < 0)
+            errors.Add($"[territory] initial_city_claim_radius must be ≥ 0 (got {t.InitialCityClaimRadius})");
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // [unrest]
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private static void ValidateUnrest(UnrestConfig u, List<string> errors)
+    {
+        CheckProbability("unrest.unrest_decay_rate", u.UnrestDecayRate, errors);
+        CheckProbability("unrest.unrest_secession_chance", u.UnrestSecessionChance, errors);
+        CheckProbability("unrest.unrest_secession_threshold", u.UnrestSecessionThreshold, errors);
+        CheckProbability("unrest.unrest_cluster_min_unrest", u.UnrestClusterMinUnrest, errors);
+        CheckProbability("unrest.splinter_initial_tension", u.SplinterInitialTension, errors);
+
+        if (u.UnrestComfortRadius < 0)
+            errors.Add($"[unrest] unrest_comfort_radius must be ≥ 0 (got {u.UnrestComfortRadius})");
+        if (u.UnrestDistancePerTile < 0f)
+            errors.Add($"[unrest] unrest_distance_per_tile must be ≥ 0 (got {u.UnrestDistancePerTile})");
+        if (u.UnrestSoftCityThreshold < 0)
+            errors.Add($"[unrest] unrest_soft_city_threshold must be ≥ 0 (got {u.UnrestSoftCityThreshold})");
+        if (u.UnrestPerExcessCity < 0f)
+            errors.Add($"[unrest] unrest_per_excess_city must be ≥ 0 (got {u.UnrestPerExcessCity})");
+        if (u.UnrestFamineBonus < 0f)
+            errors.Add($"[unrest] unrest_famine_bonus must be ≥ 0 (got {u.UnrestFamineBonus})");
+        if (u.UnrestSuccessionMult < 0f)
+            errors.Add($"[unrest] unrest_succession_mult must be ≥ 0 (got {u.UnrestSuccessionMult})");
+        if (u.UnrestClusterRadius < 0)
+            errors.Add($"[unrest] unrest_cluster_radius must be ≥ 0 (got {u.UnrestClusterRadius})");
+        if (u.SecessionMinCivPop < 0)
+            errors.Add($"[unrest] secession_min_civ_pop must be ≥ 0 (got {u.SecessionMinCivPop})");
+        if (u.SecessionPopRampRange <= 0)
+            errors.Add($"[unrest] secession_pop_ramp_range must be > 0 (got {u.SecessionPopRampRange})");
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // [cultural_traits]
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private static void ValidateCulturalTraits(CulturalTraitsConfig c, List<string> errors)
+    {
+        if (c.MilitaristicMinWars < 0)
+            errors.Add($"[cultural_traits] militaristic_min_wars must be ≥ 0 (got {c.MilitaristicMinWars})");
+        if (c.MilitaristicWarsPerDecade < 0f)
+            errors.Add($"[cultural_traits] militaristic_wars_per_decade must be ≥ 0 (got {c.MilitaristicWarsPerDecade})");
+        if (c.ExpansionistFoundingRate < 0f)
+            errors.Add($"[cultural_traits] expansionist_founding_rate must be ≥ 0 (got {c.ExpansionistFoundingRate})");
+        if (c.ExpansionistSustainedYears < 0)
+            errors.Add($"[cultural_traits] expansionist_sustained_years must be ≥ 0 (got {c.ExpansionistSustainedYears})");
+        if (c.WarWearyMinRepeatWars < 0)
+            errors.Add($"[cultural_traits] war_weary_min_repeat_wars must be ≥ 0 (got {c.WarWearyMinRepeatWars})");
+        if (c.ResilientMinNearCollapseCount < 0)
+            errors.Add($"[cultural_traits] resilient_min_near_collapse_count must be ≥ 0 (got {c.ResilientMinNearCollapseCount})");
+        if (c.ResilientNearCollapsePopThreshold < 0)
+            errors.Add($"[cultural_traits] resilient_near_collapse_pop_threshold must be ≥ 0 (got {c.ResilientNearCollapsePopThreshold})");
+        if (c.ScholarlyMinDiscoveries < 0)
+            errors.Add($"[cultural_traits] scholarly_min_discoveries must be ≥ 0 (got {c.ScholarlyMinDiscoveries})");
+        if (c.UnstableThroneMinSuccessions < 0)
+            errors.Add($"[cultural_traits] unstable_throne_min_successions must be ≥ 0 (got {c.UnstableThroneMinSuccessions})");
+        if (c.UnstableThroneYears <= 0)
+            errors.Add($"[cultural_traits] unstable_throne_years must be > 0 (got {c.UnstableThroneYears})");
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // Helpers
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -191,6 +315,13 @@ public static class SimConfigValidator
     {
         if (value < 0f || value > 1f)
             errors.Add($"[{key}] must be in [0, 1] (got {value})");
+    }
+
+    /// <summary>Relationship trust fields span [-1, 1], unlike probability/rate fields.</summary>
+    private static void CheckTrust(string key, float value, List<string> errors)
+    {
+        if (value < -1f || value > 1f)
+            errors.Add($"[{key}] must be in [-1, 1] (got {value})");
     }
 
     private static void CheckMinMax(string key, float min, float max, List<string> errors)

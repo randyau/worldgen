@@ -26,8 +26,8 @@ public static class SignificanceRescoringPass
 
     // Significance base scores per tier
     private const float ScoreBackground = 0.1f;
-    private const float ScoreCharacter  = 0.5f;
-    private const float ScoreRegional   = 0.3f;
+    private const float ScoreCharacter  = 0.3f;
+    private const float ScoreRegional   = 0.5f;
     private const float ScoreHeadline   = 0.8f;
 
     private const float BonusFirstOfKind   = 0.1f;

@@ -74,7 +74,7 @@ public sealed class FilterPanel : IWorkspacePanel
     private readonly WeField    _yearToBox     = new("–", "To");
     private readonly WeVStack   _body          = new(UiTheme.Space.Xs);
     private bool _expanded = true;
-    private WorldEngine.UI.UI.TextButton? _header;
+    private WeButton? _header;
 
     public string Id => "filter";
     public string Title => "Filters";
@@ -103,8 +103,7 @@ public sealed class FilterPanel : IWorkspacePanel
         yearRow.Add(_yearFromBox);
         yearRow.Add(_yearToBox);
 
-        var clearBtn = new WorldEngine.UI.UI.TextButton { Text = "Clear", Width = 46, Height = 20 };
-        clearBtn.Click += (_, _) => Clear();
+        var clearBtn = new WeButton("Clear", Clear, WeButtonVariant.Ghost) { Width = 46, Height = 20 };
 
         var bottomRow = new WeHStack(UiTheme.Space.Sm);
         bottomRow.Add(yearRow);
@@ -116,13 +115,12 @@ public sealed class FilterPanel : IWorkspacePanel
         _body.Add(_actorBox);
         _body.Add(bottomRow);
 
-        _header = new WorldEngine.UI.UI.TextButton { Text = "▼ Filters", Width = 80, Height = 18 };
-        _header.Click += (_, _) =>
+        _header = new WeButton("▼ Filters", () =>
         {
             _expanded = !_expanded;
             _body.Root.Visible = _expanded;
-            _header.Text = _expanded ? "▼ Filters" : "▶ Filters";
-        };
+            _header!.Text = _expanded ? "▼ Filters" : "▶ Filters";
+        }) { Width = 80, Height = 18 };
 
         var wrapper = new WeVStack(UiTheme.Space.Xs);
         wrapper.Add(_header);

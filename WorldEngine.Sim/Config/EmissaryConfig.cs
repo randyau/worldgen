@@ -40,8 +40,12 @@ public sealed class EmissaryConfig
     /// <summary>Minimum trust between rulers to send a Trade emissary.</summary>
     public float TradeDispatchMinTrust              { get; set; } = -0.1f;
 
-    /// <summary>Minimum trust for a Diplomacy mission.</summary>
-    public float DiplomacyDispatchMinTrust          { get; set; } = 0.1f;
+    /// <summary>
+    /// Minimum trust for a Diplomacy mission — feeds alliance formation, so this must stay
+    /// meaningfully above <see cref="TradeDispatchMinTrust"/> (checked second) or Trade's
+    /// broad catch-all range swallows it entirely and Diplomacy can never fire.
+    /// </summary>
+    public float DiplomacyDispatchMinTrust          { get; set; } = 0.6f;
 
     /// <summary>Maximum trust for a Spy mission (targets civs you don't trust well).</summary>
     public float SpyDispatchMaxTrust                { get; set; } = 0.2f;

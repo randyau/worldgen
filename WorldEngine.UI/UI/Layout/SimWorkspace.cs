@@ -18,7 +18,7 @@ public sealed class SimWorkspace
 {
     private readonly Dictionary<string, IWorkspacePanel> _panels = new();
     private readonly Dictionary<string, Widget> _built = new();
-    private readonly Dictionary<string, TextButton> _tabButtons = new();
+    private readonly Dictionary<string, WeButton> _tabButtons = new();
 
     private readonly WeVStack _pinnedStack     = new(UiTheme.Space.Sm);
     private readonly WeHStack _tabStrip        = new(UiTheme.Space.Xs);
@@ -97,13 +97,12 @@ public sealed class SimWorkspace
     {
         if (!_tabButtons.TryGetValue(panel.Id, out var btn))
         {
-            btn = new TextButton { Text = panel.Title };
-            btn.Click += (_, _) => ShowContextual(panel);
+            btn = new WeButton(panel.Title, () => ShowContextual(panel));
             _tabButtons[panel.Id] = btn;
             _tabStrip.Add(btn);
         }
         foreach (var (id, b) in _tabButtons)
-            b.TextColor = id == panel.Id ? UiTheme.AccentInteractive : UiTheme.TextPrimary;
+            b.Active = id == panel.Id;
 
         if (_activeContextualId == panel.Id) return;
         _activeContextualId = panel.Id;

@@ -1,5 +1,6 @@
 using Microsoft.Xna.Framework;
 using Myra.Graphics2D.UI;
+using WorldEngine.UI.UI.Kit;
 using WorldEngine.UI.UI.Layout;
 using WorldEngine.UI.UI.Theme;
 
@@ -48,15 +49,10 @@ public static class FirstRunOverlay
 
         content.Widgets.Add(new Label { Text = " ", Height = 4 });
 
-        var dismissBtn = new TextButton
-        {
-            Text              = "Got it — start exploring",
-            HorizontalAlignment = HorizontalAlignment.Center
-        };
+        var dismissBtn = new WeButton("Got it — start exploring", () => modal.Close());
+        dismissBtn.Root.HorizontalAlignment = HorizontalAlignment.Center;
 
-        content.Widgets.Add(dismissBtn);
-
-        dismissBtn.Click += (_, _) => modal.Close();
+        content.Widgets.Add(dismissBtn.Root);
 
         modal.Show(content, onClose: MarkSeen);
     }

@@ -34,11 +34,6 @@ public sealed class RiverLayer : IWorldGenLayer<RiverResult>
         progress?.Report(0.1f);
 
         // --- Step 1: Priority Flood sink filling (Barnes 2014) ---
-        // Basin tracking: each sink gets a basin ID and tile count
-        int[] basinId   = new int[n];
-        int[] basinSize = Array.Empty<int>(); // built after flood
-        Array.Fill(basinId, -1);
-
         var isLake = PriorityFloodFill(fillElev, ocean.IsOcean, w, h, ctx, cfg.MinLakeBasinTiles);
 
         ct.ThrowIfCancellationRequested();

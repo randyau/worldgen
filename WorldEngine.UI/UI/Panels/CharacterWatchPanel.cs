@@ -100,26 +100,24 @@ public sealed class CharacterWatchPanel : IToggleablePanel
         // ── Spotlight controls (M7 Phase 7.4) ───────────────────────────────
         if (isSpotlighted)
         {
-            var exitBtn = new TextButton { Text = "[Exit Spotlight]", Padding = new Myra.Graphics2D.Thickness(4) };
-            exitBtn.Click += (_, _) => OnExitSpotlight?.Invoke();
+            var exitBtn = new WeButton("[Exit Spotlight]", () => OnExitSpotlight?.Invoke(), WeButtonVariant.Danger)
+                { Padding = new Myra.Graphics2D.Thickness(4) };
             _content.Add(exitBtn);
 
             _content.Add(new WeText("SPOTLIGHT ACTIVE", color: UiTheme.ColorRole.AccentSpotlight));
 
-            var moveBtn = new TextButton
+            var moveBtn = new WeButton("[Move to inspected tile]", () => OnMoveIntent?.Invoke())
             {
-                Text    = "[Move to inspected tile]",
                 Padding = new Myra.Graphics2D.Thickness(4),
                 Enabled = _inspectedTile.HasValue
             };
-            moveBtn.Click += (_, _) => OnMoveIntent?.Invoke();
             _content.Add(moveBtn);
 
             var goalRow = new WeHStack(UiTheme.Space.Xs);
-            var wanderBtn = new TextButton { Text = "[Goal: Wander]", Padding = new Myra.Graphics2D.Thickness(4) };
-            wanderBtn.Click += (_, _) => OnWanderGoal?.Invoke();
-            var settleBtn = new TextButton { Text = "[Goal: Settle]", Padding = new Myra.Graphics2D.Thickness(4) };
-            settleBtn.Click += (_, _) => OnSettleGoal?.Invoke();
+            var wanderBtn = new WeButton("[Goal: Wander]", () => OnWanderGoal?.Invoke())
+                { Padding = new Myra.Graphics2D.Thickness(4) };
+            var settleBtn = new WeButton("[Goal: Settle]", () => OnSettleGoal?.Invoke())
+                { Padding = new Myra.Graphics2D.Thickness(4) };
             goalRow.Add(wanderBtn);
             goalRow.Add(settleBtn);
             _content.Add(goalRow);
@@ -129,15 +127,15 @@ public sealed class CharacterWatchPanel : IToggleablePanel
             _content.Add(new WeText("Spotlight biases this character's decisions without", color: UiTheme.ColorRole.TextMuted));
             _content.Add(new WeText("overriding survival autonomy. Click tile → move intent.", color: UiTheme.ColorRole.TextMuted));
             EntityId capturedWatchId = watch.Id;
-            var enterBtn = new TextButton { Text = "[Enter Spotlight]", Padding = new Myra.Graphics2D.Thickness(4) };
-            enterBtn.Click += (_, _) => OnEnterSpotlight?.Invoke(capturedWatchId);
+            var enterBtn = new WeButton("[Enter Spotlight]", () => OnEnterSpotlight?.Invoke(capturedWatchId))
+                { Padding = new Myra.Graphics2D.Thickness(4) };
             _content.Add(enterBtn);
         }
 
         // ── Full Profile ─────────────────────────────────────────────────────
         long capturedId = watch.Id.Value;
-        var profileBtn = new TextButton { Text = "[Full Profile]", Padding = new Myra.Graphics2D.Thickness(4) };
-        profileBtn.Click += (_, _) => OnProfile?.Invoke(capturedId);
+        var profileBtn = new WeButton("[Full Profile]", () => OnProfile?.Invoke(capturedId))
+            { Padding = new Myra.Graphics2D.Thickness(4) };
         _content.Add(profileBtn);
     }
 

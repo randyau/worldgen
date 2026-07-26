@@ -45,7 +45,7 @@ public sealed class ResourceLayer : IWorldGenLayer<ResourceResult>
                         AddDeposit(result, coord, "Iron", seed, x, y, 2);
                     else if (roll < cfg.Resources.IronDensity * (1f + potential) + cfg.Resources.CopperDensity)
                         AddDeposit(result, coord, "Copper", seed, x, y, 3);
-                    else if (roll < 0.35f)
+                    else if (roll < cfg.Resources.StoneOnFaultThreshold)
                         AddDeposit(result, coord, "Stone", seed, x, y, 4);
                 }
 
@@ -55,7 +55,7 @@ public sealed class ResourceLayer : IWorldGenLayer<ResourceResult>
                     float roll = WorldRng.FloatAt(seed, 0, x, y, 5);
                     if (roll < cfg.Resources.RareResourceDensity * 2f)
                         AddDeposit(result, coord, "Obsidian", seed, x, y, 6);
-                    else if (roll < 0.25f)
+                    else if (roll < cfg.Resources.VolcanicSulfurThreshold)
                         AddDeposit(result, coord, "Sulfur", seed, x, y, 7);
                 }
 
@@ -65,9 +65,9 @@ public sealed class ResourceLayer : IWorldGenLayer<ResourceResult>
                     float roll = WorldRng.FloatAt(seed, 0, x, y, 8);
                     if (roll < cfg.Resources.PreciousMetalDensity)
                         AddDeposit(result, coord, "Gold", seed, x, y, 9);
-                    else if (roll < 0.15f)
+                    else if (roll < cfg.Resources.HillCoalThreshold)
                         AddDeposit(result, coord, "Coal", seed, x, y, 10);
-                    else if (roll < 0.3f)
+                    else if (roll < cfg.Resources.HillStoneThreshold)
                         AddDeposit(result, coord, "Stone", seed, x, y, 11);
                 }
 

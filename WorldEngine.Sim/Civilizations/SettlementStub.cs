@@ -35,10 +35,4 @@ public sealed record SettlementStub(
 {
     public float GetStore(string resource) =>
         ResourceStores?.TryGetValue(resource, out float v) == true ? v : 0f;
-
-    /// <summary>
-    /// Radius (in tiles) of this settlement's hinterland.
-    /// Scales with population; capped at 5. Shared by ResourcePressurePhase and UtilityScorer.
-    /// </summary>
-    public int ReachRadius() => Math.Clamp(2 + Population / 2000, 2, 5);
 }

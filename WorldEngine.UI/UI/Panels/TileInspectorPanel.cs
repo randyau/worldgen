@@ -193,8 +193,8 @@ public sealed class TileInspectorPanel : IWorkspacePanel
             var row = new WeHStack(UiTheme.Space.Xs);
             long capturedId = c.Id.Value;
             row.Add(EntityLink.Build(new EntityRef(SelectionKind.Character, capturedId, default), $"{c.Name}{civTag}{ancTag}", _ctx.Selection));
-            var watchBtn = new TextButton { Text = "[Watch]", Padding = new Myra.Graphics2D.Thickness(2) };
-            watchBtn.Click += (_, _) => OnWatch?.Invoke(capturedId);
+            var watchBtn = new WeButton("[Watch]", () => OnWatch?.Invoke(capturedId))
+                { Padding = new Myra.Graphics2D.Thickness(2) };
             row.Add(watchBtn);
             _content.Add(row);
 

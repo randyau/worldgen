@@ -1,5 +1,6 @@
 using Microsoft.Xna.Framework;
 using Myra.Graphics2D.UI;
+using WorldEngine.UI.UI.Kit;
 using WorldEngine.UI.UI.Theme;
 
 namespace WorldEngine.UI.UI;
@@ -23,8 +24,7 @@ public sealed class WorldGenScreen
 
         // Completion panel (initially hidden)
         var readyLabel = new Label { Text = "World ready!", TextColor = UiTheme.HeaderText };
-        var startBtn   = new TextButton { Text = "▶  Start Simulation" };
-        startBtn.Click += (_, _) => _pendingStart = true;
+        var startBtn   = new WeButton("▶  Start Simulation", () => _pendingStart = true);
 
         var completeStack = new VerticalStackPanel
         {
@@ -33,7 +33,7 @@ public sealed class WorldGenScreen
             Spacing = 10
         };
         completeStack.Widgets.Add(readyLabel);
-        completeStack.Widgets.Add(startBtn);
+        completeStack.Widgets.Add(startBtn.Root);
 
         _completePanel = new Panel { Visible = false };
         _completePanel.Widgets.Add(completeStack);
