@@ -6,25 +6,7 @@ namespace WorldEngine.Sim.Config;
 public enum ConfigValueKind { Int, Float, Byte, Bool, String }
 
 /// <summary>
-/// One config-control descriptor for a single leaf property somewhere in the <see cref="SimConfig"/>
-/// object graph. <see cref="Group"/> is the top-level SimConfig section (e.g. "WorldGen");
-/// <see cref="Path"/> is dotted from that root (e.g. "Ocean.DefaultSeaLevel").
-/// </summary>
-public sealed class ConfigEntry
-{
-    public required string Group { get; init; }
-    public required string Path { get; init; }
-    public required ConfigValueKind Kind { get; init; }
-    public required Func<object> Get { get; init; }
-    public required Action<object> Set { get; init; }
-    public required object Default { get; init; }
-
-    public string Key => $"{Group}.{Path}";
-    public bool IsModified => !Equals(Get(), Default);
-}
-
-/// <summary>
-/// Builds <see cref="ConfigEntry"/> descriptors by reflecting over a live <see cref="SimConfig"/>
+/// Builds <see cref="Entry"/> descriptors by reflecting over a live <see cref="SimConfig"/>
 /// instance, generically — no per-key UI code (ui_design_framework.md §9.3). Defaults are read from
 /// a second, independently-loaded <see cref="SimConfig"/> snapshot, per
 /// docs/phases/m10_worldgen_preview_modding.md DECISION (10.2): "default" means the shipped,
@@ -34,6 +16,24 @@ public sealed class ConfigEntry
 // ui_design_framework.md §10 ("Config surfacing pattern" / presets).
 public static class ConfigRegistry
 {
+    /// <summary>
+    /// One config-control descriptor for a single leaf property somewhere in the <see cref="SimConfig"/>
+    /// object graph. <see cref="Group"/> is the top-level SimConfig section (e.g. "WorldGen");
+    /// <see cref="Path"/> is dotted from that root (e.g. "Ocean.DefaultSeaLevel").
+    /// </summary>
+    public sealed class Entry
+    {
+        public required string Group { get; init; }
+        public required string Path { get; init; }
+        public required ConfigValueKind Kind { get; init; }
+        public required Func<object> Get { get; init; }
+        public required Action<object> Set { get; init; }
+        public required object Default { get; init; }
+
+        public string Key => $"{Group}.{Path}";
+        public bool IsModified => !Equals(Get(), Default);
+    }
+
     private static readonly HashSet<Type> LeafTypes =
         [typeof(int), typeof(float), typeof(byte), typeof(bool), typeof(string)];
 
@@ -45,9 +45,9 @@ public static class ConfigRegistry
     /// sim_config.toml) and any non-leaf collection (arrays/lists/dictionaries/enums) — those
     /// aren't single-control tunables the generic {key, kind} shape can represent.
     /// </summary>
-    public static IReadOnlyList<ConfigEntry> Build(SimConfig live, SimConfig defaults)
+    public static IReadOnlyList<Entry> Build(SimConfig live, SimConfig defaults)
     {
-        var entries = new List<ConfigEntry>();
+        var entries = new List<Entry>();
         foreach (var groupProp in typeof(SimConfig).GetProperties(BindingFlags.Public | BindingFlags.Instance))
         {
             if (groupProp.Name == nameof(SimConfig.AncestryRegistry)) continue;
@@ -62,7 +62,7 @@ public static class ConfigRegistry
         return entries;
     }
 
-    private static void Walk(List<ConfigEntry> entries, string group, string prefix, object liveObj, object defaultObj)
+    private static void Walk(List<Entry> entries, string group, string prefix, object liveObj, object defaultObj)
     {
         foreach (var prop in liveObj.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance))
         {
@@ -73,7 +73,7 @@ public static class ConfigRegistry
             {
                 var capturedProp = prop;
                 var capturedLive = liveObj;
-                entries.Add(new ConfigEntry
+                entries.Add(new Entry
                 {
                     Group   = group,
                     Path    = path,

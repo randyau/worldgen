@@ -1,4 +1,5 @@
 using Myra.Graphics2D.UI;
+using WorldEngine.Sim.Config;
 using WorldEngine.UI.UI.Input;
 using WorldEngine.UI.UI.Kit;
 using WorldEngine.UI.UI.Layout;
@@ -7,18 +8,19 @@ using WorldEngine.UI.UI.Theme;
 
 namespace WorldEngine.UI.UI.Panels;
 
-// MAP: Layer 3 — Summoned Settings panel: Display + Controls tabs, backed by UiPrefs (M8.5.2-8.5.4).
+// MAP: Layer 3 — Summoned Settings panel: Display + Controls + Simulation tabs, backed by
+// UiPrefs (M8.5.2-8.5.4) and ConfigRegistry (M10 10.2).
 /// <summary>
-/// Settings shell: a left tab list (Display / Controls) + right content, both inside a
-/// <see cref="PanelFrame"/>. The simulation-config tab is explicitly out of scope for M8 (lands
-/// in M10) — tabs are registered by id here so that tab is a drop-in later.
+/// Settings shell: a left tab list (Display / Controls / Simulation) + right content, both inside
+/// a <see cref="PanelFrame"/>. The Simulation tab is optional — omitted (constructor overload)
+/// before a world/SimConfig exists, e.g. from the worldgen preview screen.
 /// </summary>
-// MOD SEAM: settings tab registry — a `simconfig` tab (M10) or a mod tab can be appended here
-// without editing the shell, once there's a second real consumer to justify generalizing this
-// from the two hardcoded tabs below into an actual registry.
+// MOD SEAM: settings tab registry — a mod tab can be appended here without editing the shell,
+// once there's a need to generalize this from the hardcoded tabs below into an actual registry.
 public sealed class SettingsPanel : IToggleablePanel
 {
     private readonly KeybindEditor _editor;
+    private readonly SimConfigEditor? _simConfigEditor;
     private readonly Action<UiPrefs> _onChanged;
     private readonly WeVStack _body = new(UiTheme.Space.Sm);
     private UiPrefs _prefs;
@@ -29,11 +31,14 @@ public sealed class SettingsPanel : IToggleablePanel
     public PanelPlacement Placement => new(PanelPlacementKind.Summoned);
     public bool IsVisible { get; private set; }
 
-    public SettingsPanel(UiPrefs initialPrefs, CommandRegistry commands, KeybindRegistry keybinds, Action<UiPrefs> onChanged)
+    public SettingsPanel(UiPrefs initialPrefs, CommandRegistry commands, KeybindRegistry keybinds,
+        Action<UiPrefs> onChanged, SimConfig? liveSimConfig = null, SimConfig? defaultSimConfig = null)
     {
         _prefs     = initialPrefs;
         _onChanged = onChanged;
         _editor    = new KeybindEditor(commands, keybinds, onChanged: PersistKeybindOverrides);
+        if (liveSimConfig is not null && defaultSimConfig is not null)
+            _simConfigEditor = new SimConfigEditor(liveSimConfig, defaultSimConfig);
     }
 
     public Widget Build()
@@ -43,6 +48,11 @@ public sealed class SettingsPanel : IToggleablePanel
         var controlsBtn = new WeButton("[Controls]", () => { _activeTab = "controls"; RebuildBody(); });
         tabRow.Add(displayBtn);
         tabRow.Add(controlsBtn);
+        if (_simConfigEditor is not null)
+        {
+            var simBtn = new WeButton("[Simulation]", () => { _activeTab = "simulation"; RebuildBody(); });
+            tabRow.Add(simBtn);
+        }
 
         var root = new WeVStack(UiTheme.Space.Sm);
         root.Add(tabRow);
@@ -69,6 +79,7 @@ public sealed class SettingsPanel : IToggleablePanel
     {
         _body.Clear();
         if (_activeTab == "display") BuildDisplayTab();
+        else if (_activeTab == "simulation" && _simConfigEditor is not null) BuildSimulationTab();
         else BuildControlsTab();
     }
 
@@ -113,6 +124,12 @@ public sealed class SettingsPanel : IToggleablePanel
     {
         _body.Add(SectionHeader.Build("Controls"));
         _body.Add(_editor);
+    }
+
+    private void BuildSimulationTab()
+    {
+        _body.Add(SectionHeader.Build("Simulation"));
+        _body.Add(_simConfigEditor!);
     }
 
     private void Persist(UiPrefs updated)

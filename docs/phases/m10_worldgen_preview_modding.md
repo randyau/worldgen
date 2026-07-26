@@ -5,8 +5,9 @@
 decisions" below). Phase 10.0 (pipeline resume/replay) done 2026-07-26 — see
 `docs/phases/archive/m10_phase0_pipeline_resume.md`. Phase 10.1 (preview screen) done
 2026-07-26, build+test verified (no manual UI pass — no display in this environment) — see
-`docs/phases/archive/m10_phase1_worldgen_preview_screen.md`. Next: 10.2 (sim-config settings
-tab) or 10.3 (data modding), both parallel-safe with each other.
+`docs/phases/archive/m10_phase1_worldgen_preview_screen.md`. Phase 10.2 (sim-config settings tab)
+done 2026-07-26, build+test verified (no manual UI pass) — see
+`docs/phases/archive/m10_phase2_sim_config_settings_tab.md`. Next: 10.3 (data modding).
 **Design authority:** `docs/ui_design_framework.md` §9 (Settings screen home) and §11 ("Worldgen
 screen" row) for the UI shape; §10 (modding seams) for the data-modding approach.
 **Roadmap:** `docs/roadmap.md` § "M10".
@@ -35,7 +36,7 @@ piece and should land first so the Settings-shell work has a stable pipeline API
 |-------|-----------|----------------------|
 | 10.0 | — | DONE. `WorldGenPipeline.RunUpToAsync(layer)` / `RerunFromAsync(ctx, layer)`: re-enter the existing 9-layer chain (Tectonic→Poi) at any point without regenerating earlier layers; `WorldGenContext` becomes replayable/resumable. Sim-only, headless, no UI. |
 | 10.1 | 10.0 | DONE. Worldgen preview screen: per-layer thumbnail overlays, parameter fields (sea level, etc.), "rerun from layer," layer-status list, Commit — built on the M8 component kit per `ui_design_framework.md` §11. |
-| 10.2 | — (parallel-safe with 10.0/10.1) | Sim-config settings tab: generic `{key, group, kind, range, default}` config-control registry rendering `sim_config.toml` groups as `WeField`/`Meter`/`WeDropdown`, with per-setting/per-group reset-to-default and diff-from-default (`ui_design_framework.md` §9.2–9.3). Presets ("High conflict," "Peaceful," "Dense population") layer on top once the registry exists. |
+| 10.2 | — (parallel-safe with 10.0/10.1) | DONE. `ConfigRegistry` (`WorldEngine.Sim/Config`): generic `{key, group, kind, default}` config-control registry over `SimConfig`, reflected once, no per-key UI code. `SimConfigEditor` renders it as `WeField`/`WeCheckBox` rows grouped by section, with per-setting/per-group reset-to-default and a `(modified)` diff tag, hosted as a new "Simulation" tab on `SettingsPanel`. Presets deferred — not built this phase (no consumer yet beyond the raw registry). |
 | 10.3 | — (parallel-safe) | Data modding: document the moddable data files, add load-time validation (schema/range checks, clear error messages), wire through the existing `PanelRegistry`/`OverlayRegistry`/`Presenter`/token-set seams from M8 §10. No new plugin/scripting surface. |
 
 Do not start a phase until its dependencies are merged and green (`scripts/test-fast.sh`).

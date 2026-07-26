@@ -75,6 +75,12 @@ public sealed class Game1 : Game
     private CommandRegistry? _commands;
     private UiPrefs _uiPrefs = new();
 
+    // M10 10.2 — sim-config settings tab: live config the running sim reads, plus an
+    // independently-loaded snapshot for reset-to-default/diff (DECISION: "default" = the loaded
+    // sim_config.toml, not bare C# initializers — see docs/phases/m10_worldgen_preview_modding.md).
+    private SimConfig? _simConfig;
+    private SimConfig? _simConfigDefaults;
+
     // M6.1.4 / M8.2.1 — unified selection model driving which contextual panel shows
     private SelectionBus? _selectionBus;
 
@@ -423,6 +429,8 @@ public sealed class Game1 : Game
         }
 
         var simCfg = SimConfigLoader.LoadOrCreateDefault();
+        _simConfig = simCfg;
+        _simConfigDefaults = SimConfigLoader.LoadOrCreateDefault();
         var beastCatalog = BeastCatalogLoader.LoadOrCreateDefault();
 
         // Reuse the existing connection when the EventStore was already Reset() by
@@ -477,7 +485,8 @@ public sealed class Game1 : Game
         // panel persists through the same ApplyAndPersistUiPrefs callback.
         BuildKeybinds();
         _helpPanel     = new HelpPanel(_commands!, _keybinds!, onKeybindsChanged: () => ApplyAndPersistUiPrefs(_uiPrefs));
-        _settingsPanel = new SettingsPanel(_uiPrefs, _commands!, _keybinds!, ApplyAndPersistUiPrefs);
+        _settingsPanel = new SettingsPanel(_uiPrefs, _commands!, _keybinds!, ApplyAndPersistUiPrefs,
+            _simConfig, _simConfigDefaults);
 
         // M8 8.1.6: register every panel with the SimWorkspace dock instead of the retired
         // PanelManager/absolute-Top-Left placement. Placement here preserves each panel's

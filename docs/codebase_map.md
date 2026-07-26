@@ -29,6 +29,7 @@ One-line description of every non-trivial source file. Check here before running
 - `CharacterNamesConfig.cs` — Name pools for procedurally naming characters (first and last names).
 - `CharacterSimConfig.cs` — Character behavior constants: needs decay, skill growth, diplomacy (war knobs in WarConfig).
 - `ClimateConfig.cs` — Temperature/moisture gradients, storm corridors, and climate drift constants.
+- `ConfigRegistry.cs` — Value kinds the generic settings UI knows how to render (M10 10.2, ui_design_framework.md §9.3).
 - `CulturalTraitsConfig.cs` — Thresholds that govern when a civilization acquires a permanent cultural trait. All constants loaded from [cultural_traits] section in sim_config.toml.
 - `DisasterConfig.cs` — Disaster probability and damage constants (wildfire, flood, eruption, earthquake, drought).
 - `ElevationConfig.cs` — FastNoiseLite terrain noise and mountain/tectonic thresholds for world generation.
@@ -212,6 +213,7 @@ One-line description of every non-trivial source file. Check here before running
 ## WorldEngine.UI/UI/Input/
 - `CommandRegistry.cs` — The set of all named user actions. <see cref="KeybindRegistry"/> binds keys to command ids and invokes them here; UI buttons can invoke the same id directly.
 - `KeybindEditor.cs` — Renders every <see cref="CommandRegistry"/> command grouped by category, each with its current key and [Rebind]/[Reset] affordances. Capture-next-keypress is driven externally via <see cref="TryCaptureKey"/> (the host feeds keyboard input from its own per-frame poll).
+- `SimConfigEditor.cs` — Renders one <see cref="ConfigRegistry"/> group at a time (picked via dropdown) as <see cref="WeField"/>/<see cref="WeCheckBox"/> rows bound directly to the live <see cref="SimConfig"/> the running sim reads — edits apply immediately, same as the M10 10.1 worldgen-preview sea-level field. Values are not written back to sim_config.toml; the file stays the tuned baseline (see the M10 index doc DECISION on "default").
 
 ## WorldEngine.UI/UI/Kit/
 - `EntityLink.cs` — Layer 2 — clickable entity reference; every nameable thing should render through this.
@@ -244,7 +246,7 @@ One-line description of every non-trivial source file. Check here before running
 - `FilterPanel.cs` — Immutable snapshot of the active event-log filter criteria. Passed to <see cref="EventLogPanel"/> each frame via <see cref="FilterPanel.CurrentFilter"/>.
 - `GodModePanel.cs` — God Mode panel — allows paused-only authoring actions: place artifact, trigger disaster, spawn character, nudge character. Dialogs route through the shared <see cref="ModalHost"/>.
 - `HelpPanel.cs` — "?"-toggled panel listing every command via <see cref="KeybindEditor"/>, plus the God-Mode/ Spotlight workflow cards. Rendered directly from <see cref="CommandRegistry"/>/ <see cref="KeybindRegistry"/> so it can never drift from actual input handling.
-- `SettingsPanel.cs` — Settings shell: a left tab list (Display / Controls) + right content, both inside a <see cref="PanelFrame"/>. The simulation-config tab is explicitly out of scope for M8 (lands in M10) — tabs are registered by id here so that tab is a drop-in later.
+- `SettingsPanel.cs` — Settings shell: a left tab list (Display / Controls / Simulation) + right content, both inside a <see cref="PanelFrame"/>. The Simulation tab is optional — omitted (constructor overload) before a world/SimConfig exists, e.g. from the worldgen preview screen.
 - `TileInspectorPanel.cs` — Layer 3 — Contextual (Tile) panel: ruin/settlement/tile facts/seasonal/resources/
 
 ## WorldEngine.UI/UI/Present/
