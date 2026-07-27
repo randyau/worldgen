@@ -28,7 +28,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DOCS_DIR  = REPO_ROOT / "docs"
 SCRIPTS   = REPO_ROOT / "scripts"
-TOML_PATH = REPO_ROOT / "sim_config.toml"
+TOML_PATH = REPO_ROOT / "config" / "sim_config.toml"
 ALLOWLIST_PATH = SCRIPTS / "doc-check-allowlist.txt"
 
 # Generated files: skip check (a) but DO check (c) freshness

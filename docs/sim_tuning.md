@@ -1,6 +1,6 @@
 # Sim Tuning Reference
 
-**Status:** Current as of 2026-07-19 (Phases D1-D5 implemented, 2026-07-18 balance cleanup)
+**Status:** Current as of 2026-07-26 (M10 doc pass; corrected `people_per_tile_peak`/`store_accumulate_rate` values that had drifted from the D1 recalibration)
 
 **Format:** knob / current value / safe range / too-low symptom / too-high symptom / metric to watch
 **Verification tool:** `python3 scripts/balance-run.py --seed-list 42,777,9999 --years 300 --label my-test`
@@ -15,7 +15,7 @@ Ranges marked **untested** mean no calibration data exists; change carefully and
 
 | Knob | Current | Safe range | Too-low symptom | Too-high symptom | Metric to watch |
 |---|---|---|---|---|---|
-| `people_per_tile_peak` | 500 | 200–1500 | Population ceiling too low, settlements cap at tiny sizes | Population explodes, Malthusian collapses every generation | `world_population`, `mean_food_ratio` |
+| `people_per_tile_peak` | 50.0 | 20–150 | Population ceiling too low, settlements cap at tiny sizes | Population explodes, Malthusian collapses every generation | `world_population`, `mean_food_ratio` |
 | `settlement_start_pop` | 500 | 50–2000 | Too-easy founding (tundra/desert civs flourish unrealistically) | Nobody founds cities (food ratio at founding too low) | `settlements_total`, `active_civs` |
 | `pop_growth_rate` | 0.5 | 0.1–2.0 | Slow growth, undershoots carrying cap; wars/disasters have lasting impact | Rapid Malthusian cycles; high settlement turnover | `world_population`, `settlements_in_shortage` |
 | `pop_decay_rate` | 0.05 | 0.01–0.15 | Population never falls; empties don't empty | Constant attrition; hard to maintain population | `world_population`, `deaths_other` |
@@ -25,7 +25,7 @@ Ranges marked **untested** mean no calibration data exists; change carefully and
 | `cold_hardy_food_floor` | 0.70 | 0.3–0.9 | Tundra civs starve immediately; too few high-lat settlements | Tundra as productive as temperate; no biome penalty | `settlements_in_crisis`, `active_civs` |
 | `shortage_threshold` | 0.6 | 0.4–0.9 | Shortage goals never fire; characters don't respond to food scarcity | Constant "shortage" state even in healthy settlements | `goals_formed_ytd`, `settlements_in_shortage` |
 | `crisis_threshold` | 0.3 | 0.1–0.5 | Flee goals never fire; settlements stay in crisis too long | Flee goals firing constantly; too much population flux | `goals_formed_ytd`, `settlements_in_crisis` |
-| `store_accumulate_rate` | 0.6 | 0.2–1.0 | Surplus wasted; no buffer for winter/drought → volatile ratios | Stores absorb everything; demand always met even in drought | `mean_food_ratio`, `min_food_ratio` |
+| `store_accumulate_rate` | 0.4 | 0.2–1.0 | Surplus wasted; no buffer for winter/drought → volatile ratios | Stores absorb everything; demand always met even in drought | `mean_food_ratio`, `min_food_ratio` |
 | `biome_food_bonus_scale` | 1.0 | 0.0–2.0 | All biomes equal; no habitat advantage/disadvantage | Extreme biome differentiation; desert/tundra always collapse | `mean_food_ratio`, `active_civs` |
 
 ---
@@ -44,7 +44,7 @@ To diagnose why a settlement's population is capped, use `--audit-food` (see D2 
 |---|---|---|---|---|---|
 | `carry_cap_minimum` | 100 | 20–500 | Very harsh biomes impossible to settle | Floor dominates; biome differentiation erased | `active_civs`, `settlements_total` |
 | `capacity_smoothing_alpha` | 0.05 | 0.01–0.5 | Capacity frozen; doesn't respond to conquest/drought | Capacity jumps every tick; oscillation if territory grows with pop | `world_population`, `mean_food_ratio` |
-| `people_per_tile_peak` (in resource_pressure) | 500 | 200–1500 | Population ceiling too low | Population explodes, Malthusian collapses | `world_population`, `mean_food_ratio` |
+| `people_per_tile_peak` (in resource_pressure) | 50.0 | 20–150 | Population ceiling too low | Population explodes, Malthusian collapses | `world_population`, `mean_food_ratio` |
 
 ---
 
@@ -72,14 +72,14 @@ Famine factor fires when `food_pressure_ratio < disease_famine_threshold`.
 
 | Knob | Current | Safe range | Too-low symptom | Too-high symptom | Metric to watch |
 |---|---|---|---|---|---|
-| `tension_accrual_per_pair` | 0.12 | 0.02–0.5 | Civs never reach war threshold; 0 wars in history | Wars every few years; constant war state | `wars_active`, `wars_declared_ytd` |
-| `tension_war_threshold` | 1.0 | 0.3–3.0 | Wars too frequent | Wars extremely rare even when civs are neighbors | `wars_active`, `wars_declared_ytd` |
-| `tension_decay_rate` | 0.15 | 0.05–0.5 | Tension builds inexorably toward war regardless of separation | Tension resets too fast; no persistent grievance | `wars_active` |
+| `tension_accrual_per_pair` | 0.05 | 0.02–0.5 | Civs never reach war threshold; 0 wars in history | Wars every few years; constant war state | `wars_active`, `wars_declared_ytd` |
+| `tension_war_threshold` | 1.4 | 0.3–3.0 | Wars too frequent | Wars extremely rare even when civs are neighbors | `wars_active`, `wars_declared_ytd` |
+| `tension_decay_rate` | 0.20 | 0.05–0.5 | Tension builds inexorably toward war regardless of separation | Tension resets too fast; no persistent grievance | `wars_active` |
 | `territory_tension_per_adjacent_pair` | 0.015 | 0.001–0.1 | No territory-based tension; wars only from character encounters | Territory contact immediately causes war | `wars_active`, `wars_declared_ytd` |
 | `max_war_duration_years` | 15 | 5–50 | Wars end before meaningful territory changes | Endless wars that never resolve | `wars_active`, `wars_ended_truce_ytd` |
 | `peace_cooldown_years` | 10 | 2–50 | Same civs cycle in/out of war every few years | Civs that fought once can never fight again | `wars_declared_ytd` |
 | `raid_damage_min` / `raid_damage_max` | 15 / 40 | 5–20 / 10–80 | Raids do no damage; siege is pointless | Raids destroy settlements in one hit | `settlements_in_crisis`, settlement health |
-| `war_proximity_radius` | 15 | 5–30 | Only immediate neighbors ever build war tension | Far-apart civs get tension from irrelevant neighbors | `wars_active` |
+| `war_proximity_radius` | 40 | 5–60 | Only immediate neighbors ever build war tension | Far-apart civs get tension from irrelevant neighbors | `wars_active` |
 | `opportunistic_war_aggression_threshold` | 0.55 | 0.3–0.9 | Passive civs never launch opportunistic wars | High-aggression civs always declare on any weak neighbor | `wars_declared_ytd`, `war_causes` |
 | `succession_crisis_war_tension_mult` | 2.0 | 1.0–5.0 | Succession crises confer no diplomatic vulnerability | Succession crisis immediately causes war with every neighbor | `wars_declared_ytd` |
 | `weak_neighbor_settlement_fraction` | 0.4 | 0.1–0.9 | Very few settlements must be sick/starving before triggering | Any single sick settlement makes a civ a "weak neighbor" | `wars_declared_ytd`, `active_diseases` |
@@ -125,7 +125,7 @@ All disaster knobs are per-tick probabilities. Multiply by 16 (ticks/year) × el
 
 | Knob | Current | Safe range | Too-low symptom | Too-high symptom | Metric to watch |
 |---|---|---|---|---|---|
-| `max_territory_radius` | 10 | 3–25 | Cities don't expand; resource base tiny | Single city claims entire continent | `settlements_total`, `world_population` |
+| `max_territory_radius` | 7 | 3–25 | Cities don't expand; resource base tiny | Single city claims entire continent | `settlements_total`, `world_population` |
 | `territory_growth_per_year` | 4 | 1–20 | Slow expansion; founding new cities preferred too quickly | Instant territory snowball; no exploration pressure | `settlements_total` |
 | `claim_tiles_per_person` | 8 | 2–30 | Cities with 1000 pop claim 125 tiles = radius 6 (adequate) | Very large cities claim too few tiles; food shortage | `mean_food_ratio` |
 | `territory_tension_per_adjacent_pair` | 0.015 | 0.001–0.1 | No war from territory contact | Wars from any territorial proximity | `wars_declared_ytd` |
@@ -138,20 +138,22 @@ Unrest accumulates on settlements annually from three independent drivers (dista
 
 | Knob | Current | Safe range | Too-low symptom | Too-high symptom | Metric to watch |
 |---|---|---|---|---|---|
-| `unrest_comfort_radius` | 35 | 15–60 | All distant settlements always in unrest; constant premature secessions | Distance driver never fires; civs grow without unrest | `secessions_ytd`, `active_civs` |
-| `unrest_distance_per_tile` | 0.003 | 0.001–0.02 | Distant cities barely accumulate unrest | Even slightly-distant cities reach threshold in a few years | `mean_unrest`, `secessions_ytd` |
-| `unrest_soft_city_threshold` | 6 | 4–10 | Size driver fires too early; splinter after 4 cities | Empires can grow to 10+ cities without unrest | `max_cities_per_civ_actual`, `secessions_ytd` |
-| `unrest_per_excess_city` | 0.04 | 0.01–0.15 | Size driver too weak; civs grow past threshold without fracturing | Any civ past threshold immediately spirals to secession | `mean_unrest`, `max_cities_per_civ_actual` |
+| `unrest_comfort_radius` | 15 | 10–60 | All distant settlements always in unrest; constant premature secessions | Distance driver never fires; civs grow without unrest | `secessions_ytd`, `active_civs` |
+| `unrest_distance_per_tile` | 0.005 | 0.001–0.02 | Distant cities barely accumulate unrest | Even slightly-distant cities reach threshold in a few years | `mean_unrest`, `secessions_ytd` |
+| `unrest_soft_city_threshold` | 4 | 4–10 | Size driver fires too early; splinter after 4 cities | Empires can grow to 10+ cities without unrest | `max_cities_per_civ_actual`, `secessions_ytd` |
+| `unrest_per_excess_city` | 0.035 | 0.01–0.15 | Size driver too weak; civs grow past threshold without fracturing | Any civ past threshold immediately spirals to secession | `mean_unrest`, `max_cities_per_civ_actual` |
 | `unrest_famine_bonus` | 0.15 | 0.05–0.4 | Famine doesn't drive unrest; starving cities stay calm | Famine always causes immediate secession | `secessions_ytd`, `settlements_in_crisis` |
-| `unrest_succession_bonus` | 0.20 | 0.05–0.5 | Leadership crises have no effect | Any succession causes immediate secession | `secessions_ytd` |
+| `unrest_succession_mult` | 1.5 | 1.0–3.0 | Leadership crises have no effect | Any succession causes immediate secession | `secessions_ytd` |
 | `unrest_decay_rate` | 0.10 | 0.02–0.3 | Unrest accumulates permanently; all distant cities eventually secede | Unrest never builds; splinter mechanic dormant | `mean_unrest` |
-| `unrest_secession_threshold` | 0.70 | 0.5–0.95 | Secessions fire too easily (threshold too low) | Secession impossible in practice | `secessions_ytd`, `active_civs` |
-| `unrest_secession_chance` | 0.40 | 0.1–0.8 | Low annual probability; cities linger just over threshold for years | First year over threshold always fires | `secessions_ytd` |
+| `unrest_secession_threshold` | 0.80 | 0.5–0.95 | Secessions fire too easily (threshold too low) | Secession impossible in practice | `secessions_ytd`, `active_civs` |
+| `unrest_secession_chance` | 0.30 | 0.1–0.8 | Low annual probability; cities linger just over threshold for years | First year over threshold always fires | `secessions_ytd` |
 | `unrest_cluster_radius` | 25 | 10–50 | Seceded civ spawns as a single isolated city | Entire continent joins the new civ | `active_civs`, `settlements_total` |
 | `unrest_cluster_min_unrest` | 0.30 | 0.1–0.6 | Only the seceding city leaves (no cluster) | Moderately unhappy cities always join secession | `active_civs`, `secessions_ytd` |
-| `splinter_initial_tension` | 0.60 | 0.2–0.9 | Parent civ immediately attacks seceded state | Seceded civ is immediately allied with parent | `wars_active`, `wars_declared_ytd` |
+| `splinter_initial_tension` | 0.40 | 0.2–0.9 | Parent civ immediately attacks seceded state | Seceded civ is immediately allied with parent | `wars_active`, `wars_declared_ytd` |
 
 **Tuning notes (S4 2026-07-18):** Comfort radius bumped 20→35 because at 20 tiles, second cities in distant geography were accumulating unrest within 50 years and splintering before civs had time to grow. At 35, the secession life-cycle operates at the correct cadence (Y74–Y590 observed first secessions). The cluster radius (15→25) and min unrest (0.50→0.30) together mean seceded civs arrive with 2–3 cities rather than just 1, giving them enough economic base to survive.
+
+**Further retuning (2026-07-21 bugfix pass):** S4's numbers proved overtuned in practice — `unrest_comfort_radius` came back down 35→15, `unrest_soft_city_threshold` 6→4, `unrest_per_excess_city` 0.05→0.035, `unrest_secession_threshold` 0.70→0.80, `unrest_secession_chance` 0.40→0.30, `splinter_initial_tension` 0.60→0.40. War tension knobs were also retuned in the same pass (`tension_accrual_per_pair` 0.08→0.05, `tension_decay_rate` 0.15→0.20, `tension_war_threshold` 1.2→1.4, `war_proximity_radius` 15→40). The table above reflects current values.
 
 ---
 
@@ -160,7 +162,7 @@ Unrest accumulates on settlements annually from three independent drivers (dista
 | Knob | Current | Safe range | Too-low symptom | Too-high symptom | Metric to watch |
 |---|---|---|---|---|---|
 | `global_settlement_min_dist` | 3 | 2–8 | Settlements cluster unrealistically close (3 tiles = 30 km at 10 km/tile) | Tile space exhausted too quickly; growth stalls | `settlements_total`, `mean_cities_per_civ` |
-| `min_fertility_to_settle` | 17 | 5–50 | Any marginal land settled; too many barren outposts | Growth stalls in geographies with moderate-fertility biomes | `settlements_total`, `active_civs` |
+| `min_fertility_to_settle` | 5 | 5–50 | Any marginal land settled; too many barren outposts | Growth stalls in geographies with moderate-fertility biomes | `settlements_total`, `active_civs` |
 | `colony_min_distance` | 10 | 5–25 | Colonize goals form next to parent city (no real expansion) | Long-range colonization never attempted | `settlements_total`, `goals_formed_ytd` |
 | `max_settlements_per_civ` | 15 | 8–25 | Civs hit ceiling before splinter fires; ceiling+splinter interact | untested | `max_cities_per_civ_actual` |
 | `civ_floor_count` | 4 | 2–8 | World converges to 1–2 civs (no floor protection) | Floor mechanic creates constant founder-spam | `active_civs`, `goals_formed_ytd` |

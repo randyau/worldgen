@@ -16,7 +16,7 @@ from pathlib import Path
 from collections import defaultdict
 
 REPO_ROOT   = Path(__file__).resolve().parent.parent
-TOML_PATH   = REPO_ROOT / "sim_config.toml"
+TOML_PATH   = REPO_ROOT / "config" / "sim_config.toml"
 OUTPUT      = REPO_ROOT / "docs" / "config_reference.md"
 
 BANNER = """\

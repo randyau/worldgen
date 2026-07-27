@@ -22,9 +22,9 @@ The primary audience is worldbuilders and writers, not traditional gamers. The c
 **Current milestone status:** M10 — Worldgen Preview & Modding COMPLETE (2026-07-26). All four phases shipped: 10.0 (pipeline resume/replay), 10.1 (preview screen), 10.2 (sim-config settings tab), 10.3 (data modding — load-time validation for `ancestries.toml`/`beasts.toml`, see `docs/modding.md`); see `docs/phases/archive/m10_worldgen_preview_modding.md` for phase sequence and `docs/phases/archive/m10_phase0_pipeline_resume.md` / `m10_phase1_worldgen_preview_screen.md` / `m10_phase2_sim_config_settings_tab.md` / `m10_phase3_data_modding.md` for what shipped. Next milestone: M11 — Scale & Distribution (not yet started; see `docs/roadmap.md` § "M11"). M9 (Created-Object Unification & Economic Depth) COMPLETE (2026-07-26) — see `docs/phases/archive/m9_created_object_unification.md`. Milestones were renumbered on 2026-07-23 when M8 was inserted (old M8→M9, M9→M10, M10→M11) — see `docs/roadmap.md`.
 
 **For coding sessions — read the active phase doc:**
-- `docs/phases/m8_ui_framework_rewrite.md` — **M8 index; read this first**, then only the specific `docs/phases/m8_phaseN_*.md` for the phase in progress (8.0 → 8.5, sequential)
-- `docs/phases/archive/` — all M1–M7 phases archived here for reference
-- `docs/testing/runbook_m1.md` — M1 manual test runbook (reference for regression testing)
+- M11 has not started yet — no phase doc exists under `docs/phases/` yet. Check `docs/roadmap.md` § "M11" for scope, then create the first `docs/phases/m11_*.md` phase doc when work begins.
+- `docs/phases/archive/` — all M1–M10 phases archived here for reference
+- `docs/archive/runbook_m1.md` — M1 manual test runbook (reference for regression testing)
 
 **Reusable code patterns and test templates:**
 - `docs/snippets/patterns.md` — command pattern, WorldRng, tile iteration, StateCache, etc.

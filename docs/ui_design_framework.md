@@ -444,8 +444,12 @@ qualifiers ("bare", "abundant") accompany bare numbers so novices aren't lost.
 
 ## 9. Settings, keybindings & configuration
 
-Today there is **no settings surface**; keybinds are centralized (`KeybindRegistry`) but fixed.
-The framework defines where all of this lives so M9's config exposure has a home.
+**Status: shipped.** The Settings shell (Controls + Display) landed in M8 phase 8.5;
+the Simulation config tab landed in M10 phase 10.2/10.2a (`ConfigRegistry`, generic
+over `SimConfig`). This section is kept as the design rationale for that surface — the
+"M9" labels below are pre-renumbering references (this doc predates the 2026-07-23
+milestone renumber; see `docs/roadmap.md`) and describe what actually shipped in M10.
+Presets (batch-set related keys) were **not** built — out of scope, not currently planned.
 
 ### 9.1 Command registry (new) sits under keybinds
 Introduce a `CommandRegistry`: every user action is a named `UiCommand` (id, label, category,
@@ -454,14 +458,14 @@ future keybind-rebinding UI, and any toolbar button all render from the same reg
 keybinds **rebindable** (a named gap) without rewiring behavior, and gives every action exactly one
 definition (P6). Keeps the existing "key and button share one delegate" guarantee, generalized.
 
-### 9.2 The Settings screen (M9 home)
+### 9.2 The Settings screen
 A summoned, full-height dock tab (or overlay screen) with grouped sections:
 - **Controls** — keybinding list with rebind, driven by CommandRegistry.
 - **Display** — theme/contrast, reduce-motion, overlay palette choice, dock width, density.
-- **Simulation config (M9)** — grouped `sim_config.toml` tunables (Character behavior, Disaster
+- **Simulation config** — grouped `sim_config.toml` tunables (Character behavior, Disaster
   rates, Civ dynamics, Artifact/economy…), each a `WeField`/`Meter`/`WeDropdown` bound to a config
   key, with **per-setting and per-group reset-to-default** and a **diff-from-default** view.
-- **Presets (M9)** — "High conflict / Peaceful / Dense population" batch-set related keys.
+- ~~**Presets** — "High conflict / Peaceful / Dense population" batch-set related keys.~~ Not built; out of scope for now.
 These use the **same component kit** as everything else — settings are not a special-case UI.
 
 ### 9.3 Config surfacing pattern
@@ -474,7 +478,10 @@ seam a mod system would later populate — but we are **not** building the mod s
 ## 10. Modding seams (coherence-first, build later)
 
 Per decision 3, do not build the mod system. Do leave these named seams so it can be added without
-a teardown (P8). Mark each with `// MOD SEAM:` in code.
+a teardown (P8). Mark each with `// MOD SEAM:` in code. (Note: M10 phase 10.3 shipped *data*
+modding — TOML config/data with load-time validation, see `docs/modding.md` — which is a
+different, narrower thing than the plugin/code mod system this section describes; that stays
+out of scope.)
 
 | Seam | What it is now | What a mod could do later |
 |---|---|---|

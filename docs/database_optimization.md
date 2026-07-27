@@ -13,7 +13,7 @@ Events are now accumulated and written to the database in batches every `event_w
 
 ### Configuration
 ```toml
-[sim_loop.persistence]
+[sim_loop]
 event_write_batch_interval_ticks = 20    # ~1 simulated year at Normal speed
 ```
 

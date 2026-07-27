@@ -52,9 +52,9 @@ Update this file whenever a new artifact is discovered and diagnosed.
 |-----|---------|------------|---------|----------|
 | `default_sea_level` | 0.40 | 0.30–0.55 | Less ocean, more land; continents crowd together | More ocean; island-heavy world |
 | `erosion_passes` | 2 | 0–4 | Thin continental fault lines protrude into ocean as Mountain/Tundra ridges (white lines in ocean) | Wide ocean erosion; eats narrow peninsulas |
-| `min_ocean_8neighbors` | 5 | 4–6 | Threshold 4 erodes too aggressively (converts coastal peninsulas to ocean); threshold 6 leaves 2-tile ridges | Threshold 6 leaves 2-tile-wide ridges; pair with 3+ erosion passes |
+| `min_ocean8_neighbors` | 5 | 4–6 | Threshold 4 erodes too aggressively (converts coastal peninsulas to ocean); threshold 6 leaves 2-tile ridges | Threshold 6 leaves 2-tile-wide ridges; pair with 3+ erosion passes |
 
-**Artifact: ridges in ocean** — if you see white/gray lines crossing open ocean, increase `erosion_passes` or lower `min_ocean_8neighbors` to 4.
+**Artifact: ridges in ocean** — if you see white/gray lines crossing open ocean, increase `erosion_passes` or lower `min_ocean8_neighbors` to 4.
 
 ---
 
@@ -67,10 +67,10 @@ Update this file whenever a new artifact is discovered and diagnosed.
 | `moisture_carry_decay` | 0.993 | 0.985–0.997 | Deep interiors are desert (0.97 = ~22% moisture at 50 tiles in) | Too much moisture everywhere; very little desert or arid land |
 | `tropical_band_half_width` | 0.25 | 0.15–0.35 | Narrow tropical belt; little rainforest | Tropics cover most of the world |
 | `rain_shadow_loss_fraction` | 0.6 | 0.3–0.8 | Weak rain shadow; leeward deserts don't form | Extreme rain shadow; everything east of a mountain range is desert |
-| `temperature_noise_scale` | 0.20 | 0.10–0.28 | Pure horizontal temperature bands; biomes stripe cleanly by latitude | Temperature swings too wild; hot tiles appear in polar bands |
-| `temperature_noise_frequency` | 0.015 | 0.008–0.025 | Very broad temperature anomaly blobs (~125 tiles/period) | Fine-grained speckle; anomalies too small to feel like climate regions |
-| `moisture_noise_scale` | 40.0 | 20–60 | Horizontal moisture bands dominate; same biome across an entire latitude row | Chaotic moisture; rain shadow signal is masked, deserts appear in coastal zones |
-| `moisture_noise_frequency` | 0.013 | 0.008–0.022 | Large wet/dry blobs (~77 tiles/period) | Fine moisture speckle; biome variety but no coherent wet or dry regions |
+| `temperature_noise_scale` | 0.28 | 0.10–0.30 | Pure horizontal temperature bands; biomes stripe cleanly by latitude | Temperature swings too wild; hot tiles appear in polar bands |
+| `temperature_noise_frequency` | 0.009 | 0.008–0.025 | Very broad temperature anomaly blobs (~111 tiles/period) | Fine-grained speckle; anomalies too small to feel like climate regions |
+| `moisture_noise_scale` | 60.0 | 20–60 | Horizontal moisture bands dominate; same biome across an entire latitude row | Chaotic moisture; rain shadow signal is masked, deserts appear in coastal zones |
+| `moisture_noise_frequency` | 0.009 | 0.008–0.022 | Large wet/dry blobs (~111 tiles/period) | Fine moisture speckle; biome variety but no coherent wet or dry regions |
 
 **Artifact: horizontal biome banding** — if biomes stripe strongly by latitude (big orange desert band, big green forest band, big gray tundra band), increase `temperature_noise_scale` and/or `moisture_noise_scale`, and lower both frequency params for broader regional blobs (current: 0.009 ≈ 111-tile period).
 

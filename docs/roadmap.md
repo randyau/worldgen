@@ -29,7 +29,7 @@ getting deeper. What actually shipped:
 | M3 | Narrative Exploration | ✅ COMPLETE 2026-06-26 | Territory, history query, cultural identity, narrative UI, tile-inspect + **read-only** character watch, ancestry/culture, save/resume. |
 | M4 | Civ Dynamics *(replaced "UI Experience")* | ✅ COMPLETE 2026-07-19 | Civ awareness/emissary, territory-war dynamics, religion/specialists. **Not** the originally-planned UI milestone. |
 | M5 | Artifacts *(unplanned)* | ✅ COMPLETE 2026-07-20 | Legendary-item lifecycle, covet/goals, decay sink, telemetry. See Session G. |
-| — | Balance / tuning | 🔄 IN PROGRESS | Unstructured; `docs/tuning_balance_review_2026-07-18.md`. |
+| — | Balance / tuning | 🔄 IN PROGRESS | Unstructured; `docs/archive/tuning_balance_review_2026-07-18.md`. |
 
 **The "lost" pillars** — the player-facing agency and polish work from the skipped
 "UI Experience" milestone — are what this roadmap picks back up, reordered and updated for
@@ -55,8 +55,8 @@ where the codebase now is.
 | **M6** | UI Experience & Polish | ✅ COMPLETE 2026-07-21 | All epics 6.1–6.4 done. See archive. |
 | **M7** | Authoring & Agency (Spotlight + God Mode) | ✅ COMPLETE 2026-07-23 | All epics 7.1–7.4 done. See archive. |
 | **M8** | UI Framework Rewrite | ✅ COMPLETE 2026-07-24 | All phases 8.0–8.5 done. See archive. |
-| M9 | Created-Object Unification & Economic Depth | summary | Pay down G-1 debt; deepen crafting/economy. |
-| M10 | Worldgen Preview & Modding | summary | Layered preview + adjustment; player config/data modding. |
+| M9 | Created-Object Unification & Economic Depth | ✅ COMPLETE 2026-07-26 | Pay down G-1 debt; deepen crafting/economy. See archive. |
+| M10 | Worldgen Preview & Modding | ✅ COMPLETE 2026-07-26 | Layered preview + adjustment; player config/data modding. See archive. |
 | M11 | Scale & Distribution | summary | 10k+ year performance; local-scale gen; packaging. |
 
 Ordering rationale: polish (M6) de-risks and clarifies the surfaces that Spotlight/God Mode
@@ -67,7 +67,7 @@ click-through leakage, scrollbar-obstructed content) are now structural. M9 adds
 surfaces (economic ledger, created-object detail, trade overlay) — doing the framework first
 means those land on the new system instead of adding more debt to migrate later. The design
 authority for M8 is `docs/ui_design_framework.md`. The G-1 refactor (M9) still sits after M7
-because M7 does not depend on it. M10/M11 are the long-tail platform work.
+because M7 does not depend on it. M10 (complete) and M11 are the long-tail platform work.
 
 ---
 
@@ -237,12 +237,16 @@ Pays down the Session G / G-1 debt and builds economic depth on the cleaned foun
 
 ## M10 — Worldgen Preview & Modding  *(summary)*
 
-**Status:** SCOPED — 2026-07-26. Phase sequence (10.0–10.3) defined in
-`docs/phases/archive/m10_worldgen_preview_modding.md`; no phase started yet.
+**Status: COMPLETE — 2026-07-26.** Phase sequence (10.0–10.3) defined in
+`docs/phases/archive/m10_worldgen_preview_modding.md`; all four phases shipped and green —
+see the index doc and its linked phase docs (`m10_phase0_pipeline_resume.md` /
+`m10_phase1_worldgen_preview_screen.md` / `m10_phase2_sim_config_settings_tab.md` /
+`m10_phase3_data_modding.md`). Next milestone: **M11 — Scale & Distribution** (below).
 
-- **Layered worldgen preview + adjustment:** build the `WorldGenPipeline` (`RunUpTo`/`RerunFrom`) that M1 deferred; let players tweak sea level / parameters and re-preview per layer before committing.
-- **Player config exposure:** surface `sim_config.toml` tunables through UI; safe presets. Lands as the **sim-config tab in the M8 Settings screen shell** (`docs/ui_design_framework.md` §9.2), reusing the M8 component kit — not a bespoke UI.
-- **Data modding:** documented, moddable config/data with validation — no plugin/code modding (that stays out of scope per CLAUDE.md). Uses the M8 `// MOD SEAM:` registries (framework §10) as the extension points. Scoped down to the data that's actually TOML-driven today (`config/ancestries.toml`, `config/beasts.toml`); biomes/resources are still hardcoded C# enums and would need their own follow-up phase to become data-driven — see `docs/phases/archive/m10_worldgen_preview_modding.md` DECISION (10.3).
+- **Layered worldgen preview + adjustment — DONE:** `WorldGenPipeline` (`RunUpTo`/`RerunFrom`) that M1 deferred; players tweak sea level / parameters and re-preview per layer before committing, via the worldgen preview screen (10.1).
+- **Player config exposure — DONE:** `sim_config.toml` tunables surfaced through UI via a generic `ConfigRegistry` (10.2a) and the sim-config tab in the M8 Settings screen shell (10.2, `docs/ui_design_framework.md` §9.2), reusing the M8 component kit — not a bespoke UI.
+- **Data modding — DONE:** documented, moddable config/data with load-time validation for `config/ancestries.toml` and `config/beasts.toml` (10.3, see `docs/modding.md`) — no plugin/code modding (stays out of scope per CLAUDE.md). Biomes/resources are still hardcoded C# enums and would need their own follow-up phase to become data-driven — see `docs/phases/archive/m10_worldgen_preview_modding.md` DECISION (10.3).
+- **Pipeline resume/replay — DONE:** phase 10.0, prerequisite plumbing for the preview screen.
 
 ## M11 — Scale & Distribution  *(summary)*
 
@@ -266,12 +270,13 @@ Pays down the Session G / G-1 debt and builds economic depth on the cleaned foun
     `character.ocean_crossing_enabled` config toggle.
   - Either path needs a `CrossesOcean = true` flag on the resulting `MoveToTile` command
     so history events can record sea voyages distinctly.
-  - Planned for a future phase — file this under sim character mobility as a standalone
-    story in M9/M10 (it is a sim change, so it is **not** part of the M8 UI rewrite).
+  - Still unimplemented as of M10 close-out. Planned for a future phase — file this under sim
+    character mobility as a standalone story in M11 or later (it is a sim change, so it is
+    **not** part of the M8 UI rewrite).
 - **LLM prose generation** — V2 feature; hook only (per CLAUDE.md), no build.
 - **Magic as physical substrate** — V2; `MagicIntensity` stays a stored, behavior-free layer.
 - **Voxel rendering, plugin/code modding, multiplayer** — out of scope.
-- **Balance/tuning** — ongoing; owned by `docs/tuning_balance_review_2026-07-18.md` and `config/balance_invariants.toml`, not a milestone.
+- **Balance/tuning** — ongoing; owned by `docs/archive/tuning_balance_review_2026-07-18.md` and `config/balance_invariants.toml`, not a milestone.
 
 ---
 

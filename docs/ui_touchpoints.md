@@ -5,6 +5,12 @@
 **Date:** 2026-07-23
 **Codebase milestone:** M7 complete (God Mode + Spotlight). M8–M10 are planned but unbuilt.
 
+**Status note (2026-07-26):** This is the pre-M8 inventory that `docs/ui_design_framework.md`
+was written against — M8 (UI Framework Rewrite), M9, and M10 have since all shipped, so
+surfaces described here as "future" or "unbuilt" may now exist. Kept as historical design
+rationale (still cited by section number from `ui_design_framework.md`); not maintained as a
+current-state inventory. For what's actually built, read the code / `docs/codebase_map.md`.
+
 ---
 
 ## Product context
