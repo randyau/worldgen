@@ -167,16 +167,33 @@ public sealed class CharacterBehaviorPhase
             civ.Members.Add(born.Id);
             world.Entities.Add(born);
 
-            // Emigrant: seed FoundCity goal immediately and deduct population from parent
+            // Emigrant: seed FoundCity (or, M11, SeaVoyage when the home landmass has no local
+            // frontier left and the civ has invested in a Port) immediately, and deduct
+            // population from parent.
             if (overCapacity)
             {
-                born.Goals.Add(new GoalData
-                {
-                    Type       = GoalType.FoundCity,
-                    Priority   = 0.9f,
-                    StaleSince = (int)tick,
-                    FormedTick = (int)tick
-                });
+                TileCoord? voyageDest = null;
+                if (world.SimConfig.Seafaring.OceanCrossingEnabled
+                    && !HasLocalFrontier(kvp.Key, world, _cfg)
+                    && CivOwnsPort(civ, world))
+                    voyageDest = _scorer.FindVoyageDestination(kvp.Key, world);
+
+                born.Goals.Add(voyageDest.HasValue
+                    ? new GoalData
+                    {
+                        Type       = GoalType.SeaVoyage,
+                        Priority   = 0.9f,
+                        TargetTile = voyageDest,
+                        StaleSince = (int)tick,
+                        FormedTick = (int)tick
+                    }
+                    : new GoalData
+                    {
+                        Type       = GoalType.FoundCity,
+                        Priority   = 0.9f,
+                        StaleSince = (int)tick,
+                        FormedTick = (int)tick
+                    });
                 // Re-read stub in case it was updated earlier this tick
                 if (world.Settlements.TryGetValue(kvp.Key, out var freshStub))
                     world.Settlements[kvp.Key] = freshStub with
@@ -191,6 +208,40 @@ public sealed class CharacterBehaviorPhase
                 new[] { born.Id.Value },
                 ActorId: born.Id.Value, ActorName: born.Identity.Name, CivId: stub.CivId.Value));
         }
+    }
+
+    // ─── M11 — sea-voyage delegation gates ─────────────────────────────────────
+
+    // DECISION: "landlocked" is a bounded local search (radius = ColonyMinDistance * 3, same
+    // landmass as the settlement), not an exhaustive scan of the whole landmass — this runs on
+    // every over-capacity settlement on every annual tick, so it stays cheap. A settlement whose
+    // immediate landmass neighborhood is fully claimed is treated as landlocked even if distant
+    // unclaimed land exists elsewhere on the same landmass; overseas expansion is offered instead
+    // of a very-long-range overland trek, which is the more interesting outcome anyway.
+    private static bool HasLocalFrontier(TileCoord settlementTile, WorldState world, CharacterSimConfig cfg)
+    {
+        int radius = cfg.ColonyMinDistance * 3;
+        int landmass = world.GetLandmassId(settlementTile);
+        foreach (var coord in world.GetTilesInRadius(settlementTile, radius))
+        {
+            if (world.TerritoryMap.ContainsKey(coord)) continue;
+            if (!world.IsLand(coord) || world.GetLandmassId(coord) != landmass) continue;
+            var tile = world.GetTile(coord);
+            if (tile.Fertility >= cfg.MinFertilityToSettle && tile.BaseMoisture >= cfg.MinBaseMoistureToSettle)
+                return true;
+        }
+        return false;
+    }
+
+    private static bool CivOwnsPort(Civilization civ, WorldState world)
+    {
+        foreach (var territory in civ.CityTerritories.Values)
+        foreach (var tile in territory)
+        {
+            if (world.ImprovementMap.TryGetValue(tile, out var imp) && imp.Type == ImprovementType.Port)
+                return true;
+        }
+        return false;
     }
 
     // ─── Lifecycle ────────────────────────────────────────────────────────────
@@ -592,7 +643,7 @@ public sealed class CharacterBehaviorPhase
         switch (cmd)
         {
             case MoveToTile move:
-                ResolveMoveWithVoyageTracking(c, move.Destination, world, pending);
+                ResolveMoveWithVoyageTracking(c, move.Destination, world, pending, tick);
                 break;
             case Rest:
                 ResolveRest(c);
@@ -626,7 +677,7 @@ public sealed class CharacterBehaviorPhase
     // resolution needs, and "did this move cross water" is fully determined by comparing
     // old/new tile land status, not something the emitting (EMIT-step) code needs to flag.
     private static void ResolveMoveWithVoyageTracking(
-        Tier1Character c, TileCoord dest, WorldState world, List<PendingEvent> pending)
+        Tier1Character c, TileCoord dest, WorldState world, List<PendingEvent> pending, long tick)
     {
         var voyageGoal = c.Goals.FirstOrDefault(g => g.Type == GoalType.SeaVoyage && !g.IsComplete);
         bool oldWasLand = world.IsLand(c.Location);
@@ -652,6 +703,17 @@ public sealed class CharacterBehaviorPhase
             pending.Add(new PendingEvent(EventType.SeaVoyageCompleted, dest, null, payload,
                 new[] { c.Id.Value },
                 ActorId: c.Id.Value, ActorName: c.Identity.Name, CivId: c.Identity.CivId.Value));
+
+            // Closing the loop: a delegate who crossed the water is here to found a city, same as
+            // any other FoundCity delegate — reuse the existing flow rather than a second founding
+            // mechanism (see m11_phase2_delegation_behavior.md).
+            c.Goals.Add(new GoalData
+            {
+                Type       = GoalType.FoundCity,
+                Priority   = 0.9f,
+                StaleSince = (int)tick,
+                FormedTick = (int)tick
+            });
         }
     }
 

@@ -1,8 +1,25 @@
 # M11 Phase 11.2 — Delegation & behavior integration
 
-**Status:** NOT STARTED.
+**Status:** DONE — 2026-07-27 (build+test verified).
 **Milestone:** M11 — Character Water Crossings (`docs/phases/m11_water_crossings.md`)
 **Depends on:** 11.1 (`SeaVoyage` goal is executable once assigned)
+
+## What shipped
+
+`CharacterBehaviorPhase.TrySpawnCivBorn`'s emigration path now checks two new gates
+(`HasLocalFrontier` — a bounded radius search, same landmass, for any unclaimed fertile tile;
+`CivOwnsPort` — any `Port` improvement inside the civ's territory) before falling back to
+`FindVoyageDestination`; only when a far shore is actually reachable does the emigrant get a
+`SeaVoyage` goal instead of `FoundCity` — any gate failing (no Port, nothing reachable, local
+frontier still open, feature disabled) reproduces the exact pre-M11 behavior. On
+`SeaVoyageCompleted`, the character now also picks up a `FoundCity` goal targeting the landing
+tile, closing the delegate → embark → cross → found loop through the existing founding flow (no
+second founding mechanism). `ApplySpotlightBias`'s `GoalIntent` switch gained a `SeaVoyage` case.
+
+Tests: `WorldEngine.Tests/Integration/SeaVoyageDelegationTests.cs` (3 tests, synthetic world) —
+landlocked + Port → SeaVoyage goal; landlocked without a Port → falls back to FoundCity
+unchanged; a civ with ample local frontier and no Port never forms a SeaVoyage goal across 20
+ticks (regression guard).
 
 ## Goal
 

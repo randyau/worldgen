@@ -877,6 +877,7 @@ public sealed class UtilityScorer
                     GoalType.Create      => ca.Command is CreateArtwork,
                     GoalType.BuildImprovement => ca.Command is BuildImprovement,
                     GoalType.SlayBeast   => ca.Command is MoveToTile,
+                    GoalType.SeaVoyage   => ca.Command is MoveToTile,
                     _                    => false
                 };
                 if (matchesGoal) bias = SpotlightIntentBias;
