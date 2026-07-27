@@ -1,3 +1,6 @@
+using WorldEngine.Sim.Core;
+using WorldEngine.Sim.World;
+
 namespace WorldEngine.Sim.WorldGen.Layers;
 
 /// <summary>
@@ -14,6 +17,10 @@ public sealed class RiverLayer : IWorldGenLayer<RiverResult>
         (-1, 0),       (1, 0),
         (-1, 1),(0, 1),(1, 1)
     };
+
+    // Local WorldRng salt for border-crossing position jitter (this layer only; not a
+    // cross-cutting sim-tick salt, so it doesn't belong in SimRngSalts).
+    private const int SaltCrossingPosition = 40;
 
     public RiverResult Generate(
         WorldGenContext ctx,
@@ -67,6 +74,40 @@ public sealed class RiverLayer : IWorldGenLayer<RiverResult>
                 result.HasRiver[i] = true;
             if (flowAcc[i] >= majorThreshold)
                 result.IsPOICandidate[i] = true;
+        }
+
+        // --- Step 5: border crossings — where a river tile's flow leaves into a neighboring
+        // world tile. Drives the border-manifest sampling M11 local-scale generation reads for
+        // cross-tile river continuity.
+        for (int i = 0; i < n; i++)
+        {
+            if (!result.HasRiver[i] || flowDir[i] < 0) continue;
+
+            int x = i % w, y = i / w;
+            int t = flowDir[i];
+            int tx = t % w, ty = t / w;
+
+            int dx = tx - x;
+            if (dx > 1) dx -= w;
+            if (dx < -1) dx += w;
+            int dy = ty - y;
+
+            EdgeDirection edge = dy switch
+            {
+                < 0 => EdgeDirection.North,
+                > 0 => EdgeDirection.South,
+                _   => dx > 0 ? EdgeDirection.East : EdgeDirection.West,
+            };
+
+            float posRoll = WorldRng.FloatAt(ctx.Config.Seed, 0, x, y, SaltCrossingPosition);
+            float position = 0.15f + posRoll * 0.7f; // keep away from tile corners
+
+            float widthT = Math.Clamp(flowAcc[i] / (float)majorThreshold, 0f, 1f);
+            float width = cfg.CrossingMinWidthFraction
+                + widthT * (cfg.CrossingMaxWidthFraction - cfg.CrossingMinWidthFraction);
+
+            result.Crossings.Add(new RiverCrossing(
+                new TileCoord(x, y), new TileCoord(tx, ty), edge, position, width, flowAcc[i]));
         }
 
         progress?.Report(1.0f);

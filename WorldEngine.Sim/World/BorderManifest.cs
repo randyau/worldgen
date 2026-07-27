@@ -9,4 +9,13 @@ public sealed class BorderManifest
     public BorderManifestSample[] South { get; } = new BorderManifestSample[SampleCount];
     public BorderManifestSample[] East  { get; } = new BorderManifestSample[SampleCount];
     public BorderManifestSample[] West  { get; } = new BorderManifestSample[SampleCount];
+
+    public BorderManifestSample[] GetEdge(EdgeDirection edge) => edge switch
+    {
+        EdgeDirection.North => North,
+        EdgeDirection.South => South,
+        EdgeDirection.East  => East,
+        EdgeDirection.West  => West,
+        _ => throw new ArgumentOutOfRangeException(nameof(edge)),
+    };
 }

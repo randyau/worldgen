@@ -72,10 +72,43 @@ public class BorderManifestTests
     }
 
     [Fact]
-    public void BorderManifestStore_LoadThrowsNotImplemented()
+    public void BorderManifestStore_LoadFromFile_RoundTripsWriteToFile()
     {
-        var action = () => BorderManifestStore.LoadFromFile("any.bin");
+        var tempFile = Path.GetTempFileName();
+        try
+        {
+            var manifests = new List<(TileCoord, BorderManifest)>();
+            for (int i = 0; i < 5; i++)
+            {
+                var coord = new TileCoord(i, i * 3);
+                var manifest = new BorderManifest();
+                manifest.North[0].Elevation        = (byte)(10 + i);
+                manifest.North[0].Moisture          = (byte)(20 + i);
+                manifest.North[0].HasRiverCrossing  = (byte)(i % 2);
+                manifest.North[0].HasRoadCrossing   = 0;
+                manifest.North[0].FlowVolume        = (byte)(30 + i);
+                manifest.East[63].Elevation         = (byte)(40 + i);
+                manifests.Add((coord, manifest));
+            }
 
-        action.Should().Throw<NotImplementedException>();
+            BorderManifestStore.WriteToFile(tempFile, manifests);
+            var loaded = BorderManifestStore.LoadFromFile(tempFile).ToList();
+
+            loaded.Should().HaveCount(5);
+            for (int i = 0; i < 5; i++)
+            {
+                loaded[i].Item1.Should().Be(manifests[i].Item1);
+                loaded[i].Item2.North[0].Elevation.Should().Be(manifests[i].Item2.North[0].Elevation);
+                loaded[i].Item2.North[0].Moisture.Should().Be(manifests[i].Item2.North[0].Moisture);
+                loaded[i].Item2.North[0].HasRiverCrossing.Should().Be(manifests[i].Item2.North[0].HasRiverCrossing);
+                loaded[i].Item2.North[0].FlowVolume.Should().Be(manifests[i].Item2.North[0].FlowVolume);
+                loaded[i].Item2.East[63].Elevation.Should().Be(manifests[i].Item2.East[63].Elevation);
+            }
+        }
+        finally
+        {
+            if (File.Exists(tempFile))
+                File.Delete(tempFile);
+        }
     }
 }

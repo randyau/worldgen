@@ -39,6 +39,28 @@ public sealed class WorldGenPipeline
     }
 
     /// <summary>
+    /// Runs the full pipeline like <see cref="RunFullAsync"/>, but also returns the border
+    /// manifests (M11 local-scale generation) built from the completed layer results — these are
+    /// not stored in WorldState (no per-edge sample resolution there), so callers that want to
+    /// persist manifests.bin need this overload instead.
+    /// </summary>
+    public async Task<(WorldState World, IReadOnlyList<(TileCoord Coord, BorderManifest Manifest)> Manifests)> RunFullWithManifestsAsync(
+        WorldConfig config,
+        SimConfig simConfig,
+        IProgress<(string Layer, float Fraction)>? progress = null,
+        CancellationToken ct = default)
+    {
+        var ctx = new WorldGenContext(config, simConfig);
+        await RunLayersAsync(ctx, 0, LayerCount - 1, progress, ct);
+
+        ct.ThrowIfCancellationRequested();
+
+        var world     = TileGridAssembler.Assemble(ctx);
+        var manifests = BorderManifestBuilder.Build(ctx);
+        return (world, manifests);
+    }
+
+    /// <summary>
     /// Runs a fresh pipeline from layer 0 up to and including <paramref name="layerIndex"/>,
     /// returning the in-progress context without assembling a WorldState. Used to seed a
     /// worldgen preview at a chosen layer.

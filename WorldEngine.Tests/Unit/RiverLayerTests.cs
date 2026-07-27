@@ -142,4 +142,35 @@ public class RiverLayerTests
         r1.IsLake.Should().BeEquivalentTo(r2.IsLake, "same seed must produce identical IsLake");
         r1.FlowAccumulation.Should().BeEquivalentTo(r2.FlowAccumulation, "same seed must produce identical FlowAccumulation");
     }
+
+    [Fact]
+    public void River_Crossings_OnlyFromRiverTiles_WithValidPositionAndWidth()
+    {
+        var ctx = MakeCtx();
+        var result = new RiverLayer().Generate(ctx);
+
+        result.Crossings.Should().NotBeEmpty("a world of this size should have some river crossings");
+
+        foreach (var crossing in result.Crossings)
+        {
+            int fromIdx = ctx.IndexOf(crossing.FromTile);
+            result.HasRiver[fromIdx].Should().BeTrue("crossings must originate from a river tile");
+            crossing.Position.Should().BeInRange(0f, 1f);
+            crossing.Width.Should().BeInRange(0f, 1f);
+            crossing.FlowVolume.Should().BeGreaterThanOrEqualTo(1);
+            crossing.FromTile.Should().NotBe(crossing.ToTile);
+        }
+    }
+
+    [Fact]
+    public void River_Crossings_SameSeedSameResult()
+    {
+        var ctx1 = MakeCtx(seed: 55555);
+        var ctx2 = MakeCtx(seed: 55555);
+
+        var r1 = new RiverLayer().Generate(ctx1);
+        var r2 = new RiverLayer().Generate(ctx2);
+
+        r1.Crossings.Should().BeEquivalentTo(r2.Crossings, "same seed must produce identical border crossings");
+    }
 }

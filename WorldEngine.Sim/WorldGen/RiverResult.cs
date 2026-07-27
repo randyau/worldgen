@@ -18,6 +18,12 @@ public sealed class RiverResult
     /// <summary>True if flow accumulation >= major_river_threshold (POI candidate).</summary>
     public bool[] IsPOICandidate { get; }
 
+    /// <summary>
+    /// Points where a river crosses from one world tile into an adjacent one — the raw data
+    /// border manifests (M11) sample from to give local-scale generation cross-tile continuity.
+    /// </summary>
+    public List<RiverCrossing> Crossings { get; } = new();
+
     public RiverResult(int tileCount)
     {
         HasRiver        = new bool[tileCount];

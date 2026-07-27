@@ -63,9 +63,11 @@ simConfig.SimLoop.SummaryRebuildIntervalYears = 0;
 logger.LogInformation("Generating world...");
 var worldConfig = new WorldConfig { Seed = seed };
 var pipeline    = new WorldGenPipeline();
-var world       = await pipeline.RunFullAsync(worldConfig, simConfig,
+var (world, borderManifests) = await pipeline.RunFullWithManifestsAsync(worldConfig, simConfig,
     progress: new Progress<(string Layer, float Fraction)>(p =>
         logger.LogInformation("  WorldGen [{Layer}] {Pct:P0}", p.Layer, p.Fraction)));
+
+BorderManifestStore.WriteToFile(Path.Combine(outDir, "manifests.bin"), borderManifests);
 
 // ─── Entity spawn ─────────────────────────────────────────────────────────────
 

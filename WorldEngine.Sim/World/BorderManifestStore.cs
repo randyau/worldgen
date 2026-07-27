@@ -36,9 +36,36 @@ public static class BorderManifestStore
         }
     }
 
-    // M4 feature — full manifest loading is deferred until Milestone 4
+    /// <summary>Reads manifests previously written by <see cref="WriteToFile"/>.</summary>
     public static IEnumerable<(TileCoord, BorderManifest)> LoadFromFile(string path)
     {
-        throw new NotImplementedException("M4 feature");
+        using var br = new BinaryReader(File.Open(path, FileMode.Open, FileAccess.Read));
+        int count = br.ReadInt32();
+        var list = new List<(TileCoord, BorderManifest)>(count);
+
+        for (int i = 0; i < count; i++)
+        {
+            var coord = new TileCoord(br.ReadInt32(), br.ReadInt32());
+            var manifest = new BorderManifest();
+            ReadEdge(br, manifest.North);
+            ReadEdge(br, manifest.South);
+            ReadEdge(br, manifest.East);
+            ReadEdge(br, manifest.West);
+            list.Add((coord, manifest));
+        }
+
+        return list;
+    }
+
+    private static void ReadEdge(BinaryReader br, BorderManifestSample[] samples)
+    {
+        for (int i = 0; i < samples.Length; i++)
+        {
+            samples[i].Elevation        = br.ReadByte();
+            samples[i].Moisture         = br.ReadByte();
+            samples[i].HasRiverCrossing = br.ReadByte();
+            samples[i].HasRoadCrossing  = br.ReadByte();
+            samples[i].FlowVolume       = br.ReadByte();
+        }
     }
 }

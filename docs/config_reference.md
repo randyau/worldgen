@@ -148,6 +148,8 @@ Edit values in `sim_config.toml`; all keys live there without recompiling.
 | `flow_accumulation_threshold` | `50` | `SimConfig.WorldGen.Rivers.FlowAccumulationThreshold` |  |
 | `min_lake_basin_tiles` | `20` | `SimConfig.WorldGen.Rivers.MinLakeBasinTiles` |  |
 | `major_river_threshold` | `500` | `SimConfig.WorldGen.Rivers.MajorRiverThreshold` |  |
+| `crossing_min_width_fraction` | `0.05` | `SimConfig.WorldGen.Rivers.CrossingMinWidthFraction` | Border-manifest river-crossing width (fraction of a tile edge's length), M11 local-scale gen |
+| `crossing_max_width_fraction` | `0.25` | `SimConfig.WorldGen.Rivers.CrossingMaxWidthFraction` |  |
 
 ## `[world_gen.biome_thresholds]` {#world-genbiome-thresholds}
 

@@ -152,6 +152,7 @@ One-line description of every non-trivial source file. Check here before running
 - `ActiveDrought.cs` — A drought affecting all tiles in a (LatitudeBand, Biome) region. Membership is computed at runtime: ActiveDroughts.Any(d => tile matches d). No per-tile registry entry — the region can contain thousands of tiles.
 - `BorderManifest.cs` — Per-tile border sampling data (North/South/East/West edges, 64 samples each) for civ contact detection.
 - `BorderManifestSample.cs` — 5-byte border sample struct: elevation, moisture, river/road crossing flags, and ownership.
+- `EdgeDirection.cs` — Which side of a world tile a border-manifest edge (or river crossing) refers to.
 - `HistoryTypes.cs` — Pre-aggregated profile of a historical character, built by SummaryBuilder.
 - `IHistoryGraphReadOnly.cs` — Read-only query surface over the persisted history graph (SQLite Events + CausalEdges).
 - `IHistoryQuery.cs` — Pre-indexed historical query API. Backed by SQLite summary tables built by WorldEngine.Sim.Persistence.SummaryBuilder. Use WorldEngine.Sim.Persistence.EventStore.GetHistoryQuery to obtain an instance.
@@ -172,6 +173,7 @@ One-line description of every non-trivial source file. Check here before running
 ## WorldEngine.Sim/WorldGen/
 - `BiomeClassifier.cs` — Pure static function that maps (temperature, moisture, elevation, flags) → BiomeType. Priority rules applied top-to-bottom; first match wins. All thresholds come from SimConfig.WorldGen.BiomeThresholds.
 - `BiomeResult.cs` — Per-tile biome classification and fertility produced by BiomeLayer.
+- `BorderManifestBuilder.cs` — Builds per-tile BorderManifests from completed world-gen layer results, for M11 local-scale generation to sample when amplifying terrain and threading rivers across a tile boundary. Elevation/moisture samples are a flat blend of the two adjacent tiles' own byte values — real sub-tile variation is added by the terrain-amplification algorithm (M11 phase 11.3); this builder's job is only to guarantee both sides of an edge agree.
 - `ClimateResult.cs` — Per-tile climate data produced by ClimateLayer.
 - `ElevationResult.cs` — Per-tile elevation data (0–255) produced by ElevationLayer.
 - `LayerSeeds.cs` — Per-layer seed constants XOR'd with worldSeed when initializing FastNoiseLite. All values must be unique — LayerSeeds_AllValuesAreUnique test enforces this.

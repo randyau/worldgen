@@ -175,6 +175,9 @@ boundary_perturb_frequency  = 0.07  # Noise frequency for perturbation. Lower=br
 flow_accumulation_threshold = 50
 min_lake_basin_tiles = 20
 major_river_threshold = 500
+# Border-manifest river-crossing width (fraction of a tile edge's length), M11 local-scale gen
+crossing_min_width_fraction = 0.05
+crossing_max_width_fraction = 0.25
 
 # =============================================================================
 # WORLD GENERATION — BIOME THRESHOLDS

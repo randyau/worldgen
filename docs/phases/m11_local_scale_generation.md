@@ -1,7 +1,29 @@
 # M11 — Local-Scale Generation
 
-**Status:** PLANNING — not started (2026-07-27). No code written yet; this doc is the phase
-sequence to work from once implementation begins.
+**Status:** IN PROGRESS (started 2026-07-27). Phase 11.1 COMPLETE (2026-07-27) — see below.
+
+## Progress
+
+- **11.1 — COMPLETE (2026-07-27).** `RiverResult` gained `Crossings` (`RiverCrossing`: FromTile/
+  ToTile/Edge/Position/Width/FlowVolume), computed in `RiverLayer` from the existing D8 `flowDir`
+  data — no new drainage algorithm, just exposing the cross-tile edge each river tile's downstream
+  flow already crosses. `BorderManifestBuilder` (new, `WorldEngine.Sim/WorldGen/`) builds one
+  `BorderManifest` per tile: elevation/moisture edge samples are a flat blend of the two adjacent
+  tiles' own byte values (real sub-tile variation is 11.3's job — this phase only guarantees both
+  sides of a shared edge agree, proven by `BorderManifestBuilderTests.Build_AdjacentTilesAgreeOnSharedEdgeElevation`),
+  and river crossings are stamped onto both the source tile's edge and the destination tile's
+  opposite edge from the same `RiverCrossing` record (no independent re-derivation, so no seam risk).
+  `WorldGenPipeline.RunFullWithManifestsAsync` is a new method alongside (not replacing)
+  `RunFullAsync` — it returns `(WorldState, Manifests)` so the ~15 existing `RunFullAsync` callers
+  in tests were untouched. `Program.cs` (headless runner) now writes `manifests.bin` via the
+  existing `BorderManifestStore.WriteToFile` at the end of world gen. `BorderManifestStore.LoadFromFile`
+  is implemented (was `NotImplementedException`) as the mirror read of `WriteToFile`'s format.
+  New config: `RiversConfig.CrossingMinWidthFraction`/`CrossingMaxWidthFraction`
+  (`world_gen.rivers.crossing_min_width_fraction`/`crossing_max_width_fraction` in
+  `sim_config.toml`). Crossing position along an edge is deterministic per-tile jitter via
+  `WorldRng.FloatAt` (local salt `RiverLayer.SaltCrossingPosition`), not a cross-sim-tick salt so
+  it was not added to the global `SimRngSalts` registry.
+- **11.2–11.8 — not started.**
 
 ## Problem statement
 
