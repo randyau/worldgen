@@ -183,6 +183,8 @@ public sealed class Presenter
         EventType.GodModeCharacterCreated  => "✦ character created",
         EventType.GodModeCharacterNudged   => "✦ character nudged",
         EventType.GodModeCivilizationForced => "✦ civilization forced",
+        EventType.SeaVoyageEmbarked        => "set sail",
+        EventType.SeaVoyageCompleted       => "made landfall",
         _                                   => type.ToString()
     };
 
@@ -207,6 +209,7 @@ public sealed class Presenter
         GoalType.FoundReligion    => "wants to found a religion",
         GoalType.SlayBeast        => "hunting a legendary beast",
         GoalType.CovetArtifact    => "coveting an artifact",
+        GoalType.SeaVoyage        => "voyaging across the sea",
         _                         => type.ToString()
     };
 

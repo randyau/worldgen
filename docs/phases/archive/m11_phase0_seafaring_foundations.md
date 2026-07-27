@@ -1,7 +1,7 @@
 # M11 Phase 11.0 — Seafaring foundations
 
 **Status:** DONE — 2026-07-27 (build+test verified).
-**Milestone:** M11 — Character Water Crossings (`docs/phases/m11_water_crossings.md`)
+**Milestone:** M11 — Character Water Crossings (`docs/phases/archive/m11_water_crossings.md`)
 **Depends on:** — (first phase)
 
 ## What shipped

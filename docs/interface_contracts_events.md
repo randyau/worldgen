@@ -84,6 +84,7 @@ WHERE Type BETWEEN 3101 AND 3199
 | `Tier2`         | 3301–3399               |
 | `Population`    | 3401–3499               |
 | `Religion`      | 4001–4099               |
+| `Seafaring`     | 5100–5199               |
 | `Artifact`      | 6001–6099               |
 | `GodMode`       | 9001–9099               |
 
@@ -309,6 +310,13 @@ Example: `SELECT TypeName, Year, SeasonName, Tier, ActorName FROM EventsReadable
 |------------------|--------------------------|----------------------------------------------------------------------|
 | `ReligionFounded` | `ReligionFoundedPayload` | `FounderId`, `FounderName`, `Year`, `TileX`, `TileY`                |
 
+### Seafaring Domain (M11)
+
+| EventType             | Payload record      | Key fields                                                  |
+|------------------------|---------------------|--------------------------------------------------------------|
+| `SeaVoyageEmbarked`   | `SeaVoyagePayload`  | `CharacterId`, `CharacterName`, `CivId`, `TileX`, `TileY`    |
+| `SeaVoyageCompleted`  | `SeaVoyagePayload`  | `CharacterId`, `CharacterName`, `CivId`, `TileX`, `TileY`    |
+
 ---
 
 ## EventType Ranges
@@ -353,6 +361,8 @@ Population: 3401–3499
 Religion:   4001–4099   (ReligionFounded=4003, ReligionExtinct=4004)
 Emissary:   5001–5099   (EmissaryDispatched=5001, EmissaryLost=5002,
                          ReligiousEmissaryArrived=5003, CivIntelGathered=5004)
+Seafaring:  5100–5199   (SeaVoyageEmbarked=5101, SeaVoyageCompleted=5102;
+                         SeaVoyageLost=5103 reserved for a future weather/sea-monster failure hook)
 Artifacts:  6001–6099   (ArtifactCreated=6001, ArtifactDestroyed=6002)
 God Mode:   9001–9099   (GodModeDisasterTriggered=9001, GodModeEntitySpawned=9002,
                          GodModeCharacterCreated=9003, GodModeArtifactPlaced=9004,

@@ -1,8 +1,23 @@
 # M11 Phase 11.3 — Persistence, event log & close-out
 
-**Status:** NOT STARTED.
-**Milestone:** M11 — Character Water Crossings (`docs/phases/m11_water_crossings.md`)
+**Status:** DONE — 2026-07-27 (build+test verified; no manual UI pass — no display in this environment).
+**Milestone:** M11 — Character Water Crossings (`docs/phases/archive/m11_water_crossings.md`)
 **Depends on:** 11.2 (full delegate→embark→cross→found flow works and is tested)
+
+## What shipped
+
+Persistence needed no mapper changes — `GoalData` (including `SeaVoyage`'s `TargetTile`) was
+already generic through `WorldStateDto`/`WorldStateMapper`; verified with a new
+`WorldEngine.Tests/Integration/SeaVoyagePersistenceTests.cs` (a character standing on water
+mid-voyage round-trips its location and incomplete `SeaVoyage` goal through save/load). Event
+log: `Presenter.EventVerbPhrase` gained `SeaVoyageEmbarked` ("set sail") /
+`SeaVoyageCompleted` ("made landfall"); `Presenter.GoalIntentPhrase` gained `SeaVoyage`
+("voyaging across the sea") — `EventLogPanel.cs` itself needed no change since it already
+consumes `Presenter` generically (and was left untouched deliberately — it's mid-edit from
+unrelated in-progress work in this working tree). Docs: `docs/interface_contracts_events.md`
+(hand-maintained) gained the Seafaring domain (5100–5199) in the range table, payload table, and
+Domain summary table; `docs/modding.md` needed no change (Port is a hardcoded enum value like
+every other `ImprovementType`, consistent with existing scope).
 
 ## Goal
 

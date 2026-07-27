@@ -1,7 +1,7 @@
 # M11 Phase 11.2 — Delegation & behavior integration
 
 **Status:** DONE — 2026-07-27 (build+test verified).
-**Milestone:** M11 — Character Water Crossings (`docs/phases/m11_water_crossings.md`)
+**Milestone:** M11 — Character Water Crossings (`docs/phases/archive/m11_water_crossings.md`)
 **Depends on:** 11.1 (`SeaVoyage` goal is executable once assigned)
 
 ## What shipped

@@ -189,7 +189,12 @@ public enum EventType
     EmissaryLost                = 5002,  // emissary did not survive the journey
     ReligiousEmissaryArrived    = 5003,  // successful religious mission; awe seeds planted
     CivIntelGathered            = 5004,  // spy emissary returned with intelligence
+
+    // M11 — sea voyage events (5100-range)
+    SeaVoyageEmbarked           = 5101,  // character departed a Port on a sea voyage
+    SeaVoyageCompleted          = 5102,  // character reached the far shore
+    // V2: SeaVoyageLost = 5103 — weather/sea-monster failure hook, not built yet
 }
 ```
 
-<!-- content-hash: 601498e0c0a767ba -->
+<!-- content-hash: 4b761e7504d7ce01 -->

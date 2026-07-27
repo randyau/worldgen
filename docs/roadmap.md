@@ -258,25 +258,13 @@ see the index doc and its linked phase docs (`m10_phase0_pipeline_resume.md` /
 
 ## Cross-cutting backlog (not milestone-bound)
 
-- **Character water crossings** — Characters currently cannot cross ocean tiles; they
-  pathfind land-only (`IsLand` check in `UtilityScorer.BestAdjacentTile`), so continents
-  separated by water are permanently isolated. Design needed before implementation:
-  - Should crossing be cheap (any coastal character can hop narrow straits) or gated
-    (requires a ship goal, `NavigationSkill`, or a friendly coastal settlement)?
-  - A minimal "coast-to-coast ferry" could let characters at coastal tiles step onto a
-    shallow-ocean tile for one move, skipping the pathfinding complexity entirely.
-  - A fuller solution would add ocean pathfinding through shallow water only (using
-    `TileStaticFlags.IsCoastal` on ocean tiles as the walkable set), governed by a
-    `character.ocean_crossing_enabled` config toggle.
-  - Either path needs a `CrossesOcean = true` flag on the resulting `MoveToTile` command
-    so history events can record sea voyages distinctly.
-  - **Scoped 2026-07-27 as an M11 story:** gated behind capability (civ builds a `Port`
-    improvement; ruler delegates a `SeaVoyage` goal, mirroring the existing `FoundCity`
-    delegation pattern), characters only (not beasts), always succeeds for now (a
-    `// V2: sea voyage failure (weather, sea monsters)` hook is left for later), on by default via
-    `SeafaringConfig.OceanCrossingEnabled`. Four phases (11.0–11.3) — see
-    `docs/phases/m11_water_crossings.md` for the full plan, design-decision rationale, and open
-    implementation details left to each phase. Not yet started.
+- **Character water crossings** — ✅ COMPLETE 2026-07-27. Characters can now cross open water via
+  a civ-built `Port` improvement + ruler-delegated `SeaVoyage` goal (mirrors the existing
+  `FoundCity` delegation pattern), characters only (not beasts), always succeeds for now (a
+  `// V2: sea voyage failure (weather, sea monsters)` hook is left for a future milestone), on by
+  default via `SeafaringConfig.OceanCrossingEnabled`. All four phases (11.0–11.3) shipped — see
+  `docs/phases/archive/m11_water_crossings.md` for the full design rationale and
+  `m11_phase0…3_*.md` for what shipped in each.
 - **LLM prose generation** — V2 feature; hook only (per CLAUDE.md), no build.
 - **Magic as physical substrate** — V2; `MagicIntensity` stays a stored, behavior-free layer.
 - **Voxel rendering, plugin/code modding, multiplayer** — out of scope.
