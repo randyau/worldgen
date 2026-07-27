@@ -34,6 +34,11 @@ The primary audience is worldbuilders and writers, not traditional gamers. The c
 
 ## Token Efficiency
 
+### Verbosity
+While working, stay minimally verbose. Do not narrate thinking or explain code
+unless explicitly asked or user feedback is needed.
+Workers should also stay minimally verbose except for their expected outputs.
+
 ### Model routing
 Use cheap models for navigation; reserve Sonnet for writing/editing code:
 - **Exploration and search:** spawn an `Explore` subagent, or pass `--model haiku` to one-off reads
