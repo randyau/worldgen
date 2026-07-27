@@ -270,9 +270,13 @@ see the index doc and its linked phase docs (`m10_phase0_pipeline_resume.md` /
     `character.ocean_crossing_enabled` config toggle.
   - Either path needs a `CrossesOcean = true` flag on the resulting `MoveToTile` command
     so history events can record sea voyages distinctly.
-  - Still unimplemented as of M10 close-out. Planned for a future phase — file this under sim
-    character mobility as a standalone story in M11 or later (it is a sim change, so it is
-    **not** part of the M8 UI rewrite).
+  - **Scoped 2026-07-27 as an M11 story:** gated behind capability (civ builds a `Port`
+    improvement; ruler delegates a `SeaVoyage` goal, mirroring the existing `FoundCity`
+    delegation pattern), characters only (not beasts), always succeeds for now (a
+    `// V2: sea voyage failure (weather, sea monsters)` hook is left for later), on by default via
+    `SeafaringConfig.OceanCrossingEnabled`. Four phases (11.0–11.3) — see
+    `docs/phases/m11_water_crossings.md` for the full plan, design-decision rationale, and open
+    implementation details left to each phase. Not yet started.
 - **LLM prose generation** — V2 feature; hook only (per CLAUDE.md), no build.
 - **Magic as physical substrate** — V2; `MagicIntensity` stays a stored, behavior-free layer.
 - **Voxel rendering, plugin/code modding, multiplayer** — out of scope.
