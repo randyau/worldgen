@@ -53,6 +53,22 @@ def build_xml_if_needed():
             sys.exit(1)
 
 
+def xml_element_text(el: ET.Element) -> str:
+    """
+    Flatten an XML doc element to plain text, resolving <see cref="X"/>,
+    <paramref name="x"/>, and <typeparamref name="x"/> to their referenced
+    name (stripping the leading "T:"/"M:"/"P:" kind prefix) instead of
+    dropping them, which ET.text/.itertext() alone would do.
+    """
+    parts = [el.text or ""]
+    for child in el:
+        ref = child.get("cref") or child.get("name")
+        if ref:
+            parts.append(re.sub(r"^[A-Z]:", "", ref).split("(")[0])
+        parts.append(child.tail or "")
+    return "".join(parts)
+
+
 def load_xml_summaries(xml_path: Path) -> dict[str, str]:
     """Return {fully_qualified_type_name: summary_text} for T: members."""
     summaries: dict[str, str] = {}
@@ -66,9 +82,12 @@ def load_xml_summaries(xml_path: Path) -> dict[str, str]:
         if not name.startswith("T:"):
             continue
         summary_el = member.find("summary")
-        if summary_el is None or not summary_el.text:
+        if summary_el is None:
             continue
-        text = " ".join(summary_el.text.split())  # normalize whitespace
+        raw_text = xml_element_text(summary_el)
+        if not raw_text:
+            continue
+        text = " ".join(raw_text.split())  # normalize whitespace
         type_name = name[2:]  # strip "T:"
         summaries[type_name] = text
     return summaries

@@ -23,7 +23,7 @@ One-line description of every non-trivial source file. Check here before running
 - `AncestryConfig.cs` — All data for one ancestry, loaded from config/ancestries.toml. Personality and aptitude fields are bias offsets added to the Gaussian mean (base 0.5).
 - `AncestryLoader.cs` — Loads ancestries.toml into AncestryConfig instances.
 - `AncestryRegistry.cs` — Loaded set of all ancestry configs. Accessible via world.SimConfig.AncestryRegistry. Provides biome-weighted ancestry sampling and cross-ancestry trust lookups.
-- `AncestryValidator.cs` — Validates ancestries.toml after deserialization. Called automatically by
+- `AncestryValidator.cs` — Validates ancestries.toml after deserialization. Called automatically by WorldEngine.Sim.Config.AncestryLoader.LoadOrDefault. Throws WorldEngine.Sim.Config.AncestryValidationException listing every violation found — a load-time gate per M10 10.3 (fail fast, not silent degradation of simulation behavior).
 - `ArtifactConfig.cs` — Artifact generation and ownership constants. Loaded from the [artifacts] section of sim_config.toml.
 - `BeastsSimConfig.cs` — Beast lifecycle constants from the [beasts] section of sim_config.toml. Species-specific values (health, strength, etc.) live in config/beasts.toml.
 - `BiomeThresholdConfig.cs` — Elevation, temperature, and moisture thresholds for biome classification.
@@ -44,13 +44,13 @@ One-line description of every non-trivial source file. Check here before running
 - `SettlementNamesConfig.cs` — Prefix/suffix pools for procedural settlement name generation.
 - `SimConfig.cs` — Root config container; all subsections loaded from sim_config.toml.
 - `SimConfigLoader.cs` — Tomlyn-based TOML loader; strict mode detects unbound keys; supports profile overlays and --set overrides.
-- `SimConfigValidator.cs` — Validates a loaded SimConfig for range, ordering, and cross-field invariants. Called automatically by SimConfigLoader after deserialization. Throws
+- `SimConfigValidator.cs` — Validates a loaded SimConfig for range, ordering, and cross-field invariants. Called automatically by SimConfigLoader after deserialization. Throws WorldEngine.Sim.Config.SimConfigValidationException listing every violation found.
 - `SimLoopConfig.cs` — Adds TicksPerSeason (alias) and TicksPerYear (= TicksPerSeasonalChange × 4) derived properties; use these everywhere instead of hardcoded 16.
 - `TectonicsConfig.cs` — Tectonic plate count, separation, and continental/oceanic ratio constants for world generation.
-- `UnrestConfig.cs` — Configuration for the settlement unrest / secession mechanic (S2 splinter). All tunable constants for unrest accumulation, decay, and the secession trigger. Bound from the
+- `UnrestConfig.cs` — Configuration for the settlement unrest / secession mechanic (S2 splinter). All tunable constants for unrest accumulation, decay, and the secession trigger. Bound from the section of .
 - `UtilityAffinityConfig.cs` — Configures the two UtilityScorer lookup tables: 1. Goal → action affinity weights (how well each action advances each goal type). 2. Action base-score need-weights (how much each need's deficit drives each action). TOML section: [utility_affinity] Sub-tables: [utility_affinity.goal_affinity] — goal-name → { action-name = weight } [utility_affinity.action_needs] — action-name → { need-name = coefficient, _default = fallback } Unmapped (goal, action) pairs default to 0.0. Unmapped action need-weights use _default (0.1 for the original fallback, 0.0 for unlisted actions).
 - `WarConfig.cs` — All war-system configuration — consolidated from [character] + [war] in D5. Loaded from the [war] section of sim_config.toml.
-- `WildlifeRiskConfig.cs` — Per-biome wildlife-raid risk multiplier table (D3 extraction from PopulationDynamicsPhase). TOML section: [wildlife_risk] Each key is a BiomeType name in snake_case (e.g. tropical_rainforest, boreal_forest). The value is a float multiplier applied to
+- `WildlifeRiskConfig.cs` — Per-biome wildlife-raid risk multiplier table (D3 extraction from PopulationDynamicsPhase). TOML section: [wildlife_risk] Each key is a BiomeType name in snake_case (e.g. tropical_rainforest, boreal_forest). The value is a float multiplier applied to WorldEngine.Sim.Config.SettlementConfig.WildlifeAttackBaseChance. Design rationale (from PopulationDynamicsPhase comment): Dense cover (forest, swamp) gives predators ambush advantage — multipliers above 1.0. Open terrain (plains, savanna, desert) provides visibility — multipliers below 1.0. The default for unlisted biomes is 0.6 (matches the original _ => 0.6f fallback). TOML section: [wildlife_risk]
 - `WorldGenConfig.cs` — World generation parameters: tile size, world dimensions, chunk size, and per-subsystem generation configs.
 
 ## WorldEngine.Sim/Core/
@@ -71,14 +71,14 @@ One-line description of every non-trivial source file. Check here before running
 ## WorldEngine.Sim/Entities/Artifacts/
 - `Artifact.cs` — Category of legendary item — drives name generation and narrative significance.
 - `ArtifactNameGenerator.cs` — Deterministic legendary-item name generator seeded via WorldRng. Same world seed + same invocation parameters produce identical names. Style: "<Epithet> <Noun>" — e.g. "Dawnbreaker", "The Sundered Crown".
-- `ArtifactRegistry.cs` — Static operations helper for the artifact registry on
-- `CreatedGoodTaxonomy.cs` — Groups and category-derivation for
+- `ArtifactRegistry.cs` — Static operations helper for the artifact registry on WorldEngine.Sim.World.WorldState. All methods mutate only — they do NOT emit events. Callers are responsible for emitting the corresponding WorldEngine.Sim.Events payload.
+- `CreatedGoodTaxonomy.cs` — Groups and category-derivation for WorldEngine.Sim.Core.CreatedGoodType (M9 G-1/G-2 unification). Replaces the old role-blind map: an artifact's category is derived from the specific good a character was making, weighted across the categories that good plausibly becomes, instead of the creator's Tier2 role.
 
 ## WorldEngine.Sim/Entities/Beasts/
 - `BeastCatalog.cs` — Queryable, in-memory view of the beast species catalog loaded from config/beasts.toml.
 - `BeastCatalogFile.cs` — Top-level wrapper for beasts.toml deserialization. Tomlyn maps [[beasts]] arrays to the Beasts list via snake_case conversion.
 - `BeastCatalogLoader.cs` — Loads beasts.toml into BeastCatalog instances.
-- `BeastCatalogValidator.cs` — Validates beasts.toml after deserialization. Called automatically by
+- `BeastCatalogValidator.cs` — Validates beasts.toml after deserialization. Called automatically by WorldEngine.Sim.Entities.Beasts.BeastCatalogLoader.LoadOrCreateDefault. Throws WorldEngine.Sim.Entities.Beasts.BeastCatalogValidationException listing every violation found — a load-time gate per M10 10.3 (fail fast, not silent degradation of simulation behavior).
 - `BeastFactory.cs` — Creates LegendaryBeast instances from a species config and placement parameters. All randomness is seeded via WorldRng for reproducibility.
 - `BeastSpawnConfig.cs` — Global beast spawn settings from the [beast_spawn] section of config/beasts.toml.
 - `BeastSpawner.cs` — Populates EntityRegistry with initial beasts and builds the BeastEmergenceSchedule for deferred mythological creature spawns. Called once, after world gen, before the first sim tick.
@@ -101,32 +101,32 @@ One-line description of every non-trivial source file. Check here before running
 - `Tier2Character.cs` — A named Tier 2 character — specialist or authority figure below hero/ruler status. Uses simplified 4-need model and fixed role behaviors instead of utility scoring.
 - `Tier2Role.cs` — Specialist role enum for Tier2 characters: General, Governor, Merchant, Scholar, Physician, Artisan.
 - `Tier2Spawner.cs` — Populates the world with Tier 2 characters proportional to settlement population at world start.
-- `UtilityScorer.cs` — Scores candidate actions for a Tier 1 character and selects one via softmax. Holds pre-baked lookup tables (goal→action affinity, action need-weights) built once at construction from
+- `UtilityScorer.cs` — Scores candidate actions for a Tier 1 character and selects one via softmax. Holds pre-baked lookup tables (goal→action affinity, action need-weights) built once at construction from WorldEngine.Sim.Config.UtilityAffinityConfig.
 
 ## WorldEngine.Sim/Events/
 - `EventGate.cs` — Pre-write gate deciding whether an event is recorded to the history log. God Mode events are always recorded; otherwise suppressed types and sub-minimum-tier events are dropped.
-- `SignificanceClassifier.cs` — Maps a (type, payload, isFirstOfKind) tuple to an
+- `SignificanceClassifier.cs` — Maps a (type, payload, isFirstOfKind) tuple to an WorldEngine.Sim.Core.EventTier and WorldEngine.Sim.Core.PopulationImpact. The final tier is the max of the verb-class floor and the impact-derived tier, bumped one level when the event is first of its kind.
 
 ## WorldEngine.Sim/Persistence/
 - `CausalEdgeBuilder.cs` — Post-sim pass that infers causal relationships between events and writes them to the CausalEdges table with typed EdgeType labels.
 - `DatabaseSchema.cs` — Schema DDL for SQLite: Events, SignificanceScore, CausalEdges, CharacterSummaries, CivSummaries, Eras, SuccessionChain, Dynasties, CivTraits, yearly_metrics.
-- `EventStore.cs` — SQLite-backed event store. Holds a single persistent connection (required so that an in-memory database survives between calls). Implements
-- `HistoryQueryService.cs` — SQLite-backed implementation of
-- `SignificanceRescoringPass.cs` — Post-sim pass: upgrades event tiers based on downstream outcomes and computes final SignificanceScore for all events. Run once after the simulation ends (or on-demand before narrative generation) via
-- `SummaryBuilder.cs` — Post-sim pass that scans the event log and populates pre-aggregated summary tables: CharacterSummaries, CivSummaries, SuccessionChain, Dynasties, and Eras. Call via
+- `EventStore.cs` — SQLite-backed event store. Holds a single persistent connection (required so that an in-memory database survives between calls). Implements WorldEngine.Sim.World.IHistoryGraphReadOnly.
+- `HistoryQueryService.cs` — SQLite-backed implementation of WorldEngine.Sim.World.IHistoryQuery. Queries pre-indexed summary tables built by WorldEngine.Sim.Persistence.SummaryBuilder. Maintains small in-memory caches for frequently accessed civs and characters (≤20 entries each, LRU-evict). Obtain via WorldEngine.Sim.Persistence.EventStore.GetHistoryQuery.
+- `SignificanceRescoringPass.cs` — Post-sim pass: upgrades event tiers based on downstream outcomes and computes final SignificanceScore for all events. Run once after the simulation ends (or on-demand before narrative generation) via WorldEngine.Sim.Persistence.EventStore.BuildSummaries.
+- `SummaryBuilder.cs` — Post-sim pass that scans the event log and populates pre-aggregated summary tables: CharacterSummaries, CivSummaries, SuccessionChain, Dynasties, and Eras. Call via WorldEngine.Sim.Persistence.EventStore.BuildSummaries after the simulation ends.
 - `WorldStateDto.cs` — Lightweight save metadata written to meta.json. Checked on load for version compat.
 - `WorldStateSaver.cs` — Saves and loads WorldState to/from a save directory. Format: meta.json (version/summary), state.bin (full world state JSON), config_snapshot/.
-- `YearlyMetricsRow.cs` — One row of the
+- `YearlyMetricsRow.cs` — One row of the table. Mutable class with settable properties so Dapper can materialize it from SQLite query results (SQLite returns INTEGER as Int64 and REAL as Double; Dapper requires a matching default constructor for property-based deserialization). Written by WorldEngine.Sim.Simulation.MetricsCollector once per in-game year.
 
 ## WorldEngine.Sim/Simulation/
 - `EventCache.cs` — Fixed-capacity ring buffer of recent SimEvents. Add() and GetRecent() are sim-thread-only. Thread safety via StateCache wrapping snapshots.
-- `FoodAuditSink.cs` — Optional audit sink for per-tile food factor breakdowns. Passed to ResourcePressurePhase when
-- `MetricsCollector.cs` — Samples world state once per in-game year and writes a row to the
+- `FoodAuditSink.cs` — Optional audit sink for per-tile food factor breakdowns. Passed to ResourcePressurePhase when is requested. Null on the normal (hot) path — zero overhead when not auditing.
+- `MetricsCollector.cs` — Samples world state once per in-game year and writes a row to the table in world.db. Runs on the sim thread only; all reads are direct WorldState accesses — no LINQ over tiles, no DB reads, no cross-thread calls. Called by WorldEngine.Sim.Simulation.PhaseRunner at the annual tick boundary, after all phases have run for that year, when in config. Columns that cannot be computed cheaply without restructuring phases are omitted and annotated with // DECISION comments below.
 - `PhaseRunner.cs` — Runs the 7 simulation phases in order each tick. Phase 1 (Environmental) produces PendingEvents consumed by Phase 7 (EventGeneration). All other phases are stubs in M1.
 - `SimLoop.cs` — Background simulation thread. Ticks WorldState, builds snapshots, commits to StateCache. Only the background thread touches WorldState. UI thread only reads StateCache.
 
 ## WorldEngine.Sim/Simulation/Phases/
-- `ArtifactDecayPhase.cs` — Annual destruction sink for artifacts. Without a sink, the artifact stock is monotonic (created but never destroyed) and grows unbounded over thousand-year histories. Each year every living artifact rolls a small destruction chance — high for Lost (ownerless) items that no one safeguards, very low for owned items. This drives the stock toward an equilibrium of roughly (annual creation rate ÷ decay rate) rather than growing forever. Runs on annual ticks only; emits
+- `ArtifactDecayPhase.cs` — Annual destruction sink for artifacts. Without a sink, the artifact stock is monotonic (created but never destroyed) and grows unbounded over thousand-year histories. Each year every living artifact rolls a small destruction chance — high for Lost (ownerless) items that no one safeguards, very low for owned items. This drives the stock toward an equilibrium of roughly (annual creation rate ÷ decay rate) rather than growing forever. Runs on annual ticks only; emits WorldEngine.Sim.Core.EventType.ArtifactDestroyed per loss.
 - `CharacterBehaviorPhase.cs` — Phase 5 — updates all Tier 1 characters each tick: needs decay, goal management, action selection (utility scoring), lifecycle (aging, death), command resolution (settlement, war, etc.).
 - `EntityBehaviorPhase.cs` — SimPhase 4 — EntityBehavior. Each season tick: update beast needs/lifecycle, emit commands, resolve them. Beast emergence schedule is checked annually.
 - `EnvironmentalPhase.cs` — Phase 1 — Environmental: seasonal climate, annual drift, disaster system, resource dynamics, sea level changes. Direct mutator — never called from UI thread.
@@ -153,7 +153,7 @@ One-line description of every non-trivial source file. Check here before running
 - `BorderManifestSample.cs` — 5-byte border sample struct: elevation, moisture, river/road crossing flags, and ownership.
 - `HistoryTypes.cs` — Pre-aggregated profile of a historical character, built by SummaryBuilder.
 - `IHistoryGraphReadOnly.cs` — Read-only query surface over the persisted history graph (SQLite Events + CausalEdges).
-- `IHistoryQuery.cs` — Pre-indexed historical query API. Backed by SQLite summary tables built by
+- `IHistoryQuery.cs` — Pre-indexed historical query API. Backed by SQLite summary tables built by WorldEngine.Sim.Persistence.SummaryBuilder. Use WorldEngine.Sim.Persistence.EventStore.GetHistoryQuery to obtain an instance.
 - `IWorldStateReadOnly.cs` — Read-only view of world state for entity decision-making (M2+). In M1, the Environmental phase reads WorldState directly as a mutator.
 - `PendingEvent.cs` — Lightweight event record produced during simulation phases. Phase 7 assigns Id, Year, Season, Tick, runs significance classification, applies the event gate, and writes to SQLite + EventCache.
 - `ResourceDeposit.cs` — A mineral or resource deposit at a tile. Multiple deposits can stack at one location (e.g., quarry slate over a placer gold seam). List ordered by depth (surface first).
