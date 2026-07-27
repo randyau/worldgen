@@ -167,9 +167,19 @@ public sealed class SimLoop
             case SetActiveOverlay o:
                 _overlay = o.Overlay;
                 break;
-            case WatchCharacter w:
+            case WatchEntity w:
                 // EntityId with Value 0 clears the watch target
-                _world.WatchedCharacterId = w.CharacterId.Value == 0 ? null : w.CharacterId;
+                if (w.Id.Value == 0)
+                {
+                    _world.WatchedEntityId = null;
+                }
+                else
+                {
+                    _world.WatchedEntityId = w.Id;
+                    _world.WatchedEntityKind = _world.Entities.All.TryGetValue(w.Id, out var entity)
+                        ? entity.Kind
+                        : EntityKind.Tier1Character; // entity not found (e.g. already died) — harmless default, SnapshotBuilder no-ops when the id can't be resolved
+                }
                 break;
             case SaveWorld sv:
                 TriggerSave(sv.SaveDir);
@@ -177,8 +187,11 @@ public sealed class SimLoop
             case EnterSpotlight es:
                 _world.SpotlightCharacterId = es.CharacterId;
                 _world.SpotlightIntent      = new SpotlightIntent();
-                // Also set WatchedCharacterId so the watch panel shows the spotlighted character
-                _world.WatchedCharacterId   = es.CharacterId;
+                // Also set the watch target so the Watch panel shows the spotlighted character
+                _world.WatchedEntityId      = es.CharacterId;
+                _world.WatchedEntityKind    = _world.Entities.All.TryGetValue(es.CharacterId, out var spotlightEntity)
+                    ? spotlightEntity.Kind
+                    : EntityKind.Tier1Character;
                 break;
             case ExitSpotlight:
                 _world.SpotlightIntent?.Clear();

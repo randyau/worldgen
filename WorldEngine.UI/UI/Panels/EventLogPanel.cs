@@ -22,6 +22,16 @@ public sealed class EventLogPanel : IWorkspacePanel
     private FocusLensState? _focusLens;
     private EventLogFilter _filter = EventLogFilter.Default;
 
+    // BUG FIX: WeList.SetItems destroys and recreates every row widget, including the actor-name
+    // buttons the player clicks to select a character. Refresh() runs on every committed sim
+    // tick, so while the sim is running this teardown raced with in-flight clicks (mouse-down on
+    // a button that no longer exists by mouse-up loses the click — Myra can't deliver it).
+    // Skip the rebuild entirely when nothing that BuildRow depends on has actually changed.
+    private List<long>? _lastRowIds;
+    private EventLogFilter? _lastFilter;
+    private FocusType _lastFocusType = FocusType.None;
+    private long _lastFocusTarget;
+
     // M8.2.2: fired immediately at the click site instead of polled by Game1 each frame.
     public Action<long>? OnCauseChain;
     public Action<long>? OnCharacterProfile;
@@ -46,8 +56,6 @@ public sealed class EventLogPanel : IWorkspacePanel
         _filter    = filter ?? EventLogFilter.Default;
     }
 
-    public EmptyStateSpec? EmptyFor(PanelContext ctx) => null; // handled inline (PreSim vs FilteredEmpty differ)
-
     public void Refresh()
     {
         var snapshot = _ctx.Snapshot;
@@ -70,6 +78,23 @@ public sealed class EventLogPanel : IWorkspacePanel
             .Where(ev => _filter.PassesTier(ev.TierInvolvement) && _filter.PassesDomain(ev.Domain)
                       && _filter.PassesActor(ev.ActorName) && _filter.PassesYear(ev.Year) && _filter.PassesGodMode(ev.IsGodMode))
             .ToList();
+
+        var focusType   = _focusLens?.Type ?? FocusType.None;
+        var focusTarget = _focusLens?.TargetId ?? 0;
+        var rowIds      = rows.Select(ev => ev.Id.Value).ToList();
+
+        bool unchanged = _lastRowIds is not null
+            && _lastFilter == _filter
+            && _lastFocusType == focusType
+            && _lastFocusTarget == focusTarget
+            && _lastRowIds.SequenceEqual(rowIds);
+
+        if (unchanged) return;
+
+        _lastRowIds     = rowIds;
+        _lastFilter     = _filter;
+        _lastFocusType  = focusType;
+        _lastFocusTarget = focusTarget;
 
         _list.SetItems(rows, ev => BuildRow(ev, civNames, present));
 

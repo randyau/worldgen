@@ -3,7 +3,7 @@
 # Interface Contracts Snapshot — snapshot
 
 ## WorldSnapshot
-**File:** `WorldEngine.Sim/World/WorldSnapshot.cs:86`  
+**File:** `WorldEngine.Sim/World/WorldSnapshot.cs:104`  
 **Kind:** `sealed record`
 
 ```csharp
@@ -47,8 +47,12 @@ public sealed record WorldSnapshot(
     float GlobalPrecipitationMultiplier,
     float StormCorridorNormalizedLat,
 
-    // Character watch panel (M3 Phase 3.4) — null when no character is being watched
+    // Watch panel (M3 Phase 3.4) — exactly one of these is non-null at a time (or neither, if
+    // nothing is watched), depending on the watched entity's kind. Tier1Character gets the rich
+    // needs/goals/personality card; everything else (Tier2Character, LegendaryBeast, ...) gets
+    // the thinner vitals-only card.
     CharacterWatchSnapshot? WatchedCharacter = null,
+    BasicWatchSnapshot?     WatchedBasic     = null,
 
     // Save state (M3 Phase 3.6) — used by UI to show "Saving..." overlay
     bool IsSaving     = false,
@@ -262,4 +266,4 @@ public sealed record CharacterWatchSnapshot(
     IReadOnlyList<GoalWatchEntry> Goals);
 ```
 
-<!-- content-hash: c0e4727c44f590bb -->
+<!-- content-hash: d2c362a4943ecedb -->

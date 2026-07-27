@@ -62,7 +62,6 @@ public sealed class SettingsPanel : IToggleablePanel
     }
 
     public void Bind(PanelContext ctx) { }
-    public EmptyStateSpec? EmptyFor(PanelContext ctx) => null;
 
     // Rebuild on open: HelpPanel hosts a separate KeybindEditor instance over the same
     // KeybindRegistry, so a rebind made there wouldn't otherwise reach this editor until its

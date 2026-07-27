@@ -258,4 +258,54 @@ public class SaveLoadTests : IDisposable
         em.ArrivalYear.Should().Be(3);
         em.SurvivalChance.Should().BeApproximately(0.8f, 0.001f);
     }
+
+    // ── Test 10: settlement specialization round-trip (M9 9.2) ──────────────
+    // The 9.2 phase doc explicitly calls for DTO/persistence coverage of these two fields
+    // (same pattern as ResourceStores/Unrest); this was the one concrete gap the M9 audit found.
+
+    [Fact]
+    public void WorldStateSaver_RoundTrip_SettlementSpecialization()
+    {
+        var world  = WorldTestHelper.CreateSmallWorld(seed: 43);
+        var simCfg = TestSimConfig.Default();
+
+        var civId = new CivId(1);
+        var tile  = new TileCoord(5, 5);
+        var founderId = new EntityId(201);
+        world.Civilizations[civId] = new Civilization(civId, "SpecCiv", founderId, tile, 0);
+        world.Settlements[tile] = new SettlementStub(founderId, civId, tile, FoundedYear: 0, Population: 50, Health: 100)
+        {
+            Specialization         = "timber",
+            SpecializationStrength = 0.72f,
+        };
+
+        WorldStateSaver.Save(world, _saveDir, simCfg);
+        var loaded = WorldStateSaver.Load(_saveDir, simCfg);
+
+        loaded.Settlements.Should().ContainKey(tile);
+        var loadedStub = loaded.Settlements[tile];
+        loadedStub.Specialization.Should().Be("timber", "Specialization must survive save/load");
+        loadedStub.SpecializationStrength.Should().BeApproximately(0.72f, 0.001f, "SpecializationStrength must survive save/load");
+    }
+
+    [Fact]
+    public void WorldStateSaver_RoundTrip_SettlementSpecialization_NullRoundTripsAsNull()
+    {
+        var world  = WorldTestHelper.CreateSmallWorld(seed: 44);
+        var simCfg = TestSimConfig.Default();
+
+        var civId = new CivId(1);
+        var tile  = new TileCoord(5, 5);
+        var founderId = new EntityId(202);
+        world.Civilizations[civId] = new Civilization(civId, "NoSpecCiv", founderId, tile, 0);
+        // Specialization left at its default (null) — a settlement with no dominant resource yet
+        world.Settlements[tile] = new SettlementStub(founderId, civId, tile, FoundedYear: 0, Population: 10, Health: 100);
+
+        WorldStateSaver.Save(world, _saveDir, simCfg);
+        var loaded = WorldStateSaver.Load(_saveDir, simCfg);
+
+        var loadedStub = loaded.Settlements[tile];
+        loadedStub.Specialization.Should().BeNull();
+        loadedStub.SpecializationStrength.Should().Be(0f);
+    }
 }

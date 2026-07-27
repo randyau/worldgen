@@ -54,6 +54,7 @@ public sealed class Game1 : Game
 
     // Narrative UI panels (created in StartSim, after historyQuery is available)
     private CharacterProfilePanel? _charProfile;
+    private BeastProfilePanel? _beastProfile;
     private CivHistoryPanel?       _civHistory;
     private TimelineBar?           _timeline;
     private FocusLensState?        _focusLens;
@@ -172,8 +173,30 @@ public sealed class Game1 : Game
                 case SelectionKind.Character:
                     // Summoned (Float region), not Contextual — clicking a name used to
                     // replace the Tile Inspector tab, which was confusing (playtest feedback).
+                    // ShowSummoned is still required here (bug fix): it's the only thing that
+                    // builds the panel's widget and attaches it to the Float region the first
+                    // time. Without it, ShowCharacter() updates internal state but nothing is
+                    // ever attached to the visible tree unless the player separately opened the
+                    // Character panel via the menu-bar toggle earlier in the session.
                     _charProfile?.ShowCharacter(snapshot.Id);
                     if (_historyQuery is not null) _focusLens?.FocusCharacter(snapshot.Id, _historyQuery);
+                    _workspace?.ShowSummoned("character");
+
+                    // BUG FIX: the Watch panel's "[Watch Selected Character]" affordance reads
+                    // SelectionBus.Current directly, which is already fresh every frame — but its
+                    // own Refresh() was only ever called from the tick-gated RefreshVisible(), so
+                    // while paused (no tick ever commits) a newly-made selection never appeared
+                    // there until the sim was unpaused. Force it here, same as ShowCharacter above.
+                    if (_lastSnapshot is not null) _charWatch?.Refresh();
+                    break;
+                case SelectionKind.Beast:
+                    // Same pattern as Character: Summoned placement, force ShowSummoned so the
+                    // panel's widget is attached the first time, and force the Watch panel to
+                    // refresh immediately since its "[Watch Selected Instead]" affordance depends
+                    // on SelectionBus.Current, not on a tick-gated snapshot arriving.
+                    _beastProfile?.ShowBeast(snapshot.Id);
+                    _workspace?.ShowSummoned("beast");
+                    if (_lastSnapshot is not null) _charWatch?.Refresh();
                     break;
                 case SelectionKind.Civ:
                     _civHistory?.ShowCiv(snapshot.Id);
@@ -298,6 +321,7 @@ public sealed class Game1 : Game
         if (vp == _lastViewport) return;
         _lastViewport = vp;
         _layoutHost.SetViewport(vp);
+        _genScreen?.Resize(vp.Height);
 
         var topBar = _layoutHost.Slot(RegionSlot.TopBar).Bounds;
         if (_topBarBoundWidget is not null)
@@ -466,8 +490,9 @@ public sealed class Game1 : Game
         // ── Narrative UI panels (Phase 3.3) ─────────────────────────────────
         _focusLens   = new FocusLensState();
         var ancestries = world.SimConfig.AncestryRegistry;
-        _charProfile = new CharacterProfilePanel(_historyQuery, ancestries);
-        _civHistory  = new CivHistoryPanel(_historyQuery, ancestries);
+        _charProfile  = new CharacterProfilePanel(_historyQuery, ancestries);
+        _beastProfile = new BeastProfilePanel();
+        _civHistory   = new CivHistoryPanel(_historyQuery, ancestries);
 
         // Timeline bar — SpriteBatch component + Myra label overlay
         _timeline = new TimelineBar();
@@ -500,6 +525,7 @@ public sealed class Game1 : Game
             _workspace.Register(_filterPanel!);
             _workspace.Register(_tileInspector!);
             _workspace.Register(_charProfile!);
+            _workspace.Register(_beastProfile!);
             _workspace.Register(_charWatch!);
             _workspace.Register(_civHistory!);
             _workspace.Register(_godModePanel!);
@@ -520,7 +546,7 @@ public sealed class Game1 : Game
         // // DECISION: only the polling mechanism changes here, not panel placement.
         _tileInspector!.OnWatch = id =>
         {
-            _commandQueue.Enqueue(new WatchCharacter(new EntityId(id)));
+            _commandQueue.Enqueue(new WatchEntity(new EntityId(id)));
             _workspace?.ShowSummoned("watch");
         };
 
@@ -552,10 +578,21 @@ public sealed class Game1 : Game
             if (_spotlightCharacterId.HasValue)
                 _commandQueue.Enqueue(new AuthorNudgeCharacter(_spotlightCharacterId.Value, CharacterNudge.SetSettle));
         };
-        _charWatch.OnProfile = id => _selectionBus?.Select(new EntityRef(SelectionKind.Character, id, default));
-        _charWatch.OnWatchCharacter = id =>
+        _charWatch.OnProfile      = id => _selectionBus?.Select(new EntityRef(SelectionKind.Character, id, default));
+        _charWatch.OnBeastProfile = id => _selectionBus?.Select(new EntityRef(SelectionKind.Beast, id, default));
+        _charWatch.OnWatchSelected = id =>
         {
-            _commandQueue.Enqueue(new WatchCharacter(new EntityId(id)));
+            _commandQueue.Enqueue(new WatchEntity(new EntityId(id)));
+        };
+        _charProfile!.OnWatch = id =>
+        {
+            _commandQueue.Enqueue(new WatchEntity(new EntityId(id)));
+            _workspace?.ShowSummoned("watch");
+        };
+        _beastProfile!.OnWatch = id =>
+        {
+            _commandQueue.Enqueue(new WatchEntity(new EntityId(id)));
+            _workspace?.ShowSummoned("watch");
         };
 
         // Default camera: fit the whole world into the map viewport area. (Regression fix: this
@@ -789,7 +826,7 @@ public sealed class Game1 : Game
         }
         _genScreen!.Root.Visible = true;
         _commandQueue.Enqueue(new SetInspectedTile(null));
-        _commandQueue.Enqueue(new WatchCharacter(new EntityId(0)));  // clear watch target
+        _commandQueue.Enqueue(new WatchEntity(new EntityId(0)));  // clear watch target
 
         // Re-kick world gen
         StartNewWorldGen();
@@ -884,14 +921,8 @@ public sealed class Game1 : Game
             }
         }
 
-        if (!_simStarted && _genScreen is not null && _spriteBatch is not null)
-        {
-            _spriteBatch.Begin();
-            _genScreen.Draw(_spriteBatch);
-            _spriteBatch.End();
-        }
-
         _desktop?.Render();
+
         base.Draw(gameTime);
     }
 

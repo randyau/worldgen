@@ -9,10 +9,14 @@ using WorldEngine.UI.UI.Theme;
 
 namespace WorldEngine.UI.UI.Panels;
 
-// MAP: Layer 3 — Summoned "Watch" panel: live needs/goals/spotlight HUD for WatchedCharacter (M8.3.2).
+// MAP: Layer 3 — Summoned "Watch" panel: live vitals HUD for whatever is watched (M8.3.2).
 /// <summary>
-/// Live panel tracking a single named (watched) character. When spotlighted (M7 Phase 7.4)
-/// exposes intent controls: enter/exit spotlight, move-to, goal nudges.
+/// Live panel tracking a single watched entity. Tier1Character gets the rich needs/goals/
+/// spotlight HUD (<see cref="WorldSnapshot.WatchedCharacter"/>); any other watchable kind
+/// (Tier2Character, LegendaryBeast, ...) gets the thinner vitals-only card
+/// (<see cref="WorldSnapshot.WatchedBasic"/>) — the same single watch slot, rendered differently
+/// depending on what's in it. When spotlighted (M7 Phase 7.4) exposes intent controls: enter/exit
+/// spotlight, move-to, goal nudges — spotlight only ever applies to a Tier1Character.
 /// </summary>
 public sealed class CharacterWatchPanel : IToggleablePanel
 {
@@ -32,14 +36,15 @@ public sealed class CharacterWatchPanel : IToggleablePanel
     public Action?           OnWanderGoal;
     public Action?           OnSettleGoal;
     public Action<long>?     OnProfile;
-    public Action<long>?     OnWatchCharacter;
+    public Action<long>?     OnBeastProfile;
+
+    /// <summary>Watches whatever is currently selected — kind-agnostic; the sim resolves the
+    /// entity's actual kind when the WatchEntity command is handled.</summary>
+    public Action<long>?     OnWatchSelected;
 
     public Widget Build() => PanelFrame.Build(Title, _content.Root, new PanelFrameOptions { OnClose = Hide });
 
     public void Bind(PanelContext ctx) => _ctx = ctx;
-
-    public EmptyStateSpec? EmptyFor(PanelContext ctx) =>
-        ctx.Snapshot.WatchedCharacter is null ? new EmptyStateSpec(EmptyStateKind.PreSim, "No character watched.") : null;
 
     public void Show() { IsVisible = true; }
     public void Hide() { IsVisible = false; }
@@ -55,22 +60,30 @@ public sealed class CharacterWatchPanel : IToggleablePanel
     {
         _content.Clear();
         var watch = _ctx.Snapshot.WatchedCharacter;
+        var basic = _ctx.Snapshot.WatchedBasic;
 
-        // Whichever character is currently selected via SelectionBus (e.g. clicked in Tile
+        // Whichever character/beast is currently selected via SelectionBus (e.g. clicked in Tile
         // Inspector or Event Log) can be watched directly from here — the only prior entry point
         // was the Tile Inspector's own [Watch] button, which left this panel with no way to pick
         // or change its own target.
         var selected = _ctx.Selection.Current;
-        bool hasDifferentCharacterSelected = selected.Kind == SelectionKind.Character
-            && (watch is null || selected.Id != watch.Id.Value);
+        long? watchedId = watch?.Id.Value ?? basic?.Id.Value;
+        bool hasDifferentWatchableSelected = selected.Kind is SelectionKind.Character or SelectionKind.Beast
+            && (watchedId is null || selected.Id != watchedId.Value);
 
-        if (watch is null)
+        if (basic is not null)
         {
-            _content.Add(EmptyState.Build(EmptyStateKind.PreSim, "No character watched."));
-            if (hasDifferentCharacterSelected)
+            RefreshBasic(basic, hasDifferentWatchableSelected, selected.Id);
+            return;
+        }
+
+        if (watch is not { } w)
+        {
+            _content.Add(EmptyState.Build(EmptyStateKind.PreSim, "Nothing watched."));
+            if (hasDifferentWatchableSelected)
             {
                 long selId = selected.Id;
-                var watchSelBtn = new WeButton("[Watch Selected Character]", () => OnWatchCharacter?.Invoke(selId))
+                var watchSelBtn = new WeButton("[Watch Selected]", () => OnWatchSelected?.Invoke(selId))
                     { Padding = new Myra.Graphics2D.Thickness(4) };
                 _content.Add(watchSelBtn);
             }
@@ -78,23 +91,23 @@ public sealed class CharacterWatchPanel : IToggleablePanel
         }
 
         var present = _ctx.Present;
-        bool isSpotlighted = _spotlightCharacterId.HasValue && _spotlightCharacterId.Value == watch.Id;
+        bool isSpotlighted = _spotlightCharacterId.HasValue && _spotlightCharacterId.Value == w.Id;
 
         // ── Header ──────────────────────────────────────────────────────────
-        string epithet = watch.Epithet.Length > 0 ? $" the {watch.Epithet}" : "";
-        _content.Add(SectionHeader.Build($"{watch.Name}{epithet}"));
-        _content.Add(new WeText($"Civ: {watch.CivName}  |  Age: {watch.AgeSeasons}s  ({watch.AgeSeasons / 4} yrs)", color: UiTheme.ColorRole.TextSecondary));
-        _content.Add(new WeText($"Location: ({watch.Location.X}, {watch.Location.Y}) — {watch.BiomeName}", color: UiTheme.ColorRole.TextSecondary));
+        string epithet = w.Epithet.Length > 0 ? $" the {w.Epithet}" : "";
+        _content.Add(SectionHeader.Build($"{w.Name}{epithet}"));
+        _content.Add(new WeText($"Civ: {w.CivName}  |  Age: {w.AgeSeasons}s  ({w.AgeSeasons / 4} yrs)", color: UiTheme.ColorRole.TextSecondary));
+        _content.Add(new WeText($"Location: ({w.Location.X}, {w.Location.Y}) — {w.BiomeName}", color: UiTheme.ColorRole.TextSecondary));
 
         // ── Wellbeing ────────────────────────────────────────────────────────
-        var wbColor = watch.Wellbeing >= 0.3f ? UiTheme.ColorRole.StatePositive
-                    : watch.Wellbeing >= -0.3f ? UiTheme.ColorRole.TextSecondary
+        var wbColor = w.Wellbeing >= 0.3f ? UiTheme.ColorRole.StatePositive
+                    : w.Wellbeing >= -0.3f ? UiTheme.ColorRole.TextSecondary
                     : UiTheme.ColorRole.StateNegative;
-        _content.Add(new WeText($"Wellbeing: {present.Wellbeing(watch.Wellbeing)} ({watch.Wellbeing:+0.00;-0.00;0.00})", color: wbColor));
+        _content.Add(new WeText($"Wellbeing: {present.Wellbeing(w.Wellbeing)} ({w.Wellbeing:+0.00;-0.00;0.00})", color: wbColor));
 
         // ── Needs (live) ─────────────────────────────────────────────────────
         _content.Add(SectionHeader.Build("Needs"));
-        var n = watch.Needs;
+        var n = w.Needs;
         _content.Add(Meter.Build("Food",      n.Food));
         _content.Add(Meter.Build("Safety",    n.Safety));
         _content.Add(Meter.Build("Shelter",   n.Shelter));
@@ -105,15 +118,15 @@ public sealed class CharacterWatchPanel : IToggleablePanel
 
         // ── Active Goals ─────────────────────────────────────────────────────
         _content.Add(SectionHeader.Build("Active Goals"));
-        if (watch.Goals.Count == 0)
+        if (w.Goals.Count == 0)
             _content.Add(EmptyState.Build(EmptyStateKind.PreSim, "(none)"));
         else
-            foreach (var g in watch.Goals)
+            foreach (var g in w.Goals)
                 _content.Add(new WeText($"  {g.Description,-20} (priority {g.Priority:F2})", color: UiTheme.ColorRole.TextSecondary));
 
         // ── Personality ──────────────────────────────────────────────────────
         _content.Add(SectionHeader.Build("Personality"));
-        var pers = watch.Personality;
+        var pers = w.Personality;
         _content.Add(new WeText($"  Ambition   {PersTick(pers.Ambition)}  Compassion {PersTick(pers.Compassion)}", color: UiTheme.ColorRole.TextSecondary));
         _content.Add(new WeText($"  Curiosity  {PersTick(pers.Curiosity)}  Creativity {PersTick(pers.Creativity)}", color: UiTheme.ColorRole.TextSecondary));
         _content.Add(new WeText($"  Loyalty    {PersTick(pers.Loyalty)}  Aggression {PersTick(pers.Aggression)}", color: UiTheme.ColorRole.TextSecondary));
@@ -147,22 +160,49 @@ public sealed class CharacterWatchPanel : IToggleablePanel
         {
             _content.Add(new WeText("Spotlight biases this character's decisions without", color: UiTheme.ColorRole.TextMuted));
             _content.Add(new WeText("overriding survival autonomy. Click tile → move intent.", color: UiTheme.ColorRole.TextMuted));
-            EntityId capturedWatchId = watch.Id;
+            EntityId capturedWatchId = w.Id;
             var enterBtn = new WeButton("[Enter Spotlight]", () => OnEnterSpotlight?.Invoke(capturedWatchId))
                 { Padding = new Myra.Graphics2D.Thickness(4) };
             _content.Add(enterBtn);
         }
 
         // ── Full Profile ─────────────────────────────────────────────────────
-        long capturedId = watch.Id.Value;
+        long capturedId = w.Id.Value;
         var profileBtn = new WeButton("[Full Profile]", () => OnProfile?.Invoke(capturedId))
             { Padding = new Myra.Graphics2D.Thickness(4) };
         _content.Add(profileBtn);
 
-        if (hasDifferentCharacterSelected)
+        if (hasDifferentWatchableSelected)
         {
             long selId = selected.Id;
-            var watchSelBtn = new WeButton("[Watch Selected Character Instead]", () => OnWatchCharacter?.Invoke(selId))
+            var watchSelBtn = new WeButton("[Watch Selected Instead]", () => OnWatchSelected?.Invoke(selId))
+                { Padding = new Myra.Graphics2D.Thickness(4) };
+            _content.Add(watchSelBtn);
+        }
+    }
+
+    private void RefreshBasic(BasicWatchSnapshot basic, bool hasDifferentWatchableSelected, long selectedId)
+    {
+        string tag = basic.IsLegendary ? " [Legendary]" : "";
+        _content.Add(SectionHeader.Build($"{basic.Name}{tag}"));
+        if (basic.SpeciesId.Length > 0)
+            _content.Add(new WeText($"Species: {basic.SpeciesId}", color: UiTheme.ColorRole.TextSecondary));
+        _content.Add(new WeText($"Age: {basic.AgeSeasons}s ({basic.AgeSeasons / 4} yrs)", color: UiTheme.ColorRole.TextSecondary));
+        _content.Add(new WeText($"Location: ({basic.Location.X}, {basic.Location.Y}) — {basic.BiomeName}", color: UiTheme.ColorRole.TextSecondary));
+
+        var grid = new KeyValueGrid();
+        grid.Add("Health", $"{basic.HealthFraction:P0}");
+        if (basic.FoodFraction >= 0f) grid.Add("Food", $"{basic.FoodFraction:P0}");
+        _content.Add(grid);
+
+        long capturedId = basic.Id.Value;
+        var profileBtn = new WeButton("[Full Profile]", () => OnBeastProfile?.Invoke(capturedId))
+            { Padding = new Myra.Graphics2D.Thickness(4) };
+        _content.Add(profileBtn);
+
+        if (hasDifferentWatchableSelected)
+        {
+            var watchSelBtn = new WeButton("[Watch Selected Instead]", () => OnWatchSelected?.Invoke(selectedId))
                 { Padding = new Myra.Graphics2D.Thickness(4) };
             _content.Add(watchSelBtn);
         }

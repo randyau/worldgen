@@ -41,9 +41,6 @@ public interface IWorkspacePanel
 
     /// <summary>Rebuilds this panel's displayed content from the bound context. Called only while visible.</summary>
     void Refresh();
-
-    /// <summary>Non-null when the panel has nothing to show for the current context (framework §7.5).</summary>
-    EmptyStateSpec? EmptyFor(PanelContext ctx);
 }
 
 /// <summary>Implemented by panels that can be shown/hidden independently of dock placement (Summoned panels).</summary>

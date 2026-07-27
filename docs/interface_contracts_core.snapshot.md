@@ -62,6 +62,8 @@ public interface IWorldStateReadOnly
     // === TILE ACCESS ===
     TileData GetTile(TileCoord coord);
     bool IsLand(TileCoord coord);
+    bool IsShallowOcean(TileCoord coord);
+    int GetLandmassId(TileCoord coord);
     IEnumerable<TileCoord> GetTilesInRadius(TileCoord center, int radius);
 
     // === WORLD CONFIG ===
@@ -120,4 +122,4 @@ public sealed class StateCache
 }
 ```
 
-<!-- content-hash: 23e83742914daf13 -->
+<!-- content-hash: 7152b6ffc4997347 -->

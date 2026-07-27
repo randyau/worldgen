@@ -62,7 +62,11 @@ public sealed record WorldStateDto(
     Dictionary<string, int>                         NameOrdinals,
     List<long>                                      ActiveFounders,
     List<BeastEmergenceEntryDto>                    BeastEmergenceSchedule,
-    long?                                           WatchedCharacterId,
+    // DECISION: renamed from WatchedCharacterId now that Watch is polymorphic (Character/Beast/...).
+    // This is a local dev save format with no shipped compatibility contract, so the field is
+    // renamed/retyped directly rather than adding a migration shim for old saves.
+    long?                                           WatchedEntityId,
+    int?                                            WatchedEntityKind,
     List<PendingEmissaryDto>                        PendingEmissaries
 );
 

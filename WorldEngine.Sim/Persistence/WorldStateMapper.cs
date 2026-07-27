@@ -58,7 +58,8 @@ internal static class WorldStateMapper
             BeastEmergenceSchedule:      w.BeastEmergenceSchedule
                                           .Select(e => new BeastEmergenceEntryDto(e.EmergenceYear, e.SpeciesId))
                                           .ToList(),
-            WatchedCharacterId:          w.WatchedCharacterId?.Value,
+            WatchedEntityId:             w.WatchedEntityId?.Value,
+            WatchedEntityKind:           w.WatchedEntityId.HasValue ? (int)w.WatchedEntityKind : null,
             PendingEmissaries:           w.PendingEmissaries
                                           .Select(e => new PendingEmissaryDto(
                                               e.FromCiv.Value, e.ToCiv.Value,
@@ -414,9 +415,12 @@ internal static class WorldStateMapper
         foreach (var e in dto.BeastEmergenceSchedule)
             world.BeastEmergenceSchedule.Add((e.EmergenceYear, e.SpeciesId));
 
-        // 20. Restore watched character
-        if (dto.WatchedCharacterId.HasValue)
-            world.WatchedCharacterId = new EntityId(dto.WatchedCharacterId.Value);
+        // 20. Restore watched entity
+        if (dto.WatchedEntityId.HasValue)
+        {
+            world.WatchedEntityId   = new EntityId(dto.WatchedEntityId.Value);
+            world.WatchedEntityKind = (EntityKind)(dto.WatchedEntityKind ?? (int)EntityKind.Tier1Character);
+        }
 
         // 21. Restore pending emissaries (M4 Phase 1)
         foreach (var e in dto.PendingEmissaries)

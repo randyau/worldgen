@@ -35,8 +35,6 @@ public sealed class GodModePanel : IToggleablePanel
 
     public void Bind(PanelContext ctx) => _ctx = ctx;
 
-    public EmptyStateSpec? EmptyFor(PanelContext ctx) => null;
-
     public void Show() => IsVisible = true;
     public void Hide() => IsVisible = false;
 

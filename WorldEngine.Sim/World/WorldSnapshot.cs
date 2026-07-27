@@ -63,8 +63,8 @@ public sealed record SettlementSnapshot(
 public sealed record GoalWatchEntry(string Description, float Priority);
 
 /// <summary>
-/// Live snapshot of a watched character for the character watch panel (M3 Phase 3.4).
-/// Populated by SnapshotBuilder when WatchedCharacterId is set on WorldState.
+/// Live snapshot of a watched Tier1Character for the Watch panel (M3 Phase 3.4).
+/// Populated by SnapshotBuilder when WorldState.WatchedEntityId is set to a Tier1Character.
 /// </summary>
 public sealed record CharacterWatchSnapshot(
     EntityId   Id,
@@ -78,6 +78,24 @@ public sealed record CharacterWatchSnapshot(
     NeedsVector   Needs,
     PersonalityVector Personality,
     IReadOnlyList<GoalWatchEntry> Goals);
+
+/// <summary>
+/// Live vitals snapshot for a watched entity that isn't a Tier1Character (Tier2Character,
+/// LegendaryBeast, and any future watchable kind) — no needs/goals/personality data exists for
+/// these, so this is deliberately a thinner card than CharacterWatchSnapshot, not a subset of it.
+/// Populated by SnapshotBuilder when WatchedEntityId is set on WorldState to a non-Tier1 entity.
+/// </summary>
+public sealed record BasicWatchSnapshot(
+    EntityId   Id,
+    EntityKind Kind,
+    string     Name,
+    string     SpeciesId,   // beasts.toml id for beasts; empty for characters
+    bool       IsLegendary,
+    TileCoord  Location,
+    string     BiomeName,
+    int        AgeSeasons,
+    float      HealthFraction,
+    float      FoodFraction);
 
 /// <summary>
 /// Immutable projection of world state for the UI. Created after each tick.
@@ -123,8 +141,12 @@ public sealed record WorldSnapshot(
     float GlobalPrecipitationMultiplier,
     float StormCorridorNormalizedLat,
 
-    // Character watch panel (M3 Phase 3.4) — null when no character is being watched
+    // Watch panel (M3 Phase 3.4) — exactly one of these is non-null at a time (or neither, if
+    // nothing is watched), depending on the watched entity's kind. Tier1Character gets the rich
+    // needs/goals/personality card; everything else (Tier2Character, LegendaryBeast, ...) gets
+    // the thinner vitals-only card.
     CharacterWatchSnapshot? WatchedCharacter = null,
+    BasicWatchSnapshot?     WatchedBasic     = null,
 
     // Save state (M3 Phase 3.6) — used by UI to show "Saving..." overlay
     bool IsSaving     = false,

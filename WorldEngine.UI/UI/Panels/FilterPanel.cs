@@ -129,7 +129,6 @@ public sealed class FilterPanel : IWorkspacePanel
     }
 
     public void Bind(PanelContext ctx) { }
-    public EmptyStateSpec? EmptyFor(PanelContext ctx) => null;
     public void Refresh() { /* filter state changes reactively via the Changed events above */ }
 
     private void Rebuild()

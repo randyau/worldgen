@@ -1,5 +1,7 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Myra.Graphics2D.Brushes;
+using Myra.Graphics2D.TextureAtlases;
 using Myra.Graphics2D.UI;
 using WorldEngine.Sim.Config;
 using WorldEngine.Sim.Core;
@@ -31,7 +33,7 @@ public sealed class WorldGenPreviewScreen : IDisposable
     // Preview state (shown once the initial run has produced every layer)
     private readonly Panel _previewPanel;
     private readonly Label[] _statusLabels = new Label[LayerCount];
-    private readonly Panel[] _thumbSlots = new Panel[LayerCount];
+    private readonly Image[] _thumbSlots = new Image[LayerCount];
     private readonly Texture2D?[] _thumbTextures = new Texture2D?[LayerCount];
     private readonly bool[] _layerDone = new bool[LayerCount];
     private readonly WeField _seaLevelField;
@@ -39,6 +41,10 @@ public sealed class WorldGenPreviewScreen : IDisposable
     private readonly WeButton _rerunButton;
     private readonly WeButton _commitButton;
     private readonly Label _rerunStatusLabel;
+    private readonly WeScroll _layerScroll;
+    private readonly VerticalStackPanel _layerList;
+    private const int LayerListWidth = 340;
+    private const int ChromeHeight = 260; // header + rerun hint + controls row + status label + commit button + spacing
 
     private GraphicsDevice? _gd;
     private WorldGenContext? _ctx;
@@ -64,16 +70,17 @@ public sealed class WorldGenPreviewScreen : IDisposable
         _genPanel = new Panel();
         _genPanel.Widgets.Add(genStack);
 
-        var layerList = new VerticalStackPanel { Spacing = UiTheme.Space.Sm };
+        _layerList = new VerticalStackPanel { Spacing = UiTheme.Space.Sm };
+        var layerList = _layerList;
         for (int i = 0; i < LayerCount; i++)
         {
             var row = new HorizontalStackPanel { Spacing = UiTheme.Space.Sm };
 
-            var thumb = new Panel
+            var thumb = new Image
             {
                 Width      = ThumbWidth,
                 Height     = ThumbHeight,
-                Background = new Myra.Graphics2D.Brushes.SolidBrush(UiTheme.SurfaceRaised)
+                Background = new SolidBrush(UiTheme.SurfaceRaised)
             };
             _thumbSlots[i] = thumb;
             row.Widgets.Add(thumb);
@@ -87,19 +94,37 @@ public sealed class WorldGenPreviewScreen : IDisposable
             layerList.Widgets.Add(row);
         }
 
+        _layerScroll = new WeScroll();
+        _layerScroll.SetContent(layerList, LayerListWidth, LayerCount * (ThumbHeight + UiTheme.Space.Sm));
+
         _seaLevelField = new WeField("Sea level (0-1)");
 
+        // TODO(M11+): every other layer (Elevation, River, Magic, Climate, Biome, Resource, Poi)
+        // seeds its own RNG independently from ctx.Config.Seed and has no config knob exposed on
+        // this screen, so rerunning from one of them with the seed unchanged reproduces identical
+        // output — no observable effect. Trimmed the picker to the two layers that actually do
+        // something (Tectonic: reseed; Ocean: sea level) until real per-layer parameters get
+        // wired up here.
         _rerunLayerDropdown = new WeDropdown<int>();
         _rerunLayerDropdown.Render(i => WorldGenPipeline.LayerNames[i]);
-        _rerunLayerDropdown.SetItems(Enumerable.Range(0, LayerCount));
+        _rerunLayerDropdown.SetItems(new[] { 0, 2 }); // Tectonic, Ocean
         _rerunLayerDropdown.Selected = 2; // Ocean — the parameter field above governs it
 
-        _rerunButton = new WeButton("Rerun from layer", OnRerunClicked) { Enabled = false };
+        _rerunButton = new WeButton("↻ Regenerate from this layer", OnRerunClicked) { Enabled = false };
         _commitButton = new WeButton("▶  Commit", OnCommitClicked, WeButtonVariant.Primary) { Enabled = false };
         _rerunStatusLabel = new Label { Text = "", TextColor = UiTheme.TextSecondary };
 
+        var rerunHint = new Label
+        {
+            Text = "Restart from Ocean to try a different sea level, or from Tectonic for a brand-new random world.",
+            TextColor = UiTheme.TextSecondary,
+            Wrap = true,
+            Width = LayerListWidth
+        };
+
         var controlsRow = new HorizontalStackPanel { Spacing = UiTheme.Space.Md };
         controlsRow.Widgets.Add(_seaLevelField.Root);
+        controlsRow.Widgets.Add(new Label { Text = "Restart from:", TextColor = UiTheme.TextPrimary, VerticalAlignment = VerticalAlignment.Center });
         controlsRow.Widgets.Add(_rerunLayerDropdown.Root);
         controlsRow.Widgets.Add(_rerunButton.Root);
 
@@ -110,21 +135,33 @@ public sealed class WorldGenPreviewScreen : IDisposable
             Spacing = UiTheme.Space.Md
         };
         previewStack.Widgets.Add(new Label { Text = "World Preview", TextColor = UiTheme.HeaderText });
-        previewStack.Widgets.Add(layerList);
+        previewStack.Widgets.Add(_layerScroll.Root);
+        previewStack.Widgets.Add(rerunHint);
         previewStack.Widgets.Add(controlsRow);
         previewStack.Widgets.Add(_rerunStatusLabel);
         previewStack.Widgets.Add(_commitButton.Root);
 
-        _previewPanel = new Panel { Visible = false };
+        _previewPanel = new Panel { Visible = false, HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Stretch };
         _previewPanel.Widgets.Add(previewStack);
 
-        Root = new Panel();
+        _genPanel.HorizontalAlignment = HorizontalAlignment.Stretch;
+        _genPanel.VerticalAlignment = VerticalAlignment.Stretch;
+
+        Root = new Panel { HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Stretch };
         Root.Widgets.Add(_genPanel);
         Root.Widgets.Add(_previewPanel);
     }
 
     /// <summary>Call once after GraphicsDevice is available.</summary>
     public void Initialize(GraphicsDevice gd) => _gd = gd;
+
+    /// <summary>Call whenever the viewport size changes so the layer list scroll area leaves room for the controls below it.</summary>
+    public void Resize(int viewportHeight)
+    {
+        int maxListHeight = LayerCount * (ThumbHeight + UiTheme.Space.Sm);
+        int height = Math.Clamp(viewportHeight - ChromeHeight, ThumbHeight + UiTheme.Space.Sm, maxListHeight);
+        _layerScroll.SetContent(_layerList, LayerListWidth, height);
+    }
 
     /// <summary>Shows the loading/progress panel with a fixed message (e.g. "Loading save...").</summary>
     public void ShowMessage(string text)
@@ -149,6 +186,7 @@ public sealed class WorldGenPreviewScreen : IDisposable
             _layerDone[i] = false;
             _thumbTextures[i]?.Dispose();
             _thumbTextures[i] = null;
+            _thumbSlots[i].Renderable = null;
         }
         RefreshLayerStatusLabels();
 
@@ -215,18 +253,6 @@ public sealed class WorldGenPreviewScreen : IDisposable
         return null;
     }
 
-    /// <summary>Draws the layer thumbnails. Call between SpriteBatch Begin/End, after Myra layout has run.</summary>
-    public void Draw(SpriteBatch sb)
-    {
-        if (_gd is null || !_previewPanel.Visible) return;
-
-        for (int i = 0; i < LayerCount; i++)
-        {
-            if (_thumbTextures[i] is not { } tex) continue;
-            sb.Draw(tex, _thumbSlots[i].Bounds, Color.White);
-        }
-    }
-
     private void OnRerunClicked()
     {
         if (_busy || _ctx is null || _gd is null) return;
@@ -247,7 +273,29 @@ public sealed class WorldGenPreviewScreen : IDisposable
 
         var progress = new Progress<(string Layer, float Fraction)>(p =>
             _rerunStatusLabel.Text = $"Rerunning: {p.Layer}  {p.Fraction:P0}");
-        _rerunTask = _pipeline.RerunFromAsync(_ctx, layerIndex, progress);
+
+        // DECISION: Tectonic (layer 0) has no config knob of its own — every layer derives its
+        // randomness deterministically from ctx.Config.Seed, so rerunning it unchanged always
+        // reproduces the same map (reproducibility is enforced by design elsewhere). Restarting
+        // from Tectonic specifically is the one case where the user's intent is "give me a
+        // different world", so roll a fresh seed and start a brand-new context instead of
+        // reusing the old one.
+        if (layerIndex == 0)
+        {
+            var oldConfig = _ctx.Config;
+            var newConfig = new WorldConfig
+            {
+                Seed        = Random.Shared.Next(),
+                WidthKm     = oldConfig.WidthKm,
+                HeightKm    = oldConfig.HeightKm,
+                TileWidthKm = oldConfig.TileWidthKm
+            };
+            _rerunTask = _pipeline.RunUpToAsync(newConfig, _ctx.SimConfig, LayerCount - 1, progress);
+        }
+        else
+        {
+            _rerunTask = _pipeline.RerunFromAsync(_ctx, layerIndex, progress);
+        }
     }
 
     private void OnCommitClicked()
@@ -269,6 +317,7 @@ public sealed class WorldGenPreviewScreen : IDisposable
             var tex = new Texture2D(_gd, _ctx.TileWidth, _ctx.TileHeight);
             tex.SetData(colors);
             _thumbTextures[i] = tex;
+            _thumbSlots[i].Renderable = new TextureRegion(tex);
         }
     }
 

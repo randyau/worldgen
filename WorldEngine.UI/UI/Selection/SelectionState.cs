@@ -3,7 +3,7 @@ using WorldEngine.Sim.Core;
 namespace WorldEngine.UI.UI.Selection;
 
 /// <summary>What kind of thing is currently selected.</summary>
-public enum SelectionKind { None, Tile, Settlement, Character, Civ }
+public enum SelectionKind { None, Tile, Settlement, Character, Civ, Beast }
 
 /// <summary>
 /// The one "selected thing" in the UI (M6 Epic 6.1.4). This is UI-thread state that decides
@@ -27,6 +27,7 @@ public sealed class SelectionState
     public void SelectSettlement(long id)      { Set(SelectionKind.Settlement, id, default); }
     public void SelectCharacter(long id)       { Set(SelectionKind.Character, id, default); }
     public void SelectCiv(long id)             { Set(SelectionKind.Civ, id, default); }
+    public void SelectBeast(long id)           { Set(SelectionKind.Beast, id, default); }
     public void Clear()                        { Set(SelectionKind.None, 0, default); }
 
     /// <summary>Called by the router once it has reacted to the current selection.</summary>

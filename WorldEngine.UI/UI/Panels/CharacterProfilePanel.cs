@@ -40,6 +40,9 @@ public sealed class CharacterProfilePanel : IToggleablePanel
     public PanelPlacement Placement => new(PanelPlacementKind.Summoned);
     public bool IsVisible { get; private set; }
 
+    /// <summary>Fired when the player clicks [Watch] on the currently-shown character.</summary>
+    public Action<long>? OnWatch;
+
     public CharacterProfilePanel(IHistoryQuery history, AncestryRegistry? ancestries = null)
     {
         _history    = history;
@@ -49,9 +52,6 @@ public sealed class CharacterProfilePanel : IToggleablePanel
     public Widget Build() => PanelFrame.Build(Title, _content.Root, new PanelFrameOptions { OnClose = Hide });
 
     public void Bind(PanelContext ctx) => _ctx = ctx;
-
-    public EmptyStateSpec? EmptyFor(PanelContext ctx) =>
-        _hasCharacter ? null : new EmptyStateSpec(EmptyStateKind.PreSim, "No character selected.");
 
     public void Show() => IsVisible = true;
     public void Hide() => IsVisible = false;
@@ -73,8 +73,36 @@ public sealed class CharacterProfilePanel : IToggleablePanel
         _content.Clear();
         if (!_hasCharacter) { _content.Add(EmptyState.Build(EmptyStateKind.PreSim, "No character selected.")); return; }
 
+        // Promote-to-watch lives here regardless of whether the history summary is ready yet —
+        // watching only needs the id, per the select → dialog → watch pattern.
+        long capturedId = _characterId;
+        _content.Add(new WeButton("[Watch]", () => OnWatch?.Invoke(capturedId)) { Padding = new Myra.Graphics2D.Thickness(4) });
+
         var summary = _history.GetCharacterSummary(new EntityId(_characterId));
-        if (summary is null) { _content.Add(EmptyState.Build(EmptyStateKind.PreSim, "No character selected.")); return; }
+        if (summary is null)
+        {
+            // BUG FIX: this used to show the identical "No character selected." message here,
+            // making a successful selection indistinguishable from no selection at all.
+            // CharacterSummaries is a derived SQLite table rebuilt only every 50 in-game years
+            // (PhaseRunner), so a freshly-born or freshly-selected character can legitimately
+            // have no row yet even though selection worked correctly. Fall back to live
+            // per-tick entity data when it exists, so the panel still shows *something*.
+            if (_ctx.Snapshot.EntitySnapshots.TryGetValue(new EntityId(_characterId), out var live))
+            {
+                _content.Add(SectionHeader.Build(live.Name));
+                _content.Add(new WeText(
+                    $"HP {live.HealthFraction:P0}  Age {live.AgeSeason}s" + (live.CivName is not null ? $"  [{live.CivName}]" : ""),
+                    color: UiTheme.ColorRole.TextSecondary));
+                _content.Add(new WeText(
+                    "Full life history not available yet — the history summary rebuilds periodically.",
+                    color: UiTheme.ColorRole.TextMuted));
+            }
+            else
+            {
+                _content.Add(EmptyState.Build(EmptyStateKind.PreSim, "Selected character has no data available."));
+            }
+            return;
+        }
 
         // ── Header ──────────────────────────────────────────────────────────
         string nameStr = summary.NameOrdinal > 0 ? $"{summary.Name} {_ctx.Present.ToRoman(summary.NameOrdinal)}" : summary.Name;

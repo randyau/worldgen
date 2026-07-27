@@ -30,6 +30,7 @@ public sealed class SnapshotBuilder
         var territoryMap     = BuildTerritorySnapshot(world);
         var improvementMap   = BuildImprovementSnapshot(world);
         var watchedChar      = BuildCharacterWatchSnapshot(world);
+        var watchedBasic     = watchedChar is null ? BuildBasicWatchSnapshot(world) : null;
         var artifacts        = BuildArtifactSnapshots(world);
 
         return new WorldSnapshot(
@@ -53,6 +54,7 @@ public sealed class SnapshotBuilder
             GlobalPrecipitationMultiplier: world.GlobalPrecipitationMultiplier,
             StormCorridorNormalizedLat:  world.StormCorridorNormalizedLat,
             WatchedCharacter:            watchedChar,
+            WatchedBasic:                watchedBasic,
             IsSaving:                    world.IsSaving,
             LastSaveTick:                world.LastSaveTick,
             Artifacts:                   artifacts,
@@ -356,7 +358,8 @@ public sealed class SnapshotBuilder
     /// </summary>
     private static CharacterWatchSnapshot? BuildCharacterWatchSnapshot(WorldState world)
     {
-        if (world.WatchedCharacterId is not { } watchId) return null;
+        if (world.WatchedEntityId is not { } watchId) return null;
+        if (world.WatchedEntityKind != EntityKind.Tier1Character) return null;
         if (!world.Entities.All.TryGetValue(watchId, out var entity)) return null;
         if (entity is not Tier1Character c) return null;
         if (!c.IsAlive) return null;
@@ -386,5 +389,33 @@ public sealed class SnapshotBuilder
             Needs:       c.Needs,
             Personality: c.Personality,
             Goals:       goals);
+    }
+
+    /// <summary>
+    /// Builds the thin vitals-only watch snapshot for a watched Tier2Character, LegendaryBeast,
+    /// or any other non-Tier1 entity — built straight from the entity's own ToSnapshot()
+    /// projection rather than hand-picking fields per kind, so a future watchable kind needs no
+    /// changes here.
+    /// </summary>
+    private static BasicWatchSnapshot? BuildBasicWatchSnapshot(WorldState world)
+    {
+        if (world.WatchedEntityId is not { } watchId) return null;
+        if (!world.Entities.All.TryGetValue(watchId, out var entity)) return null;
+        if (!entity.IsAlive) return null;
+
+        var snap  = entity.ToSnapshot();
+        var biome = (BiomeType)world.TileGrid.GetTile(entity.Location).BiomeType;
+
+        return new BasicWatchSnapshot(
+            Id:             snap.Id,
+            Kind:           snap.Kind,
+            Name:           snap.Name,
+            SpeciesId:      snap.SpeciesId,
+            IsLegendary:    snap.IsLegendary,
+            Location:       entity.Location,
+            BiomeName:      biome.ToString(),
+            AgeSeasons:     snap.AgeSeason,
+            HealthFraction: snap.HealthFraction,
+            FoodFraction:   snap.FoodFraction);
     }
 }

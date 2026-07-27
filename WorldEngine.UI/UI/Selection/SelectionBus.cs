@@ -31,6 +31,7 @@ public sealed class SelectionBus : ISelectionSink
             case SelectionKind.Settlement: _state.SelectSettlement(target.Id); break;
             case SelectionKind.Character:  _state.SelectCharacter(target.Id);  break;
             case SelectionKind.Civ:        _state.SelectCiv(target.Id);        break;
+            case SelectionKind.Beast:      _state.SelectBeast(target.Id);      break;
             default:                       _state.Clear();                    break;
         }
     }

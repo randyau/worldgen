@@ -20,8 +20,8 @@ public sealed class TileInspectorPanel : IWorkspacePanel
     public PanelPlacement Placement => new(PanelPlacementKind.Contextual, SelectionKind.Tile);
 
     /// <summary>
-    /// Invoked when the user clicks [Watch] next to a character name. Not routed through the
-    /// selection bus — Game1 wires this to enqueue WatchCharacter and reveal the (Summoned)
+    /// Invoked when the user clicks [Watch] next to a character or beast name. Not routed through
+    /// the selection bus — Game1 wires this to enqueue WatchEntity and reveal the (Summoned)
     /// Watch panel, per the M8.2.2 DECISION preserving pre-M8 Watch placement.
     /// </summary>
     public Action<long>? OnWatch;
@@ -32,11 +32,6 @@ public sealed class TileInspectorPanel : IWorkspacePanel
     public Widget Build() => PanelFrame.Build(Title, _content.Root);
 
     public void Bind(PanelContext ctx) => _ctx = ctx;
-
-    public EmptyStateSpec? EmptyFor(PanelContext ctx) =>
-        ctx.Snapshot.InspectedTile is null
-            ? new EmptyStateSpec(EmptyStateKind.PreSim, "No tile selected.", "Click a tile on the map to inspect it.")
-            : null;
 
     public void Refresh()
     {
@@ -169,7 +164,15 @@ public sealed class TileInspectorPanel : IWorkspacePanel
         foreach (var b in beasts)
         {
             string tag = b.IsLegendary ? " [Legendary]" : "";
-            _content.Add(new WeText($"{b.Name}{tag}"));
+            long capturedId = b.Id.Value;
+
+            var row = new WeHStack(UiTheme.Space.Xs);
+            row.Add(EntityLink.Build(new EntityRef(SelectionKind.Beast, capturedId, default), $"{b.Name}{tag}", _ctx.Selection));
+            var watchBtn = new WeButton("[Watch]", () => OnWatch?.Invoke(capturedId))
+                { Padding = new Myra.Graphics2D.Thickness(2) };
+            row.Add(watchBtn);
+            _content.Add(row);
+
             _content.Add(StatRow.Build("  Status", $"HP {b.HealthFraction:P0}  Food {b.FoodFraction:P0}  Age {b.AgeSeason}"));
         }
     }
@@ -204,7 +207,14 @@ public sealed class TileInspectorPanel : IWorkspacePanel
         }
         foreach (var c in tier2)
         {
-            _content.Add(new WeText($"{c.Name} [Tier2]"));
+            var row = new WeHStack(UiTheme.Space.Xs);
+            long capturedId = c.Id.Value;
+            row.Add(EntityLink.Build(new EntityRef(SelectionKind.Character, capturedId, default), $"{c.Name} [Tier2]", _ctx.Selection));
+            var watchBtn = new WeButton("[Watch]", () => OnWatch?.Invoke(capturedId))
+                { Padding = new Myra.Graphics2D.Thickness(2) };
+            row.Add(watchBtn);
+            _content.Add(row);
+
             _content.Add(StatRow.Build("  Status", $"HP {c.HealthFraction:P0}  Age {c.AgeSeason}s"));
         }
     }

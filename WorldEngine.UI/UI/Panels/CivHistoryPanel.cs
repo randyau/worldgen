@@ -42,11 +42,6 @@ public sealed class CivHistoryPanel : IToggleablePanel
 
     public void Bind(PanelContext ctx) => _ctx = ctx;
 
-    public EmptyStateSpec? EmptyFor(PanelContext ctx) =>
-        _civSummaries.Count == 0
-            ? new EmptyStateSpec(EmptyStateKind.NotBuiltYet, "No civ summaries yet.", "Summaries build every 50 in-game years.")
-            : null;
-
     public void Show() { RefreshCivList(); IsVisible = true; }
     public void Hide() { IsVisible = false; }
 
