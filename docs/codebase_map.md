@@ -40,6 +40,7 @@ One-line description of every non-trivial source file. Check here before running
 - `ResourcePressureConfig.cs` — Food/water/resource pressure constants: shortage threshold, famine onset, and carrying-capacity weights.
 - `ResourcesConfig.cs` — Per-resource deposit density fractions used during world generation (iron, copper, tin, precious metals).
 - `RiversConfig.cs` — River flow accumulation threshold and lake detection constants for world generation.
+- `SeafaringConfig.cs` — Constants governing character sea voyages (M11 — character water crossings). Loaded from the [seafaring] section of sim_config.toml.
 - `SettlementConfig.cs` — Population growth rates, carrying capacity, and crystallisation threshold constants.
 - `SettlementNamesConfig.cs` — Prefix/suffix pools for procedural settlement name generation.
 - `SimConfig.cs` — Root config container; all subsections loaded from sim_config.toml.
@@ -241,8 +242,9 @@ One-line description of every non-trivial source file. Check here before running
 - `SimWorkspace.cs` — Owns the <see cref="RegionSlot.RightDock"/> content: a pinned zone (always-visible panels, stacked) and a contextual tab zone where exactly one panel is visible at a time — no cross-panel overflow, no stacking (framework §5.2-5.3). Also drives the Float region's summoned panels (God Mode, Help).
 
 ## WorldEngine.UI/UI/Panels/
+- `BeastProfilePanel.cs` — Structured beast profile card populated from the live <see cref="EntitySnapshot"/> — beasts have no derived history-query summary the way characters do, so unlike <see cref="CharacterProfilePanel"/> this reads sim-snapshot data directly instead of an <c>IHistoryQuery</c>.
 - `CharacterProfilePanel.cs` — Structured character profile card populated entirely from <see cref="IHistoryQuery"/> — no prose generation. Shows the currently *selected* character's life summary; the live-tracked *watched* character's needs/goals/spotlight controls stay on the separate Watch panel.
-- `CharacterWatchPanel.cs` — Live panel tracking a single named (watched) character. When spotlighted (M7 Phase 7.4) exposes intent controls: enter/exit spotlight, move-to, goal nudges.
+- `CharacterWatchPanel.cs` — Live panel tracking a single watched entity. Tier1Character gets the rich needs/goals/ spotlight HUD (<see cref="WorldSnapshot.WatchedCharacter"/>); any other watchable kind (Tier2Character, LegendaryBeast, ...) gets the thinner vitals-only card (<see cref="WorldSnapshot.WatchedBasic"/>) — the same single watch slot, rendered differently depending on what's in it. When spotlighted (M7 Phase 7.4) exposes intent controls: enter/exit spotlight, move-to, goal nudges — spotlight only ever applies to a Tier1Character.
 - `CivHistoryPanel.cs` — Layer 3 — Summoned Civ History panel: civ selector + rulers/wars/major-events (M8.3.3).
 - `EventLogPanel.cs` — Pinned panel showing recent simulation events. Supports focus lens dimming and routes actor/ civ/cause-chain clicks immediately (M8.2.2) instead of a consume-once poll.
 - `FilterPanel.cs` — Immutable snapshot of the active event-log filter criteria. Passed to <see cref="EventLogPanel"/> each frame via <see cref="FilterPanel.CurrentFilter"/>.

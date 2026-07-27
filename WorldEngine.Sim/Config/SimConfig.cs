@@ -24,6 +24,7 @@ public class SimConfig
     public UtilityAffinityConfig UtilityAffinity { get; set; } = new();
     public WildlifeRiskConfig    WildlifeRisk    { get; set; } = new();
     public ArtifactConfig        Artifacts       { get; set; } = new();
+    public SeafaringConfig       Seafaring       { get; set; } = new();
 
     // Loaded separately by AncestryLoader — not from sim_config.toml
     public AncestryRegistry AncestryRegistry { get; set; } = AncestryRegistry.Empty;

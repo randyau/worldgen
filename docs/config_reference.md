@@ -27,6 +27,7 @@ Edit values in `sim_config.toml`; all keys live there without recompiling.
 - [resource_pressure](#resource-pressure)
 - [territory](#territory)
 - [improvements](#improvements)
+- [seafaring](#seafaring)
 - [settlement_names](#settlement-names)
 - [cultural_traits](#cultural-traits)
 - [emissary](#emissary)
@@ -549,6 +550,12 @@ _Natural shelter recovery per tick when NOT on a settlement tile, by biome. Dens
 | `pasture_multiplier` | `1.5` | `SimConfig.Improvements.PastureMultiplier` | Pasture (grassland/savanna only): food × this |
 | `fishery_multiplier` | `2.0` | `SimConfig.Improvements.FisheryMultiplier` | Fishery (coastal/river only): food × this |
 | `improvement_build_ticks` | `8` | `SimConfig.Improvements.ImprovementBuildTicks` | ticks character must remain on tile to build (= half a year) |
+
+## `[seafaring]` {#seafaring}
+
+| Key | Value | C# Property | Description |
+|-----|-------|-------------|-------------|
+| `ocean_crossing_enabled` | `true` | `SimConfig.Seafaring.OceanCrossingEnabled` | master toggle for M11 sea voyages; false = characters never leave their landmass |
 
 ## `[settlement_names]` {#settlement-names}
 

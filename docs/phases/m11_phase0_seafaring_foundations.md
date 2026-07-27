@@ -1,8 +1,21 @@
 # M11 Phase 11.0 — Seafaring foundations
 
-**Status:** NOT STARTED.
+**Status:** DONE — 2026-07-27 (build+test verified).
 **Milestone:** M11 — Character Water Crossings (`docs/phases/m11_water_crossings.md`)
 **Depends on:** — (first phase)
+
+## What shipped
+
+`ImprovementType.Port` (`WorldEngine.Sim/World/TileImprovement.cs`); `CivTracker.ResolveBuildImprovement`
+rejects a `Port` build target that lacks `TileStaticFlags.IsCoastal`. New
+`WorldEngine.Sim/Config/SeafaringConfig.cs` (`OceanCrossingEnabled`, default `true`), registered as
+`SimConfig.Seafaring` and a new `[seafaring]` section in `sim_config.toml` — picked up automatically
+by the M10.2 `ConfigRegistry`. `WorldState.IsShallowOcean(TileCoord)` (declared on
+`IWorldStateReadOnly`): true for an Ocean/CoastalWater tile with ≥1 land neighbor, computed on
+demand (no new `TileStaticFlags` bit — see the `// DECISION:` comment at the method). Tests in
+`WorldEngine.Tests/Unit/SeafaringTests.cs` (7 tests): shallow-ocean classification (adjacent-to-land
+true, open-ocean false, land false), Port build succeeds on a coastal tile / rejected on a
+non-coastal one, `SeafaringConfig` binds from TOML and defaults when absent.
 
 ## Goal
 

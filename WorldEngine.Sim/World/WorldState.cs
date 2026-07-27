@@ -115,8 +115,13 @@ public sealed class WorldState : IWorldStateReadOnly
     /// <summary>Set by SetInspectedTile command. Null means no tile is selected.</summary>
     public TileCoord? InspectedTile { get; internal set; }
 
-    /// <summary>Character being watched in the character watch panel. Null means no watch active.</summary>
-    public EntityId? WatchedCharacterId { get; internal set; }
+    /// <summary>Entity being watched in the Watch panel. Null means no watch active. Single slot —
+    /// watching a new entity replaces whatever was watched before, whatever its kind.</summary>
+    public EntityId? WatchedEntityId { get; internal set; }
+
+    /// <summary>Kind of the watched entity (Tier1Character, Tier2Character, LegendaryBeast, ...),
+    /// resolved from the registry when the watch target is set. Meaningless when WatchedEntityId is null.</summary>
+    public EntityKind WatchedEntityKind { get; internal set; }
 
     // === SPOTLIGHT (M7+) ===
     /// <summary>Character currently under spotlight player control. Null means no spotlight active.</summary>
@@ -167,6 +172,25 @@ public sealed class WorldState : IWorldStateReadOnly
 
     public bool IsLand(TileCoord coord) =>
         (BiomeType)GetTile(coord).BiomeType is not BiomeType.Ocean and not BiomeType.CoastalWater;
+
+    // DECISION: shallow-ocean is computed on demand from adjacency rather than a stored
+    // TileStaticFlags bit baked in during worldgen. Land/ocean assignment never changes after
+    // worldgen (see WorldState.IsLand's own basis), so there's no staleness risk, and this keeps
+    // M11 sea-voyage logic from needing a worldgen-layer change just to classify tiles.
+    public bool IsShallowOcean(TileCoord coord)
+    {
+        if (IsLand(coord)) return false;
+        int w = TileGrid.TileWidth, h = TileGrid.TileHeight;
+        int[] dx = { -1, 1, 0, 0 };
+        int[] dy = { 0, 0, -1, 1 };
+        for (int i = 0; i < 4; i++)
+        {
+            int nx = ((coord.X + dx[i]) % w + w) % w;
+            int ny = Math.Clamp(coord.Y + dy[i], 0, h - 1);
+            if (IsLand(new TileCoord(nx, ny))) return true;
+        }
+        return false;
+    }
 
     public IEnumerable<TileCoord> GetTilesInRadius(TileCoord center, int radius)
     {

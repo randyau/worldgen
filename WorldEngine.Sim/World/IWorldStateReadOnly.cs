@@ -24,6 +24,9 @@ public interface IWorldStateReadOnly
     /// <summary>Get tile data. Applies East-West cylinder wrapping.</summary>
     TileData GetTile(TileCoord coord);
     bool IsLand(TileCoord coord);
+    /// <summary>True for an Ocean/CoastalWater tile with at least one land neighbor — the walkable
+    /// set for M11 sea voyages. Open ocean with no nearby land is never shallow.</summary>
+    bool IsShallowOcean(TileCoord coord);
     IEnumerable<TileCoord> GetTilesInRadius(TileCoord center, int radius);
 
     // === WORLD CONFIG ===

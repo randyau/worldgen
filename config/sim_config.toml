@@ -746,6 +746,9 @@ pasture_multiplier        = 1.5  # Pasture (grassland/savanna only): food × thi
 fishery_multiplier        = 2.0  # Fishery (coastal/river only): food × this
 improvement_build_ticks   = 8    # ticks character must remain on tile to build (= half a year)
 
+[seafaring]
+ocean_crossing_enabled = true  # master toggle for M11 sea voyages; false = characters never leave their landmass
+
 [settlement_names]
 prefixes = [
     "Iron", "Stone", "Green", "Dark", "Swift", "High", "Old", "Black", "White",

@@ -282,6 +282,11 @@ public static partial class CivTracker
         if (!world.TerritoryMap.TryGetValue(targetTile, out var cityTile)) return;
         if (world.ImprovementMap.ContainsKey(targetTile)) return;
 
+        // Port requires a coastal tile — a harbor with no adjacent water makes no sense
+        if (cmd.ImprovementType == ImprovementType.Port
+            && !world.GetTile(targetTile).StaticFlags.HasFlag(TileStaticFlags.IsCoastal))
+            return;
+
         var civ = world.GetCivilization(builder.Identity.CivId);
         if (civ == null || !civ.CityTerritories.ContainsKey(cityTile)) return;
 
