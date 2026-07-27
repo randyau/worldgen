@@ -26,6 +26,24 @@ public class SimLoopConfig
     /// </summary>
     public bool MetricsEnabled { get; set; } = true;
 
+    /// <summary>
+    /// Minimum wall-clock seconds between headless-runner progress log lines (see
+    /// <see cref="Simulation.SimLoop.RunSynchronous"/>). Progress is sampled once/year
+    /// internally but only printed at this cadence, so long runs stay observable without
+    /// flooding the console with one line per simulated year. Default: 10s.
+    /// </summary>
+    public double HeadlessProgressIntervalSeconds { get; set; } = 10.0;
+
+    /// <summary>
+    /// In-game years between automatic <see cref="Persistence.EventStore.BuildSummaries"/> calls
+    /// (rebuilds CharacterSummaries/CivSummaries/causal edges/etc. for CivHistoryPanel). 0 disables
+    /// automatic rebuilds entirely — the caller is then responsible for calling BuildSummaries
+    /// itself (e.g. once, on demand). Each rebuild rescans the full Events table, so cost grows
+    /// with total historical event count; the headless runner sets this to 0 since nothing reads
+    /// history mid-run. Default: 50 (matches the interactive UI's prior hardcoded cadence).
+    /// </summary>
+    public int SummaryRebuildIntervalYears { get; set; } = 50;
+
     // ─── Derived time-scale helpers ───────────────────────────────────────────
 
     /// <summary>Ticks per season (same as TicksPerSeasonalChange — more readable alias).</summary>

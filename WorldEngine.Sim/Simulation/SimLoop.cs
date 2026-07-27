@@ -69,12 +69,22 @@ public sealed class SimLoop
     /// No threading, no throttle, no snapshot commits — intended for headless batch runs.
     /// Caller is responsible for flushing events after the loop via <see cref="PhaseRunner.FlushPendingEvents"/>.
     /// </summary>
-    public void RunSynchronous(int ticks)
+    /// <param name="ticks">Number of ticks to run.</param>
+    /// <param name="progress">
+    /// Optional callback invoked once per simulated year with (ticks completed, total ticks) —
+    /// long headless runs (10k+ years) are otherwise silent for the entire run, which makes a
+    /// hung or slow run indistinguishable from a healthy one. Reported once/year, not once/tick,
+    /// to keep overhead negligible at any run length.
+    /// </param>
+    public void RunSynchronous(int ticks, IProgress<(int TicksDone, int TotalTicks)>? progress = null)
     {
+        int ticksPerYear = _cfg.TicksPerYear;
         for (int i = 0; i < ticks; i++)
         {
             _phaseRunner.RunTick(_world);
             AdvanceTime();
+            if (progress is not null && ticksPerYear > 0 && (i + 1) % ticksPerYear == 0)
+                progress.Report((i + 1, ticks));
         }
     }
 

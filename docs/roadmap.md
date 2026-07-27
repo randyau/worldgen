@@ -250,9 +250,20 @@ see the index doc and its linked phase docs (`m10_phase0_pipeline_resume.md` /
 
 ## M11 — Scale & Distribution  *(summary)*
 
-- **Long-run performance:** profile and optimize 10k+ year runs (event volume, DB growth, snapshot cost); confirm the disk-as-record model holds at scale.
-- **Local-scale generation:** activate the `manifests.bin` border-manifest hook (DS-A2) for local/zoomed generation — the long-reserved M4-era capability.
-- **Distribution:** extend `publish-win.sh` to cross-platform packaging; onboarding/first-run for distributed builds.
+- **Long-run performance — phase 0 DONE (2026-07-27):** profiled a 10k-year baseline run (seed 42,
+  `-c Release`) and found a ~3x tick-rate slowdown over the run's lifetime, root-caused to
+  `EventStore.BuildSummaries()` being called on a hardcoded 50-year cadence regardless of whether
+  anything reads the summary tables — each call does a full `Events`-table rescan, so cumulative
+  cost scaled with total historical event count. Fixed via a config-driven
+  `SimLoopConfig.SummaryRebuildIntervalYears` (0 = disabled); the headless runner now disables
+  periodic rebuilds and does one at the end instead. Validated via a 3k-year re-run sustaining a
+  flat ~65 ticks/sec (vs. baseline's degrading 19 ticks/sec average). Disk-as-record model holds
+  fine at scale (531MB/1.7M events for 10k years, no issues). Also added periodic progress logging
+  to the headless runner (`SimLoop.RunSynchronous` + `SimLoopConfig.HeadlessProgressIntervalSeconds`)
+  since long runs were previously silent until complete. See
+  `docs/phases/archive/m11_phase0_longrun_performance.md`.
+- **Local-scale generation (not started):** activate the `manifests.bin` border-manifest hook (DS-A2) for local/zoomed generation — the long-reserved M4-era capability.
+- **Distribution (not started):** extend `publish-win.sh` to cross-platform packaging; onboarding/first-run for distributed builds.
 
 ---
 

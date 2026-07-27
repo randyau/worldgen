@@ -113,6 +113,8 @@ Edit values in `sim_config.toml`; all keys live there without recompiling.
 | `ultrafast_snapshot_interval_ticks` | `160` | `SimConfig.SimLoop.UltrafastSnapshotIntervalTicks` | push UI snapshot every N ticks in Ultrafast (160 = 10 years) |
 | `event_write_batch_interval_ticks` | `20` | `SimConfig.SimLoop.EventWriteBatchIntervalTicks` | batch event writes every N ticks; ~1 year at Normal speed; 0=every tick |
 | `metrics_enabled` | `true` | `SimConfig.SimLoop.MetricsEnabled` | false only for micro-benchmarks where DB writes must be minimized |
+| `headless_progress_interval_seconds` | `10.0` | `SimConfig.SimLoop.HeadlessProgressIntervalSeconds` | min wall-clock gap between headless-runner progress lines (M11 phase 0) |
+| `summary_rebuild_interval_years` | `50` | `SimConfig.SimLoop.SummaryRebuildIntervalYears` | years between auto BuildSummaries() rebuilds; 0=disabled (caller must call it). Headless runner sets 0 (M11 phase 0 perf fix). |
 
 ## `[events]` {#events}
 

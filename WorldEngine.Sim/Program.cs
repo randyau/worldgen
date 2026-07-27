@@ -52,6 +52,12 @@ logger.LogInformation("Headless runner — seed={Seed}, years={Years}, out={Out}
 SimConfigLoader.StrictMode = false; // headless runner: warn but don't throw on unbound keys
 var simConfig = SimConfigLoader.Load(configPath, profileName, overrides.Count > 0 ? overrides : null);
 
+// The periodic summary rebuild (CharacterSummaries/CivSummaries/causal edges/etc.) exists only
+// to keep CivHistoryPanel live during interactive play — this runner never calls GetHistoryQuery()
+// mid-run, so pay for it once at the end instead of on every 50-year boundary (M11 phase 0: this
+// was the dominant cost behind a ~3x tick-rate slowdown over a 10k-year run).
+simConfig.SimLoop.SummaryRebuildIntervalYears = 0;
+
 // ─── World gen ────────────────────────────────────────────────────────────────
 
 logger.LogInformation("Generating world...");
@@ -91,9 +97,26 @@ int totalTicks = years * simConfig.SimLoop.TicksPerYear;
 logger.LogInformation("Simulating {Years} years ({Ticks} ticks)...", years, totalTicks);
 
 var wallStart = DateTime.UtcNow;
-simLoop.RunSynchronous(totalTicks);
+var lastProgressLog = wallStart;
+simLoop.RunSynchronous(totalTicks, new Progress<(int TicksDone, int TotalTicks)>(p =>
+{
+    var now = DateTime.UtcNow;
+    if ((now - lastProgressLog).TotalSeconds < simConfig.SimLoop.HeadlessProgressIntervalSeconds) return;
+    lastProgressLog = now;
+
+    double elapsedSec  = (now - wallStart).TotalSeconds;
+    double rate        = elapsedSec > 0 ? p.TicksDone / elapsedSec : 0;
+    double etaSec       = rate > 0 ? (p.TotalTicks - p.TicksDone) / rate : 0;
+    int yearDone        = p.TicksDone / simConfig.SimLoop.TicksPerYear;
+    logger.LogInformation(
+        "  Progress: year {Year}/{Years} ({Pct:P0}) — {Rate:F0} ticks/sec, elapsed {Elapsed:F0}s, ETA {Eta:F0}s",
+        yearDone, years, (double)p.TicksDone / p.TotalTicks, rate, elapsedSec, etaSec);
+}));
 // Flush any batched events that haven't been written yet
 phaseRunner.FlushPendingEvents(world);
+// One rebuild at the end so the produced world.db has queryable summaries/causal edges for
+// post-run analysis, without paying the per-rebuild full-table-rescan cost 200 times during the run.
+eventStore.BuildSummaries();
 var wallEnd   = DateTime.UtcNow;
 
 // ─── Collect summary stats ────────────────────────────────────────────────────

@@ -108,6 +108,8 @@ ultrafast_snapshot_interval_ticks = 160  # push UI snapshot every N ticks in Ult
 event_write_batch_interval_ticks = 20    # batch event writes every N ticks; ~1 year at Normal speed; 0=every tick
 # Metrics: sample world health once per in-game year into yearly_metrics table (Phase A2)
 metrics_enabled              = true   # false only for micro-benchmarks where DB writes must be minimized
+headless_progress_interval_seconds = 10.0  # min wall-clock gap between headless-runner progress lines (M11 phase 0)
+summary_rebuild_interval_years = 50   # years between auto BuildSummaries() rebuilds; 0=disabled (caller must call it). Headless runner sets 0 (M11 phase 0 perf fix).
 
 # =============================================================================
 # EVENTS AND HISTORY
