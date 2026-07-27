@@ -20,7 +20,8 @@ public static class GoalManager
         GoalType.Dominance, GoalType.Alliance,
         GoalType.FoundCity, GoalType.BuildImprovement,
         GoalType.SlayBeast,
-        GoalType.CovetArtifact
+        GoalType.CovetArtifact,
+        GoalType.SeaVoyage
     ];
 
     // Salt for covet goal formation RNG — distinct from other decision salts
@@ -109,12 +110,13 @@ public static class GoalManager
                 && g.Type != GoalType.BuildImprovement // innerLifeLimit — building takes years
                 && g.Type != GoalType.Alliance         // innerLifeLimit — diplomacy takes years
                 && g.Type != GoalType.CovetArtifact   // innerLifeLimit — acquisition takes years
+                && g.Type != GoalType.SeaVoyage        // innerLifeLimit — a voyage can take more ticks than GoalStaleSeasonLimit
                 && currentTick - g.StaleSince > cfg.GoalStaleSeasonLimit
                 && g.Progress < 0.1f)
             || ((g.Type == GoalType.Bond || g.Type == GoalType.Create || g.Type == GoalType.FoundCity
                  || g.Type == GoalType.SlayBeast
                  || g.Type == GoalType.BuildImprovement || g.Type == GoalType.Alliance
-                 || g.Type == GoalType.CovetArtifact)
+                 || g.Type == GoalType.CovetArtifact || g.Type == GoalType.SeaVoyage)
                 && currentTick - g.StaleSince > innerLifeLimit
                 && g.Progress < 0.1f)).ToList();
 

@@ -180,6 +180,11 @@ public enum EventType
     EmissaryLost                = 5002,  // emissary did not survive the journey
     ReligiousEmissaryArrived    = 5003,  // successful religious mission; awe seeds planted
     CivIntelGathered            = 5004,  // spy emissary returned with intelligence
+
+    // M11 — sea voyage events (5100-range)
+    SeaVoyageEmbarked           = 5101,  // character departed a Port on a sea voyage
+    SeaVoyageCompleted          = 5102,  // character reached the far shore
+    // V2: SeaVoyageLost = 5103 — weather/sea-monster failure hook, not built yet
 }
 
 public static class VerbClassification
@@ -264,6 +269,9 @@ public static class VerbClassification
         EventType.EmissaryLost             => VerbClass.Destruction,
         EventType.ReligiousEmissaryArrived => VerbClass.Interaction,
         EventType.CivIntelGathered         => VerbClass.Interaction,
+
+        EventType.SeaVoyageEmbarked        => VerbClass.Transformation,
+        EventType.SeaVoyageCompleted       => VerbClass.Transformation,
         _ => throw new ArgumentOutOfRangeException(nameof(type), type, "No VerbClass mapping")
     };
 }

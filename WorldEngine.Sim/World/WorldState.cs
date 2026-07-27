@@ -177,19 +177,86 @@ public sealed class WorldState : IWorldStateReadOnly
     // TileStaticFlags bit baked in during worldgen. Land/ocean assignment never changes after
     // worldgen (see WorldState.IsLand's own basis), so there's no staleness risk, and this keeps
     // M11 sea-voyage logic from needing a worldgen-layer change just to classify tiles.
+    //
+    // DECISION (found while building the 11.1 route search): strict 1-tile adjacency only
+    // classifies the immediate coastal fringe as shallow, which makes any strait wider than ~2
+    // tiles unbridgeable regardless of MaxVoyageTiles (the BFS can only step onto shallow tiles,
+    // and a strait's middle tiles aren't adjacent to either shore). Widened to a small radius so
+    // real narrow-strait crossings (a handful of tiles) are actually reachable, while a radius
+    // this small still excludes open ocean far from any coast — the whole point of the
+    // classification. Not config-exposed: this is a geometric definition of "shallow," not a
+    // gameplay tuning knob (same treatment as the fixed 1-tile IsCoastal adjacency elsewhere).
+    private const int ShallowOceanRadius = 2;
+
     public bool IsShallowOcean(TileCoord coord)
     {
         if (IsLand(coord)) return false;
         int w = TileGrid.TileWidth, h = TileGrid.TileHeight;
-        int[] dx = { -1, 1, 0, 0 };
-        int[] dy = { 0, 0, -1, 1 };
-        for (int i = 0; i < 4; i++)
+        for (int dy = -ShallowOceanRadius; dy <= ShallowOceanRadius; dy++)
         {
-            int nx = ((coord.X + dx[i]) % w + w) % w;
-            int ny = Math.Clamp(coord.Y + dy[i], 0, h - 1);
-            if (IsLand(new TileCoord(nx, ny))) return true;
+            int ny = Math.Clamp(coord.Y + dy, 0, h - 1);
+            for (int dx = -ShallowOceanRadius; dx <= ShallowOceanRadius; dx++)
+            {
+                if (dx == 0 && dy == 0) continue;
+                int nx = ((coord.X + dx) % w + w) % w;
+                if (IsLand(new TileCoord(nx, ny))) return true;
+            }
         }
         return false;
+    }
+
+    // Lazy, computed once and cached — land/ocean assignment is fixed after worldgen (see IsLand),
+    // so a landmass ID never goes stale. Used by M11 sea-voyage route search to tell "still my
+    // landmass" apart from "a genuine far shore reached across water."
+    private int[]? _landmassIds;
+
+    public int GetLandmassId(TileCoord coord)
+    {
+        EnsureLandmassIds();
+        int w = TileGrid.TileWidth;
+        int x = ((coord.X % w) + w) % w;
+        int y = Math.Clamp(coord.Y, 0, TileGrid.TileHeight - 1);
+        return _landmassIds![y * w + x];
+    }
+
+    private void EnsureLandmassIds()
+    {
+        if (_landmassIds != null) return;
+        int w = TileGrid.TileWidth, h = TileGrid.TileHeight;
+        var ids = new int[w * h];
+        Array.Fill(ids, -1);
+        int[] dx = { -1, 1, 0, 0 };
+        int[] dy = { 0, 0, -1, 1 };
+        int nextId = 0;
+        var queue = new Queue<TileCoord>();
+
+        for (int y = 0; y < h; y++)
+        for (int x = 0; x < w; x++)
+        {
+            int startIdx = y * w + x;
+            if (ids[startIdx] != -1) continue;
+            var start = new TileCoord(x, y);
+            if (!IsLand(start)) continue;
+
+            ids[startIdx] = nextId;
+            queue.Enqueue(start);
+            while (queue.Count > 0)
+            {
+                var cur = queue.Dequeue();
+                for (int i = 0; i < 4; i++)
+                {
+                    int nx = ((cur.X + dx[i]) % w + w) % w;
+                    int ny = Math.Clamp(cur.Y + dy[i], 0, h - 1);
+                    int nIdx = ny * w + nx;
+                    if (ids[nIdx] != -1) continue;
+                    if (!IsLand(new TileCoord(nx, ny))) continue;
+                    ids[nIdx] = nextId;
+                    queue.Enqueue(new TileCoord(nx, ny));
+                }
+            }
+            nextId++;
+        }
+        _landmassIds = ids;
     }
 
     public IEnumerable<TileCoord> GetTilesInRadius(TileCoord center, int radius)

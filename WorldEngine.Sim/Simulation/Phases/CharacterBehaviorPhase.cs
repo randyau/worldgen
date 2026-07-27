@@ -592,7 +592,7 @@ public sealed class CharacterBehaviorPhase
         switch (cmd)
         {
             case MoveToTile move:
-                ResolveMove(c, move.Destination, world);
+                ResolveMoveWithVoyageTracking(c, move.Destination, world, pending);
                 break;
             case Rest:
                 ResolveRest(c);
@@ -619,6 +619,40 @@ public sealed class CharacterBehaviorPhase
         world.Entities.UpdateLocation(c.Id, c.Location, dest);
         c.Location = dest;
         c.TicksInCurrentTile = 0;
+    }
+
+    // M11 — wraps ResolveMove to detect a SeaVoyage goal crossing the land/water boundary and
+    // emit SeaVoyageEmbarked/Completed. No new ICommand: MoveToTile already carries everything
+    // resolution needs, and "did this move cross water" is fully determined by comparing
+    // old/new tile land status, not something the emitting (EMIT-step) code needs to flag.
+    private static void ResolveMoveWithVoyageTracking(
+        Tier1Character c, TileCoord dest, WorldState world, List<PendingEvent> pending)
+    {
+        var voyageGoal = c.Goals.FirstOrDefault(g => g.Type == GoalType.SeaVoyage && !g.IsComplete);
+        bool oldWasLand = world.IsLand(c.Location);
+
+        ResolveMove(c, dest, world);
+
+        if (voyageGoal == null) return;
+        bool newIsLand = world.IsLand(dest);
+
+        if (oldWasLand && !newIsLand)
+        {
+            var payload = JsonSerializer.Serialize(new SeaVoyagePayload(
+                c.Id.Value, c.Identity.Name, c.Identity.CivId.Value, dest.X, dest.Y));
+            pending.Add(new PendingEvent(EventType.SeaVoyageEmbarked, dest, null, payload,
+                new[] { c.Id.Value },
+                ActorId: c.Id.Value, ActorName: c.Identity.Name, CivId: c.Identity.CivId.Value));
+        }
+        else if (!oldWasLand && newIsLand)
+        {
+            voyageGoal.IsComplete = true;
+            var payload = JsonSerializer.Serialize(new SeaVoyagePayload(
+                c.Id.Value, c.Identity.Name, c.Identity.CivId.Value, dest.X, dest.Y));
+            pending.Add(new PendingEvent(EventType.SeaVoyageCompleted, dest, null, payload,
+                new[] { c.Id.Value },
+                ActorId: c.Id.Value, ActorName: c.Identity.Name, CivId: c.Identity.CivId.Value));
+        }
     }
 
     private static void ResolveRest(Tier1Character c)

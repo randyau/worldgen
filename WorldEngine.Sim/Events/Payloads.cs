@@ -218,6 +218,12 @@ internal sealed record ReligionFoundedPayload(
     int    Year,
     int    TileX, int TileY);
 
+// ─── M11 — sea voyages ─────────────────────────────────────────────────────
+
+internal sealed record SeaVoyagePayload(
+    long CharacterId, string CharacterName, long CivId,
+    int TileX, int TileY);
+
 // ─── S2 Splinter / Secession ─────────────────────────────────────────────────
 
 /// <summary>

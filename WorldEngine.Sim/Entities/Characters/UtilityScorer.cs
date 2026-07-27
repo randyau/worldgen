@@ -343,6 +343,21 @@ public sealed class UtilityScorer
             }
         }
 
+        // SeaVoyage — step toward the goal's TargetTile (a far-shore coastal tile precomputed by
+        // whoever seeded the goal — see FindVoyageDestination), allowed to cross shallow-ocean
+        // tiles unlike every other move. Disabled entirely when the config toggle is off.
+        if (world.SimConfig.Seafaring.OceanCrossingEnabled)
+        {
+            var voyageGoal = c.Goals.FirstOrDefault(g => g.Type == GoalType.SeaVoyage && !g.IsComplete && g.TargetTile.HasValue);
+            if (voyageGoal != null && c.Location != voyageGoal.TargetTile!.Value)
+            {
+                var step = StepTowardAllowingShallowOcean(c.Location, voyageGoal.TargetTile.Value, world);
+                if (step.HasValue)
+                    actions.Add(new(new MoveToTile(c.Id, step.Value),
+                        Score(c, ActionType.SeaVoyage, c.Personality.Ambition, world, cfg)));
+            }
+        }
+
         // FleeRegion — available when character has a Flee goal and Wellbeing < 0
         var fleeGoal = c.Goals.FirstOrDefault(g => g.Type == GoalType.Flee);
         if (fleeGoal != null && c.Wellbeing < 0f)
@@ -359,7 +374,7 @@ public sealed class UtilityScorer
     // DECISION: ActionType is a private enum keeping the same integer indices as before.
     // UtilityAffinityTables.TryParseAction maps TOML names to these integer indices directly,
     // so adding a new ActionType requires updating both here and in TryParseAction.
-    private enum ActionType { Rest, Travel, Establish, Ally, Negotiate, Rivalry, War, Raid, Create, Flee, BuildImprovement, FoundCity, HuntBeast }
+    private enum ActionType { Rest, Travel, Establish, Ally, Negotiate, Rivalry, War, Raid, Create, Flee, BuildImprovement, FoundCity, HuntBeast, SeaVoyage }
 
     // covet→conflict seam: GoalAdvancement already boosts War/Raid actions when a character has
     // a CovetArtifact goal, because GoalAffinity[CovetArtifact, War] and [CovetArtifact, Raid]
@@ -472,6 +487,7 @@ public sealed class UtilityScorer
         ActionType.BuildImprovement => c.Aptitude.Diligence,
         ActionType.FoundCity        => c.Personality.Ambition * 0.9f,
         ActionType.HuntBeast        => c.Personality.Aggression * 0.7f + c.Skills.Combat * 0.3f,
+        ActionType.SeaVoyage        => c.Personality.Ambition * 0.9f, // same flavor as FoundCity — ruler-delegated expansion
         _                           => 0.2f
     };
 
@@ -618,6 +634,106 @@ public sealed class UtilityScorer
             if (distSq < bestDistSq) { bestDistSq = distSq; best = cand; }
         }
         return best;
+    }
+
+    // ─── M11 — sea voyages ──────────────────────────────────────────────────────
+
+    // DECISION: greedy nearest-neighbor stepping (same shape as StepToward), not a stored
+    // parent-pointer path from the BFS in FindVoyageDestination. FindVoyageDestination already
+    // proved a route exists within MaxVoyageTiles; per-tick movement just needs "closer to the
+    // target," same as every other goal-directed move in this file. This can walk into a
+    // dead-end inlet on a very convoluted coastline — acceptable for a first pass, matching the
+    // existing StepToward's lack of real obstacle avoidance.
+    private static TileCoord? StepTowardAllowingShallowOcean(TileCoord from, TileCoord to, IWorldStateReadOnly world)
+    {
+        int w = world.Config.TileWidth, h = world.Config.TileHeight;
+        int[] dx = { -1, 1, 0, 0 };
+        int[] dy = { 0, 0, -1, 1 };
+        TileCoord? best = null;
+        int bestDistSq = int.MaxValue;
+        for (int i = 0; i < 4; i++)
+        {
+            int nx = ((from.X + dx[i]) % w + w) % w;
+            int ny = Math.Clamp(from.Y + dy[i], 0, h - 1);
+            var cand = new TileCoord(nx, ny);
+            if (!world.IsLand(cand) && !world.IsShallowOcean(cand)) continue;
+            int ddx = cand.X - to.X, ddy = cand.Y - to.Y;
+            int distSq = ddx * ddx + ddy * ddy;
+            if (distSq < bestDistSq) { bestDistSq = distSq; best = cand; }
+        }
+        return best;
+    }
+
+    /// <summary>
+    /// BFS over shallow-ocean tiles (bounded by <see cref="SeafaringConfig.MaxVoyageTiles"/>) from
+    /// a departure tile to the nearest coastal land tile on a different landmass. Returns null if
+    /// no far shore is reachable within range. Cached per origin, invalidated the same way
+    /// <see cref="_routeCache"/> is (settlement-count change — new Ports/settlements change what's
+    /// reachable enough to be worth re-deriving).
+    /// </summary>
+    private readonly Dictionary<TileCoord, TileCoord?> _voyageDestCache = new();
+
+    public TileCoord? FindVoyageDestination(TileCoord origin, IWorldStateReadOnly world)
+    {
+        SyncCaches(world);
+        if (_voyageDestCache.TryGetValue(origin, out var cached)) return cached;
+
+        int maxTiles = world.SimConfig.Seafaring.MaxVoyageTiles;
+        int originLandmass = world.GetLandmassId(origin);
+        int w = world.Config.TileWidth, h = world.Config.TileHeight;
+        int[] dx = { -1, 1, 0, 0 };
+        int[] dy = { 0, 0, -1, 1 };
+
+        var visited = new HashSet<TileCoord> { origin };
+        var queue = new Queue<(TileCoord Coord, int Dist)>();
+
+        TileCoord? FindLandNeighbor(TileCoord from)
+        {
+            for (int i = 0; i < 4; i++)
+            {
+                int nx = ((from.X + dx[i]) % w + w) % w;
+                int ny = Math.Clamp(from.Y + dy[i], 0, h - 1);
+                var cand = new TileCoord(nx, ny);
+                if (world.IsLand(cand) && world.GetLandmassId(cand) != originLandmass)
+                    return cand;
+            }
+            return null;
+        }
+
+        // Seed with origin's own shallow-ocean neighbors (origin itself is land — a Port tile —
+        // so it's never enqueued as a search node).
+        for (int i = 0; i < 4; i++)
+        {
+            int nx = ((origin.X + dx[i]) % w + w) % w;
+            int ny = Math.Clamp(origin.Y + dy[i], 0, h - 1);
+            var cand = new TileCoord(nx, ny);
+            if (!world.IsShallowOcean(cand) || !visited.Add(cand)) continue;
+            queue.Enqueue((cand, 1));
+        }
+
+        while (queue.Count > 0)
+        {
+            var (cur, dist) = queue.Dequeue();
+            var landHit = FindLandNeighbor(cur);
+            if (landHit.HasValue)
+            {
+                _voyageDestCache[origin] = landHit;
+                return landHit;
+            }
+            if (dist >= maxTiles) continue;
+
+            for (int i = 0; i < 4; i++)
+            {
+                int nx = ((cur.X + dx[i]) % w + w) % w;
+                int ny = Math.Clamp(cur.Y + dy[i], 0, h - 1);
+                var cand = new TileCoord(nx, ny);
+                if (!world.IsShallowOcean(cand) || !visited.Add(cand)) continue;
+                queue.Enqueue((cand, dist + 1));
+            }
+        }
+
+        _voyageDestCache[origin] = null;
+        return null;
     }
 
     // ─── Ruin penalty ─────────────────────────────────────────────────────────

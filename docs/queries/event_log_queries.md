@@ -72,6 +72,7 @@ The `Type` column stores integer values. Use these constants in WHERE clauses:
 -- Emissary/Diplomatic (5000–5999)
   5001 = EmissaryDispatched          5002 = EmissaryLost              
   5003 = ReligiousEmissaryArrived    5004 = CivIntelGathered          
+  5101 = SeaVoyageEmbarked           5102 = SeaVoyageCompleted        
 
 -- VerbClass integers
 0 = Creation    1 = Destruction    2 = Transformation    3 = Transfer    4 = Conflict    5 = Maintenance    6 = Interaction

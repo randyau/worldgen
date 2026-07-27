@@ -46,13 +46,12 @@ public class SeafaringTests
     {
         var world = BuildWorld();
         var center = new TileCoord(5, 5);
-        SetTile(world, center, BiomeType.Ocean);
-        SetTile(world, new TileCoord(4, 5), BiomeType.Ocean);
-        SetTile(world, new TileCoord(6, 5), BiomeType.Ocean);
-        SetTile(world, new TileCoord(5, 4), BiomeType.Ocean);
-        SetTile(world, new TileCoord(5, 6), BiomeType.Ocean);
+        // Clear the full radius-2 neighborhood to ocean so no land is within classification range.
+        for (int dy = -2; dy <= 2; dy++)
+        for (int dx = -2; dx <= 2; dx++)
+            SetTile(world, new TileCoord(5 + dx, 5 + dy), BiomeType.Ocean);
 
-        world.IsShallowOcean(center).Should().BeFalse("no neighbor is land");
+        world.IsShallowOcean(center).Should().BeFalse("no land tile is within the shallow-ocean radius");
     }
 
     [Fact]

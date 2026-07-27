@@ -1,8 +1,36 @@
 # M11 Phase 11.1 — Voyage command & resolution
 
-**Status:** NOT STARTED.
+**Status:** DONE — 2026-07-27 (build+test verified).
 **Milestone:** M11 — Character Water Crossings (`docs/phases/m11_water_crossings.md`)
 **Depends on:** 11.0 (`Port` improvement, `SeafaringConfig`, `IsShallowOcean`)
+
+## What shipped
+
+`GoalType.SeaVoyage`. `WorldState.GetLandmassId` (new, not originally scoped for 11.0 — needed to
+tell "still my landmass" apart from a genuine far shore; lazy flood-fill, cached, added to
+`IWorldStateReadOnly`). `UtilityScorer.FindVoyageDestination` (public): BFS over
+`IsShallowOcean` tiles bounded by `SeafaringConfig.MaxVoyageTiles`, returns the nearest
+different-landmass coastal tile or null; cached per origin. `UtilityScorer.StepTowardAllowingShallowOcean`
++ a `BuildCandidates` branch scoring `ActionType.SeaVoyage` (gated on
+`SeafaringConfig.OceanCrossingEnabled`). `CharacterBehaviorPhase.ResolveMoveWithVoyageTracking`
+wraps `ResolveMove` (approach (b) from this doc — no new `ICommand`): detects the land/water
+boundary crossing and emits `EventType.SeaVoyageEmbarked`/`SeaVoyageCompleted`, marking the goal
+complete on arrival. `GoalManager` exempts `SeaVoyage` from the short staleness-prune window
+(same "travel takes years" treatment as `FoundCity`/`SlayBeast`) and adds it to `NotableGoalTypes`.
+New `[utility_affinity]` TOML entries so a `SeaVoyage` goal actually outweighs ordinary `Travel`.
+
+**Correction made during this phase:** `IsShallowOcean` (11.0) as strict 1-tile land-adjacency
+only classified the immediate coastal fringe, making any strait wider than ~2 tiles unbridgeable
+regardless of `MaxVoyageTiles` — a real strait's middle tiles touch neither shore. Widened to a
+radius-2 neighborhood (`WorldState.ShallowOceanRadius`, not config-exposed — a geometric
+definition, not a tuning knob). See the `// DECISION:` comment on `IsShallowOcean` in
+`WorldState.cs`.
+
+Tests: `WorldEngine.Tests/Integration/SeaVoyageTests.cs` (6 tests, on a fully synthetic hand-built
+world — real worldgen output can't guarantee two hand-picked tiles are genuinely separate
+landmasses) — route found across a narrow strait, route null beyond `MaxVoyageTiles`, route null
+with no second landmass, full multi-tick crossing with both events firing and goal completion,
+crossing never happens with the config toggle off, same-seed reproducibility.
 
 ## Goal
 

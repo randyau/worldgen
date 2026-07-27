@@ -556,6 +556,7 @@ _Natural shelter recovery per tick when NOT on a settlement tile, by biome. Dens
 | Key | Value | C# Property | Description |
 |-----|-------|-------------|-------------|
 | `ocean_crossing_enabled` | `true` | `SimConfig.Seafaring.OceanCrossingEnabled` | master toggle for M11 sea voyages; false = characters never leave their landmass |
+| `max_voyage_tiles` | `12` | `SimConfig.Seafaring.MaxVoyageTiles` | max shallow-ocean tiles a route may cross to the far shore |
 
 ## `[settlement_names]` {#settlement-names}
 
@@ -688,6 +689,7 @@ _Natural shelter recovery per tick when NOT on a settlement tile, by biome. Dens
 | `build_improvement` | `{ build_improvement = 1.0, rest = 0.3 }` | `SimConfig.UtilityAffinity.GoalAffinity.BuildImprovement` | BuildImprovement goal: build directly; rest also advances (staying put counts as progress) |
 | `found_city` | `{ found_city = 1.0, travel = 0.8 }` | `SimConfig.UtilityAffinity.GoalAffinity.FoundCity` | FoundCity goal: founding directly; travel to find a good site |
 | `slay_beast` | `{ hunt_beast = 1.0, travel = 0.3 }` | `SimConfig.UtilityAffinity.GoalAffinity.SlayBeast` |  |
+| `sea_voyage` | `{ sea_voyage = 1.0, travel = 0.3 }` | `SimConfig.UtilityAffinity.GoalAffinity.SeaVoyage` | SeaVoyage goal (M11): sea_voyage is the direct move-across-water action; ordinary travel is a weaker fallback for the (rare) case where the voyage step happens to also be a land move. |
 
 ## `[utility_affinity.action_needs]` {#utility-affinityaction-needs}
 
@@ -704,6 +706,7 @@ _Natural shelter recovery per tick when NOT on a settlement tile, by biome. Dens
 | `build_improvement` | `{ purpose = 0.50, status = 0.20, _default = 0.0 }` | `SimConfig.UtilityAffinity.ActionNeeds.BuildImprovement` | BuildImprovement: purpose-driven with a status bonus (craftwork has social recognition) |
 | `found_city` | `{ shelter = 0.50, status = 0.50, _default = 0.0 }` | `SimConfig.UtilityAffinity.ActionNeeds.FoundCity` | FoundCity: shelter + status (city-founding is the ultimate expression of both) |
 | `hunt_beast` | `{ purpose = 0.40, status = 0.30, _default = 0.1 }` | `SimConfig.UtilityAffinity.ActionNeeds.HuntBeast` |  |
+| `sea_voyage` | `{ purpose = 0.50, status = 0.50, _default = 0.0 }` | `SimConfig.UtilityAffinity.ActionNeeds.SeaVoyage` | SeaVoyage: purpose + status, same flavor as FoundCity (a civ-level expansion act) |
 | `create` | `{ _default = 0.1 }` | `SimConfig.UtilityAffinity.ActionNeeds.Create` | create, flee: no need-based score — rely on goal advancement and personality only _default = 0.1 matches the original _ => 0.1f fallback for all unlisted actions |
 | `flee` | `{ _default = 0.1 }` | `SimConfig.UtilityAffinity.ActionNeeds.Flee` |  |
 

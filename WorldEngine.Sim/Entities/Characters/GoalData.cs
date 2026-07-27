@@ -39,6 +39,9 @@ public enum GoalType
 
     // M5 Artifacts
     CovetArtifact,     // desire a high-quality artifact not currently owned by the character
+
+    // M11 — character water crossings
+    SeaVoyage,         // ruler-delegated: cross open water via a Port to a far-shore TargetTile
 }
 
 public enum GoalObject

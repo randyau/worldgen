@@ -748,6 +748,7 @@ improvement_build_ticks   = 8    # ticks character must remain on tile to build 
 
 [seafaring]
 ocean_crossing_enabled = true  # master toggle for M11 sea voyages; false = characters never leave their landmass
+max_voyage_tiles       = 12    # max shallow-ocean tiles a route may cross to the far shore
 
 [settlement_names]
 prefixes = [
@@ -989,6 +990,9 @@ build_improvement = { build_improvement = 1.0, rest = 0.3 }
 # FoundCity goal: founding directly; travel to find a good site
 found_city      = { found_city = 1.0, travel = 0.8 }
 slay_beast      = { hunt_beast = 1.0, travel = 0.3 }
+# SeaVoyage goal (M11): sea_voyage is the direct move-across-water action; ordinary travel is a
+# weaker fallback for the (rare) case where the voyage step happens to also be a land move.
+sea_voyage      = { sea_voyage = 1.0, travel = 0.3 }
 # Goals with no affinity entries (security, unify, found_religion) default to 0.0 for all actions.
 
 [utility_affinity.action_needs]
@@ -1015,6 +1019,8 @@ build_improvement = { purpose = 0.50, status = 0.20, _default = 0.0 }
 # FoundCity: shelter + status (city-founding is the ultimate expression of both)
 found_city       = { shelter = 0.50, status = 0.50, _default = 0.0 }
 hunt_beast       = { purpose = 0.40, status = 0.30, _default = 0.1 }
+# SeaVoyage: purpose + status, same flavor as FoundCity (a civ-level expansion act)
+sea_voyage       = { purpose = 0.50, status = 0.50, _default = 0.0 }
 # create, flee: no need-based score — rely on goal advancement and personality only
 # _default = 0.1 matches the original _ => 0.1f fallback for all unlisted actions
 create           = { _default = 0.1 }

@@ -27,6 +27,9 @@ public interface IWorldStateReadOnly
     /// <summary>True for an Ocean/CoastalWater tile with at least one land neighbor — the walkable
     /// set for M11 sea voyages. Open ocean with no nearby land is never shallow.</summary>
     bool IsShallowOcean(TileCoord coord);
+    /// <summary>Connected-component id for a land tile (flood-filled once, cached); -1 for water.
+    /// Two land tiles share an id iff there is an all-land path between them.</summary>
+    int GetLandmassId(TileCoord coord);
     IEnumerable<TileCoord> GetTilesInRadius(TileCoord center, int radius);
 
     // === WORLD CONFIG ===
