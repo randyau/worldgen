@@ -262,7 +262,13 @@ see the index doc and its linked phase docs (`m10_phase0_pipeline_resume.md` /
   to the headless runner (`SimLoop.RunSynchronous` + `SimLoopConfig.HeadlessProgressIntervalSeconds`)
   since long runs were previously silent until complete. See
   `docs/phases/archive/m11_phase0_longrun_performance.md`.
-- **Local-scale generation (not started):** activate the `manifests.bin` border-manifest hook (DS-A2) for local/zoomed generation — the long-reserved M4-era capability.
+- **Local-scale generation (planned, not started):** full phase sequence (11.1–11.8) scoped in
+  `docs/phases/m11_local_scale_generation.md` — this turned out to be a from-scratch subsystem,
+  not an "activation": the `manifests.bin` hook (DS-A2) is currently vestigial (never wired into
+  the real pipeline, `LoadFromFile` throws), and the River layer doesn't carry the per-edge
+  crossing data the manifest format assumes. Scoped as chunked/lazy (Minecraft-style) generation
+  with a sparse persisted delta overlay for permanent modifications, shaped as a foundation for
+  future local-scale character interaction (not implemented in this sequence).
 - **Distribution (not started):** extend `publish-win.sh` to cross-platform packaging; onboarding/first-run for distributed builds.
 
 ---
