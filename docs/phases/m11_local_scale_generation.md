@@ -39,7 +39,33 @@
   (1000, i.e. 10km/10m) evenly into 25 chunks per world-tile edge, so chunk coordinates roll over
   cleanly at world-tile boundaries) and `LocalGenConfig.LocalTilesPerWorldTileEdge`
   (`local_gen.chunk_size_tiles`/`local_gen.local_tiles_per_world_tile_edge` in `sim_config.toml`).
-- **11.3–11.8 — not started.**
+- **11.3 — COMPLETE (2026-07-28).** New `LocalTerrainAmplifier.Amplify` (`WorldEngine.Sim/WorldGen/`)
+  is the real (non-placeholder) local-chunk generator: a pure function of `(worldSeed, ChunkCoord,
+  parent TileData, parent BorderManifest, LocalGenConfig)`. Elevation = a macro component blended
+  from the parent tile's own byte value toward the shared `BorderManifest` edge sample within
+  `EdgeBlendBandTiles` local tiles of a world-tile edge, plus FastNoiseLite (`OpenSimplex2`, FBm)
+  detail sampled at the cell's *absolute* local-tile coordinate (`LocalCoordMath.ToAbsolute`) so the
+  detail layer is automatically continuous — same seed + same absolute coordinate always produces
+  the same noise value, regardless of which chunk/tile is doing the generating, no explicit
+  blending needed for that term. The macro blend picks whichever axis (X vs Y) has the larger blend
+  weight, ties going to X; since the weight on a shared world-tile edge is always exactly 1.0, this
+  makes the entire East/West boundary column resolve to the identical (by construction, per
+  `BorderManifestBuilder`) manifest sample on both adjacent tiles — proven exactly by
+  `LocalTerrainAmplifierTests.Amplify_EastWestBoundary_IsContinuousAcrossWorldTiles` (the centerpiece
+  continuity test). The North/South boundary is continuous everywhere except its two extreme corner
+  columns, which are also on an East/West boundary shared with a third, diagonal tile — an inherent
+  ambiguity when only two adjacent manifests exist to blend from (not solved here; documented as a
+  known limitation in code and covered by `Amplify_NorthSouthBoundary_IsContinuousAwayFromCorners`,
+  which checks the non-corner interior of that boundary). `LocalTileGenerator.GenerateFlat` (11.2)
+  is untouched and still available as a cheap placeholder; `LocalTerrainAmplifier.Amplify` is the
+  generator later phases (11.7's UI) should call. New config:
+  `LocalGenConfig.EdgeBlendBandTiles`/`NoiseFrequency`/`NoiseOctaves`/`NoiseAmplitude`
+  (`local_gen.edge_blend_band_tiles`/`noise_frequency`/`noise_octaves`/`noise_amplitude` in
+  `sim_config.toml`). New `LayerSeeds.LocalTerrain` salt. `DECISION:` moisture amplification is
+  deferred — `LocalTileData` (11.2) has no moisture field and nothing downstream consumes one yet,
+  so only elevation is amplified this phase; `BiomeType` remains inherited verbatim from the parent
+  tile, same as the 11.2 placeholder.
+- **11.4–11.8 — not started.**
 
 ## Problem statement
 

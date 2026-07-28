@@ -202,6 +202,10 @@ arid_moisture           = 30    # byte moisture below which tile is "arid" (dese
 chunk_size_tiles               = 40    # Local tiles per chunk edge (chunk = 40x40 cells)
 local_tiles_per_world_tile_edge = 1000 # 10km world tile / 10m local tile = 1000; must divide
                                         # evenly by chunk_size_tiles so chunks tile a world tile exactly
+edge_blend_band_tiles = 100  # width (local tiles) of the blend-toward-manifest band at each world-tile edge
+noise_frequency       = 0.05 # FastNoiseLite frequency for local elevation detail, sampled in absolute local-tile coords
+noise_octaves         = 3    # fractal octaves for local elevation detail noise
+noise_amplitude       = 6.0  # max +/- byte contribution the detail noise adds atop the blended macro elevation
 
 # =============================================================================
 # CLIMATE (runtime parameters for ClimateLayer + seasonal sim)

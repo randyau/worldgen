@@ -15,4 +15,20 @@ public class LocalGenConfig
 
     /// <summary>Chunks per world-tile edge, derived from the two values above.</summary>
     public int ChunksPerWorldTileEdge => LocalTilesPerWorldTileEdge / ChunkSizeTiles;
+
+    /// <summary>
+    /// Width, in local tiles, of the band next to each world-tile edge over which elevation blends
+    /// from this tile's own byte value toward the shared BorderManifest edge sample. Must be less
+    /// than LocalTilesPerWorldTileEdge / 2 (bands from opposite edges must not overlap).
+    /// </summary>
+    public int EdgeBlendBandTiles { get; set; } = 100;
+
+    /// <summary>FastNoiseLite frequency for local elevation detail noise, sampled in absolute local-tile coordinates.</summary>
+    public float NoiseFrequency { get; set; } = 0.05f;
+
+    /// <summary>Fractal octaves for local elevation detail noise.</summary>
+    public int NoiseOctaves { get; set; } = 3;
+
+    /// <summary>Max +/- byte contribution the detail noise adds on top of the blended macro elevation.</summary>
+    public float NoiseAmplitude { get; set; } = 6f;
 }

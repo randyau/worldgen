@@ -172,6 +172,10 @@ Edit values in `sim_config.toml`; all keys live there without recompiling.
 |-----|-------|-------------|-------------|
 | `chunk_size_tiles` | `40` | `SimConfig.LocalGen.ChunkSizeTiles` | Local tiles per chunk edge (chunk = 40x40 cells) |
 | `local_tiles_per_world_tile_edge` | `1000` | `SimConfig.LocalGen.LocalTilesPerWorldTileEdge` | 10km world tile / 10m local tile = 1000; must divide |
+| `edge_blend_band_tiles` | `100` | `SimConfig.LocalGen.EdgeBlendBandTiles` | width (local tiles) of the blend-toward-manifest band at each world-tile edge |
+| `noise_frequency` | `0.05` | `SimConfig.LocalGen.NoiseFrequency` | FastNoiseLite frequency for local elevation detail, sampled in absolute local-tile coords |
+| `noise_octaves` | `3` | `SimConfig.LocalGen.NoiseOctaves` | fractal octaves for local elevation detail noise |
+| `noise_amplitude` | `6.0` | `SimConfig.LocalGen.NoiseAmplitude` | max +/- byte contribution the detail noise adds atop the blended macro elevation |
 
 ## `[climate]` {#climate}
 
