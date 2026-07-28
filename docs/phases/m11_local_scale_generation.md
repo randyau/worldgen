@@ -90,7 +90,29 @@
   (`local_gen.river_channel_depth`/`river_source_width_tiles` in `sim_config.toml`).
   `LocalTerrainAmplifier.Amplify` is untouched; `Thread` is meant to run on its output as a second
   pass (not fused into `Amplify`), same relationship 11.2's `GenerateFlat` has to 11.3's `Amplify`.
-- **11.5–11.8 — not started.**
+- **11.5 — COMPLETE (2026-07-28).** New `LocalTileDelta(ChunkCoord, LocalTileCoord, LocalChangeType,
+  PayloadJson)` (`Tiles/LocalScale/`) is the sparse per-cell overlay: `LocalChangeType` starts with
+  a single `CellOverride` value and `LocalTileDeltaPayload` (Elevation/BiomeType/DecorationType/
+  Flags, all nullable) is its JSON payload shape, matching the `PendingEvent`/`SimEvent`
+  typed-payload-as-JSON-string pattern per the phase doc's own scoping note. Persistence: new
+  `LocalTileDeltas` table in `world.db` (`DatabaseSchema.CreateLocalTileDeltas`), keyed by
+  `(WorldTile, Chunk, Local)`; `EventStore.WriteLocalTileDelta` is `INSERT OR REPLACE` (one row per
+  modified cell, never a growing log — a second write to the same cell replaces the first) and
+  `EventStore.LoadLocalTileDeltas(ChunkCoord)` reads them back for a chunk. `ModifyLocalTile`
+  (new `ICommand` in `Commands/PlayerCommands.cs`) is the minimal test/debug command that proves
+  the pipeline end-to-end, as scoped ("no real gameplay command produces deltas yet") — resolved in
+  `SimLoop.ApplyCommand` via a new `PhaseRunner.WriteLocalTileDelta` passthrough to `EventStore`
+  (`SimLoop` has no direct `EventStore` reference, same reason `FlushPendingEvents` lives on
+  `PhaseRunner`). `LocalTileDeltaApplier.Apply` (`WorldGen/`) is the fourth and final post-process
+  pass — after `LocalTerrainAmplifier.Amplify` (11.3) and `LocalRiverThreader.Thread` (11.4) — so a
+  player-caused modification always wins over freshly-regenerated base terrain; it applies only the
+  non-null fields in each delta's payload, leaving everything else on the cell untouched.
+  `ModifyLocalTileCommandTests` proves the full round trip: command enqueued → `SimLoop` resolves it
+  → row lands in `world.db` → `LoadLocalTileDeltas` + `Apply` reproduce the override on a chunk
+  regenerated from scratch, mirroring `SpotlightCommandTests`' pattern for exercising `SimLoop`'s
+  private command switch through the real `CommandQueue` path. No new `SimConfig` tunables this
+  phase — nothing here is a numeric constant.
+- **11.6–11.8 — not started.**
 
 ## Problem statement
 

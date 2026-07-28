@@ -1,6 +1,7 @@
 using Dapper;
 using Microsoft.Data.Sqlite;
 using WorldEngine.Sim.Core;
+using WorldEngine.Sim.Tiles.LocalScale;
 using WorldEngine.Sim.World;
 
 namespace WorldEngine.Sim.Persistence;
@@ -51,6 +52,7 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
         _conn.Execute("DROP TABLE IF EXISTS EventEntities;");
         _conn.Execute("DROP TABLE IF EXISTS CausalEdges;");
         _conn.Execute("DROP TABLE IF EXISTS Events;");
+        _conn.Execute("DROP TABLE IF EXISTS LocalTileDeltas;");
         _conn.Execute("DROP VIEW  IF EXISTS EventsReadable;");
         InitializeSchema();
     }
@@ -78,6 +80,7 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
         _conn.Execute(DatabaseSchema.CreateDynasties);
         _conn.Execute(DatabaseSchema.CreateCivTraits);
         _conn.Execute(DatabaseSchema.CreateYearlyMetrics);
+        _conn.Execute(DatabaseSchema.CreateLocalTileDeltas);
         _conn.Execute(DatabaseSchema.CreateViewReadable);
         _conn.Execute(DatabaseSchema.CreateIndexYear);
         _conn.Execute(DatabaseSchema.CreateIndexType);
@@ -296,6 +299,55 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
     }
 
     /// <summary>
+    /// Writes (or overwrites, if one already exists for this cell) one sparse local-tile delta
+    /// (M11 11.5). INSERT OR REPLACE on the (WorldTile, Chunk, Local) primary key means the delta
+    /// overlay stores at most one row per modified cell, never a growing log.
+    /// </summary>
+    public void WriteLocalTileDelta(LocalTileDelta delta)
+    {
+        _conn.Execute("""
+            INSERT OR REPLACE INTO LocalTileDeltas (
+                WorldTileX, WorldTileY, ChunkX, ChunkY, LocalX, LocalY, ChangeType, PayloadJson
+            ) VALUES (
+                @WorldTileX, @WorldTileY, @ChunkX, @ChunkY, @LocalX, @LocalY, @ChangeType, @PayloadJson
+            );
+            """, new
+        {
+            WorldTileX = delta.Chunk.WorldTile.X,
+            WorldTileY = delta.Chunk.WorldTile.Y,
+            delta.Chunk.ChunkX,
+            delta.Chunk.ChunkY,
+            LocalX = delta.Local.X,
+            LocalY = delta.Local.Y,
+            ChangeType = (int)delta.ChangeType,
+            delta.PayloadJson,
+        });
+    }
+
+    /// <summary>
+    /// Reads every persisted delta for one chunk, for <see cref="WorldEngine.Sim.WorldGen.LocalTileDeltaApplier"/>
+    /// to apply on top of a freshly-regenerated <see cref="LocalChunk"/>. Empty for a chunk that
+    /// was never modified — the common case, since deltas are sparse.
+    /// </summary>
+    public IReadOnlyList<LocalTileDelta> LoadLocalTileDeltas(ChunkCoord chunk)
+    {
+        return _conn.Query<LocalTileDeltaRow>("""
+            SELECT LocalX, LocalY, ChangeType, PayloadJson FROM LocalTileDeltas
+            WHERE WorldTileX = @WorldTileX AND WorldTileY = @WorldTileY
+              AND ChunkX = @ChunkX AND ChunkY = @ChunkY;
+            """, new
+        {
+            WorldTileX = chunk.WorldTile.X,
+            WorldTileY = chunk.WorldTile.Y,
+            chunk.ChunkX,
+            chunk.ChunkY,
+        })
+        .Select(r => new LocalTileDelta(
+            chunk, new LocalTileCoord((byte)r.LocalX, (byte)r.LocalY), (LocalChangeType)r.ChangeType, r.PayloadJson))
+        .ToList();
+    }
+
+    /// <summary>
     /// Writes one row to the <c>yearly_metrics</c> table. Called once per in-game year by
     /// <see cref="WorldEngine.Sim.Simulation.MetricsCollector"/>. Uses INSERT OR REPLACE so
     /// re-running metrics on the same year (e.g. after a load) is idempotent.
@@ -476,6 +528,7 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
         _conn.Execute("DELETE FROM SuccessionChain;");
         _conn.Execute("DELETE FROM Dynasties;");
         _conn.Execute("DELETE FROM CivTraits;");
+        _conn.Execute("DELETE FROM LocalTileDeltas;");
         _conn.Execute("PRAGMA wal_checkpoint(TRUNCATE);");
     }
 
@@ -538,5 +591,13 @@ public sealed class EventStore : IHistoryGraphReadOnly, IDisposable
         public string? SettlementName { get; init; }
         public string PayloadJson { get; init; } = "{}";
         public float SignificanceScore { get; init; }
+    }
+
+    private sealed class LocalTileDeltaRow
+    {
+        public int LocalX { get; init; }
+        public int LocalY { get; init; }
+        public int ChangeType { get; init; }
+        public string PayloadJson { get; init; } = "{}";
     }
 }

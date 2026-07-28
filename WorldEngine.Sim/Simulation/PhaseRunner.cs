@@ -5,6 +5,7 @@ using WorldEngine.Sim.Entities.Beasts;
 using WorldEngine.Sim.Events;
 using WorldEngine.Sim.Persistence;
 using WorldEngine.Sim.Simulation.Phases;
+using WorldEngine.Sim.Tiles.LocalScale;
 using WorldEngine.Sim.World;
 
 namespace WorldEngine.Sim.Simulation;
@@ -67,6 +68,13 @@ public sealed class PhaseRunner
     /// Used by tests to simulate Phase 1 output without running the full environmental system.
     /// </summary>
     public void InjectPendingEvent(PendingEvent pending) => _injectedEvents.Add(pending);
+
+    /// <summary>
+    /// Writes one local-tile delta to <c>world.db</c> (M11 11.5). Passthrough to
+    /// <see cref="EventStore.WriteLocalTileDelta"/> — SimLoop has no direct EventStore reference,
+    /// same reason FlushPendingEvents lives here rather than on SimLoop.
+    /// </summary>
+    public void WriteLocalTileDelta(LocalTileDelta delta) => _eventStore.WriteLocalTileDelta(delta);
 
     /// <summary>
     /// Run a food audit against the current world state, capturing per-tile factor breakdowns

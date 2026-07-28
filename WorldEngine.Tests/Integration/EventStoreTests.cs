@@ -3,6 +3,7 @@ using FluentAssertions;
 using Microsoft.Data.Sqlite;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Persistence;
+using WorldEngine.Sim.Tiles.LocalScale;
 using WorldEngine.Sim.World;
 using Xunit;
 
@@ -149,5 +150,63 @@ public class EventStoreTests
 
         store.GetEventsByTier(EventTier.Headline).Should().HaveCount(2);
         store.GetEventsByTier(EventTier.Regional).Should().HaveCount(1);
+    }
+
+    // ─── LocalTileDeltas (M11 11.5) ─────────────────────────────────────────
+
+    [Fact]
+    public void LocalTileDelta_RoundTrips()
+    {
+        using var store = new EventStore(":memory:");
+        var chunk = new ChunkCoord(new TileCoord(3, 4), 1, 2);
+        var local = new LocalTileCoord(5, 6);
+        var payload = """{"Elevation":200}""";
+
+        store.WriteLocalTileDelta(new LocalTileDelta(chunk, local, LocalChangeType.CellOverride, payload));
+
+        var loaded = store.LoadLocalTileDeltas(chunk);
+        loaded.Should().ContainSingle();
+        loaded[0].Chunk.Should().Be(chunk);
+        loaded[0].Local.Should().Be(local);
+        loaded[0].ChangeType.Should().Be(LocalChangeType.CellOverride);
+        loaded[0].PayloadJson.Should().Be(payload);
+    }
+
+    [Fact]
+    public void LocalTileDelta_SecondWriteToSameCell_ReplacesFirst()
+    {
+        using var store = new EventStore(":memory:");
+        var chunk = new ChunkCoord(new TileCoord(1, 1), 0, 0);
+        var local = new LocalTileCoord(10, 10);
+
+        store.WriteLocalTileDelta(new LocalTileDelta(chunk, local, LocalChangeType.CellOverride, """{"Elevation":1}"""));
+        store.WriteLocalTileDelta(new LocalTileDelta(chunk, local, LocalChangeType.CellOverride, """{"Elevation":2}"""));
+
+        var loaded = store.LoadLocalTileDeltas(chunk);
+        loaded.Should().ContainSingle("a delta overlay stores at most one row per modified cell, not a growing log");
+        loaded[0].PayloadJson.Should().Be("""{"Elevation":2}""");
+    }
+
+    [Fact]
+    public void LocalTileDelta_ScopedToItsOwnChunk()
+    {
+        using var store = new EventStore(":memory:");
+        var chunkA = new ChunkCoord(new TileCoord(1, 1), 0, 0);
+        var chunkB = new ChunkCoord(new TileCoord(1, 1), 0, 1);
+        var local = new LocalTileCoord(0, 0);
+
+        store.WriteLocalTileDelta(new LocalTileDelta(chunkA, local, LocalChangeType.CellOverride, "{}"));
+
+        store.LoadLocalTileDeltas(chunkA).Should().ContainSingle();
+        store.LoadLocalTileDeltas(chunkB).Should().BeEmpty();
+    }
+
+    [Fact]
+    public void LocalTileDelta_UnmodifiedChunk_LoadsEmpty()
+    {
+        using var store = new EventStore(":memory:");
+        var chunk = new ChunkCoord(new TileCoord(9, 9), 3, 3);
+
+        store.LoadLocalTileDeltas(chunk).Should().BeEmpty("deltas are sparse — most chunks were never modified");
     }
 }

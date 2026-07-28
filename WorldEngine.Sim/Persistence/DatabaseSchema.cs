@@ -1,6 +1,6 @@
 namespace WorldEngine.Sim.Persistence;
 
-/// <summary>Schema DDL for SQLite: Events, SignificanceScore, CausalEdges, CharacterSummaries, CivSummaries, Eras, SuccessionChain, Dynasties, CivTraits, yearly_metrics.</summary>
+/// <summary>Schema DDL for SQLite: Events, SignificanceScore, CausalEdges, CharacterSummaries, CivSummaries, Eras, SuccessionChain, Dynasties, CivTraits, yearly_metrics, LocalTileDeltas.</summary>
 public static class DatabaseSchema
 {
     public const string CreateEvents = """
@@ -248,6 +248,25 @@ public static class DatabaseSchema
             living_artifacts          INTEGER NOT NULL DEFAULT 0,
             lost_artifacts            INTEGER NOT NULL DEFAULT 0,
             artifacts_per_settlement  REAL    NOT NULL DEFAULT 0.0
+        );
+        """;
+
+    /// <summary>
+    /// Sparse per-cell local-scale terrain overrides (M11 11.5). One row per modified cell —
+    /// writing a second delta for the same cell replaces the first (see EventStore.WriteLocalTileDelta).
+    /// Base local terrain itself is never persisted (regenerated on demand); only this overlay is.
+    /// </summary>
+    public const string CreateLocalTileDeltas = """
+        CREATE TABLE IF NOT EXISTS LocalTileDeltas (
+            WorldTileX INTEGER NOT NULL,
+            WorldTileY INTEGER NOT NULL,
+            ChunkX     INTEGER NOT NULL,
+            ChunkY     INTEGER NOT NULL,
+            LocalX     INTEGER NOT NULL,
+            LocalY     INTEGER NOT NULL,
+            ChangeType INTEGER NOT NULL,
+            PayloadJson TEXT   NOT NULL,
+            PRIMARY KEY (WorldTileX, WorldTileY, ChunkX, ChunkY, LocalX, LocalY)
         );
         """;
 

@@ -2,6 +2,7 @@ using WorldEngine.Sim.Commands;
 using WorldEngine.Sim.Config;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Persistence;
+using WorldEngine.Sim.Tiles.LocalScale;
 using WorldEngine.Sim.World;
 
 namespace WorldEngine.Sim.Simulation;
@@ -193,6 +194,9 @@ public sealed class SimLoop
                 break;
             case SaveWorld sv:
                 TriggerSave(sv.SaveDir);
+                break;
+            case ModifyLocalTile mlt:
+                _phaseRunner.WriteLocalTileDelta(new LocalTileDelta(mlt.Chunk, mlt.Local, mlt.ChangeType, mlt.PayloadJson));
                 break;
             case EnterSpotlight es:
                 _world.SpotlightCharacterId = es.CharacterId;
