@@ -147,6 +147,11 @@ One-line description of every non-trivial source file. Check here before running
 - `TileStaticFlags.cs` — Static tile flags set during world generation (IsVolcanic, IsFaultLine, HasRiver, etc.).
 - `TileTemperature.cs` — Computes the effective temperature for a tile at a given simulation moment, combining static base temperature, seasonal delta, and global anomaly. Shared by all phases that need per-tile climate conditions.
 
+## WorldEngine.Sim/Tiles/LocalScale/
+- `LocalChunk.cs` — A Size×Size grid of local terrain. Always derivable from (WorldSeed, ChunkCoord, parent TileData, border manifests) — never itself persisted; see docs/phases/m11_local_scale_generation.md "regenerate base terrain on demand".
+- `LocalCoordMath.cs` — Pure conversions between (ChunkCoord, LocalTileCoord) and an "absolute" local coordinate — the cell's position counted in local tiles from world origin (0,0), ignoring world-tile and chunk boundaries entirely. Absolute coordinates are what 11.3's noise sampling keys off of, so the same seed produces continuous terrain across a chunk or world-tile edge instead of a per-tile noise domain that restarts (and seams) at every boundary.
+- `LocalTileData.cs` — Minimal per-cell local-scale terrain data — flavor terrain only, no civ/economy fields (compare <see cref="TileData"/>, the much larger world-scale equivalent).
+
 ## WorldEngine.Sim/World/
 - `ActiveDisaster.cs` — An ongoing disaster affecting a specific tile. Created by Phase 1 (Environmental). Cleared by Phase 1 when resolved. OriginEventId links to the SimEvent that started this disaster for causal graph.
 - `ActiveDrought.cs` — A drought affecting all tiles in a (LatitudeBand, Biome) region. Membership is computed at runtime: ActiveDroughts.Any(d => tile matches d). No per-tile registry entry — the region can contain thousands of tiles.
@@ -177,6 +182,7 @@ One-line description of every non-trivial source file. Check here before running
 - `ClimateResult.cs` — Per-tile climate data produced by ClimateLayer.
 - `ElevationResult.cs` — Per-tile elevation data (0–255) produced by ElevationLayer.
 - `LayerSeeds.cs` — Per-layer seed constants XOR'd with worldSeed when initializing FastNoiseLite. All values must be unique — LayerSeeds_AllValuesAreUnique test enforces this.
+- `LocalTileGenerator.cs` — Placeholder (flat/uniform) local-chunk generator — unblocks chunk-loading/UI work ahead of 11.3's real noise-based terrain amplification. Every cell in the chunk copies the parent world tile's own Elevation/BiomeType verbatim; no sub-tile variation, no border-manifest blending yet.
 - `MagicResult.cs` — Per-tile magic intensity data produced by MagicLayer.
 - `OceanResult.cs` — Per-tile ocean and coast flags produced by OceanLayer.
 - `PoiResult.cs` — POI candidate flags produced by PoiCandidateLayer.

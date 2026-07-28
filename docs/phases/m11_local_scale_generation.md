@@ -1,6 +1,6 @@
 # M11 — Local-Scale Generation
 
-**Status:** IN PROGRESS (started 2026-07-27). Phase 11.1 COMPLETE (2026-07-27) — see below.
+**Status:** IN PROGRESS (started 2026-07-27). Phase 11.1 done (2026-07-27) — see below.
 
 ## Progress
 
@@ -23,7 +23,23 @@
   `sim_config.toml`). Crossing position along an edge is deterministic per-tile jitter via
   `WorldRng.FloatAt` (local salt `RiverLayer.SaltCrossingPosition`), not a cross-sim-tick salt so
   it was not added to the global `SimRngSalts` registry.
-- **11.2–11.8 — not started.**
+- **11.2 — COMPLETE (2026-07-28).** New `WorldEngine.Sim/Tiles/LocalScale/` namespace:
+  `ChunkCoord(TileCoord WorldTile, int ChunkX, int ChunkY)` with a `Normalize` that rolls
+  out-of-range chunk indices into the neighboring world tile (cylinder-wrapped in X like
+  `TileCoord.Wrap`, clamped in Y since the world doesn't wrap vertically); `LocalTileCoord(byte X,
+  byte Y)`; `LocalTileData` (Elevation/BiomeType/DecorationType/Flags, no civ/economy fields);
+  `LocalChunk` (a `Size × Size` grid, never persisted — always regenerable). `LocalCoordMath`
+  converts between `(ChunkCoord, LocalTileCoord)` and an absolute `(long X, long Y)` local-tile
+  coordinate counted from world origin — this is what 11.3's noise sampling will key off of so
+  terrain stays continuous across chunk/tile boundaries instead of restarting its noise domain at
+  every edge. `LocalTileGenerator.GenerateFlat` is the placeholder generator: every cell in a
+  chunk copies its parent `TileData`'s Elevation/BiomeType verbatim, unblocking chunk-loading/UI
+  work ahead of 11.3's real amplification. New config: `LocalGenConfig.ChunkSizeTiles` (default
+  40, not the doc's originally-proposed 32 — chosen because it divides `LocalTilesPerWorldTileEdge`
+  (1000, i.e. 10km/10m) evenly into 25 chunks per world-tile edge, so chunk coordinates roll over
+  cleanly at world-tile boundaries) and `LocalGenConfig.LocalTilesPerWorldTileEdge`
+  (`local_gen.chunk_size_tiles`/`local_gen.local_tiles_per_world_tile_edge` in `sim_config.toml`).
+- **11.3–11.8 — not started.**
 
 ## Problem statement
 

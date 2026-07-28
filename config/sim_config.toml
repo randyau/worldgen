@@ -195,6 +195,15 @@ dry_moisture            = 60    # byte moisture below which tile is "dry" (savan
 arid_moisture           = 30    # byte moisture below which tile is "arid" (desert only)
 
 # =============================================================================
+# LOCAL-SCALE GENERATION (M11 — 10m-resolution terrain within a world tile)
+# =============================================================================
+
+[local_gen]
+chunk_size_tiles               = 40    # Local tiles per chunk edge (chunk = 40x40 cells)
+local_tiles_per_world_tile_edge = 1000 # 10km world tile / 10m local tile = 1000; must divide
+                                        # evenly by chunk_size_tiles so chunks tile a world tile exactly
+
+# =============================================================================
 # CLIMATE (runtime parameters for ClimateLayer + seasonal sim)
 # =============================================================================
 

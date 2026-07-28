@@ -18,6 +18,7 @@ Edit values in `sim_config.toml`; all keys live there without recompiling.
 - [world_gen.tectonics](#world-gentectonics)
 - [world_gen.rivers](#world-genrivers)
 - [world_gen.biome_thresholds](#world-genbiome-thresholds)
+- [local_gen](#local-gen)
 - [climate](#climate)
 - [disasters](#disasters)
 - [beasts](#beasts)
@@ -164,6 +165,13 @@ Edit values in `sim_config.toml`; all keys live there without recompiling.
 | `wet_moisture` | `160` | `SimConfig.WorldGen.BiomeThresholds.WetMoisture` | byte moisture above which tile is "wet" (forest/rainforest) |
 | `dry_moisture` | `60` | `SimConfig.WorldGen.BiomeThresholds.DryMoisture` | byte moisture below which tile is "dry" (savanna/desert) |
 | `arid_moisture` | `30` | `SimConfig.WorldGen.BiomeThresholds.AridMoisture` | byte moisture below which tile is "arid" (desert only) |
+
+## `[local_gen]` {#local-gen}
+
+| Key | Value | C# Property | Description |
+|-----|-------|-------------|-------------|
+| `chunk_size_tiles` | `40` | `SimConfig.LocalGen.ChunkSizeTiles` | Local tiles per chunk edge (chunk = 40x40 cells) |
+| `local_tiles_per_world_tile_edge` | `1000` | `SimConfig.LocalGen.LocalTilesPerWorldTileEdge` | 10km world tile / 10m local tile = 1000; must divide |
 
 ## `[climate]` {#climate}
 
