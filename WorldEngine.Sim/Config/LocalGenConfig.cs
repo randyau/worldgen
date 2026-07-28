@@ -31,4 +31,14 @@ public class LocalGenConfig
 
     /// <summary>Max +/- byte contribution the detail noise adds on top of the blended macro elevation.</summary>
     public float NoiseAmplitude { get; set; } = 6f;
+
+    /// <summary>Byte elevation decrement applied to cells carved into a river channel.</summary>
+    public int RiverChannelDepth { get; set; } = 20;
+
+    /// <summary>
+    /// Channel width, in local tiles, at a river's interior source/mouth anchor (the tile-center
+    /// endpoint used when a tile has only one boundary crossing) — the manifest gives no width to
+    /// read for that endpoint since it isn't a tile-edge crossing.
+    /// </summary>
+    public float RiverSourceWidthTiles { get; set; } = 15f;
 }

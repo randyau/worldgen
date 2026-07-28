@@ -206,6 +206,8 @@ edge_blend_band_tiles = 100  # width (local tiles) of the blend-toward-manifest 
 noise_frequency       = 0.05 # FastNoiseLite frequency for local elevation detail, sampled in absolute local-tile coords
 noise_octaves         = 3    # fractal octaves for local elevation detail noise
 noise_amplitude       = 6.0  # max +/- byte contribution the detail noise adds atop the blended macro elevation
+river_channel_depth      = 20   # byte elevation decrement applied to cells carved into a river channel
+river_source_width_tiles = 15.0 # channel width (local tiles) at a river's interior source/mouth anchor
 
 # =============================================================================
 # CLIMATE (runtime parameters for ClimateLayer + seasonal sim)

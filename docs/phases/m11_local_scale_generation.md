@@ -65,7 +65,32 @@
   deferred — `LocalTileData` (11.2) has no moisture field and nothing downstream consumes one yet,
   so only elevation is amplified this phase; `BiomeType` remains inherited verbatim from the parent
   tile, same as the 11.2 placeholder.
-- **11.4–11.8 — not started.**
+- **11.4 — COMPLETE (2026-07-28).** New `LocalRiverThreader.Thread` (`WorldEngine.Sim/WorldGen/`)
+  is a post-process pass over an already-generated `LocalChunk`, carving a river channel that
+  connects the parent tile's boundary river crossing(s). A crossing's position/width is recovered
+  directly from the contiguous run of `HasRiverCrossing`-marked samples on a manifest edge (not
+  from the raw `RiverCrossing` record) — since `BorderManifestBuilder` stamps both sides of a
+  shared edge from the identical crossing, both adjacent tiles recover byte-identical
+  position/width from their own manifest, satisfying "matches width/position with the neighboring
+  tile's corresponding exit/entry" without needing to share state. With two boundary crossings the
+  channel is a straight segment connecting them; with one, it connects to the tile's center
+  (source/mouth case), tapering to `LocalGenConfig.RiverSourceWidthTiles`; with zero, the tile's
+  river is interior-only (e.g. lake-fed) and is not carved this phase (`DECISION:` — no boundary
+  anchor exists to key continuity off of); tiles with 3+ crossings connect only the first two found
+  (N/S/E/W scan order) — both are documented edge-case simplifications, same spirit as 11.3's
+  north/south corner limitation. Carved cells get `LocalTileFlags.River` (new
+  `Tiles/LocalScale/LocalTileFlags.cs`, the first bit assigned in `LocalTileData.Flags`) and an
+  elevation drop of `RiverChannelDepth`. Continuity is proven at the crossing's own anchor point
+  (exactly shared between both tiles' recovered position/width) rather than a full boundary-column
+  match — `LocalRiverThreaderTests.Thread_RecoveredAnchor_MatchesAcrossSharedEdge` proves the
+  recovered anchors agree exactly, and `Thread_BoundaryColumns_AgreeAtCrossingCenterRow` proves
+  both sides' chunks carve the anchor's own row; unlike 11.3's elevation blend, a full-column exact
+  match isn't claimed since each tile's channel approaches the shared point from its own interior
+  direction. New config: `LocalGenConfig.RiverChannelDepth`/`RiverSourceWidthTiles`
+  (`local_gen.river_channel_depth`/`river_source_width_tiles` in `sim_config.toml`).
+  `LocalTerrainAmplifier.Amplify` is untouched; `Thread` is meant to run on its output as a second
+  pass (not fused into `Amplify`), same relationship 11.2's `GenerateFlat` has to 11.3's `Amplify`.
+- **11.5–11.8 — not started.**
 
 ## Problem statement
 

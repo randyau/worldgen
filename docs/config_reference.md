@@ -176,6 +176,8 @@ Edit values in `sim_config.toml`; all keys live there without recompiling.
 | `noise_frequency` | `0.05` | `SimConfig.LocalGen.NoiseFrequency` | FastNoiseLite frequency for local elevation detail, sampled in absolute local-tile coords |
 | `noise_octaves` | `3` | `SimConfig.LocalGen.NoiseOctaves` | fractal octaves for local elevation detail noise |
 | `noise_amplitude` | `6.0` | `SimConfig.LocalGen.NoiseAmplitude` | max +/- byte contribution the detail noise adds atop the blended macro elevation |
+| `river_channel_depth` | `20` | `SimConfig.LocalGen.RiverChannelDepth` | byte elevation decrement applied to cells carved into a river channel |
+| `river_source_width_tiles` | `15.0` | `SimConfig.LocalGen.RiverSourceWidthTiles` | channel width (local tiles) at a river's interior source/mouth anchor |
 
 ## `[climate]` {#climate}
 
