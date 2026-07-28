@@ -4,6 +4,7 @@ using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities;
 using WorldEngine.Sim.Entities.Beasts;
 using WorldEngine.Sim.Entities.Characters;
+using WorldEngine.Sim.Tiles.LocalScale;
 using WorldEngine.Sim.World;
 using WorldEngine.Sim.WorldGen;
 using WorldEngine.Sim.WorldGen.Layers;
@@ -22,6 +23,20 @@ internal static class WorldStateMapper
     {
         var i = s.IndexOf(',');
         return new TileCoord(int.Parse(s[..i]), int.Parse(s[(i + 1)..]));
+    }
+
+    // Local-scale position foundation (M11 11.6)
+    private static string ChunkKey(ChunkCoord c) => $"{c.WorldTile.X},{c.WorldTile.Y},{c.ChunkX},{c.ChunkY}";
+    private static ChunkCoord ParseChunk(string s)
+    {
+        var parts = s.Split(',');
+        return new ChunkCoord(new TileCoord(int.Parse(parts[0]), int.Parse(parts[1])), int.Parse(parts[2]), int.Parse(parts[3]));
+    }
+    private static string LocalKey(LocalTileCoord c) => $"{c.X},{c.Y}";
+    private static LocalTileCoord ParseLocal(string s)
+    {
+        var i = s.IndexOf(',');
+        return new LocalTileCoord(byte.Parse(s[..i]), byte.Parse(s[(i + 1)..]));
     }
 
     // ── ToDto ────────────────────────────────────────────────────────────────
@@ -218,7 +233,9 @@ internal static class WorldStateMapper
             Wellbeing:   c.Wellbeing, TicksInCurrentTile: c.TicksInCurrentTile,
             LastCreateCompletedTick: c.LastCreateCompletedTick,
             LastArtworkYear: c.LastArtworkYear,
-            LastReligionFoundedYear: c.LastReligionFoundedYear);
+            LastReligionFoundedYear: c.LastReligionFoundedYear,
+            LocalChunkKey: c.LocalChunk.HasValue ? ChunkKey(c.LocalChunk.Value) : null,
+            LocalPositionKey: c.LocalPosition.HasValue ? LocalKey(c.LocalPosition.Value) : null);
     }
 
     private static Tier2EntityDto MapTier2(Tier2Character c)
@@ -530,6 +547,8 @@ internal static class WorldStateMapper
         character.LastCreateCompletedTick   = d.LastCreateCompletedTick;
         character.LastArtworkYear           = d.LastArtworkYear;
         character.LastReligionFoundedYear   = d.LastReligionFoundedYear;
+        character.LocalChunk                = d.LocalChunkKey    is not null ? ParseChunk(d.LocalChunkKey)    : null;
+        character.LocalPosition             = d.LocalPositionKey is not null ? ParseLocal(d.LocalPositionKey) : null;
 
         foreach (var gd in d.Goals)
             character.Goals.Add(new GoalData

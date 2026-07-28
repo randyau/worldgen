@@ -1,5 +1,6 @@
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities;
+using WorldEngine.Sim.Tiles.LocalScale;
 using WorldEngine.Sim.World;
 
 namespace WorldEngine.Sim.Entities.Characters;
@@ -40,6 +41,11 @@ public sealed class Tier1Character : SimEntity
 
     // Year when the character last founded a religion (gates re-founding via cooldown)
     public int LastReligionFoundedYear { get; internal set; } = -999;
+
+    // Local-scale position foundation (M11 11.6) — data shape only, never populated by any current
+    // sim logic. V2: local-scale character movement/pathfinding.
+    public ChunkCoord?     LocalChunk    { get; internal set; }
+    public LocalTileCoord? LocalPosition { get; internal set; }
 
     public Tier1Character(
         EntityId id,

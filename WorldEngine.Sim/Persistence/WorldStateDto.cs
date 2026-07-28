@@ -202,7 +202,10 @@ public sealed record Tier1EntityDto(
     int    TicksInCurrentTile,
     int    LastCreateCompletedTick,
     int    LastArtworkYear,
-    int    LastReligionFoundedYear);
+    int    LastReligionFoundedYear,
+    // Local-scale position foundation (M11 11.6) — null until a future milestone populates it.
+    string? LocalChunkKey = null,
+    string? LocalPositionKey = null);
 
 public sealed record Tier2EntityDto(
     long   Id,

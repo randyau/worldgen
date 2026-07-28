@@ -112,7 +112,19 @@
   regenerated from scratch, mirroring `SpotlightCommandTests`' pattern for exercising `SimLoop`'s
   private command switch through the real `CommandQueue` path. No new `SimConfig` tunables this
   phase — nothing here is a numeric constant.
-- **11.6–11.8 — not started.**
+- **11.6 — COMPLETE (2026-07-28).** `Tier1Character` gains a nullable local-presence hook —
+  `ChunkCoord? LocalChunk` and `LocalTileCoord? LocalPosition` — populated by no current sim
+  logic (`// V2: local-scale character movement/pathfinding` at the seam, per the phase sequence
+  table's exact wording). Persisted through the existing DTO/`WorldStateMapper` round-trip
+  pattern: `Tier1EntityDto` gains two nullable string fields (`LocalChunkKey`/`LocalPositionKey`,
+  same flattened-key idiom as `TileKey`/`ParseTile` used elsewhere in the mapper for struct
+  fields, e.g. `GoalData.TargetTile`) rather than registering the raw structs with the
+  System.Text.Json source-gen context. `SaveLoadTests` gained two cases: the common path (an
+  ordinary simulated world's characters all round-trip with both fields null) and the populated
+  path (a character with both fields explicitly set survives save/load exactly). No existing
+  reproducibility/determinism test needed changes or broke — nothing writes these fields during a
+  tick, so there's no new source of divergence to prove out. No new `SimConfig` tunables.
+- **11.7–11.8 — not started.**
 
 ## Problem statement
 

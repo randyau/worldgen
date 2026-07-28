@@ -5,6 +5,7 @@ using WorldEngine.Sim.Entities.Characters;
 using WorldEngine.Sim.Events;
 using WorldEngine.Sim.Persistence;
 using WorldEngine.Sim.Simulation;
+using WorldEngine.Sim.Tiles.LocalScale;
 using WorldEngine.Sim.World;
 using WorldEngine.Tests.Helpers;
 using FluentAssertions;
@@ -307,5 +308,53 @@ public class SaveLoadTests : IDisposable
         var loadedStub = loaded.Settlements[tile];
         loadedStub.Specialization.Should().BeNull();
         loadedStub.SpecializationStrength.Should().Be(0f);
+    }
+
+    // ── Test 11: Tier1Character local-presence hook round-trip (M11 11.6) ────
+    // No current sim logic populates LocalChunk/LocalPosition, but the data shape must survive
+    // save/load like every other character field, both when unset (the common case today) and
+    // when a future system sets it.
+
+    [Fact]
+    public void WorldStateSaver_RoundTrip_Tier1LocalPresence_DefaultsToNull()
+    {
+        var world  = BuildAndRunWorld(ticks: 200);
+        var simCfg = TestSimConfig.Default();
+
+        WorldStateSaver.Save(world, _saveDir, simCfg);
+        var loaded = WorldStateSaver.Load(_saveDir, simCfg);
+
+        var tier1s = loaded.Entities.Characters.ToList();
+        tier1s.Should().NotBeEmpty("BuildAndRunWorld must produce at least one Tier1Character");
+        tier1s.Should().OnlyContain(c => c.LocalChunk == null && c.LocalPosition == null,
+            "no current sim logic populates the local-presence hook");
+    }
+
+    [Fact]
+    public void WorldStateSaver_RoundTrip_Tier1LocalPresence_PopulatedValueSurvives()
+    {
+        var world  = WorldTestHelper.CreateSmallWorld(seed: 45);
+        var simCfg = TestSimConfig.Default();
+
+        var civId = new CivId(1);
+        var tile  = new TileCoord(5, 5);
+        var founder = new Tier1Character(
+            new EntityId(301L), tile,
+            PersonalityVector.Default, AptitudeVector.Default, SkillVector.Default,
+            new IdentityData("Ruler3", "the Third", "test", null, null, civId, 0, 0),
+            100, 200)
+        {
+            LocalChunk    = new ChunkCoord(tile, 2, 3),
+            LocalPosition = new LocalTileCoord(7, 9),
+        };
+        world.Entities.Add(founder);
+        world.Civilizations[civId] = new Civilization(civId, "LocalPresenceCiv", founder.Id, tile, 0);
+
+        WorldStateSaver.Save(world, _saveDir, simCfg);
+        var loaded = WorldStateSaver.Load(_saveDir, simCfg);
+
+        var loadedFounder = loaded.Entities.Characters.Single(c => c.Id == founder.Id);
+        loadedFounder.LocalChunk.Should().Be(new ChunkCoord(tile, 2, 3));
+        loadedFounder.LocalPosition.Should().Be(new LocalTileCoord(7, 9));
     }
 }
