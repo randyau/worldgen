@@ -19,11 +19,12 @@ The primary audience is worldbuilders and writers, not traditional gamers. The c
 - `docs/interface_contracts.md` — **index only** — links to 4 split files; load only the relevant one
 - `docs/implementation_plan_m1.md` — M1 phase ordering and story-level guide (archived reference)
 
-**Current milestone status:** M10 — Worldgen Preview & Modding COMPLETE (2026-07-26). All four phases shipped: 10.0 (pipeline resume/replay), 10.1 (preview screen), 10.2 (sim-config settings tab), 10.3 (data modding — load-time validation for `ancestries.toml`/`beasts.toml`, see `docs/modding.md`); see `docs/phases/archive/m10_worldgen_preview_modding.md` for phase sequence and `docs/phases/archive/m10_phase0_pipeline_resume.md` / `m10_phase1_worldgen_preview_screen.md` / `m10_phase2_sim_config_settings_tab.md` / `m10_phase3_data_modding.md` for what shipped. Next milestone: M11 — Scale & Distribution, in progress (see `docs/roadmap.md` § "M11"). M9 (Created-Object Unification & Economic Depth) COMPLETE (2026-07-26) — see `docs/phases/archive/m9_created_object_unification.md`. Milestones were renumbered on 2026-07-23 when M8 was inserted (old M8→M9, M9→M10, M10→M11) — see `docs/roadmap.md`.
+**Current milestone status:** M11 — Scale & Distribution, in progress (see `docs/roadmap.md` § "M11"). M10 — Worldgen Preview & Modding COMPLETE (2026-07-26); see `docs/phases/archive/m10_worldgen_preview_modding.md` for phase sequence. M9 (Created-Object Unification & Economic Depth) COMPLETE (2026-07-26) — see `docs/phases/archive/m9_created_object_unification.md`. Milestones were renumbered on 2026-07-23 when M8 was inserted (old M8→M9, M9→M10, M10→M11) — see `docs/roadmap.md`.
 
 **For coding sessions — read the active phase doc:**
-- M11 phase 0 (long-run performance) COMPLETE (2026-07-27) — see `docs/phases/archive/m11_phase0_longrun_performance.md`. Remaining M11 scope (local-scale generation, cross-platform packaging) not yet started — check `docs/roadmap.md` § "M11" and create the next `docs/phases/m11_*.md` phase doc when work begins.
-- `docs/phases/archive/` — all M1–M10 phases archived here for reference
+- M11 phase 0 (long-run performance) COMPLETE (2026-07-27) — see `docs/phases/archive/m11_phase0_longrun_performance.md`.
+- M11 local-scale generation (phases 11.1–11.8) COMPLETE (2026-07-29) — see `docs/phases/archive/m11_local_scale_generation.md`. Remaining M11 scope: cross-platform packaging/distribution, not yet started — check `docs/roadmap.md` § "M11" and create a new `docs/phases/m11_*.md` phase doc when that work begins.
+- `docs/phases/archive/` — all M1–M11 phases archived here for reference
 - `docs/archive/runbook_m1.md` — M1 manual test runbook (reference for regression testing)
 
 **Reusable code patterns and test templates:**
@@ -293,7 +294,7 @@ At the start of each session:
 
 1. Read this file
 2. Run `python3 scripts/scip-query.py stats` — confirms the SCIP index is fresh and tells you the document/symbol counts. If missing, run `scip-dotnet index WorldEngine.sln --skip-dotnet-restore` first.
-3. Read the active phase doc from `docs/phases/` (whichever phase is in progress). M8 and M9 are complete (archived); the current milestone is **M10 — Worldgen Preview & Modding** — check `docs/roadmap.md` § "M10" and `docs/phases/` for whether a phase doc exists yet.
+3. Read the active phase doc from `docs/phases/` (whichever phase is in progress). M8–M10 are complete (archived); the current milestone is **M11 — Scale & Distribution** — check `docs/roadmap.md` § "M11" and `docs/phases/` for whether a phase doc exists yet.
 4. Use `docs/codebase_map.md` to orient yourself — one-line description of every source file; skip filesystem scans when possible. This file is generated per-commit and is current.
 5. Check only the relevant `docs/interface_contracts_*.md` split file for interfaces you'll be implementing against.
 6. Use `python3 scripts/scip-query.py defs <TypeName>` to locate types before reading files.

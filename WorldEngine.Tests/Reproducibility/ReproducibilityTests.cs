@@ -6,6 +6,7 @@ using WorldEngine.Sim.Events;
 using WorldEngine.Sim.Persistence;
 using WorldEngine.Sim.Simulation;
 using WorldEngine.Sim.Tiles;
+using WorldEngine.Sim.Tiles.LocalScale;
 using WorldEngine.Sim.World;
 using WorldEngine.Sim.WorldGen;
 using WorldEngine.Sim.WorldGen.Layers;
@@ -99,5 +100,66 @@ public class ReproducibilityTests
             $"tier1_count must be identical across two in-process runs with seed {seed}");
         t2_1.Should().Be(t2_2,
             $"tier2_count must be identical across two in-process runs with seed {seed}");
+    }
+
+    /// <summary>
+    /// M11 11.8 close-out: the local-scale generation pipeline (11.1-11.7) is deterministic
+    /// end-to-end, not just per-component (11.3/11.4/11.7's unit tests already prove
+    /// Amplify/Thread/Decoration are individually pure functions). Two full world-gen runs with
+    /// the same seed must produce byte-identical BorderManifests, and feeding each run's own
+    /// (parent TileData, BorderManifest) for the same chunk through the exact chunk-generation
+    /// sequence LocalViewScreen.GenerateChunk uses (Amplify -> Thread -> Decorate) must produce
+    /// identical LocalChunks.
+    /// </summary>
+    [Fact]
+    public async Task SameSeedProducesSameBorderManifestsAndLocalChunks()
+    {
+        var config = new WorldConfig { Seed = 777, WidthKm = 500, HeightKm = 400, TileWidthKm = 10 };
+        var simCfg = TestSimConfig.Default();
+
+        var (world1, manifests1) = await new WorldGenPipeline().RunFullWithManifestsAsync(config, simCfg);
+        var (world2, manifests2) = await new WorldGenPipeline().RunFullWithManifestsAsync(config, simCfg);
+
+        var manifestMap1 = manifests1.ToDictionary(m => m.Coord, m => m.Manifest);
+        var manifestMap2 = manifests2.ToDictionary(m => m.Coord, m => m.Manifest);
+        manifestMap1.Keys.Should().BeEquivalentTo(manifestMap2.Keys);
+
+        // Spot-check a handful of tiles (asserting all N*N tiles' 4*64 samples would be
+        // needlessly slow) — enough to prove the manifest builder is deterministic, not just
+        // structurally present.
+        var sampleCoords = manifestMap1.Keys.Take(5).ToList();
+        foreach (var coord in sampleCoords)
+        {
+            var m1 = manifestMap1[coord];
+            var m2 = manifestMap2[coord];
+            m1.North.Should().BeEquivalentTo(m2.North, $"North edge at {coord} must match across seed-{config.Seed} runs");
+            m1.South.Should().BeEquivalentTo(m2.South, $"South edge at {coord} must match across seed-{config.Seed} runs");
+            m1.East.Should().BeEquivalentTo(m2.East, $"East edge at {coord} must match across seed-{config.Seed} runs");
+            m1.West.Should().BeEquivalentTo(m2.West, $"West edge at {coord} must match across seed-{config.Seed} runs");
+        }
+
+        // End-to-end chunk generation: same sequence LocalViewScreen.GenerateChunk runs.
+        var localGenConfig = simCfg.LocalGen;
+        var worldTile = sampleCoords[0];
+        var parentTile1 = world1.TileGrid.GetTile(worldTile);
+        var parentTile2 = world2.TileGrid.GetTile(worldTile);
+        var chunkCoord = new ChunkCoord(worldTile, 1, 1);
+
+        LocalChunk GenerateChunk(TileData parentTile, BorderManifest manifest)
+        {
+            var chunk = LocalTerrainAmplifier.Amplify(chunkCoord, parentTile, manifest, config.Seed, localGenConfig);
+            LocalRiverThreader.Thread(chunk, chunkCoord, parentTile, manifest, localGenConfig);
+            LocalDecorationGenerator.Generate(chunk, chunkCoord, (BiomeType)parentTile.BiomeType, config.Seed, localGenConfig);
+            return chunk;
+        }
+
+        var chunk1 = GenerateChunk(parentTile1, manifestMap1[worldTile]);
+        var chunk2 = GenerateChunk(parentTile2, manifestMap2[worldTile]);
+
+        foreach (var (local, _) in chunk1.AllTiles())
+        {
+            chunk1.GetTile(local).Should().BeEquivalentTo(chunk2.GetTile(local),
+                $"local cell {local} of chunk {chunkCoord} must be identical across seed-{config.Seed} runs");
+        }
     }
 }

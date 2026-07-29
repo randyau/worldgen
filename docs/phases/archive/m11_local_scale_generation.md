@@ -1,6 +1,6 @@
 # M11 — Local-Scale Generation
 
-**Status:** IN PROGRESS (started 2026-07-27). Phase 11.1 done (2026-07-27) — see below.
+**Status:** COMPLETE — 2026-07-29. All phases 11.1–11.8 shipped; see below.
 
 ## Progress
 
@@ -292,7 +292,32 @@
   667/668 tests pass, the one failure (`SimLoop_StepOneTickAdvancesExactlyOne`) is a pre-existing,
   environment-timing-sensitive test in `WorldEngine.Sim/Simulation/SimLoop.cs` untouched by any
   11.7 commit (confirmed via `git log`/`git diff`), not a regression from this work.
-- **11.8 — not started.**
+- **11.8 — COMPLETE (2026-07-29).** Close-out per the phase sequence table: a full persistence
+  round-trip test, a reproducibility test extended to local-scale determinism, and this doc/
+  roadmap/CLAUDE.md update. New `ReproducibilityTests.SameSeedProducesSameBorderManifestsAndLocalChunks`
+  (`WorldEngine.Tests/Reproducibility/`) runs `WorldGenPipeline.RunFullWithManifestsAsync` twice
+  with the same seed and asserts identical `BorderManifest`s for a sample of tiles, then runs the
+  exact `Amplify -> Thread -> Decorate` sequence `LocalViewScreen.GenerateChunk` uses against each
+  run's own (parent `TileData`, `BorderManifest`) for the same chunk and asserts byte-identical
+  `LocalChunk`s — proving the pipeline is deterministic end-to-end, not just per-component (11.3/
+  11.4/11.7's unit tests already proved `Amplify`/`Thread`/`Decoration` individually pure).
+  New `LocalScalePersistenceTests` (`WorldEngine.Tests/Integration/`) is the one test in the whole
+  sequence that exercises real file I/O: writes `manifests.bin` and a `LocalTileDelta` to a scratch
+  directory, "restarts" (re-reads `manifests.bin` via `BorderManifestStore.LoadFromFile` and
+  re-opens `world.db` via a fresh `EventStore` instance, exactly as `Game1.StartSimFromLoad` does),
+  and asserts both that the regenerated base chunk is identical to its pre-restart generation and
+  that the persisted delta still overrides its cell — the two halves of the "regenerate base
+  terrain on demand; persist only modifications" DECISION from the top of this doc, proven
+  together for the first time (11.5's `ModifyLocalTileCommandTests` proved the delta write path
+  through the real command/SimLoop pipeline but used an in-memory `EventStore` and never touched
+  `manifests.bin`). No changes needed to `docs/roadmap.md`'s M11 section beyond marking
+  local-scale generation done — see there for the wording; `CLAUDE.md`'s milestone-status line was
+  updated to point at this doc in `docs/phases/archive/`. Full solution build warning-free; all
+  670 tests pass (668 prior + 2 new). `SimLoop_StepOneTickAdvancesExactlyOne`
+  (`WorldEngine.Sim/Simulation/SimLoop.cs`, untouched by any M11 commit — confirmed via `git log`)
+  failed once under sandbox load earlier in this session (a wall-clock `Task.Delay`-based timing
+  test, inherently flaky under contention) but passed cleanly on the final full run; not a
+  regression from this work.
 
 ## Problem statement
 

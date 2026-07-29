@@ -262,13 +262,25 @@ see the index doc and its linked phase docs (`m10_phase0_pipeline_resume.md` /
   to the headless runner (`SimLoop.RunSynchronous` + `SimLoopConfig.HeadlessProgressIntervalSeconds`)
   since long runs were previously silent until complete. See
   `docs/phases/archive/m11_phase0_longrun_performance.md`.
-- **Local-scale generation (planned, not started):** full phase sequence (11.1–11.8) scoped in
-  `docs/phases/m11_local_scale_generation.md` — this turned out to be a from-scratch subsystem,
-  not an "activation": the `manifests.bin` hook (DS-A2) is currently vestigial (never wired into
-  the real pipeline, `LoadFromFile` throws), and the River layer doesn't carry the per-edge
-  crossing data the manifest format assumes. Scoped as chunked/lazy (Minecraft-style) generation
-  with a sparse persisted delta overlay for permanent modifications, shaped as a foundation for
-  future local-scale character interaction (not implemented in this sequence).
+- **Local-scale generation — DONE (2026-07-29):** full phase sequence 11.1–11.8, see
+  `docs/phases/archive/m11_local_scale_generation.md`. This turned out to be a from-scratch
+  subsystem, not an "activation": the `manifests.bin` hook (DS-A2) was vestigial (never wired into
+  the real pipeline, `LoadFromFile` threw), and the River layer didn't carry the per-edge crossing
+  data the manifest format assumes — both built from scratch (11.1). Chunked/lazy (Minecraft-style)
+  10m-resolution terrain generation (11.2/11.3), river threading (11.4), and a sparse persisted
+  delta overlay for permanent modifications (11.5) shape a foundation for future local-scale
+  character interaction — a nullable, unpopulated local-presence stub landed on `Tier1Character`
+  (11.6) but no local movement/interaction behavior was implemented this sequence, per its explicit
+  scope. The UI (11.7, plus four same-day follow-up passes after playtesting): a `[View Local]`
+  button opens a pannable/zoomable local-scale render of the clicked world tile *within* the
+  existing MapCanvas region — not a full-screen takeover — so TopBar (time controls) and RightDock
+  (contextual panels) stay live throughout; clicking a character/beast marker selects it through
+  the same `SelectionBus` the main map uses, so whatever contextual panel that selection already
+  shows (with its own working Watch button) appears for free. Sub-tile decoration (tree stands,
+  rock outcroppings, wetland patches, sand dunes) gives chunks visual variety beyond a flat biome
+  wash; a DECISION made with the user established that decorations stay purely cosmetic for now —
+  `(ChunkCoord, LocalTileCoord)` is already the stable per-cell key a future "mine/collect"
+  interaction would need, so no new identity scheme had to be added ahead of that milestone.
 - **Distribution (not started):** extend `publish-win.sh` to cross-platform packaging; onboarding/first-run for distributed builds.
 
 ---
