@@ -358,6 +358,8 @@ public sealed class Game1 : Game
             _workspace.FloatRoot.Top  = topBar.Bottom + 4;
         }
         _ = floatBounds; // Float region is viewport-sized; content self-sizes, only anchored top-left.
+
+        _localViewScreen?.SetBounds(_layoutHost.Slot(RegionSlot.MapCanvas).Bounds);
     }
 
     protected override void Update(GameTime gameTime)
@@ -393,18 +395,14 @@ public sealed class Game1 : Game
         var snapshot = _stateCache.Read();
         if (snapshot is not null && _simStarted)
         {
-            // M11 11.7 — while the local view is open it owns pan/zoom/close input and the main
-            // map's camera/click-to-select input is suppressed, mirroring how _genScreen replaces
-            // MainUI input pre-sim.
+            HandleInput(snapshot);
+
+            // M11 11.7 — chunk loading/eviction runs independently of input handling so panning
+            // and idle frames both keep the loaded region in sync with the camera.
             if (_localViewScreen?.IsVisible == true)
             {
-                HandleLocalViewInput();
                 var vp = GraphicsDevice.Viewport;
                 _localViewScreen.Update(snapshot, vp.Width, vp.Height);
-            }
-            else
-            {
-                HandleInput(snapshot);
             }
 
             // Every frame, regardless of whether a new sim snapshot arrived — UI interaction
@@ -600,15 +598,6 @@ public sealed class Game1 : Game
             _workspace?.ShowSummoned("watch");
         };
         _tileInspector.OnViewLocal = (coord, tile) => ShowLocalView(coord, tile);
-        if (_localViewScreen is not null)
-        {
-            _localViewScreen.OnWatchEntity = id =>
-            {
-                CloseLocalView();
-                _commandQueue.Enqueue(new WatchEntity(new EntityId(id)));
-                _workspace?.ShowSummoned("watch");
-            };
-        }
 
         _eventLog!.OnCharacterProfile = id => _selectionBus?.Select(new EntityRef(SelectionKind.Character, id, default));
         _eventLog.OnCiv               = id => _selectionBus?.Select(new EntityRef(SelectionKind.Civ, id, default));
@@ -743,14 +732,17 @@ public sealed class Game1 : Game
             coord, parentTile, manifest,
             _worldSeed, _simConfig.LocalGen, _eventStore, vp.Width, vp.Height);
 
-        if (_desktop?.Root is Panel root)
-            foreach (var w in root.Widgets)
-                if (w.Id == "MainUI") w.Visible = false;
+        // MainUI (TopBar/RightDock/Float) deliberately stays visible — local view only swaps the
+        // MapCanvas region's content, per the "reuse the map view UI" DECISION (time controls and
+        // whatever contextual panel a marker click selects keep working exactly as on the main map).
+        if (_layoutHost is not null)
+            _localViewScreen.SetBounds(_layoutHost.Slot(RegionSlot.MapCanvas).Bounds);
 
         // Local view is a read-only "look closer" pause — nothing here can act on a running sim
         // yet (no local movement/interaction per the phase's scope), so pause on entry and resume
         // whatever speed was running on exit, rather than silently ticking a world the player
-        // can't see or react to.
+        // can't see or react to. The player can still manually resume via the (still-visible) time
+        // controls if they want the world to keep moving while they look around.
         _speedBeforeLocalView = _lastSnapshot?.IsPaused == true ? null : _lastSnapshot?.CurrentSpeed;
         if (_speedBeforeLocalView is not null)
             _commandQueue.Enqueue(new SetSimSpeed(SimSpeed.Paused));
@@ -759,9 +751,6 @@ public sealed class Game1 : Game
     private void CloseLocalView()
     {
         _localViewScreen?.Hide();
-        if (_desktop?.Root is Panel root)
-            foreach (var w in root.Widgets)
-                if (w.Id == "MainUI") w.Visible = true;
 
         if (_speedBeforeLocalView is { } speed)
             _commandQueue.Enqueue(new SetSimSpeed(speed));
@@ -769,71 +758,82 @@ public sealed class Game1 : Game
     }
 
     /// <summary>Pan/zoom/close input while the local-view screen (M11 11.7) is open.</summary>
-    private void HandleLocalViewInput()
-    {
-        if (_localViewScreen is null) return;
-        var mouse = Mouse.GetState();
-        var kb    = Keyboard.GetState();
-
-        if (mouse.RightButton == ButtonState.Pressed && _prevMouse.RightButton == ButtonState.Pressed)
-        {
-            var delta = new Vector2(mouse.X - _prevMouse.X, mouse.Y - _prevMouse.Y);
-            _localViewScreen.Pan(-delta);
-        }
-
-        int scrollDelta = mouse.ScrollWheelValue - _prevMouse.ScrollWheelValue;
-        if (scrollDelta != 0 && _desktop?.IsMouseOverGUI != true)
-        {
-            float factor = scrollDelta > 0 ? 1.15f : 1f / 1.15f;
-            _localViewScreen.ZoomAt(new Vector2(mouse.X, mouse.Y), factor);
-        }
-
-        if (kb.IsKeyDown(Keys.Escape) && !_prevKb.IsKeyDown(Keys.Escape))
-            CloseLocalView();
-    }
-
     private void HandleInput(WorldSnapshot snapshot)
     {
         if (_camera is null) return;
         var mouse = Mouse.GetState();
         var kb    = Keyboard.GetState();
 
-        // Right-drag to pan
-        if (mouse.RightButton == ButtonState.Pressed && _prevMouse.RightButton == ButtonState.Pressed)
-        {
-            var delta = new Vector2(mouse.X - _prevMouse.X, mouse.Y - _prevMouse.Y);
-            _camera.Pan(-delta);
-        }
+        // M11 11.7 — while local view is open, MapCanvas pan/zoom/click drive the local camera
+        // and marker picking instead of the world camera/tile-select; everything below this
+        // block (keybinds, timeline scrub) is shared with the main map since MainUI stays live.
+        bool localViewOpen = _localViewScreen?.IsVisible == true;
 
-        // Scroll wheel zoom — only when the pointer isn't over a panel/scrollbar, otherwise the
-        // wheel should scroll that panel's content instead (bug: previously fired unconditionally
-        // and zoomed the map even while scrolling the dock).
-        int scrollDelta = mouse.ScrollWheelValue - _prevMouse.ScrollWheelValue;
-        if (scrollDelta != 0 && _desktop?.IsMouseOverGUI != true)
+        if (localViewOpen)
         {
-            float factor = scrollDelta > 0 ? 1.15f : 1f / 1.15f;
-            _camera.ZoomAt(new Vector2(mouse.X, mouse.Y), factor);
-        }
-
-        // Left-click → inspect tile. The InputRouter is the single click-leak fix (framework
-        // §5.1/§3.2): a null route means no opaque Chrome/Modal region claimed the point, so
-        // it falls through to the map. MapCanvas itself is non-opaque and never claims input.
-        if (mouse.LeftButton == ButtonState.Released && _prevMouse.LeftButton == ButtonState.Pressed
-            && _layoutHost is not null && _inputRouter is not null)
-        {
-            var routed = _inputRouter.Route(new Point(mouse.X, mouse.Y), _layoutHost);
-            bool overGui = _desktop?.IsMouseOverGUI == true;
-            if (routed is null && !overGui)
+            if (mouse.RightButton == ButtonState.Pressed && _prevMouse.RightButton == ButtonState.Pressed)
             {
-                var coord = _camera.ScreenToTile(new Vector2(mouse.X, mouse.Y));
-                // Discard clicks that land outside the valid tile grid (zoomed-out empty space)
-                if (coord.X < 0 || coord.X >= snapshot.WorldTileWidth
-                 || coord.Y < 0 || coord.Y >= snapshot.WorldTileHeight)
-                    return;
-                _selectionBus?.Select(new EntityRef(SelectionKind.Tile, 0, coord));
-                // In spotlight mode: map click also sets move intent
-                if (_spotlightCharacterId.HasValue)
-                    _commandQueue.Enqueue(new SetSpotlightMoveIntent(coord));
+                var delta = new Vector2(mouse.X - _prevMouse.X, mouse.Y - _prevMouse.Y);
+                _localViewScreen!.Pan(-delta);
+            }
+
+            int localScrollDelta = mouse.ScrollWheelValue - _prevMouse.ScrollWheelValue;
+            if (localScrollDelta != 0 && _desktop?.IsMouseOverGUI != true)
+            {
+                float factor = localScrollDelta > 0 ? 1.15f : 1f / 1.15f;
+                _localViewScreen!.ZoomAt(new Vector2(mouse.X, mouse.Y), factor);
+            }
+
+            if (mouse.LeftButton == ButtonState.Released && _prevMouse.LeftButton == ButtonState.Pressed
+                && _desktop?.IsMouseOverGUI != true
+                && _localViewScreen!.TryPickEntity(new Vector2(mouse.X, mouse.Y), out var pickedId, out var pickedKind))
+            {
+                var selKind = pickedKind == EntityKind.LegendaryBeast ? SelectionKind.Beast : SelectionKind.Character;
+                _selectionBus?.Select(new EntityRef(selKind, pickedId, default));
+            }
+
+            if (kb.IsKeyDown(Keys.Escape) && !_prevKb.IsKeyDown(Keys.Escape))
+                CloseLocalView();
+        }
+        else
+        {
+            // Right-drag to pan
+            if (mouse.RightButton == ButtonState.Pressed && _prevMouse.RightButton == ButtonState.Pressed)
+            {
+                var delta = new Vector2(mouse.X - _prevMouse.X, mouse.Y - _prevMouse.Y);
+                _camera.Pan(-delta);
+            }
+
+            // Scroll wheel zoom — only when the pointer isn't over a panel/scrollbar, otherwise the
+            // wheel should scroll that panel's content instead (bug: previously fired unconditionally
+            // and zoomed the map even while scrolling the dock).
+            int scrollDelta = mouse.ScrollWheelValue - _prevMouse.ScrollWheelValue;
+            if (scrollDelta != 0 && _desktop?.IsMouseOverGUI != true)
+            {
+                float factor = scrollDelta > 0 ? 1.15f : 1f / 1.15f;
+                _camera.ZoomAt(new Vector2(mouse.X, mouse.Y), factor);
+            }
+
+            // Left-click → inspect tile. The InputRouter is the single click-leak fix (framework
+            // §5.1/§3.2): a null route means no opaque Chrome/Modal region claimed the point, so
+            // it falls through to the map. MapCanvas itself is non-opaque and never claims input.
+            if (mouse.LeftButton == ButtonState.Released && _prevMouse.LeftButton == ButtonState.Pressed
+                && _layoutHost is not null && _inputRouter is not null)
+            {
+                var routed = _inputRouter.Route(new Point(mouse.X, mouse.Y), _layoutHost);
+                bool overGui = _desktop?.IsMouseOverGUI == true;
+                if (routed is null && !overGui)
+                {
+                    var coord = _camera.ScreenToTile(new Vector2(mouse.X, mouse.Y));
+                    // Discard clicks that land outside the valid tile grid (zoomed-out empty space)
+                    if (coord.X < 0 || coord.X >= snapshot.WorldTileWidth
+                     || coord.Y < 0 || coord.Y >= snapshot.WorldTileHeight)
+                        return;
+                    _selectionBus?.Select(new EntityRef(SelectionKind.Tile, 0, coord));
+                    // In spotlight mode: map click also sets move intent
+                    if (_spotlightCharacterId.HasValue)
+                        _commandQueue.Enqueue(new SetSpotlightMoveIntent(coord));
+                }
             }
         }
 
@@ -1032,10 +1032,14 @@ public sealed class Game1 : Game
 
         var snapshot = _stateCache.Read();
 
-        if (_simStarted && _localViewScreen?.IsVisible == true && _spriteBatch is not null)
+        if (_simStarted && _localViewScreen?.IsVisible == true && _spriteBatch is not null && _layoutHost is not null)
         {
+            // Same scissor-to-MapCanvas convention as the main map draw below — local view is a
+            // MapCanvas-region content swap, not a full-screen takeover, so TopBar/RightDock
+            // chrome (drawn later via _desktop.Render()) still owns the rest of the screen.
             var vp = GraphicsDevice.Viewport;
-            _spriteBatch.Begin();
+            GraphicsDevice.ScissorRectangle = _layoutHost.Slot(RegionSlot.MapCanvas).Bounds;
+            _spriteBatch.Begin(rasterizerState: new RasterizerState { ScissorTestEnable = true });
             _localViewScreen.Draw(_spriteBatch, vp.Width, vp.Height);
             _spriteBatch.End();
         }
@@ -1048,15 +1052,15 @@ public sealed class Game1 : Game
             _spriteBatch.Begin(rasterizerState: new RasterizerState { ScissorTestEnable = true });
             _tileRenderer.Draw(_spriteBatch, snapshot);
             _spriteBatch.End();
+        }
 
-            // Timeline bar — drawn below the map, no scissor
-            if (_timeline is not null)
-            {
-                var timelineRect = _layoutHost.Slot(RegionSlot.Timeline).Bounds;
-                _spriteBatch.Begin();
-                _timeline.Draw(_spriteBatch, timelineRect, snapshot.CurrentYear);
-                _spriteBatch.End();
-            }
+        // Timeline bar — drawn below the map, no scissor; stays visible in local view too.
+        if (_simStarted && snapshot is not null && _timeline is not null && _spriteBatch is not null && _layoutHost is not null)
+        {
+            var timelineRect = _layoutHost.Slot(RegionSlot.Timeline).Bounds;
+            _spriteBatch.Begin();
+            _timeline.Draw(_spriteBatch, timelineRect, snapshot.CurrentYear);
+            _spriteBatch.End();
         }
 
         _desktop?.Render();

@@ -14,11 +14,15 @@ using WorldEngine.UI.UI.Theme;
 
 namespace WorldEngine.UI.UI;
 
-// MAP: M11 11.7 — local-view screen: "[View Local]" on TileInspectorPanel opens this full-screen
-// view of one world tile at 10m resolution, chunk-loaded lazily around a pannable/zoomable
-// camera, with the persisted delta overlay (11.5) applied on top of freshly-regenerated base
-// terrain (11.3/11.4). Mirrors WorldGenPreviewScreen's shape: a Root Panel toggled visible/hidden
-// alongside MainUI, owned as a single Game1 instance.
+// MAP: M11 11.7 — local-view: [View Local] on TileInspectorPanel swaps the MapCanvas region's
+// content (only) to a pannable/zoomable 10m-resolution render of one world tile, chunk-loaded
+// lazily around the camera, with the delta overlay (11.5) applied on top of freshly-regenerated
+// base terrain (11.3/11.4). Unlike WorldGenPreviewScreen (a full-screen takeover, appropriate
+// pre-sim), this deliberately does NOT hide MainUI — TopBar (time controls) and RightDock
+// (TileInspector/contextual panels) stay live and driven by the same SelectionBus/WorldSnapshot
+// pipeline as the main map, per the user's "reuse the map view UI" request: clicking a character/
+// beast marker here selects it exactly like clicking one on the main map would, and whatever
+// contextual panel that selection shows (with its own working [Watch] button) comes for free.
 public sealed class LocalViewScreen : IDisposable
 {
     public readonly Panel Root;
@@ -26,14 +30,9 @@ public sealed class LocalViewScreen : IDisposable
     /// <summary>Invoked when the user closes the local view (Back button or Escape).</summary>
     public Action? OnClose;
 
-    /// <summary>Invoked when the user clicks [Watch] on a character/beast listed for this tile.</summary>
-    public Action<long>? OnWatchEntity;
-
     private readonly Label _titleLabel;
     private readonly Label _statsLabel;
     private readonly WeButton _closeButton;
-    private readonly WeVStack _entityList = new(UiTheme.Space.Xs);
-    private readonly Panel _entityPanel;
 
     private readonly LocalCamera2D _camera = new();
     private LocalTileMapRenderer? _renderer;
@@ -52,43 +51,38 @@ public sealed class LocalViewScreen : IDisposable
 
     public LocalViewScreen()
     {
-        _titleLabel = new Label { Text = "Local View", TextColor = UiTheme.HeaderText };
-        var hint = new Label
-        {
-            Text      = "Right-drag to pan  ·  Scroll to zoom  ·  [Esc] Back to World Map",
-            TextColor = UiTheme.TextSecondary
-        };
+        _titleLabel  = new Label { Text = "Local View", TextColor = UiTheme.HeaderText };
+        _statsLabel  = new Label { TextColor = UiTheme.TextSecondary };
         _closeButton = new WeButton("[Back to World Map]", () => OnClose?.Invoke(), WeButtonVariant.Ghost);
-        _statsLabel = new Label { TextColor = UiTheme.TextSecondary };
 
+        // A slim strip anchored inside the MapCanvas region (Game1 positions Root there each
+        // frame via SetBounds) — TopBar above it keeps showing the real time controls/overlay
+        // bar, RightDock keeps showing whatever's selected. This is a HUD overlay, not a
+        // full-screen takeover.
         var header = new HorizontalStackPanel
         {
-            Spacing            = UiTheme.Space.Md,
-            HorizontalAlignment = HorizontalAlignment.Left,
-            VerticalAlignment   = VerticalAlignment.Top,
-            Padding            = new Myra.Graphics2D.Thickness(UiTheme.Space.Md)
+            Spacing = UiTheme.Space.Md,
+            Background = new Myra.Graphics2D.Brushes.SolidBrush(UiTheme.SurfacePanel),
+            Padding = new Myra.Graphics2D.Thickness(UiTheme.Space.Sm)
         };
         header.Widgets.Add(_titleLabel);
-        header.Widgets.Add(hint);
+        header.Widgets.Add(new Label { Text = "Right-drag pan · Scroll zoom · Click marker to inspect · [Esc]", TextColor = UiTheme.TextSecondary });
         header.Widgets.Add(_statsLabel);
         header.Widgets.Add(_closeButton.Root);
 
-        // Reuses the same PanelFrame chrome the RightDock's contextual panels use (framework
-        // §4.2), so "what's on this tile" reads as the same kind of panel a player already knows
-        // from the main map — not a bespoke local-view-only widget.
-        _entityPanel = PanelFrame.Build("On This Tile", _entityList.Root);
-        _entityPanel.HorizontalAlignment = HorizontalAlignment.Right;
-        _entityPanel.VerticalAlignment   = VerticalAlignment.Top;
-        _entityPanel.Width   = 260;
-        _entityPanel.Visible = false;
-
-        Root = new Panel { Visible = false, HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Stretch };
+        Root = new Panel { Visible = false };
         Root.Widgets.Add(header);
-        Root.Widgets.Add(_entityPanel);
     }
 
     /// <summary>Call once after GraphicsDevice is available.</summary>
     public void Initialize(GraphicsDevice gd) => _renderer = new LocalTileMapRenderer(gd, _camera);
+
+    /// <summary>Positions the HUD strip within the MapCanvas region — call from Game1.ApplyLayout every frame, mirroring how TopBar/RightDock are positioned.</summary>
+    public void SetBounds(Rectangle mapCanvasBounds)
+    {
+        Root.Left = mapCanvasBounds.X;
+        Root.Top  = mapCanvasBounds.Y;
+    }
 
     /// <summary>
     /// Opens the local view for one world tile. <paramref name="manifest"/> is null when no
@@ -109,8 +103,6 @@ public sealed class LocalViewScreen : IDisposable
 
         _chunks.Clear();
         _markers.Clear();
-        _entityList.Clear();
-        _entityPanel.Visible = false;
         _titleLabel.Text = manifest is null
             ? $"Local View — Tile ({worldTile.X}, {worldTile.Y})  (no border data — flat placeholder terrain)"
             : $"Local View — Tile ({worldTile.X}, {worldTile.Y})";
@@ -126,6 +118,38 @@ public sealed class LocalViewScreen : IDisposable
     public void Pan(Vector2 delta) => _camera.Pan(delta);
     public void ZoomAt(Vector2 screenPoint, float factor) => _camera.ZoomAt(screenPoint, factor);
 
+    /// <summary>
+    /// Hit-tests a screen point against the current marker list (character/beast only —
+    /// settlements have no distinct selectable ID, see LocalEntityMarker's doc comment), within a
+    /// generous fixed pixel radius so small markers stay easy to click at low zoom.
+    /// </summary>
+    public bool TryPickEntity(Vector2 screenPos, out long id, out EntityKind kind)
+    {
+        const float pickRadiusPx = 14f;
+        float bestDistSq = pickRadiusPx * pickRadiusPx;
+        long bestId = 0;
+        EntityKind bestKind = default;
+        bool found = false;
+
+        foreach (var m in _markers)
+        {
+            if (m.Id is not { } markerId) continue;
+            var markerScreen = _camera.LocalTileToScreen(m.X, m.Y) + new Vector2(_camera.Zoom * 0.5f);
+            float distSq = Vector2.DistanceSquared(screenPos, markerScreen);
+            if (distSq <= bestDistSq)
+            {
+                bestDistSq = distSq;
+                bestId = markerId;
+                bestKind = m.Kind;
+                found = true;
+            }
+        }
+
+        id = bestId;
+        kind = bestKind;
+        return found;
+    }
+
     /// <summary>Chunks generated per Update() call — bounds a single frame's worst-case cost so opening/panning the view doesn't stall a frame.</summary>
     private const int MaxChunksPerFrame = 12;
 
@@ -133,17 +157,9 @@ public sealed class LocalViewScreen : IDisposable
     /// Loads every chunk that overlaps the camera's actual visible viewport, plus a
     /// ViewDistanceChunks preload margin on each side (nearest-to-viewport-center first, throttled
     /// to MaxChunksPerFrame/call). Chunks farther than the margin plus a 1-chunk hysteresis band
-    /// are discarded — the margin prevents evict/reload thrashing right at the edge.
+    /// are discarded — the margin prevents evict/reload thrashing right at the edge. Also
+    /// refreshes the marker list from the live snapshot. Call once per frame while visible.
     /// </summary>
-    /// <remarks>
-    /// BUGFIX (2026-07-29): the original version loaded a *fixed chunk-count* radius from the
-    /// center regardless of zoom/viewport size. At low zoom (zoomed out) or on a wide viewport,
-    /// that fixed radius covered a screen-space area smaller than the actual visible viewport,
-    /// producing a black-bordered/notched loaded region and visible "tearing" while panning (the
-    /// generation queue permanently trailing the moving viewport). Deriving the chunk range
-    /// directly from GetVisibleTileBounds guarantees the visible area is always the thing that's
-    /// requested, at any zoom level.
-    /// </remarks>
     public void Update(WorldSnapshot? snapshot, int viewportW, int viewportH)
     {
         if (_config is null) return;
@@ -208,49 +224,27 @@ public sealed class LocalViewScreen : IDisposable
 
     private static int FloorDiv(int a, int b) => a >= 0 ? a / b : -((-a + b - 1) / b);
 
-    /// <summary>
-    /// Rebuilds the marker list and "On This Tile" panel from whatever's currently located at
-    /// _worldTile in the snapshot. Characters/beasts get a stable per-entity pseudo-position
-    /// (hashed from EntityId) — see LocalEntityMarker's doc comment for why this isn't a real
-    /// sub-tile position yet.
-    /// </summary>
+    /// <summary>Rebuilds the marker list from whatever's currently located at _worldTile in the snapshot.</summary>
     private void RefreshEntities(WorldSnapshot? snapshot)
     {
         _markers.Clear();
-        _entityList.Clear();
-        if (snapshot is null || _config is null) { _entityPanel.Visible = false; return; }
+        if (snapshot is null || _config is null) return;
 
         int n = _config.LocalTilesPerWorldTileEdge;
-        bool any = false;
 
+        // Settlement population scales the marker's visual size — a bigger village really is a
+        // bigger blip, even without full building-layout rendering (V2: procedural village layout).
         if (snapshot.Settlements.TryGetValue(_worldTile, out var settlement))
-        {
-            any = true;
-            _markers.Add(new LocalEntityMarker(n / 2, n / 2, EntityKind.Settlement, false));
-            _entityList.Add(BuildEntityRow($"{settlement.Name} — {settlement.CivName} (pop {settlement.Population:N0})", null));
-        }
+            _markers.Add(new LocalEntityMarker(n / 2, n / 2, EntityKind.Settlement, false, null, settlement.Population));
 
         foreach (var (id, snap) in snapshot.EntitySnapshots)
         {
             if (!snap.IsAlive || snap.Location != _worldTile) continue;
             if (snap.Kind is not (EntityKind.Tier1Character or EntityKind.Tier2Character or EntityKind.LegendaryBeast)) continue;
 
-            any = true;
             var (px, py) = PseudoLocalPosition(id.Value, n);
-            _markers.Add(new LocalEntityMarker(px, py, snap.Kind, snap.IsLegendary));
-            _entityList.Add(BuildEntityRow($"{snap.Name} ({snap.Kind})", id.Value));
+            _markers.Add(new LocalEntityMarker(px, py, snap.Kind, snap.IsLegendary, id.Value));
         }
-
-        _entityPanel.Visible = any;
-    }
-
-    private Widget BuildEntityRow(string label, long? watchId)
-    {
-        var row = new HorizontalStackPanel { Spacing = UiTheme.Space.Sm };
-        row.Widgets.Add(new WeText(label).Root);
-        if (watchId is { } id)
-            row.Widgets.Add(new WeButton("[Watch]", () => OnWatchEntity?.Invoke(id)) { Padding = new Myra.Graphics2D.Thickness(2) }.Root);
-        return row;
     }
 
     /// <summary>

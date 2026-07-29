@@ -7,13 +7,15 @@ namespace WorldEngine.UI.Rendering;
 
 /// <summary>
 /// A character/beast/settlement located on the local-view's world tile, at a position within the
-/// tile's local-tile coordinate space (0..LocalTilesPerWorldTileEdge). For characters/beasts this
-/// is a stable per-entity pseudo-position (hashed from EntityId), not a real sub-tile location —
-/// no sim logic populates one yet (Tier1Character.LocalPosition is a nullable 11.6 stub;
-/// // V2: local-scale character movement/pathfinding). Settlements use the tile center since a
-/// settlement occupies the whole tile conceptually.
+/// tile's local-tile coordinate space (0..LocalTilesPerWorldTileEdge), plus enough identity to
+/// select it. For characters/beasts this is a stable per-entity pseudo-position (hashed from
+/// EntityId), not a real sub-tile location — no sim logic populates one yet
+/// (Tier1Character.LocalPosition is a nullable 11.6 stub; V2: local-scale character
+/// movement/pathfinding). Settlements sit at the tile center since a settlement occupies the
+/// whole tile conceptually and has no distinct selectable ID of its own — its info already shows
+/// in the RightDock's TileInspector, unchanged, since the open world tile itself stays selected.
 /// </summary>
-public readonly record struct LocalEntityMarker(int X, int Y, EntityKind Kind, bool IsLegendary);
+public readonly record struct LocalEntityMarker(int X, int Y, EntityKind Kind, bool IsLegendary, long? Id, int Population = 0);
 
 // MAP: M11 11.7 — draws already-generated LocalChunks via a LocalCamera2D. Same solid-pixel-rect
 // approach as TileMapRenderer, colored by biome (OverlayRenderer.GetBiomeColor, shared palette)
@@ -129,7 +131,11 @@ public sealed class LocalTileMapRenderer(GraphicsDevice gd, LocalCamera2D camera
                 }
                 case EntityKind.Settlement:
                 {
-                    int s = MarkerPx(0.5f, 5);
+                    // V2: procedural village/building layout at this scale — for now, a bigger
+                    // population just draws a visibly bigger blip rather than one fixed dot
+                    // regardless of whether it's a hamlet or a city.
+                    float popScale = 1f + MathF.Min(2.5f, MathF.Log10(MathF.Max(1, m.Population)));
+                    int s = (int)(MarkerPx(0.5f, 5) * popScale);
                     sb.Draw(_pixel, new Rectangle(cx - s / 2 - 1, cy - s / 2 - 1, s + 2, s + 2), new Color(30, 20, 10));
                     sb.Draw(_pixel, new Rectangle(cx - s / 2, cy - s / 2, s, s), Color.White);
                     break;

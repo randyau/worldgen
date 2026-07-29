@@ -228,6 +228,43 @@
   most want to zoom into. Moved to the top of the panel, unconditionally, before any tile-specific
   content. No new tests added this pass (UI wiring/positioning fixes over already-tested code, same
   rationale as the original 11.7 entry); full solution build warning-free, all 668 tests still pass.
+  **Third follow-up (2026-07-29, same day):** the second follow-up's "On This Tile" panel and
+  bespoke `[Watch]` button were themselves the wrong shape — the user pointed out that clicking
+  didn't feel possible in local view at all, the Watch button did nothing (because hiding all of
+  `MainUI`, including `RightDock`/`Float`, meant there was nowhere left for the panel it tried to
+  summon to render), and there were no time controls even though the sim was supposedly paused.
+  Root cause: `ShowLocalView`/`CloseLocalView` toggled the entire `MainUI` panel — which bundles
+  TopBar (time controls), RightDock (TileInspector/contextual panels), and Float (Summoned panels)
+  as one widget tree — off and on, so *all* of that machinery, not just the map, disappeared.
+  Reworked local view from a full-screen takeover into a **MapCanvas-region content swap**:
+  `LocalViewScreen.Root` no longer stretches to fill the screen; a new `SetBounds(Rectangle)`
+  positions its now-minimal HUD strip (title/hint/stats/`[Back to World Map]`) inside
+  `RegionSlot.MapCanvas`'s bounds, called from `Game1.ApplyLayout` (mirroring how `topBarPanel`/
+  `_dockScroll` are positioned) and once immediately in `ShowLocalView` so it's correctly placed
+  the instant it opens, not just after the next resize. `ShowLocalView`/`CloseLocalView` no longer
+  touch `MainUI`'s visibility at all — TopBar and RightDock simply stay live throughout, giving
+  working time controls "for free" (the auto-pause-on-entry/resume-on-exit from the second
+  follow-up is kept as a sensible default, but the player can now manually resume via the
+  still-visible controls if they want the world to keep moving while looking around).
+  `Game1.Draw` now scissors the local-view draw to `RegionSlot.MapCanvas.Bounds` exactly like the
+  main map's `_tileRenderer.Draw` call, and the Timeline bar draws unconditionally (previously
+  skipped whenever local view was open). The bespoke "On This Tile" `PanelFrame`/`[Watch]`
+  button/`OnWatchEntity` callback were deleted outright — `LocalEntityMarker` gained a `long? Id`
+  (and `int Population` for settlements) and `LocalViewScreen.TryPickEntity(Vector2)` hit-tests a
+  screen point against the marker list (14px pick radius); `Game1.HandleInput`'s local-view branch
+  now calls `_selectionBus?.Select(new EntityRef(...))` on a marker click exactly like the main
+  map's tile click does, so whichever contextual panel that selection kind already shows (with its
+  own working `[Watch]` button) appears in the still-visible RightDock automatically — no
+  local-view-specific watch/inspect UI needed at all, directly fulfilling the "reuse the map view
+  UI" request instead of approximating it. `HandleLocalViewInput` was deleted; its pan/zoom/escape
+  logic was folded into `HandleInput` as an `if (localViewOpen) {...} else {...}` branch so
+  keybind processing and timeline scrubbing (previously skipped while local view was open) are
+  shared between both paths rather than duplicated. Also: settlement markers now scale their
+  drawn size with population (`log10`-scaled) instead of a single fixed-size blip regardless of
+  village vs. city — `// V2: procedural village/building layout` left at the draw site for the
+  user's "could in theory render an actual village" idea, out of scope for this pass. No new tests
+  (UI wiring, same rationale as prior follow-ups); full solution build warning-free, all 668 tests
+  still pass.
 - **11.8 — not started.**
 
 ## Problem statement
