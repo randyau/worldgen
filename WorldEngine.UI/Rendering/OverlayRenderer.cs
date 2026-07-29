@@ -20,7 +20,8 @@ public static class OverlayRenderer
         _ => Color.Magenta
     };
 
-    private static Color GetBiomeColor(BiomeType b) => b switch
+    /// <summary>Public so LocalTileMapRenderer (M11 11.7) can share the same biome palette for local-view terrain.</summary>
+    public static Color GetBiomeColor(BiomeType b) => b switch
     {
         BiomeType.Ocean            => new Color(0, 50, 160),
         BiomeType.CoastalWater     => new Color(65, 125, 210),

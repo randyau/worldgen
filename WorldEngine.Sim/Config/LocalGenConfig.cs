@@ -41,4 +41,11 @@ public class LocalGenConfig
     /// read for that endpoint since it isn't a tile-edge crossing.
     /// </summary>
     public float RiverSourceWidthTiles { get; set; } = 15f;
+
+    /// <summary>
+    /// Chunk-radius around the local-view camera that stays generated (Minecraft-style lazy
+    /// loading, per docs/phases/m11_local_scale_generation.md's "chunked, lazy generation"
+    /// decision); chunks further away than this are discarded, not persisted.
+    /// </summary>
+    public int ViewDistanceChunks { get; set; } = 3;
 }

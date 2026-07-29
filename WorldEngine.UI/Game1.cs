@@ -43,6 +43,12 @@ public sealed class Game1 : Game
     private Camera2D? _camera;
     private TileMapRenderer? _tileRenderer;
 
+    // M11 11.7 — local-view screen: border manifests captured at world-commit/load time, keyed by
+    // world tile, so [View Local] can amplify local terrain without re-running world gen.
+    private LocalViewScreen? _localViewScreen;
+    private Dictionary<TileCoord, BorderManifest> _borderManifests = new();
+    private int _worldSeed;
+
     // UI panels (created in LoadContent)
     private WorldGenPreviewScreen? _genScreen;
     private TimeControlsPanel? _timeControls;
@@ -138,6 +144,9 @@ public sealed class Game1 : Game
 
         _genScreen    = new WorldGenPreviewScreen();
         _genScreen.Initialize(GraphicsDevice);
+        _localViewScreen = new LocalViewScreen();
+        _localViewScreen.Initialize(GraphicsDevice);
+        _localViewScreen.OnClose = CloseLocalView;
         _timeControls = new TimeControlsPanel(_commandQueue);
         _eventLog     = new EventLogPanel();
         _filterPanel  = new FilterPanel();
@@ -242,6 +251,10 @@ public sealed class Game1 : Game
         // Gen screen (shown during gen)
         if (_genScreen is not null)
             root.Widgets.Add(_genScreen.Root);
+
+        // Local-view screen (M11 11.7 — hidden until [View Local] is clicked)
+        if (_localViewScreen is not null)
+            root.Widgets.Add(_localViewScreen.Root);
 
         // Main UI — root Panel so children can overlap the map freely
         var mainUI = new Panel { Visible = false, Id = "MainUI" };
@@ -355,7 +368,11 @@ public sealed class Game1 : Game
         // Gen path: preview screen owns pipeline progress, thumbnails and "rerun from layer";
         // Update() returns a WorldState the one frame the player clicks Commit.
         if (!_simStarted && _genScreen?.Update() is { } committedWorld)
+        {
+            _borderManifests = _genScreen.LastManifests?.ToDictionary(m => m.Coord, m => m.Manifest)
+                ?? new Dictionary<TileCoord, BorderManifest>();
             StartSim(committedWorld);
+        }
 
         // Surface sim thread crashes to a visible label and log file
         if (!_simCrashReported && _simLoop?.LastException is Exception simEx)
@@ -375,7 +392,19 @@ public sealed class Game1 : Game
         var snapshot = _stateCache.Read();
         if (snapshot is not null && _simStarted)
         {
-            HandleInput(snapshot);
+            // M11 11.7 — while the local view is open it owns pan/zoom/close input and the main
+            // map's camera/click-to-select input is suppressed, mirroring how _genScreen replaces
+            // MainUI input pre-sim.
+            if (_localViewScreen?.IsVisible == true)
+            {
+                HandleLocalViewInput();
+                var vp = GraphicsDevice.Viewport;
+                _localViewScreen.Update(vp.Width, vp.Height);
+            }
+            else
+            {
+                HandleInput(snapshot);
+            }
 
             // Every frame, regardless of whether a new sim snapshot arrived — UI interaction
             // state must respond immediately, including while paused (bug: was gated behind the
@@ -444,6 +473,26 @@ public sealed class Game1 : Game
     {
         _simStarted = true;
         _genScreen!.Root.Visible = false;
+        _worldSeed = world.Config.Seed;
+
+        // M11 11.7 — border manifests: deterministic and never regenerated after world gen, so
+        // persist once at first commit; a loaded world reads them back (empty if the save
+        // predates 11.1/11.7, in which case LocalViewScreen falls back to flat placeholder terrain).
+        var manifestsPath = Path.Combine(SaveDir, "manifests.bin");
+        if (spawnInitialEntities)
+        {
+            if (_borderManifests.Count > 0)
+            {
+                Directory.CreateDirectory(SaveDir);
+                BorderManifestStore.WriteToFile(manifestsPath, _borderManifests.Select(kv => (kv.Key, kv.Value)));
+            }
+        }
+        else
+        {
+            _borderManifests = File.Exists(manifestsPath)
+                ? BorderManifestStore.LoadFromFile(manifestsPath).ToDictionary(m => m.Item1, m => m.Item2)
+                : new Dictionary<TileCoord, BorderManifest>();
+        }
 
         // Find and show main UI
         if (_desktop?.Root is Panel root)
@@ -549,6 +598,7 @@ public sealed class Game1 : Game
             _commandQueue.Enqueue(new WatchEntity(new EntityId(id)));
             _workspace?.ShowSummoned("watch");
         };
+        _tileInspector.OnViewLocal = (coord, tile) => ShowLocalView(coord, tile);
 
         _eventLog!.OnCharacterProfile = id => _selectionBus?.Select(new EntityRef(SelectionKind.Character, id, default));
         _eventLog.OnCiv               = id => _selectionBus?.Select(new EntityRef(SelectionKind.Civ, id, default));
@@ -666,6 +716,60 @@ public sealed class Game1 : Game
         UiPrefsStore.Save(_uiPrefs);
     }
 
+    /// <summary>
+    /// Opens the local-view screen (M11 11.7) for the tile the Tile Inspector currently has
+    /// selected. <paramref name="parentTile"/> is the same TileData already read for the
+    /// inspector panel — no separate WorldState lookup needed (the UI thread never touches
+    /// WorldState directly). Missing manifest (tile not in <see cref="_borderManifests"/>, e.g. a
+    /// pre-11.1 save) falls back to flat placeholder terrain inside LocalViewScreen.
+    /// </summary>
+    private void ShowLocalView(TileCoord coord, WorldEngine.Sim.Tiles.TileData parentTile)
+    {
+        if (_localViewScreen is null || _simConfig is null || _eventStore is null) return;
+
+        BorderManifest? manifest = _borderManifests.TryGetValue(coord, out var m) ? m : null;
+        var vp = GraphicsDevice.Viewport;
+        _localViewScreen.Show(
+            coord, parentTile, manifest,
+            _worldSeed, _simConfig.LocalGen, _eventStore, vp.Width, vp.Height);
+
+        if (_desktop?.Root is Panel root)
+            foreach (var w in root.Widgets)
+                if (w.Id == "MainUI") w.Visible = false;
+    }
+
+    private void CloseLocalView()
+    {
+        _localViewScreen?.Hide();
+        if (_desktop?.Root is Panel root)
+            foreach (var w in root.Widgets)
+                if (w.Id == "MainUI") w.Visible = true;
+    }
+
+    /// <summary>Pan/zoom/close input while the local-view screen (M11 11.7) is open.</summary>
+    private void HandleLocalViewInput()
+    {
+        if (_localViewScreen is null) return;
+        var mouse = Mouse.GetState();
+        var kb    = Keyboard.GetState();
+
+        if (mouse.RightButton == ButtonState.Pressed && _prevMouse.RightButton == ButtonState.Pressed)
+        {
+            var delta = new Vector2(mouse.X - _prevMouse.X, mouse.Y - _prevMouse.Y);
+            _localViewScreen.Pan(-delta);
+        }
+
+        int scrollDelta = mouse.ScrollWheelValue - _prevMouse.ScrollWheelValue;
+        if (scrollDelta != 0 && _desktop?.IsMouseOverGUI != true)
+        {
+            float factor = scrollDelta > 0 ? 1.15f : 1f / 1.15f;
+            _localViewScreen.ZoomAt(new Vector2(mouse.X, mouse.Y), factor);
+        }
+
+        if (kb.IsKeyDown(Keys.Escape) && !_prevKb.IsKeyDown(Keys.Escape))
+            CloseLocalView();
+    }
+
     private void HandleInput(WorldSnapshot snapshot)
     {
         if (_camera is null) return;
@@ -779,6 +883,10 @@ public sealed class Game1 : Game
         // Stop the sim thread before touching shared state.
         _simLoop?.Stop();
         _simLoop = null;
+
+        // M11 11.7 — a fresh world invalidates any manifests/local view from the old one.
+        _localViewScreen?.Hide();
+        _borderManifests = new Dictionary<TileCoord, BorderManifest>();
 
         // Reset the event store in-place (drops and recreates tables) rather than
         // closing, deleting, and reopening world.db. On Windows the WAL lock is held
@@ -901,7 +1009,15 @@ public sealed class Game1 : Game
         GraphicsDevice.Clear(Color.Black);
 
         var snapshot = _stateCache.Read();
-        if (_simStarted && snapshot is not null && _tileRenderer is not null && _spriteBatch is not null && _layoutHost is not null)
+
+        if (_simStarted && _localViewScreen?.IsVisible == true && _spriteBatch is not null)
+        {
+            var vp = GraphicsDevice.Viewport;
+            _spriteBatch.Begin();
+            _localViewScreen.Draw(_spriteBatch, vp.Width, vp.Height);
+            _spriteBatch.End();
+        }
+        else if (_simStarted && snapshot is not null && _tileRenderer is not null && _spriteBatch is not null && _layoutHost is not null)
         {
             // Scissor-clip tile rendering to the MapCanvas region (framework §3.2: the region
             // that owns the rectangle also owns what draws inside it — chrome above it is opaque
@@ -933,5 +1049,6 @@ public sealed class Game1 : Game
         _tileRenderer?.Dispose();
         _timeline?.Dispose();
         _genScreen?.Dispose();
+        _localViewScreen?.Dispose();
     }
 }

@@ -217,12 +217,15 @@ One-line description of every non-trivial source file. Check here before running
 
 ## WorldEngine.UI/Rendering/
 - `Camera2D.cs` — Pan/zoom camera for the tile map.
+- `LocalCamera2D.cs` — M11 11.7 — pan/zoom camera for the local-view screen. Mirrors Camera2D's API shape at
+- `LocalTileMapRenderer.cs` — M11 11.7 — draws already-generated LocalChunks via a LocalCamera2D. Same solid-pixel-rect
 - `OverlayRenderer.cs` — Per-tile color for each OverlayType (Biome/Elevation/Temp/Moisture/Resources/Magic/Territory).
 - `TileMapRenderer.cs` — Draws tiles + entity/settlement/ruin markers; M3.4: territory civ-color tint + improvement icons.
 - `WorldGenPreviewRenderer.cs` — Builds a per-tile thumbnail color buffer for a single worldgen layer, straight from the in-progress <see cref="WorldGenContext"/> (before <see cref="TileGridAssembler"/> has run). Reuses <see cref="OverlayRenderer.GetColor"/> — the same palette functions the live map uses — by feeding it a minimal <see cref="TileDisplayData"/> built from whatever layer results are available so far (per M10 10.1 design decision: don't fork the palette).
 
 ## WorldEngine.UI/UI/
 - `FirstRunOverlay.cs` — Dismissible first-run orientation dialog shown once when the simulation starts for the first time. Points the player at the time controls, overlays, and event log.
+- `LocalViewScreen.cs` — M11 11.7 — local-view screen: "[View Local]" on TileInspectorPanel opens this full-screen
 - `OverlayBar.cs` — Top-bar "Map Display" control (M6 Epic 6.1.1; collapsed to a dropdown per playtest feedback — was a 7-button, 2-row grid). Selecting an overlay enqueues <c>SetActiveOverlay</c> — the same command the accelerator keys fire — and the dropdown reflects <c>WorldSnapshot.ActiveOverlay</c>.
 - `PanelMenuBar.cs` — Row of buttons that toggle the Summoned panels (Watch, Character, Civ History, God Mode, Settings, Help) directly from the top bar, highlighting whichever are open, plus a Spotlight status/exit indicator. Moves primary panel access off the fixed right dock (playtest feedback: "that way we move away from everything being locked to the fixed right panel").
 - `TimeControlsPanel.cs` — Top toolbar: speed buttons, year/season label.

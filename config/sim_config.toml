@@ -208,6 +208,7 @@ noise_octaves         = 3    # fractal octaves for local elevation detail noise
 noise_amplitude       = 6.0  # max +/- byte contribution the detail noise adds atop the blended macro elevation
 river_channel_depth      = 20   # byte elevation decrement applied to cells carved into a river channel
 river_source_width_tiles = 15.0 # channel width (local tiles) at a river's interior source/mouth anchor
+view_distance_chunks     = 3    # chunk-radius kept generated around the local-view camera; farther chunks are discarded, not persisted
 
 # =============================================================================
 # CLIMATE (runtime parameters for ClimateLayer + seasonal sim)

@@ -1,6 +1,7 @@
 using Myra.Graphics2D.UI;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities;
+using WorldEngine.Sim.Tiles;
 using WorldEngine.Sim.World;
 using WorldEngine.UI.UI.Kit;
 using WorldEngine.UI.UI.Layout;
@@ -25,6 +26,13 @@ public sealed class TileInspectorPanel : IWorkspacePanel
     /// Watch panel, per the M8.2.2 DECISION preserving pre-M8 Watch placement.
     /// </summary>
     public Action<long>? OnWatch;
+
+    /// <summary>
+    /// Invoked when the user clicks [View Local] on the inspected tile (M11 11.7). Not gated
+    /// behind an active Spotlight — any tile can be viewed at local scale, per the phase's
+    /// "any tile, on demand" DECISION.
+    /// </summary>
+    public Action<TileCoord, TileData>? OnViewLocal;
 
     private readonly WeVStack _content = new(UiTheme.Space.Xs);
     private PanelContext _ctx;
@@ -91,6 +99,7 @@ public sealed class TileInspectorPanel : IWorkspacePanel
         }
 
         _content.Add(SectionHeader.Build($"Tile ({data.Coord.X}, {data.Coord.Y})"));
+        _content.Add(new WeButton("[View Local]", () => OnViewLocal?.Invoke(data.Coord, tile)) { Padding = new Myra.Graphics2D.Thickness(2) });
         var tileGrid = new KeyValueGrid();
         tileGrid.Add("Biome", ((BiomeType)tile.BiomeType).ToString());
         tileGrid.Add("Elevation", $"{tile.Elevation} ({present.Elevation(tile.Elevation)})");

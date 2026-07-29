@@ -124,7 +124,52 @@
   path (a character with both fields explicitly set survives save/load exactly). No existing
   reproducibility/determinism test needed changes or broke — nothing writes these fields during a
   tick, so there's no new source of divergence to prove out. No new `SimConfig` tunables.
-- **11.7–11.8 — not started.**
+- **11.7 — COMPLETE (2026-07-29).** UI: a `[View Local]` button on `TileInspectorPanel`
+  (`OnViewLocal`, an `Action<TileCoord, TileData>?` delegate following the same pattern as
+  `OnWatch`) invokes the currently-inspected tile's own already-read `RawTile` data — no separate
+  `WorldState` lookup needed, since the UI thread never touches `WorldState` directly. New
+  `LocalViewScreen` (`WorldEngine.UI/UI/`) mirrors `WorldGenPreviewScreen`'s shape: a `Panel Root`
+  added once to the desktop root, toggled visible/hidden alongside `MainUI` (`Game1.ShowLocalView`/
+  `CloseLocalView`), drawn directly via `SpriteBatch` (not through Myra `Image` widgets, since it's
+  pannable/zoomable like the main map) rather than through the RightDock/panel system. New
+  `LocalCamera2D` (`WorldEngine.UI/Rendering/`) mirrors `Camera2D`'s pan/zoom API shape at
+  10m-local-tile granularity, operating in within-world-tile local-tile coordinates
+  (0..`LocalTilesPerWorldTileEdge`) rather than Camera2D's global 10km-tile space. New
+  `LocalTileMapRenderer` mirrors `TileMapRenderer`'s solid-pixel-rect approach, coloring cells via
+  `OverlayRenderer.GetBiomeColor` (made `public` so both renderers share one palette) with simple
+  elevation shading and a river tint — local view has no overlay-type switcher yet.
+  `LocalViewScreen.Update` lazy-loads chunks within `LocalGenConfig.ViewDistanceChunks` (new
+  config, default 3) of the camera's center each frame, generating each via
+  `LocalTerrainAmplifier.Amplify` + `LocalRiverThreader.Thread` (falling back to
+  `LocalTileGenerator.GenerateFlat` when no border manifest is available — see below) then
+  `LocalTileDeltaApplier.Apply` with deltas read live from `EventStore.LoadLocalTileDeltas`, and
+  evicts chunks now outside that radius — never persisted, regenerated fresh next time they're
+  in range, exactly the "chunked, lazy generation... discarded once out of range" design decision.
+  `DECISION:` local view is scoped to the single world tile it was opened on — panning past that
+  tile's own chunk grid renders empty background rather than loading a neighboring world tile's
+  chunks (`ChunkCoord.Normalize`'s cross-tile-boundary support exists but isn't exercised here);
+  cross-world-tile local panning is left to a future milestone, consistent with "foundation, not
+  full interaction."
+  **Manifest-wiring gap closed:** 11.1–11.6 built the local-gen pipeline but nothing in the live
+  `Game1` sim-start path ever produced a `BorderManifest` — `WorldGenPreviewScreen.OnCommitClicked`
+  now also computes `BorderManifestBuilder.Build(_ctx)` (exposed via new `LastManifests` property,
+  read the same frame `Update()` returns the committed `WorldState`) and `Game1.StartSim` persists
+  it once, immediately, to `worldsave/manifests.bin` via `BorderManifestStore.WriteToFile` — border
+  manifests are deterministic and never regenerated after world gen, so a single write at first
+  commit is sufficient (no per-tick or per-save rewrite). The loaded-world path
+  (`StartSimFromLoad` → `StartSim(world, spawnInitialEntities: false)`) reads it back via
+  `BorderManifestStore.LoadFromFile`; a save that predates 11.1/11.7 has no `manifests.bin`, so
+  `_borderManifests` stays empty and `LocalViewScreen` falls back to
+  `LocalTileGenerator.GenerateFlat` per-tile (11.2's placeholder generator) instead of failing —
+  the title bar says so ("no border data — flat placeholder terrain"). `ResetToNewWorld` clears
+  `_borderManifests` (a fresh world invalidates the old one) and `WorldStateSaver.DeleteSave`
+  already recursively deletes `manifests.bin` alongside `state.bin`/`meta.json`, so no separate
+  cleanup was needed there. No new Sim-layer logic beyond the `ViewDistanceChunks` config field —
+  11.7 is UI orchestration over already-tested 11.1–11.6 generation code, so no new unit tests were
+  added (this codebase has no dedicated WorldEngine.UI test project; rendering/camera/screen
+  classes are exercised manually, same as `TileMapRenderer`/`Camera2D`/`WorldGenPreviewScreen`).
+  Full solution build is warning-free and all 664 existing tests still pass.
+- **11.8 — not started.**
 
 ## Problem statement
 

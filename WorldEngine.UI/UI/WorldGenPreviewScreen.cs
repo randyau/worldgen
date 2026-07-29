@@ -54,6 +54,13 @@ public sealed class WorldGenPreviewScreen : IDisposable
     private bool _busy;
     private WorldState? _pendingCommit;
 
+    /// <summary>
+    /// Border manifests (M11 local-scale generation) built at the same moment as the last
+    /// committed WorldState — set alongside <see cref="_pendingCommit"/> in OnCommitClicked, read
+    /// by Game1 the same frame it consumes <see cref="Update"/>'s returned WorldState.
+    /// </summary>
+    public IReadOnlyList<(TileCoord Coord, BorderManifest Manifest)>? LastManifests { get; private set; }
+
     public WorldGenPreviewScreen()
     {
         _genStatusLabel = new Label { Text = "Initializing...", TextColor = UiTheme.TextSecondary };
@@ -302,6 +309,7 @@ public sealed class WorldGenPreviewScreen : IDisposable
     {
         if (_busy || _ctx is null) return;
         _pendingCommit = TileGridAssembler.Assemble(_ctx);
+        LastManifests  = BorderManifestBuilder.Build(_ctx);
     }
 
     private void RebuildThumbnails(int fromIndex, int toIndex)
