@@ -220,7 +220,7 @@ One-line description of every non-trivial source file. Check here before running
 ## WorldEngine.UI/Rendering/
 - `Camera2D.cs` — Pan/zoom camera for the tile map.
 - `LocalCamera2D.cs` — M11 11.7 — pan/zoom camera for the local-view screen. Mirrors Camera2D's API shape at
-- `LocalTileMapRenderer.cs` — M11 11.7 — draws already-generated LocalChunks via a LocalCamera2D. Same solid-pixel-rect
+- `LocalTileMapRenderer.cs` — A character/beast/settlement located on the local-view's world tile, at a position within the tile's local-tile coordinate space (0..LocalTilesPerWorldTileEdge). For characters/beasts this is a stable per-entity pseudo-position (hashed from EntityId), not a real sub-tile location — no sim logic populates one yet (Tier1Character.LocalPosition is a nullable 11.6 stub; // V2: local-scale character movement/pathfinding). Settlements use the tile center since a settlement occupies the whole tile conceptually.
 - `OverlayRenderer.cs` — Per-tile color for each OverlayType (Biome/Elevation/Temp/Moisture/Resources/Magic/Territory).
 - `TileMapRenderer.cs` — Draws tiles + entity/settlement/ruin markers; M3.4: territory civ-color tint + improvement icons.
 - `WorldGenPreviewRenderer.cs` — Builds a per-tile thumbnail color buffer for a single worldgen layer, straight from the in-progress <see cref="WorldGenContext"/> (before <see cref="TileGridAssembler"/> has run). Reuses <see cref="OverlayRenderer.GetColor"/> — the same palette functions the live map uses — by feeding it a minimal <see cref="TileDisplayData"/> built from whatever layer results are available so far (per M10 10.1 design decision: don't fork the palette).

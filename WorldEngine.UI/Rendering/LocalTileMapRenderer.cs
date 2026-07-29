@@ -5,6 +5,16 @@ using WorldEngine.Sim.Tiles.LocalScale;
 
 namespace WorldEngine.UI.Rendering;
 
+/// <summary>
+/// A character/beast/settlement located on the local-view's world tile, at a position within the
+/// tile's local-tile coordinate space (0..LocalTilesPerWorldTileEdge). For characters/beasts this
+/// is a stable per-entity pseudo-position (hashed from EntityId), not a real sub-tile location —
+/// no sim logic populates one yet (Tier1Character.LocalPosition is a nullable 11.6 stub;
+/// // V2: local-scale character movement/pathfinding). Settlements use the tile center since a
+/// settlement occupies the whole tile conceptually.
+/// </summary>
+public readonly record struct LocalEntityMarker(int X, int Y, EntityKind Kind, bool IsLegendary);
+
 // MAP: M11 11.7 — draws already-generated LocalChunks via a LocalCamera2D. Same solid-pixel-rect
 // approach as TileMapRenderer, colored by biome (OverlayRenderer.GetBiomeColor, shared palette)
 // with simple elevation shading and a river tint — local view has no overlay-type switcher yet.
@@ -92,6 +102,49 @@ public sealed class LocalTileMapRenderer(GraphicsDevice gd, LocalCamera2D camera
         LocalDecorationType.SandDune        => new Color(215, 190, 130),
         _ => null,
     };
+
+    /// <summary>Draws character/beast/settlement markers — same glyph language as TileMapRenderer (cross/dot/square) so the visual vocabulary carries over from the main map.</summary>
+    public void DrawMarkers(SpriteBatch sb, IReadOnlyList<LocalEntityMarker> markers)
+    {
+        foreach (var m in markers)
+        {
+            var pos = camera.LocalTileToScreen(m.X, m.Y);
+            int cx = (int)MathF.Round(pos.X + camera.Zoom * 0.5f);
+            int cy = (int)MathF.Round(pos.Y + camera.Zoom * 0.5f);
+
+            switch (m.Kind)
+            {
+                case EntityKind.Tier1Character or EntityKind.Tier2Character:
+                {
+                    int arm = MarkerPx(0.3f, 4);
+                    DrawCross(sb, cx, cy, arm, Math.Max(1, arm / 2), new Color(80, 130, 230));
+                    break;
+                }
+                case EntityKind.LegendaryBeast:
+                {
+                    int r = MarkerPx(0.35f, 4);
+                    var color = m.IsLegendary ? Color.Gold : new Color(160, 30, 30);
+                    sb.Draw(_pixel, new Rectangle(cx - r / 2, cy - r / 2, r, r), color);
+                    break;
+                }
+                case EntityKind.Settlement:
+                {
+                    int s = MarkerPx(0.5f, 5);
+                    sb.Draw(_pixel, new Rectangle(cx - s / 2 - 1, cy - s / 2 - 1, s + 2, s + 2), new Color(30, 20, 10));
+                    sb.Draw(_pixel, new Rectangle(cx - s / 2, cy - s / 2, s, s), Color.White);
+                    break;
+                }
+            }
+        }
+    }
+
+    private int MarkerPx(float factor, int minPx) => Math.Max(minPx, (int)(camera.Zoom * factor));
+
+    private void DrawCross(SpriteBatch sb, int cx, int cy, int arm, int thick, Color color)
+    {
+        sb.Draw(_pixel, new Rectangle(cx - arm, cy - thick / 2, arm * 2, thick), color);
+        sb.Draw(_pixel, new Rectangle(cx - thick / 2, cy - arm, thick, arm * 2), color);
+    }
 
     public void Dispose() => _pixel.Dispose();
 

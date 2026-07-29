@@ -55,6 +55,13 @@ public sealed class TileInspectorPanel : IWorkspacePanel
         var present  = _ctx.Present;
         var tile     = data.RawTile;
 
+        // [View Local] always leads the panel, before Ruin/Settlement content — a settlement
+        // tile's resource ledger/stores can push far enough down a scrollable sidebar that a
+        // button placed near the "Tile (...)" section (its original spot) was effectively
+        // undiscoverable for exactly the tiles (settlements) users most want to zoom into.
+        _content.Add(new WeButton($"[View Local]  Tile ({data.Coord.X}, {data.Coord.Y})",
+            () => OnViewLocal?.Invoke(data.Coord, tile)) { Padding = new Myra.Graphics2D.Thickness(2) });
+
         // Ruin — shown before or instead of settlement info
         if (snapshot.Ruins.TryGetValue(data.Coord, out var ruin) && !snapshot.Settlements.ContainsKey(data.Coord))
         {
@@ -99,7 +106,6 @@ public sealed class TileInspectorPanel : IWorkspacePanel
         }
 
         _content.Add(SectionHeader.Build($"Tile ({data.Coord.X}, {data.Coord.Y})"));
-        _content.Add(new WeButton("[View Local]", () => OnViewLocal?.Invoke(data.Coord, tile)) { Padding = new Myra.Graphics2D.Thickness(2) });
         var tileGrid = new KeyValueGrid();
         tileGrid.Add("Biome", ((BiomeType)tile.BiomeType).ToString());
         tileGrid.Add("Elevation", $"{tile.Elevation} ({present.Elevation(tile.Elevation)})");

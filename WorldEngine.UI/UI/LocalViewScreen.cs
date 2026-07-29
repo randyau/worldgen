@@ -26,14 +26,20 @@ public sealed class LocalViewScreen : IDisposable
     /// <summary>Invoked when the user closes the local view (Back button or Escape).</summary>
     public Action? OnClose;
 
+    /// <summary>Invoked when the user clicks [Watch] on a character/beast listed for this tile.</summary>
+    public Action<long>? OnWatchEntity;
+
     private readonly Label _titleLabel;
     private readonly Label _statsLabel;
     private readonly WeButton _closeButton;
+    private readonly WeVStack _entityList = new(UiTheme.Space.Xs);
+    private readonly Panel _entityPanel;
 
     private readonly LocalCamera2D _camera = new();
     private LocalTileMapRenderer? _renderer;
 
     private readonly Dictionary<ChunkCoord, LocalChunk> _chunks = new();
+    private readonly List<LocalEntityMarker> _markers = new();
 
     private TileCoord _worldTile;
     private TileData _parentTile;
@@ -67,8 +73,18 @@ public sealed class LocalViewScreen : IDisposable
         header.Widgets.Add(_statsLabel);
         header.Widgets.Add(_closeButton.Root);
 
+        // Reuses the same PanelFrame chrome the RightDock's contextual panels use (framework
+        // §4.2), so "what's on this tile" reads as the same kind of panel a player already knows
+        // from the main map — not a bespoke local-view-only widget.
+        _entityPanel = PanelFrame.Build("On This Tile", _entityList.Root);
+        _entityPanel.HorizontalAlignment = HorizontalAlignment.Right;
+        _entityPanel.VerticalAlignment   = VerticalAlignment.Top;
+        _entityPanel.Width   = 260;
+        _entityPanel.Visible = false;
+
         Root = new Panel { Visible = false, HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Stretch };
         Root.Widgets.Add(header);
+        Root.Widgets.Add(_entityPanel);
     }
 
     /// <summary>Call once after GraphicsDevice is available.</summary>
@@ -92,6 +108,9 @@ public sealed class LocalViewScreen : IDisposable
         _eventStore = eventStore;
 
         _chunks.Clear();
+        _markers.Clear();
+        _entityList.Clear();
+        _entityPanel.Visible = false;
         _titleLabel.Text = manifest is null
             ? $"Local View — Tile ({worldTile.X}, {worldTile.Y})  (no border data — flat placeholder terrain)"
             : $"Local View — Tile ({worldTile.X}, {worldTile.Y})";
@@ -108,35 +127,50 @@ public sealed class LocalViewScreen : IDisposable
     public void ZoomAt(Vector2 screenPoint, float factor) => _camera.ZoomAt(screenPoint, factor);
 
     /// <summary>Chunks generated per Update() call — bounds a single frame's worst-case cost so opening/panning the view doesn't stall a frame.</summary>
-    private const int MaxChunksPerFrame = 6;
+    private const int MaxChunksPerFrame = 12;
 
     /// <summary>
-    /// Loads chunks within ViewDistanceChunks of the camera's current center (nearest first,
-    /// throttled to MaxChunksPerFrame/call), discarding chunks now outside that radius plus a
-    /// 1-chunk hysteresis margin so a camera oscillating right at the boundary doesn't
-    /// evict-then-immediately-reload the same chunk every frame. Call once per frame while visible.
+    /// Loads every chunk that overlaps the camera's actual visible viewport, plus a
+    /// ViewDistanceChunks preload margin on each side (nearest-to-viewport-center first, throttled
+    /// to MaxChunksPerFrame/call). Chunks farther than the margin plus a 1-chunk hysteresis band
+    /// are discarded — the margin prevents evict/reload thrashing right at the edge.
     /// </summary>
-    public void Update(int viewportW, int viewportH)
+    /// <remarks>
+    /// BUGFIX (2026-07-29): the original version loaded a *fixed chunk-count* radius from the
+    /// center regardless of zoom/viewport size. At low zoom (zoomed out) or on a wide viewport,
+    /// that fixed radius covered a screen-space area smaller than the actual visible viewport,
+    /// producing a black-bordered/notched loaded region and visible "tearing" while panning (the
+    /// generation queue permanently trailing the moving viewport). Deriving the chunk range
+    /// directly from GetVisibleTileBounds guarantees the visible area is always the thing that's
+    /// requested, at any zoom level.
+    /// </remarks>
+    public void Update(WorldSnapshot? snapshot, int viewportW, int viewportH)
     {
         if (_config is null) return;
 
+        RefreshEntities(snapshot);
+
         int chunksPerEdge = _config.ChunksPerWorldTileEdge;
+        int chunkSize     = _config.ChunkSizeTiles;
+        int margin        = _config.ViewDistanceChunks;
+
         var (minX, minY, maxX, maxY) = _camera.GetVisibleTileBounds(viewportW, viewportH);
-        int centerChunkX = Math.Clamp(((minX + maxX) / 2) / _config.ChunkSizeTiles, 0, chunksPerEdge - 1);
-        int centerChunkY = Math.Clamp(((minY + maxY) / 2) / _config.ChunkSizeTiles, 0, chunksPerEdge - 1);
-        int viewDist = _config.ViewDistanceChunks;
+        int minChunkX = Math.Clamp(FloorDiv(minX, chunkSize) - margin, 0, chunksPerEdge - 1);
+        int maxChunkX = Math.Clamp(FloorDiv(maxX, chunkSize) + margin, 0, chunksPerEdge - 1);
+        int minChunkY = Math.Clamp(FloorDiv(minY, chunkSize) - margin, 0, chunksPerEdge - 1);
+        int maxChunkY = Math.Clamp(FloorDiv(maxY, chunkSize) + margin, 0, chunksPerEdge - 1);
+        float centerChunkX = (minChunkX + maxChunkX) / 2f;
+        float centerChunkY = (minChunkY + maxChunkY) / 2f;
 
         // DECISION: local view is scoped to the single world tile it was opened on (11.7) —
         // panning past that tile's own chunk grid shows empty background rather than loading a
         // neighboring world tile's chunks. Cross-world-tile local panning is left to a future
         // milestone; see docs/phases/m11_local_scale_generation.md "Explicitly out of scope".
         List<ChunkCoord>? missing = null;
-        for (int cy = centerChunkY - viewDist; cy <= centerChunkY + viewDist; cy++)
+        for (int cy = minChunkY; cy <= maxChunkY; cy++)
         {
-            if (cy < 0 || cy >= chunksPerEdge) continue;
-            for (int cx = centerChunkX - viewDist; cx <= centerChunkX + viewDist; cx++)
+            for (int cx = minChunkX; cx <= maxChunkX; cx++)
             {
-                if (cx < 0 || cx >= chunksPerEdge) continue;
                 var coord = new ChunkCoord(_worldTile, cx, cy);
                 if (!_chunks.ContainsKey(coord))
                     (missing ??= new List<ChunkCoord>()).Add(coord);
@@ -146,26 +180,91 @@ public sealed class LocalViewScreen : IDisposable
         if (missing is not null)
         {
             missing.Sort((a, b) =>
-                Chebyshev(a, centerChunkX, centerChunkY).CompareTo(Chebyshev(b, centerChunkX, centerChunkY)));
+                DistSq(a, centerChunkX, centerChunkY).CompareTo(DistSq(b, centerChunkX, centerChunkY)));
             for (int i = 0; i < missing.Count && i < MaxChunksPerFrame; i++)
                 _chunks[missing[i]] = GenerateChunk(missing[i]);
         }
 
-        int evictDist = viewDist + 1; // hysteresis margin — avoids evict/reload thrashing at the boundary
+        // Hysteresis: evict only a full chunk beyond the loaded range, so a camera sitting right
+        // at the margin's edge doesn't evict-then-immediately-regenerate the same chunk each frame.
         List<ChunkCoord>? toRemove = null;
         foreach (var coord in _chunks.Keys)
         {
-            if (Math.Abs(coord.ChunkX - centerChunkX) > evictDist || Math.Abs(coord.ChunkY - centerChunkY) > evictDist)
+            if (coord.ChunkX < minChunkX - 1 || coord.ChunkX > maxChunkX + 1
+             || coord.ChunkY < minChunkY - 1 || coord.ChunkY > maxChunkY + 1)
                 (toRemove ??= new List<ChunkCoord>()).Add(coord);
         }
         if (toRemove is not null)
             foreach (var coord in toRemove) _chunks.Remove(coord);
 
-        _statsLabel.Text = $"{_chunks.Count} chunks · zoom {_camera.Zoom:F1} · center chunk ({centerChunkX},{centerChunkY})";
+        _statsLabel.Text = $"{_chunks.Count} chunks · zoom {_camera.Zoom:F1} · chunk range ({minChunkX}-{maxChunkX},{minChunkY}-{maxChunkY})";
     }
 
-    private static int Chebyshev(ChunkCoord c, int centerX, int centerY) =>
-        Math.Max(Math.Abs(c.ChunkX - centerX), Math.Abs(c.ChunkY - centerY));
+    private static float DistSq(ChunkCoord c, float centerX, float centerY)
+    {
+        float dx = c.ChunkX - centerX, dy = c.ChunkY - centerY;
+        return dx * dx + dy * dy;
+    }
+
+    private static int FloorDiv(int a, int b) => a >= 0 ? a / b : -((-a + b - 1) / b);
+
+    /// <summary>
+    /// Rebuilds the marker list and "On This Tile" panel from whatever's currently located at
+    /// _worldTile in the snapshot. Characters/beasts get a stable per-entity pseudo-position
+    /// (hashed from EntityId) — see LocalEntityMarker's doc comment for why this isn't a real
+    /// sub-tile position yet.
+    /// </summary>
+    private void RefreshEntities(WorldSnapshot? snapshot)
+    {
+        _markers.Clear();
+        _entityList.Clear();
+        if (snapshot is null || _config is null) { _entityPanel.Visible = false; return; }
+
+        int n = _config.LocalTilesPerWorldTileEdge;
+        bool any = false;
+
+        if (snapshot.Settlements.TryGetValue(_worldTile, out var settlement))
+        {
+            any = true;
+            _markers.Add(new LocalEntityMarker(n / 2, n / 2, EntityKind.Settlement, false));
+            _entityList.Add(BuildEntityRow($"{settlement.Name} — {settlement.CivName} (pop {settlement.Population:N0})", null));
+        }
+
+        foreach (var (id, snap) in snapshot.EntitySnapshots)
+        {
+            if (!snap.IsAlive || snap.Location != _worldTile) continue;
+            if (snap.Kind is not (EntityKind.Tier1Character or EntityKind.Tier2Character or EntityKind.LegendaryBeast)) continue;
+
+            any = true;
+            var (px, py) = PseudoLocalPosition(id.Value, n);
+            _markers.Add(new LocalEntityMarker(px, py, snap.Kind, snap.IsLegendary));
+            _entityList.Add(BuildEntityRow($"{snap.Name} ({snap.Kind})", id.Value));
+        }
+
+        _entityPanel.Visible = any;
+    }
+
+    private Widget BuildEntityRow(string label, long? watchId)
+    {
+        var row = new HorizontalStackPanel { Spacing = UiTheme.Space.Sm };
+        row.Widgets.Add(new WeText(label).Root);
+        if (watchId is { } id)
+            row.Widgets.Add(new WeButton("[Watch]", () => OnWatchEntity?.Invoke(id)) { Padding = new Myra.Graphics2D.Thickness(2) }.Root);
+        return row;
+    }
+
+    /// <summary>
+    /// Stable, deterministic scatter position within [0,n) for an entity with no real sub-tile
+    /// location yet — same entity always lands on the same spot within this tile, but it is not
+    /// a meaningful position (V2: Tier1Character.LocalPosition once local movement lands).
+    /// </summary>
+    private static (int X, int Y) PseudoLocalPosition(long entityId, int n)
+    {
+        ulong h = unchecked((ulong)entityId * 2654435761UL);
+        int x = (int)(h % (ulong)n);
+        int y = (int)((h / 104729UL) % (ulong)n);
+        return (x, y);
+    }
 
     private LocalChunk GenerateChunk(ChunkCoord coord)
     {
@@ -193,6 +292,7 @@ public sealed class LocalViewScreen : IDisposable
     {
         if (_config is null || _renderer is null) return;
         _renderer.Draw(sb, _chunks, _config.ChunkSizeTiles, viewportW, viewportH);
+        _renderer.DrawMarkers(sb, _markers);
     }
 
     public void Dispose() => _renderer?.Dispose();

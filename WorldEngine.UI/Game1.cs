@@ -48,6 +48,7 @@ public sealed class Game1 : Game
     private LocalViewScreen? _localViewScreen;
     private Dictionary<TileCoord, BorderManifest> _borderManifests = new();
     private int _worldSeed;
+    private SimSpeed? _speedBeforeLocalView; // resumed on close; null means it was already paused
 
     // UI panels (created in LoadContent)
     private WorldGenPreviewScreen? _genScreen;
@@ -399,7 +400,7 @@ public sealed class Game1 : Game
             {
                 HandleLocalViewInput();
                 var vp = GraphicsDevice.Viewport;
-                _localViewScreen.Update(vp.Width, vp.Height);
+                _localViewScreen.Update(snapshot, vp.Width, vp.Height);
             }
             else
             {
@@ -599,6 +600,15 @@ public sealed class Game1 : Game
             _workspace?.ShowSummoned("watch");
         };
         _tileInspector.OnViewLocal = (coord, tile) => ShowLocalView(coord, tile);
+        if (_localViewScreen is not null)
+        {
+            _localViewScreen.OnWatchEntity = id =>
+            {
+                CloseLocalView();
+                _commandQueue.Enqueue(new WatchEntity(new EntityId(id)));
+                _workspace?.ShowSummoned("watch");
+            };
+        }
 
         _eventLog!.OnCharacterProfile = id => _selectionBus?.Select(new EntityRef(SelectionKind.Character, id, default));
         _eventLog.OnCiv               = id => _selectionBus?.Select(new EntityRef(SelectionKind.Civ, id, default));
@@ -736,6 +746,14 @@ public sealed class Game1 : Game
         if (_desktop?.Root is Panel root)
             foreach (var w in root.Widgets)
                 if (w.Id == "MainUI") w.Visible = false;
+
+        // Local view is a read-only "look closer" pause — nothing here can act on a running sim
+        // yet (no local movement/interaction per the phase's scope), so pause on entry and resume
+        // whatever speed was running on exit, rather than silently ticking a world the player
+        // can't see or react to.
+        _speedBeforeLocalView = _lastSnapshot?.IsPaused == true ? null : _lastSnapshot?.CurrentSpeed;
+        if (_speedBeforeLocalView is not null)
+            _commandQueue.Enqueue(new SetSimSpeed(SimSpeed.Paused));
     }
 
     private void CloseLocalView()
@@ -744,6 +762,10 @@ public sealed class Game1 : Game
         if (_desktop?.Root is Panel root)
             foreach (var w in root.Widgets)
                 if (w.Id == "MainUI") w.Visible = true;
+
+        if (_speedBeforeLocalView is { } speed)
+            _commandQueue.Enqueue(new SetSimSpeed(speed));
+        _speedBeforeLocalView = null;
     }
 
     /// <summary>Pan/zoom/close input while the local-view screen (M11 11.7) is open.</summary>

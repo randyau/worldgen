@@ -192,6 +192,42 @@
   for on-screen diagnosis of both issues. New unit tests: `LocalDecorationGeneratorTests`
   (determinism, forest biomes get patchy TreeStand not full coverage, water biomes and river cells
   never decorate). Full solution build is warning-free; all 668 tests pass (664 prior + 4 new).
+  **Second follow-up (2026-07-29, same day):** playtest surfaced three more issues. (1) The chunk
+  loader still showed a ragged, black-bordered loaded region and "tearing" while panning — root
+  cause was that the loader picked a *fixed chunk-count radius* from the camera's center regardless
+  of zoom or viewport size; at lower zoom (or on a wide viewport) that radius covered less screen
+  area than the actual visible viewport, so the edges of the visible area were permanently
+  unloaded/stale. Fixed by deriving the loaded chunk range directly from
+  `LocalCamera2D.GetVisibleTileBounds` (plus `ViewDistanceChunks` as a preload margin on top, not
+  the sole radius) — the visible area is now always what's requested, at any zoom. Chunk-priority
+  sort changed from Chebyshev-from-a-single-center to Euclidean distance from the visible range's
+  midpoint (matches the now-rectangular-not-square load region); `MaxChunksPerFrame` raised 6→12
+  since a wide low-zoom viewport can need many more chunks to fully cover. (2) The sim kept
+  ticking in the background while the local view was open — nothing in local view can see or
+  react to that yet (no local movement/interaction per this phase's scope), so entering now enqueues
+  `SetSimSpeed(Paused)` (`Game1.ShowLocalView`) unless the sim is already paused, and closing restores
+  whatever speed was running before (`Game1.CloseLocalView`, via a new `_speedBeforeLocalView` field)
+  — matches the "ostensibly paused" behavior the local view was designed to imply but didn't
+  actually enforce. (3) There was no way to see a character/beast/settlement located on the tile
+  being viewed, or to inspect/interact with one. `LocalViewScreen.Update` now takes the current
+  `WorldSnapshot` and cross-references `snapshot.EntitySnapshots`/`Settlements` against the open
+  world tile; matches get drawn via new `LocalTileMapRenderer.DrawMarkers` using the *same* marker
+  glyphs as the main map's `TileMapRenderer` (cross for characters, dot for beasts, square for
+  settlements) so the visual vocabulary carries over, and are listed in a new "On This Tile" panel
+  built with `PanelFrame.Build` — the same titled/bordered shell the RightDock's contextual panels
+  use, per the user's "reuse the map view UI" ask — with a `[Watch]` button per character/beast that
+  closes the local view and opens the existing (Summoned) Watch panel on the main map, reusing
+  `WatchEntity` rather than building local-view-specific watch behavior. Characters/beasts have no
+  real sub-tile position yet (`Tier1Character.LocalPosition` is an unpopulated 11.6 stub), so each
+  gets a stable per-entity pseudo-position hashed from its `EntityId` (new `LocalEntityMarker`
+  record, `WorldEngine.UI/Rendering/`) — deterministic per entity, but explicitly not a real
+  location; documented at the record and left as a `// V2: local-scale character movement` seam,
+  same as 11.6. Also fixed: `[View Local]` was placed after the Ruin/Settlement sections in
+  `TileInspectorPanel`, so a settlement tile's resource ledger/stores could push it far enough down
+  a scrollable sidebar to be effectively undiscoverable for exactly the tiles — settlements — users
+  most want to zoom into. Moved to the top of the panel, unconditionally, before any tile-specific
+  content. No new tests added this pass (UI wiring/positioning fixes over already-tested code, same
+  rationale as the original 11.7 entry); full solution build warning-free, all 668 tests still pass.
 - **11.8 — not started.**
 
 ## Problem statement
