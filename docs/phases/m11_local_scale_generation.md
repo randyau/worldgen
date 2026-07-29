@@ -164,11 +164,34 @@
   the title bar says so ("no border data — flat placeholder terrain"). `ResetToNewWorld` clears
   `_borderManifests` (a fresh world invalidates the old one) and `WorldStateSaver.DeleteSave`
   already recursively deletes `manifests.bin` alongside `state.bin`/`meta.json`, so no separate
-  cleanup was needed there. No new Sim-layer logic beyond the `ViewDistanceChunks` config field —
-  11.7 is UI orchestration over already-tested 11.1–11.6 generation code, so no new unit tests were
-  added (this codebase has no dedicated WorldEngine.UI test project; rendering/camera/screen
-  classes are exercised manually, same as `TileMapRenderer`/`Camera2D`/`WorldGenPreviewScreen`).
-  Full solution build is warning-free and all 664 existing tests still pass.
+  cleanup was needed there.
+  **Follow-up (2026-07-29, same day):** first manual playtest showed a flat, near-uniform-green
+  chunk with no legible sub-tile detail, plus a visible frame stall on opening the screen. Two
+  fixes: (1) new `LocalDecorationGenerator` (`WorldEngine.Sim/WorldGen/`) populates
+  `LocalTileData.DecorationType` (reserved since 11.2, unused until now) — a low-frequency
+  "cluster" `FastNoiseLite` channel places patchy regions of a biome's primary decoration
+  (`LocalDecorationType`: TreeStand/RockOutcropping/Shrub/Wetland/SandDune, new enum) and a
+  high-frequency "sparse" channel scatters an occasional secondary feature elsewhere, skipping
+  river cells; new `LocalGenConfig.DecorationClusterFrequency`/`DecorationClusterThreshold`/
+  `DecorationSparseFrequency`/`DecorationSparseThreshold`. Purely cosmetic today (no gameplay reads
+  `DecorationType` yet) — `// V2: local decoration → persistent object promotion` at the generator
+  notes that a future "mine/collect" interaction needs no new identity scheme: `(ChunkCoord,
+  LocalTileCoord)` is already the stable per-cell key `LocalTileDelta` (11.5) uses, so a future
+  command would just write a delta for that cell the first time it's touched — the delta overlay
+  already *is* the "this location now has tracked, permanent state" registry, per a DECISION made
+  with the user before implementing. `LocalTileMapRenderer` now shades by neighbor-relative slope
+  (south/east elevation deltas) instead of absolute elevation — the physical `NoiseAmplitude`
+  constant (±6 of 255) is far too small a swing to read as relief when compared against 0-255, but
+  compared against a neighbor it reads as visible texture — and draws an inset colored rect per
+  decorated cell. (2) `LocalViewScreen.Update` was generating every missing chunk in the view
+  radius synchronously in one call (up to 49 chunks the first frame) — now throttled to
+  `MaxChunksPerFrame = 6`, nearest-chunk-first (Chebyshev distance sort), spread across however
+  many frames it takes; eviction now keeps a 1-chunk hysteresis margin (`viewDist + 1`) so a camera
+  sitting right at a chunk boundary doesn't evict-then-immediately-regenerate the same chunk every
+  frame. A live `{chunks} chunks · zoom · center chunk (...)` stats label was added to the header
+  for on-screen diagnosis of both issues. New unit tests: `LocalDecorationGeneratorTests`
+  (determinism, forest biomes get patchy TreeStand not full coverage, water biomes and river cells
+  never decorate). Full solution build is warning-free; all 668 tests pass (664 prior + 4 new).
 - **11.8 — not started.**
 
 ## Problem statement

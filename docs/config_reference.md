@@ -179,6 +179,10 @@ Edit values in `sim_config.toml`; all keys live there without recompiling.
 | `river_channel_depth` | `20` | `SimConfig.LocalGen.RiverChannelDepth` | byte elevation decrement applied to cells carved into a river channel |
 | `river_source_width_tiles` | `15.0` | `SimConfig.LocalGen.RiverSourceWidthTiles` | channel width (local tiles) at a river's interior source/mouth anchor |
 | `view_distance_chunks` | `3` | `SimConfig.LocalGen.ViewDistanceChunks` | chunk-radius kept generated around the local-view camera; farther chunks are discarded, not persisted |
+| `decoration_cluster_frequency` | `0.015` | `SimConfig.LocalGen.DecorationClusterFrequency` | FastNoiseLite frequency for decoration cluster placement (tree stands, wetland patches) — low freq for large patchy regions |
+| `decoration_cluster_threshold` | `0.15` | `SimConfig.LocalGen.DecorationClusterThreshold` | noise threshold ([-1,1]) above which a cell falls inside a decoration cluster |
+| `decoration_sparse_frequency` | `0.25` | `SimConfig.LocalGen.DecorationSparseFrequency` | FastNoiseLite frequency for sparse secondary decoration (scattered rocks/shrubs) — high freq for isolated single-cell features |
+| `decoration_sparse_threshold` | `0.55` | `SimConfig.LocalGen.DecorationSparseThreshold` | noise threshold ([-1,1]) above which a cell gets the sparse secondary decoration, when not already in a cluster |
 
 ## `[climate]` {#climate}
 

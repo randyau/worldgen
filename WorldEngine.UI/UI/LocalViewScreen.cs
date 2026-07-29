@@ -27,6 +27,7 @@ public sealed class LocalViewScreen : IDisposable
     public Action? OnClose;
 
     private readonly Label _titleLabel;
+    private readonly Label _statsLabel;
     private readonly WeButton _closeButton;
 
     private readonly LocalCamera2D _camera = new();
@@ -52,6 +53,7 @@ public sealed class LocalViewScreen : IDisposable
             TextColor = UiTheme.TextSecondary
         };
         _closeButton = new WeButton("[Back to World Map]", () => OnClose?.Invoke(), WeButtonVariant.Ghost);
+        _statsLabel = new Label { TextColor = UiTheme.TextSecondary };
 
         var header = new HorizontalStackPanel
         {
@@ -62,6 +64,7 @@ public sealed class LocalViewScreen : IDisposable
         };
         header.Widgets.Add(_titleLabel);
         header.Widgets.Add(hint);
+        header.Widgets.Add(_statsLabel);
         header.Widgets.Add(_closeButton.Root);
 
         Root = new Panel { Visible = false, HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Stretch };
@@ -104,9 +107,14 @@ public sealed class LocalViewScreen : IDisposable
     public void Pan(Vector2 delta) => _camera.Pan(delta);
     public void ZoomAt(Vector2 screenPoint, float factor) => _camera.ZoomAt(screenPoint, factor);
 
+    /// <summary>Chunks generated per Update() call — bounds a single frame's worst-case cost so opening/panning the view doesn't stall a frame.</summary>
+    private const int MaxChunksPerFrame = 6;
+
     /// <summary>
-    /// Loads chunks within ViewDistanceChunks of the camera's current center, discarding chunks
-    /// now outside that radius. Call once per frame while visible.
+    /// Loads chunks within ViewDistanceChunks of the camera's current center (nearest first,
+    /// throttled to MaxChunksPerFrame/call), discarding chunks now outside that radius plus a
+    /// 1-chunk hysteresis margin so a camera oscillating right at the boundary doesn't
+    /// evict-then-immediately-reload the same chunk every frame. Call once per frame while visible.
     /// </summary>
     public void Update(int viewportW, int viewportH)
     {
@@ -122,6 +130,7 @@ public sealed class LocalViewScreen : IDisposable
         // panning past that tile's own chunk grid shows empty background rather than loading a
         // neighboring world tile's chunks. Cross-world-tile local panning is left to a future
         // milestone; see docs/phases/m11_local_scale_generation.md "Explicitly out of scope".
+        List<ChunkCoord>? missing = null;
         for (int cy = centerChunkY - viewDist; cy <= centerChunkY + viewDist; cy++)
         {
             if (cy < 0 || cy >= chunksPerEdge) continue;
@@ -130,19 +139,33 @@ public sealed class LocalViewScreen : IDisposable
                 if (cx < 0 || cx >= chunksPerEdge) continue;
                 var coord = new ChunkCoord(_worldTile, cx, cy);
                 if (!_chunks.ContainsKey(coord))
-                    _chunks[coord] = GenerateChunk(coord);
+                    (missing ??= new List<ChunkCoord>()).Add(coord);
             }
         }
 
+        if (missing is not null)
+        {
+            missing.Sort((a, b) =>
+                Chebyshev(a, centerChunkX, centerChunkY).CompareTo(Chebyshev(b, centerChunkX, centerChunkY)));
+            for (int i = 0; i < missing.Count && i < MaxChunksPerFrame; i++)
+                _chunks[missing[i]] = GenerateChunk(missing[i]);
+        }
+
+        int evictDist = viewDist + 1; // hysteresis margin — avoids evict/reload thrashing at the boundary
         List<ChunkCoord>? toRemove = null;
         foreach (var coord in _chunks.Keys)
         {
-            if (Math.Abs(coord.ChunkX - centerChunkX) > viewDist || Math.Abs(coord.ChunkY - centerChunkY) > viewDist)
+            if (Math.Abs(coord.ChunkX - centerChunkX) > evictDist || Math.Abs(coord.ChunkY - centerChunkY) > evictDist)
                 (toRemove ??= new List<ChunkCoord>()).Add(coord);
         }
         if (toRemove is not null)
             foreach (var coord in toRemove) _chunks.Remove(coord);
+
+        _statsLabel.Text = $"{_chunks.Count} chunks · zoom {_camera.Zoom:F1} · center chunk ({centerChunkX},{centerChunkY})";
     }
+
+    private static int Chebyshev(ChunkCoord c, int centerX, int centerY) =>
+        Math.Max(Math.Abs(c.ChunkX - centerX), Math.Abs(c.ChunkY - centerY));
 
     private LocalChunk GenerateChunk(ChunkCoord coord)
     {
@@ -156,6 +179,8 @@ public sealed class LocalViewScreen : IDisposable
         {
             chunk = LocalTileGenerator.GenerateFlat(coord, _parentTile, _config!);
         }
+
+        LocalDecorationGenerator.Generate(chunk, coord, (BiomeType)_parentTile.BiomeType, _worldSeed, _config!);
 
         var deltas = _eventStore?.LoadLocalTileDeltas(coord);
         if (deltas is { Count: > 0 })

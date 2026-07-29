@@ -38,7 +38,11 @@ public sealed class LocalTileMapRenderer(GraphicsDevice gd, LocalCamera2D camera
 
                 var color = OverlayRenderer.GetBiomeColor((BiomeType)tile.BiomeType);
 
-                float shade = 0.7f + tile.Elevation / 255f * 0.5f;
+                // Slope-based relief shading: contrasts neighbor elevation deltas rather than the
+                // cell's own absolute elevation, so even a few bytes of noise (NoiseAmplitude is a
+                // small physical constant, not a visual-contrast knob) reads as visible relief
+                // instead of a flat wash.
+                float shade = 1f + Slope(chunk, local) * 0.6f;
                 color = new Color(
                     (byte)Math.Clamp(color.R * shade, 0, 255),
                     (byte)Math.Clamp(color.G * shade, 0, 255),
@@ -48,9 +52,46 @@ public sealed class LocalTileMapRenderer(GraphicsDevice gd, LocalCamera2D camera
                     color = new Color(40, 90, 200);
 
                 sb.Draw(_pixel, rect, color);
+
+                var decoColor = DecorationColor((LocalDecorationType)tile.DecorationType);
+                if (decoColor is { } dc)
+                {
+                    int inset = Math.Max(1, (int)MathF.Round(camera.Zoom * 0.2f));
+                    var decoRect = new Rectangle(rect.X + inset, rect.Y + inset,
+                        Math.Max(1, rect.Width - inset * 2), Math.Max(1, rect.Height - inset * 2));
+                    sb.Draw(_pixel, decoRect, dc);
+                }
             }
         }
     }
+
+    /// <summary>
+    /// Normalized (roughly [-1,1]) elevation gradient toward the cell's south-east neighbors,
+    /// edge-clamped. A cell higher than its neighbors reads brighter ("catching light"); lower
+    /// reads darker — reveals relief from small elevation deltas that an absolute-elevation
+    /// greyscale would render as visually flat.
+    /// </summary>
+    private static float Slope(LocalChunk chunk, LocalTileCoord local)
+    {
+        int size = chunk.Size;
+        var here  = chunk.GetTile(local);
+        var right = chunk.GetTile(new LocalTileCoord((byte)Math.Min(local.X + 1, size - 1), local.Y));
+        var down  = chunk.GetTile(new LocalTileCoord(local.X, (byte)Math.Min(local.Y + 1, size - 1)));
+
+        int dRight = here.Elevation - right.Elevation;
+        int dDown  = here.Elevation - down.Elevation;
+        return Math.Clamp((dRight + dDown) / 16f, -1f, 1f);
+    }
+
+    private static Color? DecorationColor(LocalDecorationType deco) => deco switch
+    {
+        LocalDecorationType.TreeStand       => new Color(20, 90, 35),
+        LocalDecorationType.RockOutcropping => new Color(120, 115, 110),
+        LocalDecorationType.Shrub           => new Color(110, 140, 60),
+        LocalDecorationType.Wetland         => new Color(50, 95, 90),
+        LocalDecorationType.SandDune        => new Color(215, 190, 130),
+        _ => null,
+    };
 
     public void Dispose() => _pixel.Dispose();
 

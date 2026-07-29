@@ -17,4 +17,6 @@ public static class LayerSeeds
     public const int Poi            = 0x9CADBE;
     public const int MicroVariation = 0xADBECF;
     public const int LocalTerrain   = 0xBECFDA;
+    public const int LocalDecorationCluster = 0xCFDAEB;
+    public const int LocalDecorationSparse  = 0xDAEBFC;
 }

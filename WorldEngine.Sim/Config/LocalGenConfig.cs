@@ -48,4 +48,16 @@ public class LocalGenConfig
     /// decision); chunks further away than this are discarded, not persisted.
     /// </summary>
     public int ViewDistanceChunks { get; set; } = 3;
+
+    /// <summary>FastNoiseLite frequency for decoration cluster placement (tree stands, wetland patches) — low frequency for large patchy regions.</summary>
+    public float DecorationClusterFrequency { get; set; } = 0.015f;
+
+    /// <summary>Noise threshold (of [-1,1]) above which a cell falls inside a decoration cluster.</summary>
+    public float DecorationClusterThreshold { get; set; } = 0.15f;
+
+    /// <summary>FastNoiseLite frequency for sparse secondary decoration (scattered rocks/shrubs) — high frequency for isolated single-cell features.</summary>
+    public float DecorationSparseFrequency { get; set; } = 0.25f;
+
+    /// <summary>Noise threshold (of [-1,1]) above which a cell gets the sparse secondary decoration, when not already in a cluster.</summary>
+    public float DecorationSparseThreshold { get; set; } = 0.55f;
 }
