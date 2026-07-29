@@ -265,6 +265,33 @@
   user's "could in theory render an actual village" idea, out of scope for this pass. No new tests
   (UI wiring, same rationale as prior follow-ups); full solution build warning-free, all 668 tests
   still pass.
+  **Fourth follow-up (2026-07-29, same day):** the third follow-up's MapCanvas-swap still had a
+  coordinate-space bug — `LocalCamera2D` was centered/panned using *full window* dimensions while
+  `Game1.Draw` scissored (but did not translate) drawing to the smaller MapCanvas rectangle, so the
+  camera's idea of where things are and the screen's idea of where MapCanvas actually sits
+  disagreed. Symptoms matched exactly: scroll-zoom appearing dead and clicks having no effect
+  (`ZoomAt`/`TryPickEntity` were comparing raw window mouse coordinates against camera math done
+  in a different frame of reference), header text clipped (`Root` had no explicit size — Myra's
+  default stretch tried to fill the full window, not the narrower MapCanvas rect it was supposed to
+  fit inside), and terrain not drawing at all while markers still appeared (terrain draws are
+  culled by `GetVisibleTileBounds`, which no longer matched where the scissor/camera actually put
+  things; `DrawMarkers` has no such culling, so it kept drawing regardless). Fixed properly this
+  time: `LocalCamera2D`'s coordinate space is now *MapCanvas-local* (0,0 = MapCanvas's own top-left)
+  everywhere — `LocalViewScreen.SetBounds`/`Show` take the actual `RegionSlot.MapCanvas` `Rectangle`
+  and use its Width/Height for `CenterOn`/`GetVisibleTileBounds`; a new private `ToLocal(Vector2)`
+  converts a raw window/mouse point before it ever touches the camera, applied inside `ZoomAt` and
+  `TryPickEntity` (`Pan` needs no conversion — a delta between two points already cancels out any
+  constant offset). `Game1.Draw` no longer just scissors; it also `Begin()`s the local-view
+  SpriteBatch with `transformMatrix: Matrix.CreateTranslation(mapCanvas.X, mapCanvas.Y, 0)`, so
+  everything `LocalViewScreen.Draw` computes in local space lands in the right place on screen
+  without every draw call needing its own offset math. `Root`'s header strip now sets
+  `HorizontalAlignment.Left`/`VerticalAlignment.Top` explicitly (not Myra's default stretch) with
+  `SetBounds` also assigning `Root.Width`/`Height` to the MapCanvas rectangle's own dimensions, so
+  it can no longer grow wider than the region it's meant to sit inside. No new tests (coordinate-
+  space/positioning fix over already-tested rendering code); full solution build warning-free —
+  667/668 tests pass, the one failure (`SimLoop_StepOneTickAdvancesExactlyOne`) is a pre-existing,
+  environment-timing-sensitive test in `WorldEngine.Sim/Simulation/SimLoop.cs` untouched by any
+  11.7 commit (confirmed via `git log`/`git diff`), not a regression from this work.
 - **11.8 — not started.**
 
 ## Problem statement

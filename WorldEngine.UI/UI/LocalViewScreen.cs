@@ -23,6 +23,13 @@ namespace WorldEngine.UI.UI;
 // pipeline as the main map, per the user's "reuse the map view UI" request: clicking a character/
 // beast marker here selects it exactly like clicking one on the main map would, and whatever
 // contextual panel that selection shows (with its own working [Watch] button) comes for free.
+//
+// All of LocalCamera2D's own coordinate math is MapCanvas-local (0,0 = MapCanvas's own top-left,
+// not the window's) — Game1 always passes raw window/mouse coordinates in, and every entry point
+// here (Pan/ZoomAt/TryPickEntity) converts via ToLocal before touching the camera, so the camera
+// itself never needs to know where MapCanvas sits on screen. Draw() reports the same offset back
+// to Game1 as a translation matrix so SpriteBatch draws (computed in that same local space) land
+// in the right place on screen without every render call needing its own offset math.
 public sealed class LocalViewScreen : IDisposable
 {
     public readonly Panel Root;
@@ -40,6 +47,8 @@ public sealed class LocalViewScreen : IDisposable
     private readonly Dictionary<ChunkCoord, LocalChunk> _chunks = new();
     private readonly List<LocalEntityMarker> _markers = new();
 
+    private Rectangle _mapCanvasBounds;
+
     private TileCoord _worldTile;
     private TileData _parentTile;
     private BorderManifest? _manifest;
@@ -53,36 +62,52 @@ public sealed class LocalViewScreen : IDisposable
     {
         _titleLabel  = new Label { Text = "Local View", TextColor = UiTheme.HeaderText };
         _statsLabel  = new Label { TextColor = UiTheme.TextSecondary };
-        _closeButton = new WeButton("[Back to World Map]", () => OnClose?.Invoke(), WeButtonVariant.Ghost);
+        _closeButton = new WeButton("[Back]", () => OnClose?.Invoke(), WeButtonVariant.Ghost);
 
-        // A slim strip anchored inside the MapCanvas region (Game1 positions Root there each
-        // frame via SetBounds) — TopBar above it keeps showing the real time controls/overlay
-        // bar, RightDock keeps showing whatever's selected. This is a HUD overlay, not a
-        // full-screen takeover.
+        // A slim strip anchored inside the MapCanvas region (positioned/sized by SetBounds,
+        // Left/Top-aligned rather than the Myra default Stretch so it can't grow wider than the
+        // region it's meant to sit inside of, which was cutting text off).
         var header = new HorizontalStackPanel
         {
-            Spacing = UiTheme.Space.Md,
-            Background = new Myra.Graphics2D.Brushes.SolidBrush(UiTheme.SurfacePanel),
-            Padding = new Myra.Graphics2D.Thickness(UiTheme.Space.Sm)
+            Spacing             = UiTheme.Space.Sm,
+            HorizontalAlignment = HorizontalAlignment.Left,
+            VerticalAlignment   = VerticalAlignment.Top,
+            Background          = new Myra.Graphics2D.Brushes.SolidBrush(UiTheme.SurfacePanel),
+            Padding             = new Myra.Graphics2D.Thickness(UiTheme.Space.Sm)
         };
         header.Widgets.Add(_titleLabel);
-        header.Widgets.Add(new Label { Text = "Right-drag pan · Scroll zoom · Click marker to inspect · [Esc]", TextColor = UiTheme.TextSecondary });
+        header.Widgets.Add(new Label { Text = "Drag=pan · Scroll=zoom · Click=inspect · Esc=back", TextColor = UiTheme.TextSecondary });
         header.Widgets.Add(_statsLabel);
         header.Widgets.Add(_closeButton.Root);
 
-        Root = new Panel { Visible = false };
+        Root = new Panel
+        {
+            Visible             = false,
+            HorizontalAlignment = HorizontalAlignment.Left,
+            VerticalAlignment   = VerticalAlignment.Top
+        };
         Root.Widgets.Add(header);
     }
 
     /// <summary>Call once after GraphicsDevice is available.</summary>
     public void Initialize(GraphicsDevice gd) => _renderer = new LocalTileMapRenderer(gd, _camera);
 
-    /// <summary>Positions the HUD strip within the MapCanvas region — call from Game1.ApplyLayout every frame, mirroring how TopBar/RightDock are positioned.</summary>
+    /// <summary>
+    /// Records where MapCanvas currently sits on screen — call from Game1.ApplyLayout every frame
+    /// (mirroring how TopBar/RightDock are positioned) and once immediately from ShowLocalView so
+    /// it's correct the instant the view opens, not just after the next resize.
+    /// </summary>
     public void SetBounds(Rectangle mapCanvasBounds)
     {
-        Root.Left = mapCanvasBounds.X;
-        Root.Top  = mapCanvasBounds.Y;
+        _mapCanvasBounds = mapCanvasBounds;
+        Root.Left   = mapCanvasBounds.X;
+        Root.Top    = mapCanvasBounds.Y;
+        Root.Width  = mapCanvasBounds.Width;
+        Root.Height = mapCanvasBounds.Height;
     }
+
+    /// <summary>Converts a raw window/mouse coordinate into MapCanvas-local space.</summary>
+    private Vector2 ToLocal(Vector2 screenPos) => screenPos - new Vector2(_mapCanvasBounds.X, _mapCanvasBounds.Y);
 
     /// <summary>
     /// Opens the local view for one world tile. <paramref name="manifest"/> is null when no
@@ -92,7 +117,7 @@ public sealed class LocalViewScreen : IDisposable
     public void Show(
         TileCoord worldTile, TileData parentTile, BorderManifest? manifest,
         int worldSeed, LocalGenConfig config, EventStore eventStore,
-        int viewportW, int viewportH)
+        Rectangle mapCanvasBounds)
     {
         _worldTile  = worldTile;
         _parentTile = parentTile;
@@ -101,30 +126,33 @@ public sealed class LocalViewScreen : IDisposable
         _config     = config;
         _eventStore = eventStore;
 
+        SetBounds(mapCanvasBounds);
+
         _chunks.Clear();
         _markers.Clear();
         _titleLabel.Text = manifest is null
-            ? $"Local View — Tile ({worldTile.X}, {worldTile.Y})  (no border data — flat placeholder terrain)"
+            ? $"Local View — Tile ({worldTile.X}, {worldTile.Y}) (no border data)"
             : $"Local View — Tile ({worldTile.X}, {worldTile.Y})";
 
         int n = config.LocalTilesPerWorldTileEdge;
-        _camera.CenterOn(n / 2f, n / 2f, viewportW, viewportH);
+        _camera.CenterOn(n / 2f, n / 2f, mapCanvasBounds.Width, mapCanvasBounds.Height);
 
         Root.Visible = true;
     }
 
     public void Hide() => Root.Visible = false;
 
-    public void Pan(Vector2 delta) => _camera.Pan(delta);
-    public void ZoomAt(Vector2 screenPoint, float factor) => _camera.ZoomAt(screenPoint, factor);
+    public void Pan(Vector2 delta) => _camera.Pan(delta); // a delta needs no offset translation
+    public void ZoomAt(Vector2 screenPoint, float factor) => _camera.ZoomAt(ToLocal(screenPoint), factor);
 
     /// <summary>
-    /// Hit-tests a screen point against the current marker list (character/beast only —
+    /// Hit-tests a raw window/mouse point against the current marker list (character/beast only —
     /// settlements have no distinct selectable ID, see LocalEntityMarker's doc comment), within a
     /// generous fixed pixel radius so small markers stay easy to click at low zoom.
     /// </summary>
     public bool TryPickEntity(Vector2 screenPos, out long id, out EntityKind kind)
     {
+        var local = ToLocal(screenPos);
         const float pickRadiusPx = 14f;
         float bestDistSq = pickRadiusPx * pickRadiusPx;
         long bestId = 0;
@@ -134,8 +162,8 @@ public sealed class LocalViewScreen : IDisposable
         foreach (var m in _markers)
         {
             if (m.Id is not { } markerId) continue;
-            var markerScreen = _camera.LocalTileToScreen(m.X, m.Y) + new Vector2(_camera.Zoom * 0.5f);
-            float distSq = Vector2.DistanceSquared(screenPos, markerScreen);
+            var markerLocal = _camera.LocalTileToScreen(m.X, m.Y) + new Vector2(_camera.Zoom * 0.5f);
+            float distSq = Vector2.DistanceSquared(local, markerLocal);
             if (distSq <= bestDistSq)
             {
                 bestDistSq = distSq;
@@ -154,13 +182,14 @@ public sealed class LocalViewScreen : IDisposable
     private const int MaxChunksPerFrame = 12;
 
     /// <summary>
-    /// Loads every chunk that overlaps the camera's actual visible viewport, plus a
-    /// ViewDistanceChunks preload margin on each side (nearest-to-viewport-center first, throttled
-    /// to MaxChunksPerFrame/call). Chunks farther than the margin plus a 1-chunk hysteresis band
-    /// are discarded — the margin prevents evict/reload thrashing right at the edge. Also
-    /// refreshes the marker list from the live snapshot. Call once per frame while visible.
+    /// Loads every chunk that overlaps the camera's actual visible viewport (MapCanvas-sized),
+    /// plus a ViewDistanceChunks preload margin on each side (nearest-to-viewport-center first,
+    /// throttled to MaxChunksPerFrame/call). Chunks farther than the margin plus a 1-chunk
+    /// hysteresis band are discarded — the margin prevents evict/reload thrashing right at the
+    /// edge. Also refreshes the marker list from the live snapshot. Call once per frame while
+    /// visible.
     /// </summary>
-    public void Update(WorldSnapshot? snapshot, int viewportW, int viewportH)
+    public void Update(WorldSnapshot? snapshot)
     {
         if (_config is null) return;
 
@@ -170,7 +199,7 @@ public sealed class LocalViewScreen : IDisposable
         int chunkSize     = _config.ChunkSizeTiles;
         int margin        = _config.ViewDistanceChunks;
 
-        var (minX, minY, maxX, maxY) = _camera.GetVisibleTileBounds(viewportW, viewportH);
+        var (minX, minY, maxX, maxY) = _camera.GetVisibleTileBounds(_mapCanvasBounds.Width, _mapCanvasBounds.Height);
         int minChunkX = Math.Clamp(FloorDiv(minX, chunkSize) - margin, 0, chunksPerEdge - 1);
         int maxChunkX = Math.Clamp(FloorDiv(maxX, chunkSize) + margin, 0, chunksPerEdge - 1);
         int minChunkY = Math.Clamp(FloorDiv(minY, chunkSize) - margin, 0, chunksPerEdge - 1);
@@ -213,7 +242,7 @@ public sealed class LocalViewScreen : IDisposable
         if (toRemove is not null)
             foreach (var coord in toRemove) _chunks.Remove(coord);
 
-        _statsLabel.Text = $"{_chunks.Count} chunks · zoom {_camera.Zoom:F1} · chunk range ({minChunkX}-{maxChunkX},{minChunkY}-{maxChunkY})";
+        _statsLabel.Text = $"{_chunks.Count} chunks · zoom {_camera.Zoom:F1}";
     }
 
     private static float DistSq(ChunkCoord c, float centerX, float centerY)
@@ -282,10 +311,16 @@ public sealed class LocalViewScreen : IDisposable
         return chunk;
     }
 
-    public void Draw(SpriteBatch sb, int viewportW, int viewportH)
+    /// <summary>
+    /// Draws terrain+markers in MapCanvas-local space (0,0 = MapCanvas's own top-left). Caller
+    /// must Begin() the SpriteBatch with a transform matrix translating by (MapCanvasBounds.X,
+    /// MapCanvasBounds.Y) — see <see cref="Rendering.LocalCamera2D"/>'s doc — so this never needs
+    /// to know its own screen offset.
+    /// </summary>
+    public void Draw(SpriteBatch sb)
     {
         if (_config is null || _renderer is null) return;
-        _renderer.Draw(sb, _chunks, _config.ChunkSizeTiles, viewportW, viewportH);
+        _renderer.Draw(sb, _chunks, _config.ChunkSizeTiles, _mapCanvasBounds.Width, _mapCanvasBounds.Height);
         _renderer.DrawMarkers(sb, _markers);
     }
 

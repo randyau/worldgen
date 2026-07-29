@@ -400,10 +400,7 @@ public sealed class Game1 : Game
             // M11 11.7 — chunk loading/eviction runs independently of input handling so panning
             // and idle frames both keep the loaded region in sync with the camera.
             if (_localViewScreen?.IsVisible == true)
-            {
-                var vp = GraphicsDevice.Viewport;
-                _localViewScreen.Update(snapshot, vp.Width, vp.Height);
-            }
+                _localViewScreen.Update(snapshot);
 
             // Every frame, regardless of whether a new sim snapshot arrived — UI interaction
             // state must respond immediately, including while paused (bug: was gated behind the
@@ -724,19 +721,16 @@ public sealed class Game1 : Game
     /// </summary>
     private void ShowLocalView(TileCoord coord, WorldEngine.Sim.Tiles.TileData parentTile)
     {
-        if (_localViewScreen is null || _simConfig is null || _eventStore is null) return;
+        if (_localViewScreen is null || _simConfig is null || _eventStore is null || _layoutHost is null) return;
 
         BorderManifest? manifest = _borderManifests.TryGetValue(coord, out var m) ? m : null;
-        var vp = GraphicsDevice.Viewport;
-        _localViewScreen.Show(
-            coord, parentTile, manifest,
-            _worldSeed, _simConfig.LocalGen, _eventStore, vp.Width, vp.Height);
 
         // MainUI (TopBar/RightDock/Float) deliberately stays visible — local view only swaps the
         // MapCanvas region's content, per the "reuse the map view UI" DECISION (time controls and
         // whatever contextual panel a marker click selects keep working exactly as on the main map).
-        if (_layoutHost is not null)
-            _localViewScreen.SetBounds(_layoutHost.Slot(RegionSlot.MapCanvas).Bounds);
+        _localViewScreen.Show(
+            coord, parentTile, manifest,
+            _worldSeed, _simConfig.LocalGen, _eventStore, _layoutHost.Slot(RegionSlot.MapCanvas).Bounds);
 
         // Local view is a read-only "look closer" pause — nothing here can act on a running sim
         // yet (no local movement/interaction per the phase's scope), so pause on entry and resume
@@ -1034,13 +1028,17 @@ public sealed class Game1 : Game
 
         if (_simStarted && _localViewScreen?.IsVisible == true && _spriteBatch is not null && _layoutHost is not null)
         {
-            // Same scissor-to-MapCanvas convention as the main map draw below — local view is a
-            // MapCanvas-region content swap, not a full-screen takeover, so TopBar/RightDock
-            // chrome (drawn later via _desktop.Render()) still owns the rest of the screen.
-            var vp = GraphicsDevice.Viewport;
-            GraphicsDevice.ScissorRectangle = _layoutHost.Slot(RegionSlot.MapCanvas).Bounds;
-            _spriteBatch.Begin(rasterizerState: new RasterizerState { ScissorTestEnable = true });
-            _localViewScreen.Draw(_spriteBatch, vp.Width, vp.Height);
+            // LocalViewScreen draws in MapCanvas-local space (0,0 = MapCanvas's own top-left) —
+            // the transform matrix shifts that to the right place on screen, and the scissor (same
+            // convention as the main map draw below) clips anything panned/zoomed past the region's
+            // edge, so TopBar/RightDock chrome (drawn later via _desktop.Render()) still owns the
+            // rest of the screen.
+            var mapCanvas = _layoutHost.Slot(RegionSlot.MapCanvas).Bounds;
+            GraphicsDevice.ScissorRectangle = mapCanvas;
+            _spriteBatch.Begin(
+                rasterizerState: new RasterizerState { ScissorTestEnable = true },
+                transformMatrix: Matrix.CreateTranslation(mapCanvas.X, mapCanvas.Y, 0));
+            _localViewScreen.Draw(_spriteBatch);
             _spriteBatch.End();
         }
         else if (_simStarted && snapshot is not null && _tileRenderer is not null && _spriteBatch is not null && _layoutHost is not null)
