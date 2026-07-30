@@ -58,6 +58,12 @@ where the codebase now is.
 | M9 | Created-Object Unification & Economic Depth | ✅ COMPLETE 2026-07-26 | Pay down G-1 debt; deepen crafting/economy. See archive. |
 | M10 | Worldgen Preview & Modding | ✅ COMPLETE 2026-07-26 | Layered preview + adjustment; player config/data modding. See archive. |
 | M11 | Scale & Distribution | summary | 10k+ year performance; local-scale gen; packaging. |
+| M12 | Generational & Domestic Drama | summary | Family bonds, mentorship, non-war rivalry, betrayal within a civ. |
+| M13 | Economy & Independent Wealth | summary | Persistent trade routes; merchant wealth as a power track separate from rulership. |
+| M14 | Religion, Deepened | summary | Schism, heresy, pilgrimage; religious leaders as a third power track alongside rulers/merchants. |
+| M15 | Disasters, Reworked | summary | Give eruptions/disasters real consequences; expand variety beyond wildfire/beasts; multi-year recovery arcs. |
+| M16 | Exploration & the Unknown | summary | Land expeditions; first contact; discovering ruins/artifacts from prior collapsed civs. |
+| M17 | Intrigue & Espionage | summary | Failed assassinations, coups, corrupt Tier-2 role-holders, spies. |
 
 Ordering rationale: polish (M6) de-risks and clarifies the surfaces that Spotlight/God Mode
 (M7) build on, so we author against a UI that's already coherent. **M8 (UI Framework Rewrite)
@@ -282,6 +288,71 @@ see the index doc and its linked phase docs (`m10_phase0_pipeline_resume.md` /
   `(ChunkCoord, LocalTileCoord)` is already the stable per-cell key a future "mine/collect"
   interaction would need, so no new identity scheme had to be added ahead of that milestone.
 - **Distribution (not started):** extend `publish-win.sh` to cross-platform packaging; onboarding/first-run for distributed builds.
+
+---
+
+## M12–M17 — Narrative Depth Expansion  *(summary)*
+
+**Status: not started.** Origin: 2026-07-30 design conversation — the simulation currently
+generates history, but nearly every *headline*-tier story that surfaces is war/conquest.
+Investigation found the event schema already has non-war event types
+(`CharacterMarried`, `CharacterGrieved`, `ScholarDiscovery`, `ArtisanCrafted`,
+`ReligionFounded`, `MerchantTradeCompleted`, `SeaVoyage*`, `DiseaseOutbreak`) that mostly go
+unused in the stories that get told — likely because goal-utility weights
+(`[utility_affinity.goal_affinity]`) and the headline significance threshold
+(`events.minimum_recorded_tier`) both bias toward conflict. **Before scoping any of
+M12–M17 in detail, do a diagnostic pass on those two config surfaces** to establish how much of
+the war-dominance problem is a tuning bug (events already firing but filtered/outscored) versus
+a genuine missing-mechanic gap — the milestones below assume some of both.
+
+An M17-equivalent idea (myth/unreliable-history — what a civ *believes* happened diverging from
+the event log) was considered and explicitly deferred: characters have no belief system to hang
+it on, and it would need one to mean anything. Revisit after M14 (religious leaders may partially
+establish belief machinery).
+
+These are sim-depth milestones, independent of M11's platform/distribution track — sequencing
+between them (which comes first, whether they interleave with M11) is not yet decided.
+
+### Reusable mechanics — schema evolution notes
+
+Found while scoping M12–M17: several existing systems have more depth already built into their
+data than the current behavior/story surface uses. Flagging these now so schema work for
+M12–M17 extends them instead of duplicating them.
+
+- **`RelationshipEdge` (`WorldEngine.Sim/Entities/Characters/RelationshipEdge.cs`) already
+  tracks `Trust`, `Fear`, and `Debt` as continuous floats**, not just the `IsAlly`/`IsRival`/
+  `IsFamily`/`IsMarried` flags. `Debt` in particular has no goal or event driving off it today —
+  it's a ready-made hook for M12 obligation/betrayal stories (a character who won't turn on a
+  debt-holder even when it costs them) without adding new state.
+- **Personality/aptitude bias fields exist per-ancestry** (`AncestryConfig` — Gaussian offsets on
+  a base-0.5 mean) — needs verification of whether `UtilityScorer` actually weights goal
+  selection by them, or whether they're currently flavor-only. If unused, this is a cross-cutting
+  fix (not milestone-specific) that would make every future milestone's new goal types feel more
+  differentiated by character, for free.
+- **Succession today is hardcoded to civ rulers only**
+  (`Civilization.SuccessionCrisisEndYear`, wired in `CivTracker.Diplomacy.cs`, backed by the
+  `SuccessionChain`/`Dynasties` tables). The underlying shape — a "seat" that becomes vacant, a
+  pool of eligible heirs/claimants, a crisis window, a resolution event — is not ruler-specific.
+  **Generalize it into a reusable "leadership succession" mechanic** with the seat type as a
+  parameter, so the same machinery drives: civ rulers (existing), family heads (M12), guild/
+  merchant-house heads (M13), and religious leaders (M14) — instead of hand-rolling three more
+  bespoke succession-crisis implementations. Do this generalization *before* or *during* M12,
+  since M12 is the first milestone that needs a second instance of it.
+- **Tier2 roles are fixed-behavior** (`Tier2BehaviorPhase` — one hardcoded routine per role:
+  Merchant/Physician/Scholar/Artisan/General/Governor). M13 (merchant wealth) and M17
+  (corrupt role-holders) both need *variable* behavior per role-holder rather than one script per
+  role — build that flexibility once as shared infrastructure rather than twice.
+- **`CulturalProfile`/`CivTraits`** (cultural distance, acquired traits) are computed once at civ
+  founding — needs verification of whether culture ever drifts from sustained contact. If it's
+  static-after-founding, letting it drift over time from trade/contact (M13/M16) is a cheap way
+  to generate contact-driven stories using a value that already exists, rather than a new system.
+
+- **M12 — Generational & Domestic Drama.** Parent-child bonds with inherited traits/grudges/goals; mentorship (master→apprentice skill transfer, and its failure modes); non-war rivalry (romantic, professional, succession disputes within a family); betrayal by an ally, spouse, or heir. Highest-leverage item — mostly wiring new goal types onto existing character relationships, no new worldgen or event-log domains required. Reuses `RelationshipEdge.Debt` for obligation stories and is the first consumer of the generalized succession mechanic (family-head seats) described above.
+- **M13 — Economy & Independent Wealth.** Trade routes as persistent entities between settlements (replacing the current one-shot `MerchantTradeCompleted` transaction) that can be severed by war/disaster/piracy, creating dependency and scarcity stories. Wealthy merchant characters/dynasties as a power track independent of political rulership — wealth that buys influence or funds factions without holding a title. Guilds/monopolies, whose heads use the generalized succession mechanic. Debt and economic ruin as a civ-level failure mode distinct from military collapse. Builds on M9's economic-depth foundation (per-capita demand, settlement specialization) and the trade-network topology M9 deliberately left out of scope; also the second consumer (after M17) of Tier2-role behavior variability.
+- **M14 — Religion, Deepened.** Schism — reuse the `CivSplintered` pattern (`3212`) for religions splitting into competing sects. Heresy/persecution short of holy war. Pilgrimage as a goal type. Religious leaders as a third power track alongside rulers (political) and merchants (M13, economic), using the generalized succession mechanic for a religious-leader seat (e.g. contested succession of a high priest).
+- **M15 — Disasters, Reworked.** Eruptions currently fire (`DisasterConfig`/`[disasters]`) but have no gameplay consequence — wire real effects (destroyed settlements/improvements, ash-driven famine, displacement). Expand disaster variety beyond wildfire/beasts: flood, drought, earthquake, blight/crop disease, harsh winter. Model disasters as multi-year recovery arcs rather than single-tick events, so they leave a visible scar in a settlement's history instead of resolving instantly.
+- **M16 — Exploration & the Unknown.** Land expeditions mirroring the M11 water-crossing pattern (`Port`/`SeaVoyage` delegation) — lost expeditions, first contact with an unknown ancestry or beast species. Ruins/artifacts from a *previously collapsed* civ (`CivilizationCollapsed`, `3202`, is already logged) discoverable by a later civ, resurfacing dead history as new story material.
+- **M17 — Intrigue & Espionage.** Failed/attempted assassinations (today only resolved outcomes are logged). Coups — a civ's power changing hands without full `CivilizationCollapsed`. Corruption or abuse by an appointed Tier-2 role-holder (`AppointedToRole`, `3301`, exists; nothing currently exploits the role) — first consumer of the Tier2-role behavior variability described above. Spies/informants as a character role, feeding `CivIntelGathered` (`5004`) into deliberate sabotage rather than passive intel.
 
 ---
 
