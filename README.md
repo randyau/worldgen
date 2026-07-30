@@ -2,7 +2,7 @@
 
 A procedural world generation and history simulation engine. It generates a world, runs thousands of years of history forward, and produces a queryable event log. The simulation is headless — the UI layer observes it; it doesn't drive it.
 
-**Status: in active development (Milestones 1–4 complete, balance/tuning phase)**
+**Status: in active development (Milestones 1–10 complete; M11 — Scale & Distribution — in progress. See `docs/roadmap.md`.)**
 
 ---
 
@@ -73,9 +73,11 @@ Launch `WorldEngine.UI.exe` from the `publish/win-x64/` directory. It generates 
 **First run:** a `world.db` SQLite file is created alongside the executable. Delete it before starting a fresh run — the sim appends to an existing database and will error on schema conflicts.
 
 **Keyboard controls:**
-- `Space` — pause/resume
-- `1–5` — set simulation speed
-- `B / E / T / M` — switch map overlay (Biome / Elevation / Temperature / Moisture)
+- `Space` — pause/resume; playback speed is set from the on-screen speed control
+- `B / E / T / M / R / G` — switch map overlay (Biome / Elevation / Territory / Moisture / Resources / Magic)
+- `H / W / F2` — toggle Civ History / Character Watch / God Mode panels
+- `Ctrl+,` — Settings, `Ctrl+S` — save world, `N` — new world
+- `?` — open the in-app Help panel, which lists all current bindings (all are rebindable)
 - Click any tile — opens the tile inspector
 
 ---
@@ -90,15 +92,16 @@ Key sections:
 |---|---|
 | `[world_gen]` | World dimensions, tile size |
 | `[world_gen.elevation]` | Tectonic intensity, mountain thresholds |
-| `[world_gen.climate]` | Temperature bands, moisture |
+| `[climate]` | Temperature bands, moisture |
 | `[world_gen.resources]` | Deposit density and types |
-| `[sim_loop.speed]` | TPS targets for each speed setting |
+| `[sim_loop]` | Tick cadence, TPS targets per speed setting, autosave/persistence intervals |
 | `[events.gate]` | Which event types are suppressed before DB write |
-| `[characters]` | Lifespan, needs decay, skill growth rates |
-| `[utility]` | Action scoring weights |
-| `[specialists]` | Population thresholds for Tier 2 character crystallization |
+| `[character]` | Lifespan, needs decay, skill growth rates |
+| `[utility_affinity]` | Action/goal scoring weights |
 | `[resource_pressure]` | Food/water shortage thresholds, reach scaling |
 | `[settlement_names]` | Prefix and suffix pools for generated settlement names |
+
+The full, always-current list of all ~200 config keys (with the C# path that reads each one) is generated at `docs/config_reference.md`.
 
 **Ancestries and beasts** have their own files:
 - `config/ancestries.toml` — the six playable ancestries (human, elf, dwarf, etc.), with spawn weights, personality biases, name pools, and cultural distance values
@@ -135,7 +138,8 @@ dotnet tool restore
 
 Design decisions, architecture records, and interface contracts are in `docs/`. Start with:
 
+- `docs/roadmap.md` — forward source of truth for milestone/phase planning (M6 onward)
 - `docs/architecture_decision_records.md` — why the codebase is structured as it is
 - `docs/implementation_decisions_v0.3.md` — all major technical decisions with rationale
-- `docs/mvp_spec.md` — milestone definitions and current status
-- `docs/interface_contracts.md` — key C# interface signatures
+- `docs/mvp_spec.md` — milestone and epic definitions (historical spec of record for M1–M2; frozen)
+- `docs/interface_contracts.md` — index into the split interface-contract docs
