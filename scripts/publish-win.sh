@@ -32,7 +32,7 @@ dotnet publish WorldEngine.UI/WorldEngine.UI.csproj \
   -v q
 
 echo ""
-echo -e "${GREEN}=== Publish complete ===${NC}"
+echo -e "${GREEN}=== Publish complete ($(ls -1 "$OUT" | wc -l) items in $OUT) ===${NC}"
 echo ""
 
 # Show Windows path (only works if running inside WSL2)

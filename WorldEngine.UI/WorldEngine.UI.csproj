@@ -10,6 +10,18 @@
     <OutputType>WinExe</OutputType>
   </PropertyGroup>
 
+  <!-- Publish cleanup: only applies to `dotnet publish -r <rid>` (RuntimeIdentifier set), never
+       to plain `dotnet build`/`dotnet run`. Bundles the ~200 managed runtime/dependency DLLs a
+       self-contained publish would otherwise scatter as loose files into the single exe itself —
+       config/Content/native libs stay as regular files alongside it (see scripts/publish-win.sh). -->
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' != ''">
+    <PublishSingleFile>true</PublishSingleFile>
+    <!-- Native libs (SDL2/OpenAL/e_sqlite3) and the CoreCLR host stay as loose files next to the
+         exe rather than self-extracting to a temp dir each launch — simpler to troubleshoot and
+         avoids native-loading quirks some MonoGame/SDL setups hit when self-extracted. -->
+    <IncludeNativeLibrariesForSelfExtract>false</IncludeNativeLibrariesForSelfExtract>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.1.303" />
     <PackageReference Include="Myra" Version="1.6.3" />
@@ -23,4 +35,17 @@
     <!-- MonoGame requires this dir to exist even if no assets are loaded -->
     <Content Include="Content\**\*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+
+  <!-- BUGFIX: WorldEngine.Sim is a ProjectReference but is itself an Exe (its headless CLI
+       runner, Program.cs) — the .NET SDK copies a referenced Exe project's own apphost/
+       deps.json/runtimeconfig.json/pdb/xml into the referencing project's publish output too,
+       so a second, unrelated "WorldEngine.Sim.exe" was landing next to the actual game exe.
+       Delete it post-publish rather than fighting ProjectReference metadata to prevent the copy
+       (fragile across SDK versions) — WorldEngine.Sim's own publish output is unaffected. -->
+  <Target Name="RemoveLeakedSimCliArtifacts" AfterTargets="Publish">
+    <ItemGroup>
+      <_SimCliArtifacts Include="$(PublishDir)WorldEngine.Sim.exe;$(PublishDir)WorldEngine.Sim.pdb;$(PublishDir)WorldEngine.Sim.deps.json;$(PublishDir)WorldEngine.Sim.runtimeconfig.json;$(PublishDir)WorldEngine.Sim.xml" />
+    </ItemGroup>
+    <Delete Files="@(_SimCliArtifacts)" ContinueOnError="true" />
+  </Target>
 </Project>
