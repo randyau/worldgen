@@ -2,25 +2,24 @@
 """
 generate-story.py — Extract character history from world.db and generate narrative via Ollama.
 
-Connects to a local Ollama instance. When running inside WSL2 with Ollama on the
-Windows host, use --host with the WSL2 gateway IP (see docs/story-generation.md).
+Auto-detects where Ollama is reachable (localhost, or — under WSL2 — the Windows
+host gateway) unless --host is given explicitly. See docs/story-generation.md.
 
 Usage:
     python3 scripts/generate-story.py world.db [options]
 
 Options:
     --model MODEL        Ollama model name (default: gemma4:e4b)
-    --host  HOST         Ollama base URL (default: http://localhost:11434)
+    --host  HOST         Ollama base URL (default: auto-detected)
     --top   N            Pick the N most event-rich characters (default: 3)
     --id    CHAR_ID      Process a specific character ID
     --prompt-only        Print the prompt without calling Ollama
     --out   DIR          Write story files to DIR (default: stdout)
     --style STYLE        Story style: biography | legend | epic (default: biography)
 
-Examples (WSL2 with Ollama on Windows):
-    HOST=$(ip route show default | awk '{print $3}')
-    python3 scripts/generate-story.py publish/win-x64/world.db --host http://$HOST:11434 --top 5
-    python3 scripts/generate-story.py world.db --host http://$HOST:11434 --id 6641948
+Examples:
+    python3 scripts/generate-story.py publish/win-x64/world.db --top 5
+    python3 scripts/generate-story.py world.db --id 6641948
     python3 scripts/generate-story.py world.db --prompt-only --top 1
 """
 
@@ -29,6 +28,7 @@ import json
 import os
 import re
 import sqlite3
+import subprocess
 import sys
 import textwrap
 import urllib.request
@@ -81,6 +81,33 @@ SEASON = {0: "Spring", 1: "Summer", 2: "Autumn", 3: "Winter"}
 
 # Maximum events to include in the LLM prompt (keeps prompt size manageable)
 MAX_PROMPT_EVENTS = 45
+
+# Character/settlement MaxHealth is 100 across the sim (CharacterSimConfig.MaxHealth,
+# SettlementConfig.MaxHealth) — damage/health fields in event payloads are on this scale.
+HEALTH_SCALE = 100
+
+
+def damage_severity(dmg: float, scale: int = HEALTH_SCALE) -> str:
+    """
+    Translate a raw damage number (0-100 scale) into a qualitative severity phrase.
+
+    Raw numbers like "dealt 35 damage" mean nothing to an LLM or a reader without
+    the 0-100 scale as context — it either omits them or, worse, cites them verbatim
+    as if they were meaningful on their own. Bucketing into severity tiers gives the
+    narrative something it can actually describe.
+    """
+    if dmg <= 0:
+        return ""
+    frac = dmg / scale
+    if frac < 0.05:
+        return "a glancing blow"
+    if frac < 0.15:
+        return "minor damage"
+    if frac < 0.35:
+        return "significant damage"
+    if frac < 0.60:
+        return "heavy damage"
+    return "devastating, near-crippling damage"
 
 
 # ── DB helpers ─────────────────────────────────────────────────────────────────
@@ -369,10 +396,11 @@ def format_event(ev: dict, civs: dict[int, str] | None = None) -> str:
         enemy   = p.get("EnemyCivName") or civ_name("EnemyCivId")
         return f"Year {year}, {s}: War with {enemy} ended — {outcome}"
     if t == EV_BATTLE:
-        outcome = p.get("RaidOutcome", p.get("Outcome", "battle"))
-        dmg     = p.get("Damage", p.get("DamageDealt", 0))
-        target  = sett or "an enemy settlement"
-        return f"Year {year}, {s}: Battle at {target} — {outcome}" + (f", dealt {dmg} dmg" if dmg else "")
+        outcome  = p.get("RaidOutcome", p.get("Outcome", "battle"))
+        dmg      = p.get("Damage", p.get("DamageDealt", 0))
+        target   = sett or "an enemy settlement"
+        severity = damage_severity(dmg)
+        return f"Year {year}, {s}: Battle at {target} — {outcome}" + (f" ({severity})" if severity else "")
     if t == EV_SET_FOUNDED:
         return f"Year {year}, {s}: Founded the settlement of {sett}"
     if t == EV_SET_CONQUERED:
@@ -381,9 +409,10 @@ def format_event(ev: dict, civs: dict[int, str] | None = None) -> str:
     if t == EV_SUCCESSION:
         return f"Year {year}, {s}: Became ruler of {p.get('CivName', 'their civ')}"
     if t == EV_BEAST_CHAR:
-        beast = p.get("BeastName", p.get("BeastSpecies", "a beast"))
-        dmg   = p.get("DamageDealt", 0)
-        return f"Year {year}, {s}: Attacked by {beast}, took {dmg} damage"
+        beast    = p.get("BeastName", p.get("BeastSpecies", "a beast"))
+        dmg      = p.get("DamageDealt", p.get("Damage", 0))
+        severity = damage_severity(dmg)
+        return f"Year {year}, {s}: Attacked by {beast}" + (f", suffered {severity}" if severity else "")
     if t == EV_GOAL_FORMED:
         goal = p.get("GoalType", "a goal")
         return f"Year {year}, {s}: Set out to {goal.replace('_', ' ').lower()}"
@@ -459,20 +488,77 @@ def build_prompt(char: dict, events: list[dict], style: str,
         ====
         {style_instructions}
         Be specific — use names, places, and events from the timeline.
+        The timeline avoids raw game statistics on purpose — do not invent or cite numeric
+        stats (damage, health, population counts) as if they were meaningful figures; convey
+        severity and scale qualitatively instead (a crushing blow, a narrow victory, a starving
+        village), the way the timeline itself already does.
         Write only the story, no preamble.
     """)
 
 
 # ── Ollama client ──────────────────────────────────────────────────────────────
 
+def detect_ollama_host() -> str:
+    """
+    Auto-detect where Ollama is reachable, so WSL2 users don't have to remember
+    the Windows-host gateway IP every session. Order: explicit OLLAMA_HOST env
+    var, then localhost, then — if running under WSL2 — the default-route
+    gateway IP (that's what Windows-side Ollama binds to when OLLAMA_HOST=0.0.0.0
+    is set on the Windows side; see docs/story-generation.md).
+    """
+    if os.environ.get("OLLAMA_HOST"):
+        return os.environ["OLLAMA_HOST"]
+
+    candidates = ["http://localhost:11434"]
+    try:
+        with open("/proc/version") as f:
+            is_wsl = "microsoft" in f.read().lower()
+    except OSError:
+        is_wsl = False
+    if is_wsl:
+        try:
+            result = subprocess.run(["ip", "route", "show", "default"],
+                                    capture_output=True, text=True, timeout=2)
+            m = re.search(r"default via (\S+)", result.stdout)
+            if m:
+                candidates.append(f"http://{m.group(1)}:11434")
+        except (OSError, subprocess.SubprocessError):
+            pass
+
+    for host in candidates:
+        try:
+            urllib.request.urlopen(f"{host}/api/tags", timeout=1.5)
+            return host
+        except (urllib.error.URLError, OSError):
+            continue
+
+    return candidates[0]  # nothing answered; fall back to localhost and let call_ollama report the real error
+
+
+# Stories target 300-500 words (~400-700 tokens). Ollama's /api/generate defaults
+# num_ctx to a small value (often 2048) unless told otherwise — for a 45-event
+# timeline prompt plus output, that can be enough to silently truncate the
+# response mid-sentence. These are generous enough for the largest prompts this
+# script builds.
+OLLAMA_NUM_CTX     = 6144
+OLLAMA_NUM_PREDICT = 900
+
+
 def call_ollama(prompt: str, model: str, host: str) -> str:
     url  = f"{host.rstrip('/')}/api/generate"
-    body = json.dumps({"model": model, "prompt": prompt, "stream": False}).encode()
+    body = json.dumps({
+        "model": model, "prompt": prompt, "stream": False,
+        "options": {"num_ctx": OLLAMA_NUM_CTX, "num_predict": OLLAMA_NUM_PREDICT},
+    }).encode()
     req  = urllib.request.Request(url, data=body,
                                   headers={"Content-Type": "application/json"})
     try:
         with urllib.request.urlopen(req, timeout=600) as resp:
             data = json.loads(resp.read())
+            if data.get("done_reason") == "length":
+                print(f"  [WARN] Response was cut off at the {OLLAMA_NUM_PREDICT}-token output limit "
+                      f"— edit OLLAMA_NUM_PREDICT in this script if you need more.",
+                      file=sys.stderr)
             return data.get("response", "").strip()
     except urllib.error.URLError as e:
         print(f"[ERROR] Could not reach Ollama at {host}: {e}", file=sys.stderr)
@@ -487,7 +573,7 @@ def main():
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("db", help="Path to world.db")
     ap.add_argument("--model",       default="gemma4:e4b")
-    ap.add_argument("--host",        default="http://localhost:11434")
+    ap.add_argument("--host",        default=None, help="Ollama base URL (default: auto-detected)")
     ap.add_argument("--top",         type=int, default=3)
     ap.add_argument("--id",          type=int, default=None)
     ap.add_argument("--prompt-only", action="store_true")
@@ -499,6 +585,10 @@ def main():
     if not os.path.exists(args.db):
         print(f"[ERROR] Database not found: {args.db}", file=sys.stderr)
         sys.exit(1)
+
+    if not args.prompt_only:
+        args.host = args.host or detect_ollama_host()
+        print(f"  Using Ollama at {args.host}", file=sys.stderr)
 
     conn = connect(args.db)
     civs = civ_name_map(conn)
