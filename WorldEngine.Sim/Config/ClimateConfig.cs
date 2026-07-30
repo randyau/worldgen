@@ -26,6 +26,18 @@ public class ClimateConfig
     public float MonsoonMultiplierMax { get; set; } = 3.0f;
     public float LatTemperatureAnomalyScale { get; set; } = 1.4f;
 
+    /// <summary>
+    /// Amplitude (degrees) of a long-period sinusoidal oscillation layered on top of the secular
+    /// temperature drift. The secular trend saturates at its clamp within decades; this cycle keeps
+    /// GlobalTemperatureAnomaly — and therefore biome boundaries, monsoon strength, storm corridor
+    /// position — moving across a multi-thousand-year run instead of freezing once the drift caps out.
+    /// 0 = no cycle (legacy monotonic-then-flat behavior).
+    /// </summary>
+    public float ClimateCycleAmplitude { get; set; } = 0.0f;
+
+    /// <summary>Period (years) of the ClimateCycleAmplitude oscillation. 0 disables the cycle.</summary>
+    public int ClimateCyclePeriodYears { get; set; } = 0;
+
     // Phase 5 — sea level (annual)
     public float AnnualSeaLevelDriftRate { get; set; } = 0.0f;
     public float SeaLevelEventThreshold { get; set; } = 0.1f;

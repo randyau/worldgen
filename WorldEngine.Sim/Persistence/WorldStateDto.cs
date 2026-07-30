@@ -36,6 +36,7 @@ public sealed record WorldStateDto(
 
     // Environmental drift
     float GlobalTemperatureAnomaly,
+    float SecularTemperatureAnomaly,
     float CurrentSeaLevel,
     float GlobalPrecipitationMultiplier,
     float StormCorridorNormalizedLat,

@@ -95,6 +95,13 @@ public sealed class WorldState : IWorldStateReadOnly
     public long CurrentTick { get; internal set; }
 
     // === DRIFT PARAMETERS (genesis = zero/defaults) ===
+    /// <summary>
+    /// Monotonic secular warming/cooling trend, accumulated from AnnualTempDriftRate and clamped
+    /// to [-MaxCoolingAnomaly, MaxWarmingAnomaly]. Tracked separately from GlobalTemperatureAnomaly
+    /// because the secular trend saturates at the clamp within decades — the multi-century cyclical
+    /// term layered on top in RunAnnualDrift keeps climate moving for the rest of a long run.
+    /// </summary>
+    public float SecularTemperatureAnomaly { get; internal set; }
     public float GlobalTemperatureAnomaly { get; internal set; }
     public float CurrentSeaLevel { get; internal set; }
     public float GlobalPrecipitationMultiplier { get; internal set; } = 1.0f;

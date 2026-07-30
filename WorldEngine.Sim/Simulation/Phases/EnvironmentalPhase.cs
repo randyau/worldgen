@@ -113,15 +113,27 @@ public sealed class EnvironmentalPhase
     private void RunAnnualDrift(WorldState world, List<PendingEvent> pending)
     {
         var cfg = _cfg.Climate;
+        float previousAnomaly = world.GlobalTemperatureAnomaly;
 
-        // Temperature anomaly drift (only when drift rate > 0)
+        // Secular trend: accumulates and clamps as before (only when drift rate > 0)
         if (cfg.AnnualTempDriftRate != 0f)
         {
-            world.GlobalTemperatureAnomaly = Math.Clamp(
-                world.GlobalTemperatureAnomaly + cfg.AnnualTempDriftRate,
+            world.SecularTemperatureAnomaly = Math.Clamp(
+                world.SecularTemperatureAnomaly + cfg.AnnualTempDriftRate,
                 -cfg.MaxCoolingAnomaly,
                 cfg.MaxWarmingAnomaly);
+        }
 
+        // Cyclical term: keeps the climate moving long after the secular trend has saturated at
+        // its clamp, so a 3k–10k year run doesn't just freeze at the ceiling after a century or two.
+        float cyclical = 0f;
+        if (cfg.ClimateCycleAmplitude != 0f && cfg.ClimateCyclePeriodYears > 0)
+            cyclical = cfg.ClimateCycleAmplitude * MathF.Sin(2f * MathF.PI * world.CurrentYear / cfg.ClimateCyclePeriodYears);
+
+        world.GlobalTemperatureAnomaly = world.SecularTemperatureAnomaly + cyclical;
+
+        if (world.GlobalTemperatureAnomaly != previousAnomaly)
+        {
             // Storm corridor shift
             world.StormCorridorNormalizedLat = Math.Clamp(
                 world.StormCorridorNormalizedLat + world.GlobalTemperatureAnomaly * cfg.StormCorridorShiftPerDegree,

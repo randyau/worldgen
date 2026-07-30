@@ -49,6 +49,7 @@ public class ClimateDriftTests
         var world = BuildWorld();
         world.SimConfig.Climate.AnnualTempDriftRate = 100f;
         world.SimConfig.Climate.MaxWarmingAnomaly = 5.0f;
+        world.SimConfig.Climate.ClimateCycleAmplitude = 0f; // isolate the secular-clamp behavior under test
         var phase = new EnvironmentalPhase(world.SimConfig);
 
         for (int y = 0; y < 20; y++)
@@ -82,6 +83,7 @@ public class ClimateDriftTests
     {
         var world = BuildWorld();
         world.SimConfig.Climate.AnnualTempDriftRate = 0.0f;
+        world.SimConfig.Climate.ClimateCycleAmplitude = 0f; // isolate the secular-drift-off behavior under test
         float before = world.GlobalTemperatureAnomaly;
         var phase = new EnvironmentalPhase(world.SimConfig);
 
@@ -93,6 +95,30 @@ public class ClimateDriftTests
 
         world.GlobalTemperatureAnomaly.Should().Be(before,
             "with drift rate=0, anomaly must remain unchanged");
+    }
+
+    [Fact]
+    public void Drift_CycleKeepsAnomalyMovingAfterSecularTrendSaturates()
+    {
+        var world = BuildWorld();
+        world.SimConfig.Climate.AnnualTempDriftRate = 100f;   // saturates SecularTemperatureAnomaly in 1 tick
+        world.SimConfig.Climate.MaxWarmingAnomaly = 5.0f;
+        world.SimConfig.Climate.MaxCoolingAnomaly = 5.0f;
+        world.SimConfig.Climate.ClimateCycleAmplitude = 3.0f;
+        world.SimConfig.Climate.ClimateCyclePeriodYears = 100;
+        var phase = new EnvironmentalPhase(world.SimConfig);
+
+        var seen = new HashSet<float>();
+        for (int y = 0; y < 100; y++)
+        {
+            world.CurrentSeason = Season.Spring;
+            phase.RunTick(world, new List<PendingEvent>(), isAnnualTick: true);
+            seen.Add(world.GlobalTemperatureAnomaly);
+        }
+
+        seen.Count.Should().BeGreaterThan(1,
+            "even after the secular trend saturates at its clamp, the cyclical term should keep " +
+            "GlobalTemperatureAnomaly moving across a long run instead of freezing at the ceiling");
     }
 
     [Fact]

@@ -51,6 +51,7 @@ internal static class WorldStateMapper
             CurrentSeason:               (int)w.CurrentSeason,
             CurrentTick:                 w.CurrentTick,
             GlobalTemperatureAnomaly:    w.GlobalTemperatureAnomaly,
+            SecularTemperatureAnomaly:   w.SecularTemperatureAnomaly,
             CurrentSeaLevel:             w.CurrentSeaLevel,
             GlobalPrecipitationMultiplier: w.GlobalPrecipitationMultiplier,
             StormCorridorNormalizedLat:  w.StormCorridorNormalizedLat,
@@ -327,6 +328,7 @@ internal static class WorldStateMapper
 
         // 7. Restore environmental drift
         world.GlobalTemperatureAnomaly     = dto.GlobalTemperatureAnomaly;
+        world.SecularTemperatureAnomaly    = dto.SecularTemperatureAnomaly;
         world.CurrentSeaLevel              = dto.CurrentSeaLevel;
         world.GlobalPrecipitationMultiplier = dto.GlobalPrecipitationMultiplier;
         world.StormCorridorHalfWidth       = dto.StormCorridorHalfWidth;
