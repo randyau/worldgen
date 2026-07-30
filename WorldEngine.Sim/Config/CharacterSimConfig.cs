@@ -10,6 +10,14 @@ public sealed class CharacterSimConfig
     public int   MaxAgeSeasonsMax       { get; set; } = 200;
     public int   MaxHealth              { get; set; } = 100;
 
+    // Minimum AgeSeason for a character to be eligible for succession to ruler.
+    // 32 seasons = 8 years — excludes literal infants/toddlers while still allowing
+    // child/teen monarchs (historically plausible, and comfortably below every
+    // ancestry's shortest MinLifespanSeasons floor of 60, so it never single-handedly
+    // forces a succession crisis). If no living member clears this bar, the civ falls
+    // through to the existing "no successor found" succession-crisis path.
+    public int   MinRulerAgeSeasons     { get; set; } = 32;
+
     // Needs decay per season (all 0.0–1.0 range)
     public float NeedsDecaySafety       { get; set; } = 0.05f;
     public float NeedsDecayFood         { get; set; } = 0.08f;

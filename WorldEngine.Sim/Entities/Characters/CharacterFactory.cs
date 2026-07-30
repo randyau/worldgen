@@ -14,6 +14,17 @@ public static class CharacterFactory
     private const int SaltAge         = 430;
     private const int SaltName        = 440;
     private const int SaltEpithet     = 441;
+    private const int SaltStartAge    = 450;
+
+    /// <summary>
+    /// Fraction-of-lifespan range sampled for <c>startAsAdult</c> spawns. Expressed as a fraction
+    /// of the individual's own rolled MaxAgeSeason (not an absolute season count) so it scales
+    /// correctly across ancestries with wildly different lifespans (e.g. short-lived humans vs.
+    /// elves living 10x longer) — a "founder in their prime" is ~15-45% of the way through their
+    /// own life regardless of whether that life is 20 years or 400.
+    /// </summary>
+    private const float AdultAgeFractionMin = 0.15f;
+    private const float AdultAgeFractionMax = 0.45f;
 
     public static Tier1Character Spawn(
         TileCoord location,
@@ -21,7 +32,8 @@ public static class CharacterFactory
         int worldSeed,
         long entitySeq,
         SimConfig config,
-        int birthYear)
+        int birthYear,
+        bool startAsAdult = false)
     {
         // DECISION: EntityId value is derived from entitySeq so that two runs with the
         // same seed produce identical IDs (in-process reproducibility). entitySeq must be
@@ -90,7 +102,7 @@ public static class CharacterFactory
             BirthYear:   birthYear,
             BirthSeason: 0);
 
-        return new Tier1Character(
+        var character = new Tier1Character(
             id:           id,
             location:     location,
             personality:  personality,
@@ -99,6 +111,21 @@ public static class CharacterFactory
             identity:     identity,
             maxHealth:    config.Character.MaxHealth,
             maxAgeSeason: maxAge);
+
+        // DECISION: a "leader emerges from the population" spawn (civ founding, secession,
+        // ruler backfill after a civ's last named member dies) represents someone who already
+        // existed, not a birth — without this they spawn at AgeSeason 0 and can found/rule in
+        // the same tick as their CharacterBorn event, i.e. an infant monarch. Genuine births
+        // (CharacterBehaviorPhase's population-growth path) leave startAsAdult=false.
+        if (startAsAdult)
+        {
+            float frac = AdultAgeFractionMin
+                + WorldRng.FloatAt(worldSeed, 0, seq, 0, SaltStartAge) * (AdultAgeFractionMax - AdultAgeFractionMin);
+            int startAge = Math.Clamp((int)(frac * maxAge), config.Character.MinRulerAgeSeasons, Math.Max(1, maxAge - 1));
+            character.AgeSeason = startAge;
+        }
+
+        return character;
     }
 
     // Backward-compat overload for call sites that don't know the biome (Tier2 promotions, tests)
@@ -107,8 +134,9 @@ public static class CharacterFactory
         int worldSeed,
         long entitySeq,
         SimConfig config,
-        int birthYear) =>
-        Spawn(location, BiomeType.Grassland, worldSeed, entitySeq, config, birthYear);
+        int birthYear,
+        bool startAsAdult = false) =>
+        Spawn(location, BiomeType.Grassland, worldSeed, entitySeq, config, birthYear, startAsAdult);
 
     // Gaussian approximation (3-sample CLT); bias shifts the mean, individual noise ≈ stddev 0.2
     private static float BiasedTrait(int worldSeed, int seq, int salt, float bias)

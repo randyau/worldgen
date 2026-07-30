@@ -205,6 +205,8 @@ Edit values in `sim_config.toml`; all keys live there without recompiling.
 | `monsoon_multiplier_min` | `0.5` | `SimConfig.Climate.MonsoonMultiplierMin` | minimum MonsoonIntensityMultiplier |
 | `monsoon_multiplier_max` | `3.0` | `SimConfig.Climate.MonsoonMultiplierMax` | maximum MonsoonIntensityMultiplier |
 | `lat_temperature_anomaly_scale` | `1.4` | `SimConfig.Climate.LatTemperatureAnomalyScale` | amplification of temperature anomaly at high latitudes |
+| `climate_cycle_amplitude` | `2.5` | `SimConfig.Climate.ClimateCycleAmplitude` | degrees; long-period oscillation layered on top of the secular |
+| `climate_cycle_period_years` | `800` | `SimConfig.Climate.ClimateCyclePeriodYears` | years per full oscillation of climate_cycle_amplitude |
 | `annual_sea_level_drift_rate` | `0.0` | `SimConfig.Climate.AnnualSeaLevelDriftRate` | sea level change per year; 0 = stable |
 | `sea_level_event_threshold` | `0.1` | `SimConfig.Climate.SeaLevelEventThreshold` | minimum delta to emit SeaLevelChanged event |
 | `volcanic_decay_rate` | `0.005` | `SimConfig.Climate.VolcanicDecayRate` | VolcanicActivityMultiplier lerp toward 1.0 per tick (~0.07/year at 14 ticks/year) |
@@ -270,6 +272,7 @@ Edit values in `sim_config.toml`; all keys live there without recompiling.
 | `max_age_seasons_min` | `80` | `SimConfig.Character.MaxAgeSeasonsMin` |  |
 | `max_age_seasons_max` | `200` | `SimConfig.Character.MaxAgeSeasonsMax` |  |
 | `max_health` | `100` | `SimConfig.Character.MaxHealth` |  |
+| `min_ruler_age_seasons` | `32` | `SimConfig.Character.MinRulerAgeSeasons` | 8 years; succession skips members younger than this (no infant monarchs) |
 | `needs_decay_safety` | `0.05` | `SimConfig.Character.NeedsDecaySafety` |  |
 | `needs_decay_food` | `0.08` | `SimConfig.Character.NeedsDecayFood` |  |
 | `needs_decay_shelter` | `0.04` | `SimConfig.Character.NeedsDecayShelter` |  |

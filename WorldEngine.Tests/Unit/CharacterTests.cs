@@ -67,6 +67,38 @@ public sealed class CharacterTests
     }
 
     [Fact]
+    public void Factory_Default_StartsAtAgeZero()
+    {
+        var cfg = DefaultConfig();
+        var c = CharacterFactory.Spawn(new TileCoord(0, 0), worldSeed: 42, entitySeq: 10_000, cfg, birthYear: 1);
+
+        // Genuine births (default startAsAdult: false) must start as newborns — anything else
+        // desyncs from the CharacterBorn event they're paired with.
+        c.AgeSeason.Should().Be(0);
+    }
+
+    [Fact]
+    public void Factory_StartAsAdult_RollsPlausibleStartingAge()
+    {
+        var cfg = DefaultConfig();
+        var c = CharacterFactory.Spawn(new TileCoord(0, 0), worldSeed: 42, entitySeq: 10_000, cfg, birthYear: 1, startAsAdult: true);
+
+        // "Leader emerges from the population" spawns (civ founding, secession, ruler backfill)
+        // must not start as infants — see SuccessionAgeGateTests for the succession-side gate.
+        c.AgeSeason.Should().BeInRange(cfg.Character.MinRulerAgeSeasons, c.MaxAgeSeason - 1);
+    }
+
+    [Fact]
+    public void Factory_StartAsAdult_IsDeterministic()
+    {
+        var cfg = DefaultConfig();
+        var c1 = CharacterFactory.Spawn(new TileCoord(3, 7), worldSeed: 555, entitySeq: 20_000, cfg, birthYear: 1, startAsAdult: true);
+        var c2 = CharacterFactory.Spawn(new TileCoord(3, 7), worldSeed: 555, entitySeq: 20_000, cfg, birthYear: 1, startAsAdult: true);
+
+        c1.AgeSeason.Should().Be(c2.AgeSeason);
+    }
+
+    [Fact]
     public void Factory_AgeIsWithinReasonableBounds()
     {
         // Ancestry now controls lifespan — range depends on which ancestry is rolled.

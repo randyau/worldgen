@@ -332,6 +332,7 @@ public sealed class CharacterBehaviorPhase
                 foreach (var memberId in civ.Members)
                 {
                     if (world.GetEntity(memberId) is not Tier1Character member || !member.IsAlive) continue;
+                    if (member.AgeSeason < _cfg.MinRulerAgeSeasons) continue; // no infant/toddler monarchs
                     float score = (member.Personality.Aggression + member.Skills.Leadership) * 0.5f;
                     if (score > bestScore) { bestScore = score; successorId = memberId; }
                 }
@@ -377,7 +378,7 @@ public sealed class CharacterBehaviorPhase
                     long seq = (300_000L + world.CurrentYear * 997L + sTile.X * 31L + sTile.Y) & 0x7FFFFFFF;
                     var tileData = world.TileGrid.GetTile(sTile);
                     var newRuler = CharacterFactory.Spawn(sTile, (BiomeType)tileData.BiomeType,
-                        world.WorldSeed, seq, _simCfg, world.CurrentYear);
+                        world.WorldSeed, seq, _simCfg, world.CurrentYear, startAsAdult: true);
                     int nameOrdinal = world.ClaimNameOrdinal(newRuler.Identity.Name);
                     civ.RulerId = newRuler.Id;
                     civ.RulerCount++;

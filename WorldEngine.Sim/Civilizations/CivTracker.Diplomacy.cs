@@ -257,7 +257,7 @@ public static partial class CivTracker
 
             long seq     = (200_000L + world.CurrentYear * 997L + slot * 31L) & 0x7FFFFFFF;
             var  biome   = (BiomeType)world.TileGrid.GetTile(tile.Value).BiomeType;
-            var  founder = CharacterFactory.Spawn(tile.Value, biome, world.WorldSeed, seq, cfg, world.CurrentYear);
+            var  founder = CharacterFactory.Spawn(tile.Value, biome, world.WorldSeed, seq, cfg, world.CurrentYear, startAsAdult: true);
             int  founderOrdinal = world.ClaimNameOrdinal(founder.Identity.Name);
             if (founderOrdinal > 0)
                 founder.Identity = founder.Identity with { NameOrdinal = founderOrdinal };

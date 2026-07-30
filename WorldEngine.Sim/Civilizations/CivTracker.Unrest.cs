@@ -150,7 +150,7 @@ public static partial class CivTracker
             long seq = (400_000L + world.CurrentYear * 997L + leadTile.X * 31L + leadTile.Y) & 0x7FFFFFFF;
             var tileData = world.TileGrid.GetTile(leadTile);
             leader = CharacterFactory.Spawn(leadTile, (BiomeType)tileData.BiomeType,
-                world.WorldSeed, seq, world.SimConfig, world.CurrentYear);
+                world.WorldSeed, seq, world.SimConfig, world.CurrentYear, startAsAdult: true);
             int ordinal = world.ClaimNameOrdinal(leader.Identity.Name);
             if (ordinal > 0)
                 leader.Identity = leader.Identity with { NameOrdinal = ordinal };
