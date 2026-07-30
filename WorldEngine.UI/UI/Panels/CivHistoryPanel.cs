@@ -36,7 +36,10 @@ public sealed class CivHistoryPanel : IToggleablePanel
     {
         var body = new WeVStack(UiTheme.Space.Sm);
         body.Add(_civCombo);
-        body.Add(_content);
+        // BUG FIX: an old civ's rulers/wars/events list can run to hundreds of lines with no
+        // internal scrollbar, so the panel just kept growing and pushed the map/other panels
+        // off-screen. Cap it in its own ScrollViewer, same pattern as EventLogPanel.
+        body.Add(new ScrollViewer { Content = _content.Root, Height = 500 });
         return PanelFrame.Build(Title, body.Root, new PanelFrameOptions { OnClose = Hide });
     }
 

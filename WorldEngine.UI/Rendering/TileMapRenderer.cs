@@ -106,6 +106,15 @@ public sealed class TileMapRenderer(GraphicsDevice gd, Camera2D camera)
         // Draw settlement markers — always visible regardless of zoom
         DrawSettlementMarkers(sb, snapshot, tw, th, minX, maxX, minY, maxY, territoryMode);
 
+        // Draw spotlight marker — always visible regardless of zoom, distinct from the yellow
+        // tile-inspector outline (that one marks *what you clicked*, this marks *who you're playing*).
+        if (snapshot.SpotlightCharacterId is { } spotlightId &&
+            snapshot.EntitySnapshots.TryGetValue(spotlightId, out var spotlightSnap) &&
+            spotlightSnap.IsAlive)
+        {
+            DrawSpotlightMarker(sb, spotlightSnap.Location);
+        }
+
         // Draw selection highlight over the inspected tile
         if (snapshot.InspectedTile?.Coord is TileCoord sel)
         {
@@ -323,6 +332,41 @@ public sealed class TileMapRenderer(GraphicsDevice gd, Camera2D camera)
             int cy  = (int)MathF.Round(pos.Y + camera.Zoom * 0.5f);
             DrawX(sb, cx, cy, ruinHalf, ruinColor);
         }
+    }
+
+    /// <summary>
+    /// Draws a bold orange outline around the spotlit character's tile, with corner ticks so it
+    /// reads at any zoom level (including zoom &lt; 2, where the blue character-cross marker
+    /// doesn't render at all). Kept visually distinct from the yellow tile-inspector highlight.
+    /// </summary>
+    private void DrawSpotlightMarker(SpriteBatch sb, TileCoord coord)
+    {
+        var pos = camera.TileToScreen(coord);
+        int x0 = (int)MathF.Round(pos.X);
+        int y0 = (int)MathF.Round(pos.Y);
+        int x1 = (int)MathF.Round(pos.X + camera.Zoom);
+        int y1 = (int)MathF.Round(pos.Y + camera.Zoom);
+        int w = Math.Max(x1 - x0, 6), h = Math.Max(y1 - y0, 6);
+        x1 = x0 + w; y1 = y0 + h;
+
+        var orange = new Color(255, 140, 0);
+        const int B = 3;
+        int pad = Math.Max(2, MarkerPx(0.15f, 2)); // outset from the tile so it doesn't merge with the tile-inspector box
+        int ox0 = x0 - pad, oy0 = y0 - pad, ox1 = x1 + pad, oy1 = y1 + pad;
+        int ow = ox1 - ox0, oh = oy1 - oy0;
+
+        // Corner ticks instead of a full box outline — reads as "marked" without occluding the tile.
+        sb.Draw(_pixel, new Rectangle(ox0, oy0, B, oh / 3), orange);
+        sb.Draw(_pixel, new Rectangle(ox0, oy0, ow / 3, B), orange);
+
+        sb.Draw(_pixel, new Rectangle(ox1 - B, oy0, B, oh / 3), orange);
+        sb.Draw(_pixel, new Rectangle(ox1 - ow / 3, oy0, ow / 3, B), orange);
+
+        sb.Draw(_pixel, new Rectangle(ox0, oy1 - oh / 3, B, oh / 3), orange);
+        sb.Draw(_pixel, new Rectangle(ox0, oy1 - B, ow / 3, B), orange);
+
+        sb.Draw(_pixel, new Rectangle(ox1 - B, oy1 - oh / 3, B, oh / 3), orange);
+        sb.Draw(_pixel, new Rectangle(ox1 - ow / 3, oy1 - B, ow / 3, B), orange);
     }
 
     public void Dispose() => _pixel.Dispose();
