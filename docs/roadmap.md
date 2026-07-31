@@ -43,7 +43,7 @@ where the codebase now is.
 - **Modding / config exposure to players** — nothing.
 - **Long-run (10k+ year) performance pass** — never formally addressed.
 - **Comprehensive UI polish** — functional panels exist (inspector, profile, civ history, event log, timeline, worldgen screen, focus lens) but interaction is keyboard-heavy and never had a cohesive design pass.
-- **Distribution** — only M1's `scripts/publish-win.sh`.
+- **Distribution** — only M1's `scripts/publish-win.sh`. (Pushed out to final pre-release milestone M19 on 2026-07-31 — see below.)
 - **Created-object unification (Session G / G-1)** — four divergent "things characters make" taxonomies; self-contained refactor pending.
 
 ---
@@ -57,7 +57,7 @@ where the codebase now is.
 | **M8** | UI Framework Rewrite | ✅ COMPLETE 2026-07-24 | All phases 8.0–8.5 done. See archive. |
 | M9 | Created-Object Unification & Economic Depth | ✅ COMPLETE 2026-07-26 | Pay down G-1 debt; deepen crafting/economy. See archive. |
 | M10 | Worldgen Preview & Modding | ✅ COMPLETE 2026-07-26 | Layered preview + adjustment; player config/data modding. See archive. |
-| M11 | Scale & Distribution | summary | 10k+ year performance; local-scale gen; packaging. |
+| M11 | Scale | summary | 10k+ year performance; local-scale gen. |
 | M12 | Organization Model *(new — inserted 2026-07-30)* | summary | Generalize civ/guild/religion/family into a shared Organization abstraction with decoupled org-relationships and multi-membership. Prerequisite for M13–M15. |
 | M13 | Generational & Domestic Drama | summary | Family bonds, mentorship, non-war rivalry, betrayal within a civ. |
 | M14 | Economy & Independent Wealth | summary | Persistent trade routes; merchant wealth as a power track separate from rulership. |
@@ -65,6 +65,7 @@ where the codebase now is.
 | M16 | Disasters, Reworked | summary | Give eruptions/disasters real consequences; expand variety beyond wildfire/beasts; multi-year recovery arcs. |
 | M17 | Exploration & the Unknown | summary | Land expeditions; first contact; discovering ruins/artifacts from prior collapsed civs. |
 | M18 | Intrigue & Espionage | summary | Failed assassinations, coups, corrupt Tier-2 role-holders, spies. |
+| M19 | Packaging & Release *(final pre-release milestone — pushed out from M11 on 2026-07-31)* | summary | Cross-platform packaging (extend `publish-win.sh`); onboarding/first-run for distributed builds. Deliberately last: hold until the M12–M18 narrative-depth backlog is settled so packaging targets a feature-complete build, not a moving one. |
 
 Ordering rationale: polish (M6) de-risks and clarifies the surfaces that Spotlight/God Mode
 (M7) build on, so we author against a UI that's already coherent. **M8 (UI Framework Rewrite)
@@ -248,14 +249,14 @@ Pays down the Session G / G-1 debt and builds economic depth on the cleaned foun
 `docs/phases/archive/m10_worldgen_preview_modding.md`; all four phases shipped and green —
 see the index doc and its linked phase docs (`m10_phase0_pipeline_resume.md` /
 `m10_phase1_worldgen_preview_screen.md` / `m10_phase2_sim_config_settings_tab.md` /
-`m10_phase3_data_modding.md`). Next milestone: **M11 — Scale & Distribution** (below).
+`m10_phase3_data_modding.md`). Next milestone: **M11 — Scale** (below).
 
 - **Layered worldgen preview + adjustment — DONE:** `WorldGenPipeline` (`RunUpTo`/`RerunFrom`) that M1 deferred; players tweak sea level / parameters and re-preview per layer before committing, via the worldgen preview screen (10.1).
 - **Player config exposure — DONE:** `sim_config.toml` tunables surfaced through UI via a generic `ConfigRegistry` (10.2a) and the sim-config tab in the M8 Settings screen shell (10.2, `docs/ui_design_framework.md` §9.2), reusing the M8 component kit — not a bespoke UI.
 - **Data modding — DONE:** documented, moddable config/data with load-time validation for `config/ancestries.toml` and `config/beasts.toml` (10.3, see `docs/modding.md`) — no plugin/code modding (stays out of scope per CLAUDE.md). Biomes/resources are still hardcoded C# enums and would need their own follow-up phase to become data-driven — see `docs/phases/archive/m10_worldgen_preview_modding.md` DECISION (10.3).
 - **Pipeline resume/replay — DONE:** phase 10.0, prerequisite plumbing for the preview screen.
 
-## M11 — Scale & Distribution  *(summary)*
+## M11 — Scale  *(summary)*
 
 - **Long-run performance — phase 0 DONE (2026-07-27):** profiled a 10k-year baseline run (seed 42,
   `-c Release`) and found a ~3x tick-rate slowdown over the run's lifetime, root-caused to
@@ -288,7 +289,10 @@ see the index doc and its linked phase docs (`m10_phase0_pipeline_resume.md` /
   wash; a DECISION made with the user established that decorations stay purely cosmetic for now —
   `(ChunkCoord, LocalTileCoord)` is already the stable per-cell key a future "mine/collect"
   interaction would need, so no new identity scheme had to be added ahead of that milestone.
-- **Distribution (not started):** extend `publish-win.sh` to cross-platform packaging; onboarding/first-run for distributed builds.
+
+M11's remaining scope as originally planned — cross-platform packaging/distribution — has been
+pushed out to **M19 — Packaging & Release** (see below), now the final pre-release milestone.
+M11 itself is otherwise complete (phase 0 + local-scale generation both done).
 
 ---
 
@@ -449,6 +453,21 @@ M12–M18 extends them instead of duplicating them.
 - **M16 — Disasters, Reworked.** Eruptions currently fire (`DisasterConfig`/`[disasters]`) but have no gameplay consequence — wire real effects (destroyed settlements/improvements, ash-driven famine, displacement). Expand disaster variety beyond wildfire/beasts: flood, drought, earthquake, blight/crop disease, harsh winter. Model disasters as multi-year recovery arcs rather than single-tick events, so they leave a visible scar in a settlement's history instead of resolving instantly.
 - **M17 — Exploration & the Unknown.** Land expeditions mirroring the M11 water-crossing pattern (`Port`/`SeaVoyage` delegation) — lost expeditions, first contact with an unknown ancestry or beast species. Ruins/artifacts from a *previously collapsed* civ (`CivilizationCollapsed`, `3202`, is already logged) discoverable by a later civ, resurfacing dead history as new story material.
 - **M18 — Intrigue & Espionage.** Failed/attempted assassinations (today only resolved outcomes are logged). Coups — a civ's power changing hands without full `CivilizationCollapsed`. Corruption or abuse by an appointed Tier-2 role-holder (`AppointedToRole`, `3301`, exists; nothing currently exploits the role) — first consumer of the Tier2-role behavior variability described above. Spies/informants as a character role, feeding `CivIntelGathered` (`5004`) into deliberate sabotage rather than passive intel.
+
+---
+
+## M19 — Packaging & Release  *(summary — final pre-release milestone)*
+
+**Status: not started.** Pushed out from M11 on 2026-07-31 — M11's Distribution scope
+(cross-platform packaging, onboarding/first-run) was deferred so it isn't stale by the time it
+ships: M12–M18 add new player-facing surfaces
+(organizations, trade routes, religious leaders, exploration, espionage) that packaging and
+onboarding should reflect. Sequenced last deliberately — this is the milestone that turns the
+project into an actual release, so it should run once the narrative-depth backlog (M12–M18) is
+settled, not before.
+
+- **Cross-platform packaging** — extend `scripts/publish-win.sh` (currently Windows-only) to produce Linux/macOS builds.
+- **Onboarding / first-run experience** — first-run flow for a distributed build (no dev environment assumed), distinct from the in-editor worldgen preview screen (M10).
 
 ---
 

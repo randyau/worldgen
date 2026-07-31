@@ -23,7 +23,7 @@ The primary audience is worldbuilders and writers, not traditional gamers. The c
 
 **For coding sessions — read the active phase doc:**
 - M11 phase 0 (long-run performance) COMPLETE (2026-07-27) — see `docs/phases/archive/m11_phase0_longrun_performance.md`.
-- M11 local-scale generation (phases 11.1–11.8) COMPLETE (2026-07-29) — see `docs/phases/archive/m11_local_scale_generation.md`. Remaining M11 scope: cross-platform packaging/distribution, not yet started — check `docs/roadmap.md` § "M11" and create a new `docs/phases/m11_*.md` phase doc when that work begins.
+- M11 local-scale generation (phases 11.1–11.8) COMPLETE (2026-07-29) — see `docs/phases/archive/m11_local_scale_generation.md`. M11 is otherwise complete; cross-platform packaging/distribution has been pushed out to **M19 — Packaging & Release**, the final pre-release milestone, per `docs/roadmap.md` § "M19" (deferred 2026-07-31 until the M12–M18 narrative-depth backlog is settled).
 - `docs/phases/archive/` — all M1–M11 phases archived here for reference
 - `docs/archive/runbook_m1.md` — M1 manual test runbook (reference for regression testing)
 
