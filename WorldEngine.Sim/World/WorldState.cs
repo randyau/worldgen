@@ -4,6 +4,7 @@ using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities;
 using WorldEngine.Sim.Entities.Artifacts;
 using WorldEngine.Sim.Entities.Characters;
+using WorldEngine.Sim.Organizations;
 using WorldEngine.Sim.Tiles;
 
 namespace WorldEngine.Sim.World;
@@ -61,6 +62,10 @@ public sealed class WorldState : IWorldStateReadOnly
     public Dictionary<ArtifactId, Artifact>        Artifacts       { get; } = new();
     public RelationshipGraph                       Relationships   { get; } = new();
     public int NextCivId { get; set; } = 1;
+
+    /// <summary>M12 shared Organization layer (backs Civilization; Guild/Religion/Family land M13-M15). See docs/phases/m12_organization_model.md.</summary>
+    public Dictionary<OrganizationId, Organization> Organizations  { get; } = new();
+    public int NextOrganizationId { get; set; } = 1;
 
     /// <summary>
     /// Tracks how many characters have ever had each given name.

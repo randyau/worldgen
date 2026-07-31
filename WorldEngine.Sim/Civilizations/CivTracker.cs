@@ -4,6 +4,7 @@ using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities;
 using WorldEngine.Sim.Entities.Characters;
 using WorldEngine.Sim.Events;
+using WorldEngine.Sim.Organizations;
 using WorldEngine.Sim.Tiles;
 using WorldEngine.Sim.World;
 
@@ -15,6 +16,16 @@ namespace WorldEngine.Sim.Civilizations;
 /// </summary>
 public static partial class CivTracker
 {
+    /// <summary>Creates the M12 Organization backing a newly founded org (Civilization now; Guild/Religion/Family from M13-M15). See docs/phases/m12_organization_model.md.</summary>
+    internal static OrganizationId CreateOrganization(WorldState world, OrganizationKind kind, string name, EntityId leaderId)
+    {
+        var orgId = new OrganizationId(world.NextOrganizationId++);
+        var org = new Organization(orgId, kind, name, leaderId, world.CurrentYear);
+        org.Members[leaderId] = Membership.Founding(orgId);
+        world.Organizations[orgId] = org;
+        return orgId;
+    }
+
     public static void Resolve(
         ICommand cmd,
         WorldState world,
@@ -77,6 +88,7 @@ public static partial class CivTracker
             var civ = new Civilization(civId, civName, founder.Id, cmd.Tile, world.CurrentYear);
             civ.Members.Add(founder.Id);
             world.Civilizations[civId] = civ;
+            civ.OrgId = CreateOrganization(world, OrganizationKind.Civilization, civName, founder.Id);
             founder.Identity = founder.Identity with { CivId = civId, RulerOrdinal = 1 };
 
             // Build initial cultural profile from founding ancestry

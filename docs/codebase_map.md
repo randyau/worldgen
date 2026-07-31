@@ -109,6 +109,12 @@ One-line description of every non-trivial source file. Check here before running
 - `EventGate.cs` — Pre-write gate deciding whether an event is recorded to the history log. God Mode events are always recorded; otherwise suppressed types and sub-minimum-tier events are dropped.
 - `SignificanceClassifier.cs` — Maps a (type, payload, isFirstOfKind) tuple to an WorldEngine.Sim.Core.EventTier and WorldEngine.Sim.Core.PopulationImpact. The final tier is the max of the verb-class floor and the impact-derived tier, bumped one level when the event is first of its kind.
 
+## WorldEngine.Sim/Organizations/
+- `Membership.cs` — One character's stake in an Organization. Loyalty is a continuous value analogous to RelationshipEdge.Trust; when a character belongs to multiple Organizations whose interests conflict, goal/utility scoring weighs by whichever Organization has the higher Loyalty stake (see roadmap M12 design decision 2 — the actual weighted-scoring logic lands with M13).
+- `Organization.cs` — Shared organization layer backing Civilization (M12) and, from M13-M15, Guild/Religion/Family. Holds membership, the leader seat, and org-to-org relationship state (alliance/war/tension) as an independent fact rather than one derived from the leader's personal RelationshipEdge — see roadmap M12 design decision 1. Civ-specific mechanics that aren't about membership/leadership/relationships (territory, CulturalProfile, war resolution itself) stay on Civilization; only the generalizable state lives here.
+- `OrganizationKind.cs` — The four kinds of Organization the shared model backs. M12 only populates Civilization; Guild/Religion/Family land in M13-M15.
+- `OrganizationRole.cs` — Coarse role a character holds within an Organization. Kind-specific role names (guild master, high priest, family head) are a M13-M15 concern layered on top of this.
+
 ## WorldEngine.Sim/Persistence/
 - `CausalEdgeBuilder.cs` — Post-sim pass that infers causal relationships between events and writes them to the CausalEdges table with typed EdgeType labels.
 - `DatabaseSchema.cs` — Schema DDL for SQLite: Events, SignificanceScore, CausalEdges, CharacterSummaries, CivSummaries, Eras, SuccessionChain, Dynasties, CivTraits, yearly_metrics, LocalTileDeltas.

@@ -3,6 +3,7 @@ using WorldEngine.Sim.Config;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities.Characters;
 using WorldEngine.Sim.Events;
+using WorldEngine.Sim.Organizations;
 using WorldEngine.Sim.World;
 
 namespace WorldEngine.Sim.Civilizations;
@@ -170,6 +171,7 @@ public static partial class CivTracker
         string civName = $"{leader.Identity.Name}'s {suffix}";
         var newCiv = new Civilization(newCivId, civName, leader.Id, leadTile, world.CurrentYear);
         world.Civilizations[newCivId] = newCiv;
+        newCiv.OrgId = CreateOrganization(world, OrganizationKind.Civilization, civName, leader.Id);
 
         parent.Members.Remove(leader.Id);
         newCiv.Members.Add(leader.Id);
