@@ -1,6 +1,6 @@
 # M12 — Organization Model
 
-**Status:** IN PROGRESS — started 2026-07-31.
+**Status:** COMPLETE — 2026-07-31. All four phases (12.0-12.3) shipped same-day.
 
 See `docs/roadmap.md` § "M12–M18 — Narrative Depth Expansion" for the full design rationale,
 the 2026-07-30 user-confirmed decisions, and the code audit this milestone is built on
@@ -75,11 +75,28 @@ Hard prerequisite for M13 (family), M14 (guilds), M15 (religion).
   first time a character can hold two simultaneous Organization memberships at all, since only
   Civilization creates Organizations before M13). 12.2 lands the schema and the single-membership
   read/write paths only.
-- **12.3 — Generalize leadership succession.** Vacant-seat/heir-pool/crisis-window pattern
-  (`SuccessionCrisisEndYear`, DB `SuccessionChain`/`Dynasties`) moves to hang off
-  `Organization.LeaderId` generically, civ rulers migrated onto it as the existing instance. No
-  new consumers this milestone (family/guild/religion heads land in M13–M15) — the point is the
-  machinery is reusable when they do.
+- **12.3 — Generalize leadership succession. DONE (2026-07-31).** The reusable kernel was the
+  heir-selection algorithm itself — a vacant seat, a pool of eligible heirs, a scoring function —
+  which lived hardcoded inline in `CharacterBehaviorPhase.KillCharacter`, iterating
+  `Civilization.Members` and writing `Civilization.RulerId` directly. Extracted to
+  `Organizations/SuccessionResolver.SelectSuccessor(Organization, WorldState, minAgeSeasons,
+  scoreFn)`, which iterates `Organization.Members` and returns a candidate `EntityId` with no
+  `Civilization` involved at all — proven by `SuccessionResolverTests` exercising it against a
+  bare `Organization` (Kind: Family/Guild/Religion) with no backing civ. `KillCharacter`'s civ
+  succession path now calls through it and keeps `Organization.LeaderId` in sync from the same
+  call (previously a separate manual mirror added in 12.1); civ-specific bookkeeping
+  (`RulerCount`, `RulerOrdinal`, the `SuccessionOccurred` payload) stays where it was — that's
+  "war/civ mechanics", not the generic seat. `Organization.SuccessionCrisisEndYear` is now
+  mirrored from `Civilization.SuccessionCrisisEndYear` when a crisis is flagged
+  (`CivTracker.Diplomacy.cs`), so the generic "seat vacant" fact is visible at the Organization
+  layer without needing to know about `Civilization`; civ-specific consequences (settlement
+  decay, war vulnerability) keep reading `Civilization.SuccessionCrisisEndYear` directly, per the
+  same mechanics-stay-on-Civilization scope boundary. DB `SuccessionChain`/`Dynasties`
+  (`SummaryBuilder`) are historical/query-only tables built post-hoc from the event log, not live
+  succession state — left as-is; nothing about them is civ-specific in a way that blocks M13-M15
+  from reusing the same event-log query pattern for other Organization kinds later, and doing so
+  now would be speculative. No new consumers this milestone (family/guild/religion heads land in
+  M13-M15) — the point was making the machinery reusable when they do.
 
 ## Scope boundaries (per roadmap)
 

@@ -19,12 +19,13 @@ The primary audience is worldbuilders and writers, not traditional gamers. The c
 - `docs/interface_contracts.md` — **index only** — links to 4 split files; load only the relevant one
 - `docs/implementation_plan_m1.md` — M1 phase ordering and story-level guide (archived reference)
 
-**Current milestone status:** M11 — Scale & Distribution, in progress (see `docs/roadmap.md` § "M11"). M10 — Worldgen Preview & Modding COMPLETE (2026-07-26); see `docs/phases/archive/m10_worldgen_preview_modding.md` for phase sequence. M9 (Created-Object Unification & Economic Depth) COMPLETE (2026-07-26) — see `docs/phases/archive/m9_created_object_unification.md`. Milestones were renumbered on 2026-07-23 when M8 was inserted (old M8→M9, M9→M10, M10→M11) — see `docs/roadmap.md`.
+**Current milestone status:** M12 — Organization Model COMPLETE (2026-07-31); see `docs/phases/archive/m12_organization_model.md`. M13 (Generational & Domestic Drama) is next — not yet started, no phase doc yet; check `docs/roadmap.md` § "M12–M18" before starting. M11 — Scale is otherwise complete (perf + local-scale gen); packaging/distribution pushed out to final pre-release milestone M19, see `docs/roadmap.md` § "M19". M10 — Worldgen Preview & Modding COMPLETE (2026-07-26); see `docs/phases/archive/m10_worldgen_preview_modding.md` for phase sequence. M9 (Created-Object Unification & Economic Depth) COMPLETE (2026-07-26) — see `docs/phases/archive/m9_created_object_unification.md`. Milestones were renumbered on 2026-07-23 when M8 was inserted (old M8→M9, M9→M10, M10→M11) — see `docs/roadmap.md`.
 
 **For coding sessions — read the active phase doc:**
+- M12 (Organization Model, phases 12.0–12.3) COMPLETE (2026-07-31) — see `docs/phases/archive/m12_organization_model.md`. No M13 phase doc exists yet; create one when M13 work begins.
 - M11 phase 0 (long-run performance) COMPLETE (2026-07-27) — see `docs/phases/archive/m11_phase0_longrun_performance.md`.
 - M11 local-scale generation (phases 11.1–11.8) COMPLETE (2026-07-29) — see `docs/phases/archive/m11_local_scale_generation.md`. M11 is otherwise complete; cross-platform packaging/distribution has been pushed out to **M19 — Packaging & Release**, the final pre-release milestone, per `docs/roadmap.md` § "M19" (deferred 2026-07-31 until the M12–M18 narrative-depth backlog is settled).
-- `docs/phases/archive/` — all M1–M11 phases archived here for reference
+- `docs/phases/archive/` — all M1–M12 phases archived here for reference
 - `docs/archive/runbook_m1.md` — M1 manual test runbook (reference for regression testing)
 
 **Reusable code patterns and test templates:**

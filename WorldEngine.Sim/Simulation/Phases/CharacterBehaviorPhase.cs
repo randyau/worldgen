@@ -326,26 +326,21 @@ public sealed class CharacterBehaviorPhase
             bool wasRuler = civ.RulerId == c.Id;
             civ.Members.Remove(c.Id);
 
-            // Succession: promote the highest-scoring living member to ruler
+            // Succession: promote the highest-scoring living member to ruler. The heir-selection
+            // kernel is generalized onto Organization (M12 12.3, SuccessionResolver) so M13-M15 can
+            // reuse it for family/guild/religious-leader seats instead of hand-rolling three more.
             if (wasRuler && !civ.IsCollapsed)
             {
-                EntityId? successorId = null;
-                float bestScore = float.MinValue;
-                foreach (var memberId in civ.Members)
-                {
-                    if (world.GetEntity(memberId) is not Tier1Character member || !member.IsAlive) continue;
-                    if (member.AgeSeason < _cfg.MinRulerAgeSeasons) continue; // no infant/toddler monarchs
-                    float score = (member.Personality.Aggression + member.Skills.Leadership) * 0.5f;
-                    if (score > bestScore) { bestScore = score; successorId = memberId; }
-                }
+                Organization? succOrg = civ.OrgId.HasValue && world.Organizations.TryGetValue(civ.OrgId.Value, out var o) ? o : null;
+                EntityId? successorId = succOrg != null
+                    ? SuccessionResolver.SelectSuccessor(succOrg, world, _cfg.MinRulerAgeSeasons,
+                        member => (member.Personality.Aggression + member.Skills.Leadership) * 0.5f)
+                    : null;
                 if (successorId.HasValue)
                 {
                     civ.RulerId = successorId.Value;
-                    // Keep the M12 Organization's leader seat mirrored — see docs/phases/m12_organization_model.md 12.1.
-                    // Full vacant-seat/heir-pool succession machinery generalizes onto Organization in 12.3; this is
-                    // just enough to keep org-level alliance dissolution (CivTracker.Diplomacy.cs) from reading a stale leader.
-                    if (civ.OrgId.HasValue && world.Organizations.TryGetValue(civ.OrgId.Value, out var succOrg))
-                        succOrg.LeaderId = successorId.Value;
+                    // Keep the Organization's leader seat mirrored — see docs/phases/m12_organization_model.md.
+                    succOrg!.LeaderId = successorId.Value;
                     civ.RulerCount++;
                     civ.TotalSuccessions++;
                     var successor = (Tier1Character)world.GetEntity(successorId.Value)!;

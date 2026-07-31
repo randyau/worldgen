@@ -97,6 +97,11 @@ public static partial class CivTracker
             if (anyLivingMember) continue;
 
             civ.SuccessionCrisisEndYear = world.CurrentYear + cfg.SuccessionCrisisYears;
+            // Mirror the generic "seat vacant" fact onto the Organization layer too (M12 12.3) —
+            // civ-specific consequences (settlement decay, war vulnerability) stay reading
+            // Civilization.SuccessionCrisisEndYear directly; this is for future Organization-level
+            // consumers that don't want to know about Civilization specifically.
+            if (GetOrg(world, civ) is { } crisisOrg) crisisOrg.SuccessionCrisisEndYear = civ.SuccessionCrisisEndYear;
             pending.Add(new PendingEvent(EventType.SuccessionCrisis, civ.CapitalTile, null,
                 JsonSerializer.Serialize(new SuccessionCrisisPayload(
                     civ.Id.Value, civ.Name, civ.SuccessionCrisisEndYear)),

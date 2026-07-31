@@ -58,7 +58,7 @@ where the codebase now is.
 | M9 | Created-Object Unification & Economic Depth | ✅ COMPLETE 2026-07-26 | Pay down G-1 debt; deepen crafting/economy. See archive. |
 | M10 | Worldgen Preview & Modding | ✅ COMPLETE 2026-07-26 | Layered preview + adjustment; player config/data modding. See archive. |
 | M11 | Scale | summary | 10k+ year performance; local-scale gen. |
-| M12 | Organization Model *(new — inserted 2026-07-30)* | summary | Generalize civ/guild/religion/family into a shared Organization abstraction with decoupled org-relationships and multi-membership. Prerequisite for M13–M15. |
+| M12 | Organization Model *(new — inserted 2026-07-30)* | ✅ COMPLETE 2026-07-31 | Generalize civ/guild/religion/family into a shared Organization abstraction with decoupled org-relationships and multi-membership. Prerequisite for M13–M15. See archive. |
 | M13 | Generational & Domestic Drama | summary | Family bonds, mentorship, non-war rivalry, betrayal within a civ. |
 | M14 | Economy & Independent Wealth | summary | Persistent trade routes; merchant wealth as a power track separate from rulership. |
 | M15 | Religion, Deepened | summary | Schism, heresy, pilgrimage; religious leaders as a third power track alongside rulers/merchants. |
@@ -358,7 +358,7 @@ M12–M18 extends them instead of duplicating them.
   static-after-founding, letting it drift over time from trade/contact (M14/M17) is a cheap way
   to generate contact-driven stories using a value that already exists, rather than a new system.
 
-- **M12 — Organization Model.** New foundational milestone, inserted 2026-07-30 — hard prerequisite for M13 (family), M14 (guilds), and M15 (religion), all of which need "an organization with a leader, members, and relationships to other organizations" and would otherwise each hand-roll a bespoke version of what `Civilization` already does ad hoc.
+- **M12 — Organization Model.** ✅ COMPLETE 2026-07-31 — see `docs/phases/archive/m12_organization_model.md` for the phase-by-phase implementation record (12.0 Organization entity/registry, 12.1 org-to-org alliance fact decoupled from ruler death, 12.2 full `IdentityData.CivId` → `Tier1Character.Memberships` migration, 12.3 generalized succession kernel). New foundational milestone, inserted 2026-07-30 — hard prerequisite for M13 (family), M14 (guilds), and M15 (religion), all of which need "an organization with a leader, members, and relationships to other organizations" and would otherwise each hand-roll a bespoke version of what `Civilization` already does ad hoc.
 
   **Why this exists.** Audited how civ diplomacy actually works today (`Civilization.cs`,
   `CivTracker*.cs`): there is no civ-pair relationship record. `WarsAgainst`/`BorderTension`/
