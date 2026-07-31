@@ -16,14 +16,47 @@ namespace WorldEngine.Sim.Civilizations;
 /// </summary>
 public static partial class CivTracker
 {
-    /// <summary>Creates the M12 Organization backing a newly founded org (Civilization now; Guild/Religion/Family from M13-M15). See docs/phases/m12_organization_model.md.</summary>
+    /// <summary>
+    /// Creates the M12 Organization backing a newly founded org (Civilization now; Guild/Religion/Family
+    /// from M13-M15). Member registration is the caller's job — for civs, via SetCharacterCiv, which is
+    /// what keeps Tier1Character.Memberships and Organization.Members in sync. See docs/phases/m12_organization_model.md.
+    /// </summary>
     internal static OrganizationId CreateOrganization(WorldState world, OrganizationKind kind, string name, EntityId leaderId)
     {
         var orgId = new OrganizationId(world.NextOrganizationId++);
         var org = new Organization(orgId, kind, name, leaderId, world.CurrentYear);
-        org.Members[leaderId] = Membership.Founding(orgId);
         world.Organizations[orgId] = org;
         return orgId;
+    }
+
+    /// <summary>
+    /// M12 12.2: sets (or clears, when civId is invalid) a character's Civilization-kind
+    /// membership — the sole write path for Tier1Character.Memberships' civ entry, replacing the
+    /// old `Identity = Identity with { CivId = x }` pattern. Keeps Tier1Character.Memberships and
+    /// the backing Organization.Members in sync from one call, so they can never drift.
+    /// </summary>
+    internal static void SetCharacterCiv(Tier1Character c, CivId civId, OrganizationRole role, WorldState world)
+    {
+        var existing = c.Memberships.FirstOrDefault(m => m.CivId.IsValid);
+        if (existing != null)
+        {
+            c.Memberships.Remove(existing);
+            if (world.Organizations.TryGetValue(existing.OrganizationId, out var oldOrg))
+                oldOrg.Members.Remove(c.Id);
+        }
+
+        if (!civId.IsValid) return;
+        if (!world.Civilizations.TryGetValue(civId, out var civ)) return;
+        // Self-heal: production code always creates the backing Organization at civ-founding
+        // (CivTracker.cs/CivTracker.Unrest.cs), but pre-M12 test fixtures still construct
+        // Civilization directly. Backfill rather than silently dropping the membership.
+        civ.OrgId ??= CreateOrganization(world, OrganizationKind.Civilization, civ.Name, civ.RulerId);
+        var orgId = civ.OrgId.Value;
+
+        var membership = new Membership(orgId, role, 1.0f, civId);
+        c.Memberships.Add(membership);
+        if (world.Organizations.TryGetValue(orgId, out var org))
+            org.Members[c.Id] = membership;
     }
 
     public static void Resolve(
@@ -78,7 +111,7 @@ public static partial class CivTracker
         }
 
         // Create settlement
-        var civId = founder.Identity.CivId;
+        var civId = founder.CivId;
         bool newCiv = !civId.IsValid;
         if (newCiv)
         {
@@ -89,7 +122,8 @@ public static partial class CivTracker
             civ.Members.Add(founder.Id);
             world.Civilizations[civId] = civ;
             civ.OrgId = CreateOrganization(world, OrganizationKind.Civilization, civName, founder.Id);
-            founder.Identity = founder.Identity with { CivId = civId, RulerOrdinal = 1 };
+            SetCharacterCiv(founder, civId, OrganizationRole.Leader, world);
+            founder.Identity = founder.Identity with { RulerOrdinal = 1 };
 
             // Build initial cultural profile from founding ancestry
             var capitalBiome = (BiomeType)world.TileGrid.GetTile(cmd.Tile).BiomeType;
@@ -168,8 +202,8 @@ public static partial class CivTracker
         var cfg = world.SimConfig.Character;
 
         // Cross-civ only — same-civ relationships are just trust edges
-        if (c.Identity.CivId.IsValid && target.Identity.CivId.IsValid
-            && c.Identity.CivId == target.Identity.CivId) return;
+        if (c.CivId.IsValid && target.CivId.IsValid
+            && c.CivId == target.CivId) return;
 
         // Alliance cap
         int allianceMax = cfg.AllianceMaxBase + (int)(c.Personality.Sociability * cfg.AllianceMaxPerSociability);
@@ -198,10 +232,10 @@ public static partial class CivTracker
         // Org-level alliance fact (M12 12.1): only meaningful when both allying characters are
         // their civ's current ruler — that's the only case where a personal alliance is also a
         // civ-to-civ one. See CivTracker.Diplomacy.cs FormOrgAlliance.
-        if (c.Identity.CivId.IsValid && target.Identity.CivId.IsValid
-            && c.Identity.CivId != target.Identity.CivId
-            && world.Civilizations.TryGetValue(c.Identity.CivId, out var cCiv) && cCiv.RulerId == c.Id
-            && world.Civilizations.TryGetValue(target.Identity.CivId, out var tCiv) && tCiv.RulerId == target.Id
+        if (c.CivId.IsValid && target.CivId.IsValid
+            && c.CivId != target.CivId
+            && world.Civilizations.TryGetValue(c.CivId, out var cCiv) && cCiv.RulerId == c.Id
+            && world.Civilizations.TryGetValue(target.CivId, out var tCiv) && tCiv.RulerId == target.Id
             && GetOrg(world, cCiv) is { } cOrg && GetOrg(world, tCiv) is { } tOrg)
             FormOrgAlliance(cOrg, tOrg);
 
@@ -216,10 +250,10 @@ public static partial class CivTracker
         var payload = JsonSerializer.Serialize(new AllianceFormedPayload(
             c.Id.Value, c.Identity.Name,
             target.Id.Value, target.Identity.Name,
-            c.Identity.CivId.Value, target.Identity.CivId.Value));
+            c.CivId.Value, target.CivId.Value));
         pending.Add(new PendingEvent(EventType.AllianceFormed, c.Location, null, payload,
             new[] { c.Id.Value }, new[] { target.Id.Value },
-            ActorId: c.Id.Value, ActorName: c.Identity.Name, CivId: c.Identity.CivId.Value));
+            ActorId: c.Id.Value, ActorName: c.Identity.Name, CivId: c.CivId.Value));
     }
 
     // ─── Rivalry ──────────────────────────────────────────────────────────────
@@ -296,7 +330,7 @@ public static partial class CivTracker
         BuildImprovement cmd, WorldState world, List<PendingEvent> pending)
     {
         if (world.GetEntity(cmd.CharacterId) is not Tier1Character builder) return;
-        if (!builder.Identity.CivId.IsValid) return;
+        if (!builder.CivId.IsValid) return;
 
         var targetTile = cmd.TargetTile;
 
@@ -309,7 +343,7 @@ public static partial class CivTracker
             && !world.GetTile(targetTile).StaticFlags.HasFlag(TileStaticFlags.IsCoastal))
             return;
 
-        var civ = world.GetCivilization(builder.Identity.CivId);
+        var civ = world.GetCivilization(builder.CivId);
         if (civ == null || !civ.CityTerritories.ContainsKey(cityTile)) return;
 
         // Advance progress on the character's BuildImprovement goal (ImprovementBuildTicks ticks to complete)
@@ -342,12 +376,12 @@ public static partial class CivTracker
         string settName = world.Settlements.TryGetValue(cityTile, out var sett) ? sett.Name : null!;
         var payload = System.Text.Json.JsonSerializer.Serialize(new ImprovementBuiltPayload(
             cmd.CharacterId.Value, builder.Identity.Name,
-            builder.Identity.CivId.Value, targetTile.X, targetTile.Y,
+            builder.CivId.Value, targetTile.X, targetTile.Y,
             cmd.ImprovementType.ToString()));
         pending.Add(new PendingEvent(EventType.ImprovementBuilt, targetTile, null, payload,
             new[] { cmd.CharacterId.Value },
             ActorId: cmd.CharacterId.Value, ActorName: builder.Identity.Name,
-            CivId: builder.Identity.CivId.Value, SettlementName: settName));
+            CivId: builder.CivId.Value, SettlementName: settName));
     }
 
     // ─── Territory helpers ────────────────────────────────────────────────────

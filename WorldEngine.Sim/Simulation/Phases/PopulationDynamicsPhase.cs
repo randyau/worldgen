@@ -378,7 +378,7 @@ public sealed class PopulationDynamicsPhase
             foreach (var e in world.GetEntitiesAt(coord))
             {
                 if (e is not Tier1Character defender || !defender.IsAlive) continue;
-                if (defender.Identity.CivId != stub.CivId) continue;
+                if (defender.CivId != stub.CivId) continue;
 
                 var charCfg = _simCfg.Character;
                 float defenseReduction = defender.Skills.Combat * charCfg.WildlifeCharDefenseReduction;

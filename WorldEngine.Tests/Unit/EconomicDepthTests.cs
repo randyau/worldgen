@@ -5,6 +5,7 @@ using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities;
 using WorldEngine.Sim.Entities.Characters;
 using WorldEngine.Sim.Events;
+using WorldEngine.Sim.Organizations;
 using WorldEngine.Sim.Simulation.Phases;
 using WorldEngine.Sim.World;
 using WorldEngine.Tests.Helpers;
@@ -171,7 +172,7 @@ public class EconomicDepthTests
         var founder = CharacterFactory.Spawn(cityA, (BiomeType)world.TileGrid.GetTile(cityA).BiomeType,
             world.WorldSeed, 1L, world.SimConfig, world.CurrentYear);
         founder.Skills = founder.Skills with { Combat = 0.2f };
-        founder.Identity = founder.Identity with { CivId = civAId };
+        CivTracker.SetCharacterCiv(founder, civAId, OrganizationRole.Leader, world);
         world.Entities.Add(founder);
         civA.Members.Clear();
         civA.Members.Add(founder.Id);

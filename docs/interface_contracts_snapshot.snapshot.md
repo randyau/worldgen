@@ -120,7 +120,7 @@ public sealed record SettlementSnapshot(
 ```
 
 ## Civilization
-**File:** `WorldEngine.Sim/Civilizations/Civilization.cs:9`  
+**File:** `WorldEngine.Sim/Civilizations/Civilization.cs:10`  
 **Kind:** `class`
 
 ```csharp
@@ -267,4 +267,4 @@ public sealed record CharacterWatchSnapshot(
     IReadOnlyList<GoalWatchEntry> Goals);
 ```
 
-<!-- content-hash: 94d177705bd6238a -->
+<!-- content-hash: 93e33c099a4f3126 -->

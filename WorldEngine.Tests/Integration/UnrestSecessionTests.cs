@@ -3,6 +3,7 @@ using WorldEngine.Sim.Civilizations;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities;
 using WorldEngine.Sim.Entities.Characters;
+using WorldEngine.Sim.Organizations;
 using WorldEngine.Sim.World;
 using WorldEngine.Tests.Helpers;
 
@@ -62,7 +63,7 @@ public class UnrestSecessionTests
         // Second member founds the distant settlement under the same civ
         var biome2 = (BiomeType)world.TileGrid.GetTile(distant).BiomeType;
         var member = CharacterFactory.Spawn(distant, biome2, world.WorldSeed, 2L, world.SimConfig, world.CurrentYear);
-        member.Identity = member.Identity with { CivId = civ.Id };
+        CivTracker.SetCharacterCiv(member, civ.Id, OrganizationRole.Member, world);
         civ.Members.Add(member.Id);
         world.Entities.Add(member);
         CivTracker.Resolve(new EstablishSettlement(member.Id, distant),
@@ -171,7 +172,7 @@ public class UnrestSecessionTests
         // Ruler exists, is alive, and belongs to the new civ
         var ruler = world.GetEntity(newCiv.RulerId) as Tier1Character;
         ruler.Should().NotBeNull();
-        ruler!.Identity.CivId.Should().Be(newCiv.Id);
+        ruler!.CivId.Should().Be(newCiv.Id);
         newCiv.Members.Should().Contain(newCiv.RulerId);
 
         // Mutual diplomatic tension seeded

@@ -370,14 +370,15 @@ public sealed class ArtifactTests
             AncestryId:  "anc_test",
             MotherId:    null,
             FatherId:    null,
-            CivId:       new CivId(1),
             BirthYear:   1,
             BirthSeason: 0);
         var personality = PersonalityVector.Default;
         var aptitude    = AptitudeVector.Default;
         var skills      = SkillVector.Default;
-        return new Tier1Character(id, tile, personality, aptitude, skills, identity,
+        var character = new Tier1Character(id, tile, personality, aptitude, skills, identity,
             maxHealth: cfg.Character.MaxHealth,
             maxAgeSeason: 80);
+        character.WithCiv(new CivId(1));
+        return character;
     }
 }

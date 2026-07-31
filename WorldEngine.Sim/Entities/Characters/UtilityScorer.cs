@@ -93,7 +93,7 @@ public sealed class UtilityScorer
         // Travel — pick best adjacent tile; wanderlust bonus grows with time stationary,
         // dampened by settled role (founder > civ member > free agent) and Curiosity
         var travelDest = BestAdjacentTile(c, world, cfg);
-        bool isFounder = c.Identity.CivId.IsValid && world.ActiveFounders.Contains(c.Id);
+        bool isFounder = c.CivId.IsValid && world.ActiveFounders.Contains(c.Id);
         if (travelDest.HasValue)
         {
             float wanderlust = Math.Min(1f, (float)c.TicksInCurrentTile / cfg.WanderlustMaxTicks)
@@ -115,15 +115,15 @@ public sealed class UtilityScorer
         {
             if (e is not Tier1Character other || other.Id == c.Id || !other.IsAlive) continue;
             // Alliances are cross-civ only
-            if (c.Identity.CivId.IsValid && other.Identity.CivId.IsValid
-                && c.Identity.CivId == other.Identity.CivId) continue;
+            if (c.CivId.IsValid && other.CivId.IsValid
+                && c.CivId == other.CivId) continue;
             var rel = world.GetRelationship(c.Id, other.Id);
             if (rel?.IsAlly ?? false) continue;
             // Don't form alliances across enemy civ lines
-            if (c.Identity.CivId.IsValid && other.Identity.CivId.IsValid)
+            if (c.CivId.IsValid && other.CivId.IsValid)
             {
-                var myCivForAlly = world.GetCivilization(c.Identity.CivId);
-                if (myCivForAlly?.IsAtWarWith(other.Identity.CivId) == true) continue;
+                var myCivForAlly = world.GetCivilization(c.CivId);
+                if (myCivForAlly?.IsAtWarWith(other.CivId) == true) continue;
             }
 
             ICommand? cmd;
@@ -168,9 +168,9 @@ public sealed class UtilityScorer
         // DeclareWar — civ-level: only the current ruler can start a war.
         // Primary trigger is border tension (rulers know about territorial disputes without needing
         // to meet enemy rulers personally). Personal animosity with any visible enemy is a secondary trigger.
-        if (c.Identity.CivId.IsValid)
+        if (c.CivId.IsValid)
         {
-            var myCiv = world.GetCivilization(c.Identity.CivId);
+            var myCiv = world.GetCivilization(c.CivId);
             bool isRuler = myCiv?.RulerId == c.Id;
             var wCfg = world.SimConfig.War;  // D5: war knobs consolidated in WarConfig
             if (isRuler && c.Personality.Aggression > wCfg.WarAggressionThreshold
@@ -179,7 +179,7 @@ public sealed class UtilityScorer
                 foreach (var coord in world.GetTilesInRadius(c.Location, cfg.PerceptionRadius))
                 {
                     if (!world.Settlements.TryGetValue(coord, out var nearSettle)) continue;
-                    if (!nearSettle.CivId.IsValid || nearSettle.CivId == c.Identity.CivId) continue;
+                    if (!nearSettle.CivId.IsValid || nearSettle.CivId == c.CivId) continue;
                     if (myCiv.IsAtWarWith(nearSettle.CivId)) continue;
                     if (myCiv.InPeaceCooldownWith(nearSettle.CivId, world.CurrentYear, wCfg.PeaceCooldownYears, wCfg.WarExhaustionYearsPerWar)) continue;
                     var targetCiv = world.GetCivilization(nearSettle.CivId);
@@ -191,7 +191,7 @@ public sealed class UtilityScorer
                     foreach (var e2 in world.GetEntitiesInRadius(c.Location, cfg.PerceptionRadius))
                     {
                         if (e2 is not Tier1Character enemy || !enemy.IsAlive || enemy.Id == c.Id) continue;
-                        if (enemy.Identity.CivId != nearSettle.CivId) continue;
+                        if (enemy.CivId != nearSettle.CivId) continue;
                         var rel = world.GetRelationship(c.Id, enemy.Id);
                         if ((rel?.IsRival ?? false) || (rel?.Trust ?? 0f) < cfg.RivalryTrustThreshold)
                         {
@@ -217,9 +217,9 @@ public sealed class UtilityScorer
         // Individual characters represent their civ's military effort during wartime.
         bool hasAvengeGoal = c.Goals.Any(g => g.Type == GoalType.Avenge);
         float raidAggressionMin = hasAvengeGoal ? 0.2f : 0.4f;
-        if (c.Personality.Aggression > raidAggressionMin && c.Identity.CivId.IsValid)
+        if (c.Personality.Aggression > raidAggressionMin && c.CivId.IsValid)
         {
-            var myCivForRaid = world.GetCivilization(c.Identity.CivId);
+            var myCivForRaid = world.GetCivilization(c.CivId);
             if (myCivForRaid != null)
             {
                 foreach (var coord in world.GetTilesInRadius(c.Location, cfg.PerceptionRadius))
@@ -251,7 +251,7 @@ public sealed class UtilityScorer
         // ImprovementType is stored in goal ResourceTag; we advance progress each tick they stay.
         var buildGoal = c.Goals.FirstOrDefault(g => g.Type == GoalType.BuildImprovement
                                                   && g.TargetTile.HasValue);
-        if (buildGoal != null && c.Identity.CivId.IsValid)
+        if (buildGoal != null && c.CivId.IsValid)
         {
             var targetTile = buildGoal.TargetTile!.Value;
             // Character must be on the target tile, tile must be owned by their civ, no existing improvement
@@ -259,7 +259,7 @@ public sealed class UtilityScorer
                 && world.TerritoryMap.TryGetValue(targetTile, out var cityTile)
                 && !world.ImprovementMap.ContainsKey(targetTile))
             {
-                var myCivForBuild = world.GetCivilization(c.Identity.CivId);
+                var myCivForBuild = world.GetCivilization(c.CivId);
                 if (myCivForBuild?.CityTerritories.ContainsKey(cityTile) == true)
                 {
                     if (Enum.TryParse<ImpType>(buildGoal.ResourceTag, out var impType))
@@ -500,7 +500,7 @@ public sealed class UtilityScorer
         Tier1Character c, bool isFounder, CharacterSimConfig cfg)
     {
         float roleBase = isFounder               ? cfg.WanderlustFounderMultiplier
-                       : c.Identity.CivId.IsValid ? cfg.WanderlustMemberMultiplier
+                       : c.CivId.IsValid ? cfg.WanderlustMemberMultiplier
                        : 1.0f;
 
         // Curiosity scales from CuriosityFloor (low Curiosity) to 1.0 (max Curiosity)
@@ -566,7 +566,7 @@ public sealed class UtilityScorer
             // Settlement pull — home is attractive, but FoundCity-goal characters need to leave.
             if (world.Settlements.TryGetValue(coord, out var s))
             {
-                bool isSameCiv = c.Identity.CivId.IsValid && s.CivId == c.Identity.CivId;
+                bool isSameCiv = c.CivId.IsValid && s.CivId == c.CivId;
                 if (isSameCiv && isFoundCityChar)
                     score -= cfg.ExpansionHomePenalty; // push away to find a founding site
                 else

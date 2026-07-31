@@ -5,6 +5,7 @@ using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities;
 using WorldEngine.Sim.Entities.Characters;
 using WorldEngine.Sim.Events;
+using WorldEngine.Sim.Organizations;
 using WorldEngine.Sim.Tiles;
 using WorldEngine.Sim.World;
 using WorldEngine.Tests.Helpers;
@@ -85,7 +86,7 @@ public class SeafaringTests
         world.Civilizations[civId].CityTerritories[cityTile].Add(targetTile);
 
         var builder = CharacterFactory.Spawn(targetTile, BiomeType.Plains, world.WorldSeed, 2L, world.SimConfig, world.CurrentYear);
-        builder.Identity = builder.Identity with { CivId = civId };
+        CivTracker.SetCharacterCiv(builder, civId, OrganizationRole.Member, world);
         world.Entities.Add(builder);
         world.Civilizations[civId].Members.Add(builder.Id);
 

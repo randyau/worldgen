@@ -250,6 +250,8 @@ internal static class WorldStateMapper
             Needs:       [n.Safety, n.Food, n.Shelter, n.Belonging, n.Status, n.Purpose, n.Spiritual],
             Identity:    MapIdentity(c.Identity),
             Goals:       c.Goals.Select(MapGoal).ToList(),
+            Memberships: c.Memberships.Select(m => new CharacterMembershipDto(
+                m.OrganizationId.Value, (int)m.Role, m.Loyalty, m.CivId.Value)).ToList(),
             IsInfected:  c.IsInfected, InfectedSinceYear: c.InfectedSinceYear,
             Wellbeing:   c.Wellbeing, TicksInCurrentTile: c.TicksInCurrentTile,
             LastCreateCompletedTick: c.LastCreateCompletedTick,
@@ -293,7 +295,7 @@ internal static class WorldStateMapper
     private static IdentityDataDto MapIdentity(IdentityData id) =>
         new(id.Name, id.Epithet, id.AncestryId,
             id.MotherId?.Value, id.FatherId?.Value,
-            id.CivId.Value, id.BirthYear, id.BirthSeason, id.NameOrdinal, id.RulerOrdinal);
+            id.BirthYear, id.BirthSeason, id.NameOrdinal, id.RulerOrdinal);
 
     private static GoalDataDto MapGoal(GoalData g) =>
         new((int)g.Type, (int)g.Object,
@@ -573,11 +575,16 @@ internal static class WorldStateMapper
             id.Name, id.Epithet, id.AncestryId,
             id.MotherId.HasValue ? new EntityId(id.MotherId.Value) : null,
             id.FatherId.HasValue ? new EntityId(id.FatherId.Value) : null,
-            new CivId(id.CivId), id.BirthYear, id.BirthSeason, id.NameOrdinal, id.RulerOrdinal);
+            id.BirthYear, id.BirthSeason, id.NameOrdinal, id.RulerOrdinal);
 
         var character = new Tier1Character(
             new EntityId(d.Id), new TileCoord(d.LocationX, d.LocationY),
             personality, aptitude, skills, identity, d.MaxHealth, d.MaxAgeSeason);
+
+        foreach (var md in d.Memberships)
+            character.Memberships.Add(new Organizations.Membership(
+                new OrganizationId(md.OrganizationId), (Organizations.OrganizationRole)md.Role,
+                md.Loyalty, new CivId(md.CivId)));
 
         character.IsAlive             = d.IsAlive;
         character.Health              = d.Health;

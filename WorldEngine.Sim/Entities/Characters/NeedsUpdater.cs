@@ -50,7 +50,7 @@ public static class NeedsUpdater
         // shared purpose, and ritual that solitary wandering cannot supply.
         if (world.Settlements.TryGetValue(c.Location, out var stub))
         {
-            bool atOwnCiv = c.Identity.CivId.IsValid && stub.CivId == c.Identity.CivId;
+            bool atOwnCiv = c.CivId.IsValid && stub.CivId == c.CivId;
             n.Belonging = Math.Min(1f, n.Belonging + (atOwnCiv
                 ? cfg.BelongingOwnSettlementRecovery
                 : cfg.BelongingForeignSettlementRecovery));

@@ -3,6 +3,7 @@ using WorldEngine.Sim.Civilizations;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities;
 using WorldEngine.Sim.Entities.Characters;
+using WorldEngine.Sim.Organizations;
 using WorldEngine.Sim.Simulation.Phases;
 using WorldEngine.Sim.World;
 using WorldEngine.Tests.Helpers;
@@ -61,7 +62,7 @@ public class SuccessionAgeGateTests
         // the succession heuristic `(Aggression + Leadership) * 0.5` regardless of Aggression's
         // seeded-random value (clamped to [0.1, 0.9], so a 1.0-point Leadership gap always wins).
         var infant = CharacterFactory.Spawn(tile, biome, world.WorldSeed, 2L, world.SimConfig, world.CurrentYear);
-        infant.Identity = infant.Identity with { CivId = civ.Id };
+        CivTracker.SetCharacterCiv(infant, civ.Id, OrganizationRole.Member, world);
         infant.AgeSeason = 0;
         infant.Skills = infant.Skills with { Leadership = 1.0f };
         civ.Members.Add(infant.Id);
@@ -69,7 +70,7 @@ public class SuccessionAgeGateTests
 
         // Adult member: clears MinRulerAgeSeasons but scores lower — should still win.
         var adult = CharacterFactory.Spawn(tile, biome, world.WorldSeed, 3L, world.SimConfig, world.CurrentYear, startAsAdult: true);
-        adult.Identity = adult.Identity with { CivId = civ.Id };
+        CivTracker.SetCharacterCiv(adult, civ.Id, OrganizationRole.Member, world);
         adult.Skills = adult.Skills with { Leadership = 0.0f };
         civ.Members.Add(adult.Id);
         world.Entities.Add(adult);
@@ -94,7 +95,7 @@ public class SuccessionAgeGateTests
         // Only an infant remains — no successor should be assigned this tick (falls through to
         // the existing succession-crisis path instead of crowning a newborn).
         var infant = CharacterFactory.Spawn(tile, biome, world.WorldSeed, 2L, world.SimConfig, world.CurrentYear);
-        infant.Identity = infant.Identity with { CivId = civ.Id };
+        CivTracker.SetCharacterCiv(infant, civ.Id, OrganizationRole.Member, world);
         infant.AgeSeason = 0;
         civ.Members.Add(infant.Id);
         world.Entities.Add(infant);

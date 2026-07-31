@@ -211,7 +211,7 @@ public class SaveLoadTests : IDisposable
             WorldEngine.Sim.Entities.Characters.AptitudeVector.Default,
             WorldEngine.Sim.Entities.Characters.SkillVector.Default,
             new WorldEngine.Sim.Entities.Characters.IdentityData("Ruler1", "the First", "test",
-                null, null, civ1Id, 0, 0),
+                null, null, 0, 0),
             100, 200);
         var founder2 = new WorldEngine.Sim.Entities.Characters.Tier1Character(
             new EntityId(102L), capital2,
@@ -219,8 +219,10 @@ public class SaveLoadTests : IDisposable
             WorldEngine.Sim.Entities.Characters.AptitudeVector.Default,
             WorldEngine.Sim.Entities.Characters.SkillVector.Default,
             new WorldEngine.Sim.Entities.Characters.IdentityData("Ruler2", "the Second", "test",
-                null, null, civ2Id, 0, 0),
+                null, null, 0, 0),
             100, 200);
+        founder1.WithCiv(civ1Id);
+        founder2.WithCiv(civ2Id);
         world.Entities.Add(founder1);
         world.Entities.Add(founder2);
 
@@ -272,7 +274,7 @@ public class SaveLoadTests : IDisposable
         var ruler = new Tier1Character(
             new EntityId(101L), capital,
             PersonalityVector.Default, AptitudeVector.Default, SkillVector.Default,
-            new IdentityData("Ruler1", "the First", "test", null, null, civId, 0, 0),
+            new IdentityData("Ruler1", "the First", "test", null, null, 0, 0),
             100, 200);
         world.Entities.Add(ruler);
 
@@ -282,11 +284,13 @@ public class SaveLoadTests : IDisposable
         var orgId = new OrganizationId(1);
         var otherOrgId = new OrganizationId(2);
         var org = new Organization(orgId, OrganizationKind.Civilization, "Civ1", ruler.Id, 0);
-        org.Members[ruler.Id] = Membership.Founding(orgId);
+        var membership = new Membership(orgId, OrganizationRole.Leader, 1.0f, civId);
+        org.Members[ruler.Id] = membership;
         org.Allies.Add(otherOrgId);
         world.Organizations[orgId] = org;
         world.NextOrganizationId = 2;
         civ.OrgId = orgId;
+        ruler.Memberships.Add(membership);
 
         WorldStateSaver.Save(world, _saveDir, simCfg);
         var loaded = WorldStateSaver.Load(_saveDir, simCfg);
@@ -301,6 +305,12 @@ public class SaveLoadTests : IDisposable
         loadedOrg.Allies.Should().Contain(otherOrgId, "alliance facts must survive save/load");
 
         loaded.Civilizations[civId].OrgId.Should().Be(orgId, "the civ-to-org link must survive save/load");
+
+        var loadedRuler = loaded.GetEntity(ruler.Id) as WorldEngine.Sim.Entities.Characters.Tier1Character;
+        loadedRuler.Should().NotBeNull();
+        loadedRuler!.Memberships.Should().ContainSingle(
+            "M12 12.2: Tier1Character.Memberships (replacing IdentityData.CivId) must survive save/load");
+        loadedRuler.CivId.Should().Be(civId);
     }
 
     // ── Test 10: settlement specialization round-trip (M9 9.2) ──────────────
@@ -384,12 +394,13 @@ public class SaveLoadTests : IDisposable
         var founder = new Tier1Character(
             new EntityId(301L), tile,
             PersonalityVector.Default, AptitudeVector.Default, SkillVector.Default,
-            new IdentityData("Ruler3", "the Third", "test", null, null, civId, 0, 0),
+            new IdentityData("Ruler3", "the Third", "test", null, null, 0, 0),
             100, 200)
         {
             LocalChunk    = new ChunkCoord(tile, 2, 3),
             LocalPosition = new LocalTileCoord(7, 9),
         };
+        founder.WithCiv(civId);
         world.Entities.Add(founder);
         world.Civilizations[civId] = new Civilization(civId, "LocalPresenceCiv", founder.Id, tile, 0);
 

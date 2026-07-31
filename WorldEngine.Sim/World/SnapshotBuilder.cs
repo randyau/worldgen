@@ -120,8 +120,8 @@ public sealed class SnapshotBuilder
         foreach (var (id, entity) in world.Entities.All)
         {
             var snap = entity.ToSnapshot();
-            if (entity is Tier1Character c && c.Identity.CivId.IsValid
-                && world.Civilizations.TryGetValue(c.Identity.CivId, out var civ))
+            if (entity is Tier1Character c && c.CivId.IsValid
+                && world.Civilizations.TryGetValue(c.CivId, out var civ))
                 snap = snap with { CivName = civ.Name };
             dict[id] = snap;
         }
@@ -364,8 +364,8 @@ public sealed class SnapshotBuilder
         if (entity is not Tier1Character c) return null;
         if (!c.IsAlive) return null;
 
-        string civName = c.Identity.CivId.IsValid
-            && world.Civilizations.TryGetValue(c.Identity.CivId, out var civ)
+        string civName = c.CivId.IsValid
+            && world.Civilizations.TryGetValue(c.CivId, out var civ)
             ? civ.Name : "Unknown";
 
         var biome = (BiomeType)world.TileGrid.GetTile(c.Location).BiomeType;

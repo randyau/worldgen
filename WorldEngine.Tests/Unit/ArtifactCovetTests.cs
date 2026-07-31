@@ -65,7 +65,7 @@ public class ArtifactCovetTests
         var coord   = tile ?? new TileCoord(5, 5);
         var identity = new IdentityData(
             Name: "TestChar", Epithet: "", AncestryId: "",
-            MotherId: null, FatherId: null, CivId: default,
+            MotherId: null, FatherId: null,
             BirthYear: 1, BirthSeason: 0);
         int maxHealth = world.SimConfig.Character.MaxHealth;
 

@@ -1,5 +1,6 @@
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities;
+using WorldEngine.Sim.Organizations;
 using WorldEngine.Sim.Tiles.LocalScale;
 using WorldEngine.Sim.World;
 
@@ -22,6 +23,30 @@ public sealed class Tier1Character : SimEntity
     public NeedsVector   Needs    { get; internal set; }
     public IdentityData  Identity { get; internal set; }
     public List<GoalData> Goals   { get; } = [];
+
+    /// <summary>
+    /// M12 12.2: this character's Organization affiliations (civ, and from M13-M15 also
+    /// family/guild/religion). Replaces the old IdentityData.CivId scalar field — see
+    /// docs/phases/m12_organization_model.md. Mutate only via CivTracker.SetCharacterCiv.
+    /// </summary>
+    public List<Membership> Memberships { get; } = [];
+
+    /// <summary>
+    /// O(1) convenience accessor for this character's Civilization-kind membership, if any.
+    /// The overwhelming majority of the sim's per-tick reads only ever care about "what civ is
+    /// this character in", so this stays a fast property instead of forcing every call site to
+    /// scan Memberships or thread a WorldState reference through (ToCharacterSnapshot below has
+    /// none available at all).
+    /// </summary>
+    public CivId CivId
+    {
+        get
+        {
+            foreach (var m in Memberships)
+                if (m.CivId.IsValid) return m.CivId;
+            return CivId.None;
+        }
+    }
 
     // Disease state — set by CharacterBehaviorPhase on exposure to infected settlements
     public bool IsInfected       { get; internal set; }
@@ -85,7 +110,7 @@ public sealed class Tier1Character : SimEntity
         Epithet:        Identity.Epithet,
         AncestryId:     Identity.AncestryId,
         Location:       Location,
-        CivId:          Identity.CivId,
+        CivId:          CivId,
         IsAlive:        IsAlive,
         Ambition:       Personality.Ambition,
         Aggression:     Personality.Aggression,

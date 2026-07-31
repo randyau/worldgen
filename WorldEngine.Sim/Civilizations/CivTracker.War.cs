@@ -18,8 +18,8 @@ public static partial class CivTracker
     private static void ResolveWar(DeclareWar cmd, WorldState world, List<PendingEvent> pending)
     {
         if (world.GetEntity(cmd.CharacterId) is not Tier1Character c) return;
-        if (!c.Identity.CivId.IsValid) return;
-        var declCiv = world.GetCivilization(c.Identity.CivId);
+        if (!c.CivId.IsValid) return;
+        var declCiv = world.GetCivilization(c.CivId);
         var targCiv = world.GetCivilization(cmd.TargetCivId);
         if (declCiv == null || targCiv == null || declCiv.IsCollapsed || targCiv.IsCollapsed) return;
         StartWarBetween(declCiv, targCiv, WarCause.CharacterEncounter, world, pending);
@@ -351,7 +351,7 @@ public static partial class CivTracker
         foreach (var e in world.GetEntitiesAt(cmd.SettlementTile))
         {
             if (e is not Tier1Character defender || !defender.IsAlive) continue;
-            if (defender.Identity.CivId != settlement.CivId) continue;
+            if (defender.CivId != settlement.CivId) continue;
             if (defender.Id == raider.Id) continue;
 
             int counterDamage = Math.Max(1,
@@ -378,14 +378,14 @@ public static partial class CivTracker
         pending.Add(new PendingEvent(EventType.BattleOccurred, cmd.SettlementTile, null, payload,
             primaryIds, secondaryIds,
             ActorId: raider.Id.Value, ActorName: raider.Identity.Name,
-            CivId: raider.Identity.CivId.IsValid ? raider.Identity.CivId.Value : 0,
+            CivId: raider.CivId.IsValid ? raider.CivId.Value : 0,
             SettlementName: settlement.Name));
 
         if (newHealth <= 0)
         {
-            bool canConquer = raider.Identity.CivId.IsValid
+            bool canConquer = raider.CivId.IsValid
                            && settlement.CivId.IsValid
-                           && raider.Identity.CivId != settlement.CivId;
+                           && raider.CivId != settlement.CivId;
 
             if (canConquer)
             {
@@ -395,7 +395,7 @@ public static partial class CivTracker
                 int   conqueredPop  = Math.Max(1, settlement.Population / 2);
                 world.Settlements[cmd.SettlementTile] = settlement with
                 {
-                    CivId              = raider.Identity.CivId,
+                    CivId              = raider.CivId,
                     Health             = world.SimConfig.Settlement.MaxHealth / 2,
                     Population         = conqueredPop,
                     PopulationF        = 0f,
@@ -410,14 +410,14 @@ public static partial class CivTracker
                     if (settlement.IsColony) losingCiv.ColonyCount    = Math.Max(0, losingCiv.ColonyCount    - 1);
                     else                     losingCiv.SettlementCount = Math.Max(0, losingCiv.SettlementCount - 1);
                 }
-                if (world.Civilizations.TryGetValue(raider.Identity.CivId, out var winningCiv))
+                if (world.Civilizations.TryGetValue(raider.CivId, out var winningCiv))
                 {
                     if (settlement.IsColony) winningCiv.ColonyCount++;
                     else                     winningCiv.SettlementCount++;
                 }
 
                 // Transfer territory: reassign all tiles of the conquered city to the winning civ's nearest city
-                TransferTerritory(cmd.SettlementTile, previousCivId, raider.Identity.CivId, world);
+                TransferTerritory(cmd.SettlementTile, previousCivId, raider.CivId, world);
 
                 var conquestEntityIds = world.Civilizations.TryGetValue(previousCivId, out var losingCivForLink)
                     ? new[] { raider.Id.Value, losingCivForLink.FounderId.Value }
@@ -425,14 +425,14 @@ public static partial class CivTracker
                 pending.Add(new PendingEvent(EventType.SettlementConquered, cmd.SettlementTile, null,
                     JsonSerializer.Serialize(new SettlementConqueredPayload(
                         raider.Id.Value, raider.Identity.Name,
-                        raider.Identity.CivId.Value, previousCivId.Value, conqueredPop)),
+                        raider.CivId.Value, previousCivId.Value, conqueredPop)),
                     conquestEntityIds,
                     ActorId: raider.Id.Value, ActorName: raider.Identity.Name,
-                    CivId: raider.Identity.CivId.Value, SettlementName: settlement.Name));
+                    CivId: raider.CivId.Value, SettlementName: settlement.Name));
 
                 // Conquest: transfer all artifacts held by the conquered settlement to the raider's civ
-                if (raider.Identity.CivId.IsValid)
-                    TransferConquestArtifacts(world, pending, cmd.SettlementTile, raider.Identity.CivId,
+                if (raider.CivId.IsValid)
+                    TransferConquestArtifacts(world, pending, cmd.SettlementTile, raider.CivId,
                         raider.Id.Value, raider.Identity.Name);
 
                 // If the losing civ has no settlements or colonies left, it collapses.

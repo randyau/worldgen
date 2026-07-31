@@ -98,7 +98,6 @@ public static class CharacterFactory
             AncestryId:  ancId,
             MotherId:    null,
             FatherId:    null,
-            CivId:       CivId.None,
             BirthYear:   birthYear,
             BirthSeason: 0);
 

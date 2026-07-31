@@ -157,8 +157,8 @@ public static class GoalManager
         int  activeBonds  = c.Goals.Count(g => g.Type == GoalType.Bond);
         bool hasBondRoom  = activeBonds < bondMax;
 
-        bool isFounder = c.Identity.CivId.IsValid && world.ActiveFounders.Contains(c.Id);
-        var myCiv = c.Identity.CivId.IsValid ? world.GetCivilization(c.Identity.CivId) : null;
+        bool isFounder = c.CivId.IsValid && world.ActiveFounders.Contains(c.Id);
+        var myCiv = c.CivId.IsValid ? world.GetCivilization(c.CivId) : null;
 
         if (!hasDominance && c.Personality.Aggression > cfg.GoalAggressionThreshold)
         {
@@ -232,12 +232,12 @@ public static class GoalManager
         // BuildImprovement goal: hard-working civ members on unimproved territory tiles claim one to build on.
         // Runs only when character is actually standing on such a tile (saves evaluating every civ member every tick).
         bool hasBuildGoal = c.Goals.Any(g => g.Type == GoalType.BuildImprovement);
-        if (!hasBuildGoal && c.Identity.CivId.IsValid && c.Aptitude.Diligence > cfg.GoalDiligenceThreshold)
+        if (!hasBuildGoal && c.CivId.IsValid && c.Aptitude.Diligence > cfg.GoalDiligenceThreshold)
         {
             if (world.TerritoryMap.TryGetValue(c.Location, out var cityTile)
                 && !world.ImprovementMap.ContainsKey(c.Location))
             {
-                var myCivForBuild = world.GetCivilization(c.Identity.CivId);
+                var myCivForBuild = world.GetCivilization(c.CivId);
                 // Only on tiles this character's civ actually owns
                 if (myCivForBuild?.CityTerritories.ContainsKey(cityTile) == true)
                 {

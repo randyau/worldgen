@@ -358,7 +358,7 @@ public sealed class Tier2BehaviorPhase
         foreach (var edge in world.Relationships.GetAll(home.FounderId).Where(e => e.IsAlly))
         {
             var allyId = edge.From == home.FounderId ? edge.To : edge.From;
-            if (world.GetEntity(allyId) is Tier1Character ally && ally.Identity.CivId == dest.CivId)
+            if (world.GetEntity(allyId) is Tier1Character ally && ally.CivId == dest.CivId)
                 return true;
         }
         return false;

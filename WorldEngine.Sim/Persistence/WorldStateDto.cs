@@ -217,6 +217,7 @@ public sealed record Tier1EntityDto(
     float[] Needs,
     IdentityDataDto   Identity,
     List<GoalDataDto> Goals,
+    List<CharacterMembershipDto> Memberships,
     bool   IsInfected,
     int    InfectedSinceYear,
     float  Wellbeing,
@@ -281,11 +282,13 @@ public sealed record IdentityDataDto(
     string AncestryId,
     long?  MotherId,
     long?  FatherId,
-    int    CivId,
     int    BirthYear,
     int    BirthSeason,
     int    NameOrdinal,
     int    RulerOrdinal);
+
+/// <summary>M12 12.2: a character's Organization membership. Mirrors Organizations.Membership but self-contained for the DTO layer.</summary>
+public sealed record CharacterMembershipDto(int OrganizationId, int Role, float Loyalty, int CivId);
 
 public sealed record GoalDataDto(
     int     Type,

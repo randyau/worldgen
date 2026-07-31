@@ -6,6 +6,7 @@ using WorldEngine.Sim.Entities;
 using WorldEngine.Sim.Entities.Artifacts;
 using WorldEngine.Sim.Entities.Characters;
 using WorldEngine.Sim.Events;
+using WorldEngine.Sim.Organizations;
 using WorldEngine.Sim.World;
 using S = WorldEngine.Sim.Simulation.SimRngSalts;
 
@@ -163,7 +164,8 @@ public sealed class CharacterBehaviorPhase
             var tileData = world.TileGrid.GetTile(kvp.Key);
             var born  = CharacterFactory.Spawn(kvp.Key, (BiomeType)tileData.BiomeType, world.WorldSeed, seq, _simCfg, world.CurrentYear);
             int bornOrdinal = world.ClaimNameOrdinal(born.Identity.Name);
-            born.Identity = born.Identity with { CivId = stub.CivId, NameOrdinal = bornOrdinal };
+            born.Identity = born.Identity with { NameOrdinal = bornOrdinal };
+            CivTracker.SetCharacterCiv(born, stub.CivId, OrganizationRole.Member, world);
             civ.Members.Add(born.Id);
             world.Entities.Add(born);
 
@@ -318,8 +320,8 @@ public sealed class CharacterBehaviorPhase
         TryHeroicDeathForge(c, cause, world, pending);
 
         // Handle succession when a civ member dies
-        if (c.Identity.CivId.IsValid
-            && world.Civilizations.TryGetValue(c.Identity.CivId, out var civ))
+        if (c.CivId.IsValid
+            && world.Civilizations.TryGetValue(c.CivId, out var civ))
         {
             bool wasRuler = civ.RulerId == c.Id;
             civ.Members.Remove(c.Id);
@@ -393,10 +395,10 @@ public sealed class CharacterBehaviorPhase
                     civ.Members.Add(newRuler.Id);
                     newRuler.Identity = newRuler.Identity with
                     {
-                        CivId = civ.Id,
                         NameOrdinal = nameOrdinal,
                         RulerOrdinal = civ.RulerCount
                     };
+                    CivTracker.SetCharacterCiv(newRuler, civ.Id, OrganizationRole.Leader, world);
                     world.Entities.Add(newRuler);
 
                     var bornPayload = JsonSerializer.Serialize(new CharacterBornPayload(
@@ -445,8 +447,8 @@ public sealed class CharacterBehaviorPhase
         ArtifactOwner owner;
         if (world.Settlements.ContainsKey(c.Location))
             owner = ArtifactOwner.OfSettlement(c.Location);
-        else if (c.Identity.CivId.IsValid
-                 && world.Civilizations.TryGetValue(c.Identity.CivId, out var civ3)
+        else if (c.CivId.IsValid
+                 && world.Civilizations.TryGetValue(c.CivId, out var civ3)
                  && world.Settlements.ContainsKey(civ3.CapitalTile))
             owner = ArtifactOwner.OfSettlement(civ3.CapitalTile);
         else
@@ -476,7 +478,7 @@ public sealed class CharacterBehaviorPhase
         pending.Add(new PendingEvent(EventType.ArtifactCreated, c.Location, null, artPayload,
             new[] { c.Id.Value },
             ActorId: c.Id.Value, ActorName: c.Identity.Name,
-            CivId: c.Identity.CivId.IsValid ? c.Identity.CivId.Value : 0));
+            CivId: c.CivId.IsValid ? c.CivId.Value : 0));
     }
 
     // ─── Artifact inheritance on death ───────────────────────────────────────
@@ -496,8 +498,8 @@ public sealed class CharacterBehaviorPhase
         TileCoord? settleTile = null;
         if (world.Settlements.ContainsKey(c.Location))
             settleTile = c.Location;
-        else if (c.Identity.CivId.IsValid
-                 && world.Civilizations.TryGetValue(c.Identity.CivId, out var civ2)
+        else if (c.CivId.IsValid
+                 && world.Civilizations.TryGetValue(c.CivId, out var civ2)
                  && world.Settlements.ContainsKey(civ2.CapitalTile))
             settleTile = civ2.CapitalTile;
 
@@ -636,7 +638,7 @@ public sealed class CharacterBehaviorPhase
         pending.Add(new PendingEvent(EventType.ReligionFounded, c.Location, null, payload,
             new[] { c.Id.Value },
             ActorId: c.Id.Value, ActorName: c.Identity.Name,
-            CivId: c.Identity.CivId.Value));
+            CivId: c.CivId.Value));
     }
 
     // ─── Command resolution ────────────────────────────────────────────────────
@@ -698,19 +700,19 @@ public sealed class CharacterBehaviorPhase
         if (oldWasLand && !newIsLand)
         {
             var payload = JsonSerializer.Serialize(new SeaVoyagePayload(
-                c.Id.Value, c.Identity.Name, c.Identity.CivId.Value, dest.X, dest.Y));
+                c.Id.Value, c.Identity.Name, c.CivId.Value, dest.X, dest.Y));
             pending.Add(new PendingEvent(EventType.SeaVoyageEmbarked, dest, null, payload,
                 new[] { c.Id.Value },
-                ActorId: c.Id.Value, ActorName: c.Identity.Name, CivId: c.Identity.CivId.Value));
+                ActorId: c.Id.Value, ActorName: c.Identity.Name, CivId: c.CivId.Value));
         }
         else if (!oldWasLand && newIsLand)
         {
             voyageGoal.IsComplete = true;
             var payload = JsonSerializer.Serialize(new SeaVoyagePayload(
-                c.Id.Value, c.Identity.Name, c.Identity.CivId.Value, dest.X, dest.Y));
+                c.Id.Value, c.Identity.Name, c.CivId.Value, dest.X, dest.Y));
             pending.Add(new PendingEvent(EventType.SeaVoyageCompleted, dest, null, payload,
                 new[] { c.Id.Value },
-                ActorId: c.Id.Value, ActorName: c.Identity.Name, CivId: c.Identity.CivId.Value));
+                ActorId: c.Id.Value, ActorName: c.Identity.Name, CivId: c.CivId.Value));
 
             // Closing the loop: a delegate who crossed the water is here to found a city, same as
             // any other FoundCity delegate — reuse the existing flow rather than a second founding
@@ -753,13 +755,13 @@ public sealed class CharacterBehaviorPhase
 
         // Only applies to the founding char (or any char with high aggression at their own settlement)
         bool atOwnSettlement = world.Settlements.TryGetValue(c.Location, out var stub)
-            && stub.CivId == c.Identity.CivId;
+            && stub.CivId == c.CivId;
         if (!atOwnSettlement) return;
 
         foreach (var e in world.GetEntitiesAt(c.Location))
         {
             if (e is not Tier1Character other || other.Id == c.Id || !other.IsAlive) continue;
-            if (other.Identity.CivId == c.Identity.CivId) continue; // same civ — no pressure
+            if (other.CivId == c.CivId) continue; // same civ — no pressure
 
             var rel = world.Relationships.GetOrCreate(c.Id, other.Id);
             if (rel.IsAlly || rel.IsRival) continue; // relationship already decided
@@ -787,7 +789,7 @@ public sealed class CharacterBehaviorPhase
         {
             if (e is not Tier1Character other || other.Id == c.Id || !other.IsAlive) continue;
             // Only drain between chars of different civs; same-civ relations handled by territorial pressure
-            if (c.Identity.CivId == other.Identity.CivId) continue;
+            if (c.CivId == other.CivId) continue;
 
             bool isFirstMeeting = world.Relationships.Get(c.Id, other.Id) == null;
             var rel = world.Relationships.GetOrCreate(c.Id, other.Id);
@@ -804,16 +806,16 @@ public sealed class CharacterBehaviorPhase
 
                 // Seed cross-civ awareness: both civs learn of each other at WandererMet fidelity
                 float encounterGain = _simCfg.Emissary.EncounterConfidenceGain;
-                if (c.Identity.CivId.IsValid && other.Identity.CivId.IsValid)
+                if (c.CivId.IsValid && other.CivId.IsValid)
                 {
-                    if (world.Civilizations.TryGetValue(other.Identity.CivId, out var otherCiv))
+                    if (world.Civilizations.TryGetValue(other.CivId, out var otherCiv))
                     {
-                        CivTracker.SeedCivContact(c.Identity.CivId, other.Identity.CivId,
+                        CivTracker.SeedCivContact(c.CivId, other.CivId,
                             CivContactSource.WandererMet, otherCiv.CapitalTile, encounterGain, world);
                     }
-                    if (world.Civilizations.TryGetValue(c.Identity.CivId, out var cCiv))
+                    if (world.Civilizations.TryGetValue(c.CivId, out var cCiv))
                     {
-                        CivTracker.SeedCivContact(other.Identity.CivId, c.Identity.CivId,
+                        CivTracker.SeedCivContact(other.CivId, c.CivId,
                             CivContactSource.WandererMet, cCiv.CapitalTile, encounterGain, world);
                     }
                 }

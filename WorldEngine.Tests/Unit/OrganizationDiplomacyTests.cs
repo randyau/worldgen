@@ -82,7 +82,7 @@ public class OrganizationDiplomacyTests
         ruler1.AgeSeason = ruler1.MaxAgeSeason - 1;
         var biome = (BiomeType)world.TileGrid.GetTile(ruler1.Location).BiomeType;
         var successor = CharacterFactory.Spawn(ruler1.Location, biome, world.WorldSeed, 900L, world.SimConfig, world.CurrentYear, startAsAdult: true);
-        successor.Identity = successor.Identity with { CivId = civ1.Id };
+        CivTracker.SetCharacterCiv(successor, civ1.Id, OrganizationRole.Member, world);
         successor.Skills = successor.Skills with { Leadership = 1.0f };
         civ1.Members.Add(successor.Id);
         world.Entities.Add(successor);

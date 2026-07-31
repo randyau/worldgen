@@ -43,13 +43,38 @@ Hard prerequisite for M13 (family), M14 (guilds), M15 (religion).
   `WorldEngine.Tests/Integration/SaveLoadTests.cs`
   `WorldStateSaver_RoundTrip_Organizations` — since the alliance fact is now load-bearing
   behavior, not just additive state, per CLAUDE.md's "disk as system of record" rule.
-- **12.2 — Multi-membership schema.** Replace single `IdentityData.CivId` with a membership set
-  per character (`OrganizationId`, `Role`, `Loyalty`), migrate readers (UI panels, snapshot,
-  persistence, `UtilityScorer`/`NeedsUpdater`). Per design decision 2, the *weighted-loyalty
-  conflict-resolution scoring logic* in `UtilityScorer`/`GoalManager` is genuinely new design
-  work the roadmap explicitly defers to land alongside M13 (family is the first real test case)
-  — 12.2 only needs to land the schema plus a single-membership-equivalent default behavior so
-  nothing regresses before that scoring work exists.
+- **12.2 — Multi-membership schema. DONE (2026-07-31).** `IdentityData.CivId` is removed;
+  `Tier1Character.Memberships: List<Membership>` (mutable, parallel to `Goals`) is now the
+  authoritative per-character Organization affiliation set, with `CivTracker.SetCharacterCiv` as
+  the sole write path (replaces every `Identity = Identity with { CivId = x }` call site).
+  Scoped as the full mechanical replacement per user direction (two rounds of scope-check —
+  the true size was ~70 read sites across 10 Sim files, not the ~20 originally estimated), not
+  the smaller additive-forward-index alternative.
+  Real wrinkle found along the way: `CivId` and `OrganizationId` are independently-counted ID
+  spaces (`WorldState.NextCivId` vs `NextOrganizationId`), and several of the ~70 reads have no
+  `WorldState` available to do a reverse lookup with (`Tier1Character.ToCharacterSnapshot()` takes
+  none at all) — so `Membership` carries a denormalized `CivId` field alongside `OrganizationId`,
+  set once at the same call that creates the membership, not independently maintained by a second
+  subsystem (the actual "dual source of truth" failure mode the roadmap's audit flagged). This
+  keeps the ~70 hot-path reads (`UtilityScorer`, `GoalManager`, `CharacterBehaviorPhase`, etc.,
+  now all `c.CivId` — an O(1) property on `Tier1Character` — instead of `c.Identity.CivId`) at
+  their original cost.
+  `SetCharacterCiv` self-heals a missing `Civilization.OrgId` (creates the backing Organization
+  on demand) rather than silently dropping the membership — needed because ~20 test fixtures
+  construct `Civilization` directly, bypassing the two production call sites
+  (`CivTracker.cs`/`CivTracker.Unrest.cs`) that already create it. `Tier1Character.Memberships`
+  is now persisted (`Tier1EntityDto.Memberships`/`CharacterMembershipDto`), alongside
+  `Organization.Members`, so both round-trip in sync (`WorldStateSaver_RoundTrip_Organizations`
+  asserts the loaded ruler's `Memberships` too). See
+  `WorldEngine.Tests/Unit/CharacterMembershipTests.cs` for `SetCharacterCiv`'s own contract
+  (self-heal, civ-switching removes the old membership and `Organization.Members` entry, clearing
+  via `CivId.None`).
+  Per design decision 2, the *weighted-loyalty conflict-resolution scoring logic* in
+  `UtilityScorer`/`GoalManager` itself is still out of scope here — genuinely new design work the
+  roadmap explicitly defers to land alongside M13 (family is the first real test case, and the
+  first time a character can hold two simultaneous Organization memberships at all, since only
+  Civilization creates Organizations before M13). 12.2 lands the schema and the single-membership
+  read/write paths only.
 - **12.3 — Generalize leadership succession.** Vacant-seat/heir-pool/crisis-window pattern
   (`SuccessionCrisisEndYear`, DB `SuccessionChain`/`Dynasties`) moves to hang off
   `Organization.LeaderId` generically, civ rulers migrated onto it as the existing instance. No

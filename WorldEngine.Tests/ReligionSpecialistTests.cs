@@ -43,9 +43,10 @@ public sealed class ReligionSpecialistTests
             Curiosity: 0.5f, Creativity: 0.5f, Rationality: 0.5f, Wonder: wonder,
             Loyalty: 0.5f, Sociability: 0.5f, Honesty: 0.5f, Stability: 0.5f);
         var skills   = SkillVector.Default with { Piety = piety };
-        var identity = new IdentityData("Prophet", "the Seer", "test", null, null, civ, 0, 0);
+        var identity = new IdentityData("Prophet", "the Seer", "test", null, null, 0, 0);
         var c = new Tier1Character(new EntityId(id), tile, personality, AptitudeVector.Default,
             skills, identity, 100, 400);
+        c.WithCiv(civ);
         c.Needs = c.Needs with { Spiritual = spiritual };
         world.Entities.Add(c);
         return c;

@@ -69,11 +69,12 @@ public class CivAwarenessTests
             Loyalty: 0.5f, Sociability: 0.5f, Honesty: honesty, Stability: 0.5f);
         var skills = SkillVector.Default with { Piety = piety };
         var identity = new IdentityData("TestChar", "the Test", "test",
-            null, null, civId, 0, 0);
+            null, null, 0, 0);
         var character = new Tier1Character(
             new EntityId(id), location,
             personality, AptitudeVector.Default, skills, identity,
             100, 200);
+        character.WithCiv(civId);
         world.Entities.Add(character);
         return character;
     }
@@ -654,10 +655,10 @@ public class CivAwarenessTests
         civ2.Members.Add(charB.Id);
 
         // Simulate the encounter: call SeedCivContact directly as CharacterBehaviorPhase would
-        CivTracker.SeedCivContact(charA.Identity.CivId, charB.Identity.CivId,
+        CivTracker.SeedCivContact(charA.CivId, charB.CivId,
             CivContactSource.WandererMet, civ2.CapitalTile,
             world.SimConfig.Emissary.EncounterConfidenceGain, world);
-        CivTracker.SeedCivContact(charB.Identity.CivId, charA.Identity.CivId,
+        CivTracker.SeedCivContact(charB.CivId, charA.CivId,
             CivContactSource.WandererMet, civ1.CapitalTile,
             world.SimConfig.Emissary.EncounterConfidenceGain, world);
 

@@ -175,7 +175,8 @@ public static partial class CivTracker
 
         parent.Members.Remove(leader.Id);
         newCiv.Members.Add(leader.Id);
-        leader.Identity = leader.Identity with { CivId = newCivId, RulerOrdinal = 1 };
+        SetCharacterCiv(leader, newCivId, OrganizationRole.Leader, world);
+        leader.Identity = leader.Identity with { RulerOrdinal = 1 };
 
         var capitalBiome = (BiomeType)world.TileGrid.GetTile(leadTile).BiomeType;
         newCiv.CulturalProfile = BuildCulturalProfile(
@@ -194,7 +195,7 @@ public static partial class CivTracker
             parent.Members.Remove(id);
             newCiv.Members.Add(id);
             if (world.GetEntity(id) is Tier1Character m)
-                m.Identity = m.Identity with { CivId = newCivId };
+                SetCharacterCiv(m, newCivId, OrganizationRole.Member, world);
         }
 
         // ── Transfer settlements, counts, territory, population ───────────────
