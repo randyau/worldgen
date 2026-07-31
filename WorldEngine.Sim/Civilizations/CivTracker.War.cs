@@ -75,6 +75,13 @@ public static partial class CivTracker
             if (wasAllied) FireAllianceBroken(declRuler, targRuler, "war_declared", world, pending);
         }
 
+        // Org-level alliance fact (M12 12.1) — war and alliance can't coexist regardless of
+        // whether the current rulers happen to have a personal RelationshipEdge yet.
+        var declOrg = GetOrg(world, declCiv);
+        var targOrg = GetOrg(world, targCiv);
+        if (declOrg != null && targOrg != null && declOrg.IsAllyOf(targOrg.Id))
+            BreakOrgAlliance(declOrg, targOrg);
+
         int warNumber = declCiv.WarHistory.GetValueOrDefault(targCiv.Id, 1);
         string causeDescription = cause switch
         {

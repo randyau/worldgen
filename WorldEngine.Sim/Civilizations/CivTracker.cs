@@ -195,6 +195,16 @@ public static partial class CivTracker
             Flags = rel.Flags | RelationshipFlags.IsAlly
         });
 
+        // Org-level alliance fact (M12 12.1): only meaningful when both allying characters are
+        // their civ's current ruler — that's the only case where a personal alliance is also a
+        // civ-to-civ one. See CivTracker.Diplomacy.cs FormOrgAlliance.
+        if (c.Identity.CivId.IsValid && target.Identity.CivId.IsValid
+            && c.Identity.CivId != target.Identity.CivId
+            && world.Civilizations.TryGetValue(c.Identity.CivId, out var cCiv) && cCiv.RulerId == c.Id
+            && world.Civilizations.TryGetValue(target.Identity.CivId, out var tCiv) && tCiv.RulerId == target.Id
+            && GetOrg(world, cCiv) is { } cOrg && GetOrg(world, tCiv) is { } tOrg)
+            FormOrgAlliance(cOrg, tOrg);
+
         c.Needs      = c.Needs with { Belonging = Math.Min(1f, c.Needs.Belonging + 0.15f) };
         target.Needs = target.Needs with { Belonging = Math.Min(1f, target.Needs.Belonging + 0.1f) };
         c.Skills     = c.Skills with { Diplomacy = Math.Min(1f, c.Skills.Diplomacy + 0.02f) };

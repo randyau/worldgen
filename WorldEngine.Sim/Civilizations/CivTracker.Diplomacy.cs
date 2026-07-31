@@ -4,6 +4,7 @@ using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities;
 using WorldEngine.Sim.Entities.Characters;
 using WorldEngine.Sim.Events;
+using WorldEngine.Sim.Organizations;
 using WorldEngine.Sim.World;
 
 namespace WorldEngine.Sim.Civilizations;
@@ -11,6 +12,28 @@ namespace WorldEngine.Sim.Civilizations;
 public static partial class CivTracker
 {
     private const int SaltCivFloor = 760;
+
+    /// <summary>Looks up the M12 Organization backing a Civilization, if one exists (see 12.0). Null for pre-M12 test fixtures that construct Civilization directly.</summary>
+    private static Organization? GetOrg(WorldState world, Civilization civ) =>
+        civ.OrgId.HasValue && world.Organizations.TryGetValue(civ.OrgId.Value, out var org) ? org : null;
+
+    /// <summary>
+    /// Forms a mutual alliance fact between two Organizations — independent of which characters
+    /// currently hold the leader seats. Per M12 design decision 1, this is what makes an alliance
+    /// survive a ruler's death instead of evaporating with their personal RelationshipEdge.
+    /// </summary>
+    private static void FormOrgAlliance(Organization a, Organization b)
+    {
+        a.Allies.Add(b.Id);
+        b.Allies.Add(a.Id);
+    }
+
+    /// <summary>Breaks a mutual alliance fact between two Organizations. See FormOrgAlliance.</summary>
+    private static void BreakOrgAlliance(Organization a, Organization b)
+    {
+        a.Allies.Remove(b.Id);
+        b.Allies.Remove(a.Id);
+    }
 
     /// <summary>
     /// Called once per year (Spring).
@@ -52,6 +75,9 @@ public static partial class CivTracker
 
             // War expiry is handled at civ level below; no character-level war state here.
         }
+
+        // 2b. Org-level alliance dissolution (M12 12.1) — see RunOrgAllianceDissolution.
+        RunOrgAllianceDissolution(world, pending);
 
         // 3. Border tension: accumulate territorial pressure; declare war if threshold crossed
         RunBorderTension(world, pending);
@@ -149,6 +175,35 @@ public static partial class CivTracker
 
                 if (reason != null)
                     EndWarBetween(civ.Id, enemyCivId, reason, world, pending);
+            }
+        }
+    }
+
+    /// <summary>
+    /// M12 12.1: annual org-level alliance dissolution, decoupled from ruler death. An alliance
+    /// only dissolves when the *current* rulers of both sides both exist and their personal trust
+    /// has decayed below the floor — a vacant/succeeding seat simply skips the check that year,
+    /// so the alliance survives the succession instead of silently lapsing.
+    /// </summary>
+    private static void RunOrgAllianceDissolution(WorldState world, List<PendingEvent> pending)
+    {
+        var cfg = world.SimConfig.Character;
+
+        foreach (var org in world.Organizations.Values)
+        {
+            foreach (var alliedOrgId in org.Allies.ToList())
+            {
+                if (org.Id.Value >= alliedOrgId.Value) continue; // process each pair once
+                if (!world.Organizations.TryGetValue(alliedOrgId, out var alliedOrg)) continue;
+
+                if (world.GetEntity(org.LeaderId) is not Tier1Character rulerA) continue;
+                if (world.GetEntity(alliedOrg.LeaderId) is not Tier1Character rulerB) continue;
+
+                var rel = world.Relationships.Get(rulerA.Id, rulerB.Id);
+                if (rel == null || rel.Trust >= cfg.AllianceTrustFloor) continue;
+
+                BreakOrgAlliance(org, alliedOrg);
+                FireAllianceBroken(rulerA, rulerB, "trust_decay", world, pending);
             }
         }
     }
@@ -433,18 +488,16 @@ public static partial class CivTracker
             if (a.IsAtWarWith(b.Id)) continue;
             if (a.InPeaceCooldownWith(b.Id, world.CurrentYear, wCfg.PeaceCooldownYears, wCfg.WarExhaustionYearsPerWar)) continue;
 
-            // Allied rulers: decay tension and skip accrual — respect the peace treaty.
-            var rulerA = world.GetEntity(a.RulerId) as Tier1Character;
-            var rulerB = world.GetEntity(b.RulerId) as Tier1Character;
-            if (rulerA != null && rulerB != null)
+            // Allied civs: decay tension and skip accrual — respect the alliance.
+            // M12 12.1: this is now the org-to-org alliance fact, not the current rulers'
+            // personal RelationshipEdge, so it survives either ruler dying mid-alliance.
+            var orgA = GetOrg(world, a);
+            var orgB = GetOrg(world, b);
+            if (orgA != null && orgB != null && orgA.IsAllyOf(orgB.Id))
             {
-                var rel = world.Relationships.Get(rulerA.Id, rulerB.Id);
-                if (rel?.IsAlly == true)
-                {
-                    Decay(a.BorderTension, b.Id, wCfg.TensionDecayRate * 2f);
-                    Decay(b.BorderTension, a.Id, wCfg.TensionDecayRate * 2f);
-                    continue;
-                }
+                Decay(a.BorderTension, b.Id, wCfg.TensionDecayRate * 2f);
+                Decay(b.BorderTension, a.Id, wCfg.TensionDecayRate * 2f);
+                continue;
             }
 
             float proximity = 0f;
@@ -1108,6 +1161,13 @@ public static partial class CivTracker
             {
                 Flags = rel.Flags | RelationshipFlags.IsAlly
             });
+
+            // Org-level alliance fact (M12 12.1) — the ruler's trust is the trigger, but the
+            // resulting alliance is recorded against the civs, not the ruler pair, so it survives
+            // succession. See FormOrgAlliance.
+            var fromOrg = GetOrg(world, fromCiv);
+            var toOrg   = GetOrg(world, toCiv);
+            if (fromOrg != null && toOrg != null) FormOrgAlliance(fromOrg, toOrg);
 
             var alliancePayload = JsonSerializer.Serialize(new AllianceFormedPayload(
                 fromRuler.Id.Value, fromRuler.Identity.Name,

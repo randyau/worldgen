@@ -63,6 +63,9 @@ public sealed record WorldStateDto(
     Dictionary<string, int>                         NameOrdinals,
     List<long>                                      ActiveFounders,
     List<BeastEmergenceEntryDto>                    BeastEmergenceSchedule,
+    // M12 Organization layer (see docs/phases/m12_organization_model.md)
+    List<OrganizationDto>                           Organizations,
+    int                                              NextOrganizationId,
     // DECISION: renamed from WatchedCharacterId now that Watch is polymorphic (Character/Beast/...).
     // This is a local dev save format with no shipped compatibility contract, so the field is
     // renamed/retyped directly rather than adding a migration shim for old saves.
@@ -93,6 +96,7 @@ public sealed record CivilizationDto(
     string Name,
     long   FounderId,
     long   RulerId,
+    int?   OrgId,            // M12: links to Organizations[i].Id, see docs/phases/m12_organization_model.md
     string CapitalTile,     // "x,y"
     int    FoundedYear,
     bool   IsCollapsed,
@@ -121,6 +125,22 @@ public sealed record CivilizationDto(
     Dictionary<string, int>           ActiveEmissaryCountByTarget,
     // M4 Phase 2 — war campaigns
     Dictionary<string, int>           WarBattleWins);
+
+// ─── Organization (M12) ────────────────────────────────────────────────────────
+public sealed record MembershipDto(long CharacterId, int Role, float Loyalty);
+
+public sealed record OrganizationDto(
+    int    Id,
+    int    Kind,        // (int)OrganizationKind
+    string Name,
+    long   LeaderId,
+    int    FoundedYear,
+    int    SuccessionCrisisEndYear,
+    List<MembershipDto>     Members,
+    Dictionary<string, int> WarsAgainst,      // CivId (or future org id) → year declared
+    Dictionary<string, float> BorderTension,
+    Dictionary<string, int> PeaceTreaties,
+    List<int>                Allies);
 
 public sealed record CulturalProfileDto(
     string   AncestryId,

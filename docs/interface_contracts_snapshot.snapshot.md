@@ -130,6 +130,7 @@ public sealed class Civilization
     public string     Name        { get; }
     public EntityId   FounderId   { get; }
     public EntityId   RulerId     { get; set; }
+    public OrganizationId? OrgId  { get; set; }
     public TileCoord  CapitalTile { get; set; }
     public int        FoundedYear { get; }
     public bool       IsCollapsed { get; set; }
@@ -266,4 +267,4 @@ public sealed record CharacterWatchSnapshot(
     IReadOnlyList<GoalWatchEntry> Goals);
 ```
 
-<!-- content-hash: d2c362a4943ecedb -->
+<!-- content-hash: 94d177705bd6238a -->

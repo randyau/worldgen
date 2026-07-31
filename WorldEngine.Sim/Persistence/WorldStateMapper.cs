@@ -80,8 +80,27 @@ internal static class WorldStateMapper
                                           .Select(e => new PendingEmissaryDto(
                                               e.FromCiv.Value, e.ToCiv.Value,
                                               (int)e.Purpose, e.DepartedYear, e.ArrivalYear, e.SurvivalChance))
-                                          .ToList());
+                                          .ToList(),
+            Organizations:               MapOrganizations(w),
+            NextOrganizationId:          w.NextOrganizationId);
     }
+
+    private static List<OrganizationDto> MapOrganizations(WorldState w) =>
+        w.Organizations.Values.Select(o => new OrganizationDto(
+            Id:                      o.Id.Value,
+            Kind:                    (int)o.Kind,
+            Name:                    o.Name,
+            LeaderId:                o.LeaderId.Value,
+            FoundedYear:             o.FoundedYear,
+            SuccessionCrisisEndYear: o.SuccessionCrisisEndYear,
+            Members:                 o.Members
+                                      .Select(kv => new MembershipDto(kv.Key.Value, (int)kv.Value.Role, kv.Value.Loyalty))
+                                      .ToList(),
+            WarsAgainst:             o.WarsAgainst.ToDictionary(kv => kv.Key.Value.ToString(), kv => kv.Value),
+            BorderTension:           o.BorderTension.ToDictionary(kv => kv.Key.Value.ToString(), kv => kv.Value),
+            PeaceTreaties:           o.PeaceTreaties.ToDictionary(kv => kv.Key.Value.ToString(), kv => kv.Value),
+            Allies:                  o.Allies.Select(a => a.Value).ToList()))
+        .ToList();
 
     private static Dictionary<string, List<ResourceDepositDto>> MapResourceRegistry(WorldState w)
     {
@@ -124,6 +143,7 @@ internal static class WorldStateMapper
             Name:                    c.Name,
             FounderId:               c.FounderId.Value,
             RulerId:                 c.RulerId.Value,
+            OrgId:                   c.OrgId?.Value,
             CapitalTile:             TileKey(c.CapitalTile),
             FoundedYear:             c.FoundedYear,
             IsCollapsed:             c.IsCollapsed,
@@ -358,6 +378,26 @@ internal static class WorldStateMapper
             world.Civilizations[civ.Id] = civ;
         }
 
+        // 10b. Restore M12 Organizations (see docs/phases/m12_organization_model.md)
+        world.NextOrganizationId = dto.NextOrganizationId;
+        foreach (var odto in dto.Organizations)
+        {
+            var org = new Organizations.Organization(
+                new OrganizationId(odto.Id), (Organizations.OrganizationKind)odto.Kind, odto.Name,
+                new EntityId(odto.LeaderId), odto.FoundedYear)
+            {
+                SuccessionCrisisEndYear = odto.SuccessionCrisisEndYear
+            };
+            foreach (var m in odto.Members)
+                org.Members[new EntityId(m.CharacterId)] = new Organizations.Membership(
+                    org.Id, (Organizations.OrganizationRole)m.Role, m.Loyalty);
+            foreach (var kv in odto.WarsAgainst)   org.WarsAgainst[new OrganizationId(int.Parse(kv.Key))]   = kv.Value;
+            foreach (var kv in odto.BorderTension) org.BorderTension[new OrganizationId(int.Parse(kv.Key))] = kv.Value;
+            foreach (var kv in odto.PeaceTreaties) org.PeaceTreaties[new OrganizationId(int.Parse(kv.Key))] = kv.Value;
+            foreach (var a in odto.Allies) org.Allies.Add(new OrganizationId(a));
+            world.Organizations[org.Id] = org;
+        }
+
         // 11. Restore settlements
         foreach (var (key, s) in dto.Settlements)
         {
@@ -466,6 +506,7 @@ internal static class WorldStateMapper
             new EntityId(dto.FounderId), ParseTile(dto.CapitalTile), dto.FoundedYear);
 
         civ.RulerId                  = new EntityId(dto.RulerId);
+        civ.OrgId                    = dto.OrgId.HasValue ? new OrganizationId(dto.OrgId.Value) : null;
         civ.IsCollapsed              = dto.IsCollapsed;
         civ.CollapseYear             = dto.CollapseYear;
         civ.LastSettlementFoundedYear = dto.LastSettlementFoundedYear;

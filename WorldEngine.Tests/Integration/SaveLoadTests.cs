@@ -3,6 +3,7 @@ using WorldEngine.Sim.Config;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities.Characters;
 using WorldEngine.Sim.Events;
+using WorldEngine.Sim.Organizations;
 using WorldEngine.Sim.Persistence;
 using WorldEngine.Sim.Simulation;
 using WorldEngine.Sim.Tiles.LocalScale;
@@ -258,6 +259,48 @@ public class SaveLoadTests : IDisposable
         em.Purpose.Should().Be(EmissaryPurpose.Trade);
         em.ArrivalYear.Should().Be(3);
         em.SurvivalChance.Should().BeApproximately(0.8f, 0.001f);
+    }
+
+    [Fact]
+    public void WorldStateSaver_RoundTrip_Organizations()
+    {
+        var world  = WorldTestHelper.CreateSmallWorld(seed: 42);
+        var simCfg = TestSimConfig.Default();
+
+        var civId = new CivId(1);
+        var capital = new TileCoord(5, 5);
+        var ruler = new Tier1Character(
+            new EntityId(101L), capital,
+            PersonalityVector.Default, AptitudeVector.Default, SkillVector.Default,
+            new IdentityData("Ruler1", "the First", "test", null, null, civId, 0, 0),
+            100, 200);
+        world.Entities.Add(ruler);
+
+        var civ = new Civilization(civId, "Civ1", ruler.Id, capital, 0);
+        world.Civilizations[civId] = civ;
+
+        var orgId = new OrganizationId(1);
+        var otherOrgId = new OrganizationId(2);
+        var org = new Organization(orgId, OrganizationKind.Civilization, "Civ1", ruler.Id, 0);
+        org.Members[ruler.Id] = Membership.Founding(orgId);
+        org.Allies.Add(otherOrgId);
+        world.Organizations[orgId] = org;
+        world.NextOrganizationId = 2;
+        civ.OrgId = orgId;
+
+        WorldStateSaver.Save(world, _saveDir, simCfg);
+        var loaded = WorldStateSaver.Load(_saveDir, simCfg);
+
+        loaded.NextOrganizationId.Should().Be(2);
+        loaded.Organizations.Should().ContainKey(orgId);
+        var loadedOrg = loaded.Organizations[orgId];
+        loadedOrg.Kind.Should().Be(OrganizationKind.Civilization);
+        loadedOrg.LeaderId.Should().Be(ruler.Id);
+        loadedOrg.Members.Should().ContainKey(ruler.Id);
+        loadedOrg.Members[ruler.Id].Role.Should().Be(OrganizationRole.Leader);
+        loadedOrg.Allies.Should().Contain(otherOrgId, "alliance facts must survive save/load");
+
+        loaded.Civilizations[civId].OrgId.Should().Be(orgId, "the civ-to-org link must survive save/load");
     }
 
     // ── Test 10: settlement specialization round-trip (M9 9.2) ──────────────

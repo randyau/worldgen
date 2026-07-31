@@ -339,6 +339,11 @@ public sealed class CharacterBehaviorPhase
                 if (successorId.HasValue)
                 {
                     civ.RulerId = successorId.Value;
+                    // Keep the M12 Organization's leader seat mirrored — see docs/phases/m12_organization_model.md 12.1.
+                    // Full vacant-seat/heir-pool succession machinery generalizes onto Organization in 12.3; this is
+                    // just enough to keep org-level alliance dissolution (CivTracker.Diplomacy.cs) from reading a stale leader.
+                    if (civ.OrgId.HasValue && world.Organizations.TryGetValue(civ.OrgId.Value, out var succOrg))
+                        succOrg.LeaderId = successorId.Value;
                     civ.RulerCount++;
                     civ.TotalSuccessions++;
                     var successor = (Tier1Character)world.GetEntity(successorId.Value)!;
@@ -381,6 +386,8 @@ public sealed class CharacterBehaviorPhase
                         world.WorldSeed, seq, _simCfg, world.CurrentYear, startAsAdult: true);
                     int nameOrdinal = world.ClaimNameOrdinal(newRuler.Identity.Name);
                     civ.RulerId = newRuler.Id;
+                    if (civ.OrgId.HasValue && world.Organizations.TryGetValue(civ.OrgId.Value, out var reOrg))
+                        reOrg.LeaderId = newRuler.Id;
                     civ.RulerCount++;
                     civ.TotalSuccessions++;
                     civ.Members.Add(newRuler.Id);

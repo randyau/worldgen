@@ -17,12 +17,32 @@ Hard prerequisite for M13 (family), M14 (guilds), M15 (religion).
   `WarsAgainst`/`BorderTension`/`PeaceTreaties`/`Allies`). `Organizations` dictionary on
   `WorldState`. Additive only — no existing `Civilization` behavior migrated yet. One
   `Organization` (Kind: Civilization) auto-created per `Civilization` at founding, kept in sync.
-- **12.1 — Migrate civ diplomacy onto Organization relationship state.** Per design decision 1:
-  alliance/war/peace becomes an org-to-org fact instead of being derived from the ruler pair's
-  personal `RelationshipEdge.Trust`. Ruler trust becomes an input/lever, not the source of
-  truth. `CivTracker.Diplomacy.cs`/`CivTracker.War.cs` migrate to read/write
-  `Organization` state; `Civilization.WarsAgainst`/`BorderTension`/`PeaceTreaties` are removed
-  once callers move over (no dual source of truth, no compat shim per CLAUDE.md).
+- **12.1 — Migrate civ diplomacy onto Organization relationship state. DONE (2026-07-31).**
+  Scope note: on inspection, `Civilization.WarsAgainst`/`BorderTension`/`PeaceTreaties` were
+  already civ-level facts (never derived from the ruler pair), and are deeply entangled with
+  territory transfer/conquest/population — squarely "war mechanics themselves" per the roadmap's
+  scope boundary, so they stay on `Civilization`. The actual fragility design decision 1 names
+  ("assassinate the ruler, alliance evaporates") lives entirely in the *alliance* fact: it was
+  read/written as the current ruler pair's `RelationshipEdge.IsAlly`
+  (`CivTracker.Diplomacy.cs` `RunBorderTension`'s peace-check, the annual dissolution loop) —
+  so a new ruler with no relationship history to the other side looked unallied even though the
+  alliance was never broken. Fixed by adding `Organization.Allies` (a `HashSet<OrganizationId>`,
+  landed in 12.0) as the independent org-to-org fact: `ResolveDiplomacy` (emissary path) and
+  `ResolveAlly` (ruler-pair `AllyWith` case) now call `FormOrgAlliance` alongside the existing
+  ruler-edge `IsAlly` flag; `RunBorderTension`'s peace-check reads `Organization.IsAllyOf`
+  instead of the ruler edge; a new `RunOrgAllianceDissolution` (called from
+  `RunAnnualDiplomacy`) breaks the org-level alliance only when the *current* rulers on both
+  sides exist and their trust has decayed below the floor — a vacant/succeeding seat simply
+  skips that year instead of the alliance silently lapsing; `StartWarBetween` also breaks the
+  org alliance on war declaration. `Organization.LeaderId` is kept mirrored to
+  `Civilization.RulerId` at both succession call sites in `CharacterBehaviorPhase.cs` (a
+  narrow sync, not the full vacant-seat/heir-pool machinery — that generalization is 12.3).
+  See `WorldEngine.Tests/Unit/OrganizationDiplomacyTests.cs` for the succession-survives-alliance
+  regression test. `Organization` (including `Allies`) and `Civilization.OrgId` are now
+  persisted via `OrganizationDto`/`WorldStateMapper` — see
+  `WorldEngine.Tests/Integration/SaveLoadTests.cs`
+  `WorldStateSaver_RoundTrip_Organizations` — since the alliance fact is now load-bearing
+  behavior, not just additive state, per CLAUDE.md's "disk as system of record" rule.
 - **12.2 — Multi-membership schema.** Replace single `IdentityData.CivId` with a membership set
   per character (`OrganizationId`, `Role`, `Loyalty`), migrate readers (UI panels, snapshot,
   persistence, `UtilityScorer`/`NeedsUpdater`). Per design decision 2, the *weighted-loyalty
