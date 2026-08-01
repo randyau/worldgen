@@ -376,6 +376,10 @@ public sealed class CharacterBehaviorPhase
             }
         }
 
+        // M13 13.2 — Debt is inheritable: a dead character's obligations pass to their household
+        // heir rather than vanishing with them.
+        TransferDebtOnDeath(c, world);
+
         var payload = JsonSerializer.Serialize(new CharacterDeathPayload(
             c.Id.Value, c.Identity.Name, cause, c.AgeSeason,
             AncestryId: c.Identity.AncestryId, MaxAgeSeason: c.MaxAgeSeason));
@@ -483,6 +487,56 @@ public sealed class CharacterBehaviorPhase
                         CivId: civ.Id.Value));
                 }
             }
+        }
+    }
+
+    /// <summary>
+    /// M13 13.2 — Debt as an obligation mechanic: inheritable, tying into the household Family
+    /// Organization rather than a full succession-seat change. The heir is the deceased's spouse
+    /// (preferred) or, absent one, any other living member of their household. Each of the
+    /// deceased's nonzero-Debt edges is re-pointed at the heir (summed with any debt the heir
+    /// already carries toward the same counterparty); a debt directly between the deceased and
+    /// their own heir is simply extinguished rather than transferred to itself.
+    /// </summary>
+    private static void TransferDebtOnDeath(Tier1Character c, WorldState world)
+    {
+        var familyMembership = c.Memberships.FirstOrDefault(m =>
+            world.Organizations.TryGetValue(m.OrganizationId, out var o) && o.Kind == OrganizationKind.Family);
+        if (familyMembership == null) return;
+        var familyOrg = world.Organizations[familyMembership.OrganizationId];
+
+        Tier1Character? heir = null;
+        foreach (var memberId in familyOrg.Members.Keys)
+        {
+            if (memberId == c.Id) continue;
+            if (world.GetEntity(memberId) is not Tier1Character candidate || !candidate.IsAlive) continue;
+            if (world.Relationships.Get(c.Id, memberId)?.IsMarried ?? false) { heir = candidate; break; }
+            heir ??= candidate;
+        }
+        if (heir == null) return;
+
+        foreach (var edge in world.Relationships.GetAll(c.Id).ToList())
+        {
+            if (edge.Debt == 0f) continue;
+            var counterpartyId = edge.From == c.Id ? edge.To : edge.From;
+
+            if (counterpartyId == heir.Id)
+            {
+                world.Relationships.Upsert(edge with { Debt = 0f });
+                continue;
+            }
+
+            float owedByC = edge.DebtorId == c.Id ? Math.Abs(edge.Debt) : -Math.Abs(edge.Debt);
+
+            var heirEdge = world.Relationships.GetOrCreate(heir.Id, counterpartyId);
+            float existingOwedByHeir = heirEdge.DebtorId == heir.Id ? Math.Abs(heirEdge.Debt)
+                                      : heirEdge.DebtorId == counterpartyId ? -Math.Abs(heirEdge.Debt)
+                                      : 0f;
+            float newOwedByHeir = Math.Clamp(existingOwedByHeir + owedByC, -1f, 1f);
+            float sign = heir.Id == heirEdge.From ? 1f : -1f;
+            world.Relationships.Upsert(heirEdge with { Debt = newOwedByHeir * sign });
+
+            world.Relationships.Upsert(edge with { Debt = 0f });
         }
     }
 

@@ -952,6 +952,17 @@ trait_inheritance_weight        = 0.4   # 0 = pure ancestry bias, 1 = pure paren
 newborn_family_loyalty          = 0.8   # starting Loyalty for a newborn's Family membership
 kin_in_enemy_civ_war_dampen_min = 0.2   # War/Raid score multiplier floor when a Family relative lives in the target civ
 
+[debt]
+aid_trust_threshold     = 0.4   # granter must already trust the recipient this much before offering aid
+aid_need_threshold      = 0.3   # recipient's Food or Safety must be below this to qualify for aid
+aid_debt_increment      = 0.3   # |Debt| added toward the granter per GrantAid
+aid_trust_gain          = 0.15  # Trust gained by both parties from the exchange
+aid_need_restore        = 0.25  # recipient's triggering need restored by this much
+debt_war_dampen_min     = 0.3   # War/Raid score multiplier floor when maximally indebted to someone in the target civ
+forgive_trust_threshold = 0.6   # creditor must trust the debtor this much before forgiving
+forgive_min_debt        = 0.2   # minimum |Debt| owed before forgiveness is considered
+forgive_trust_gain      = 0.2   # Trust gained by both parties when debt is forgiven
+
 # =============================================================================
 # UNREST / SECESSION (S2 splinter mechanic)
 # =============================================================================
@@ -1071,6 +1082,12 @@ sea_voyage       = { purpose = 0.50, status = 0.50, _default = 0.0 }
 # _default = 0.1 matches the original _ => 0.1f fallback for all unlisted actions
 create           = { _default = 0.1 }
 flee             = { _default = 0.1 }
+# Marry: belonging-driven, same flavor as Ally
+marry            = { belonging = 0.60, _default = 0.0 }
+# GrantAid (M13 13.2): belonging-driven — helping a trusted, needy companion
+grant_aid        = { belonging = 0.50, _default = 0.0 }
+# ForgiveDebt (M13 13.2): belonging-driven — releasing an obligation to repair a bond
+forgive_debt     = { belonging = 0.40, _default = 0.0 }
 
 # ─── Wildlife raid risk by biome (D3) ─────────────────────────────────────────
 # Per-biome multiplier applied to settlement.wildlife_attack_base_chance.

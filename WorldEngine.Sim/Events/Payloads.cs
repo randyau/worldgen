@@ -47,6 +47,13 @@ internal sealed record MarriagePayload(
     long CharacterAId, string CharacterAName, long CharacterBId, string CharacterBName,
     long FamilyOrgId);
 
+// M13 13.2 — Debt as an obligation mechanic.
+internal sealed record DebtIncurredPayload(
+    long GranterId, string GranterName, long RecipientId, string RecipientName, float DebtMagnitude);
+
+internal sealed record DebtForgivenPayload(
+    long CreditorId, string CreditorName, long DebtorId, string DebtorName, float ForgivenMagnitude);
+
 internal sealed record WarDeclaredPayload(
     long DeclarerId, string DeclarerName,
     long DeclarerCivId, string DeclarerCivName,

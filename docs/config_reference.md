@@ -35,6 +35,7 @@ Edit values in `sim_config.toml`; all keys live there without recompiling.
 - [war](#war)
 - [religion](#religion)
 - [family](#family)
+- [debt](#debt)
 - [unrest](#unrest)
 - [utility_affinity.goal_affinity](#utility-affinitygoal-affinity)
 - [utility_affinity.action_needs](#utility-affinityaction-needs)
@@ -690,6 +691,20 @@ _Natural shelter recovery per tick when NOT on a settlement tile, by biome. Dens
 | `newborn_family_loyalty` | `0.8` | `SimConfig.Family.NewbornFamilyLoyalty` | starting Loyalty for a newborn's Family membership |
 | `kin_in_enemy_civ_war_dampen_min` | `0.2` | `SimConfig.Family.KinInEnemyCivWarDampenMin` | War/Raid score multiplier floor when a Family relative lives in the target civ |
 
+## `[debt]` {#debt}
+
+| Key | Value | C# Property | Description |
+|-----|-------|-------------|-------------|
+| `aid_trust_threshold` | `0.4` | `SimConfig.Debt.AidTrustThreshold` | granter must already trust the recipient this much before offering aid |
+| `aid_need_threshold` | `0.3` | `SimConfig.Debt.AidNeedThreshold` | recipient's Food or Safety must be below this to qualify for aid |
+| `aid_debt_increment` | `0.3` | `SimConfig.Debt.AidDebtIncrement` | \|Debt\| added toward the granter per GrantAid |
+| `aid_trust_gain` | `0.15` | `SimConfig.Debt.AidTrustGain` | Trust gained by both parties from the exchange |
+| `aid_need_restore` | `0.25` | `SimConfig.Debt.AidNeedRestore` | recipient's triggering need restored by this much |
+| `debt_war_dampen_min` | `0.3` | `SimConfig.Debt.DebtWarDampenMin` | War/Raid score multiplier floor when maximally indebted to someone in the target civ |
+| `forgive_trust_threshold` | `0.6` | `SimConfig.Debt.ForgiveTrustThreshold` | creditor must trust the debtor this much before forgiving |
+| `forgive_min_debt` | `0.2` | `SimConfig.Debt.ForgiveMinDebt` | minimum \|Debt\| owed before forgiveness is considered |
+| `forgive_trust_gain` | `0.2` | `SimConfig.Debt.ForgiveTrustGain` | Trust gained by both parties when debt is forgiven |
+
 ## `[unrest]` {#unrest}
 
 | Key | Value | C# Property | Description |
@@ -749,6 +764,9 @@ _Natural shelter recovery per tick when NOT on a settlement tile, by biome. Dens
 | `sea_voyage` | `{ purpose = 0.50, status = 0.50, _default = 0.0 }` | `SimConfig.UtilityAffinity.ActionNeeds.SeaVoyage` | SeaVoyage: purpose + status, same flavor as FoundCity (a civ-level expansion act) |
 | `create` | `{ _default = 0.1 }` | `SimConfig.UtilityAffinity.ActionNeeds.Create` | create, flee: no need-based score — rely on goal advancement and personality only _default = 0.1 matches the original _ => 0.1f fallback for all unlisted actions |
 | `flee` | `{ _default = 0.1 }` | `SimConfig.UtilityAffinity.ActionNeeds.Flee` |  |
+| `marry` | `{ belonging = 0.60, _default = 0.0 }` | `SimConfig.UtilityAffinity.ActionNeeds.Marry` | Marry: belonging-driven, same flavor as Ally |
+| `grant_aid` | `{ belonging = 0.50, _default = 0.0 }` | `SimConfig.UtilityAffinity.ActionNeeds.GrantAid` | GrantAid (M13 13.2): belonging-driven — helping a trusted, needy companion |
+| `forgive_debt` | `{ belonging = 0.40, _default = 0.0 }` | `SimConfig.UtilityAffinity.ActionNeeds.ForgiveDebt` | ForgiveDebt (M13 13.2): belonging-driven — releasing an obligation to repair a bond |
 
 ## `[wildlife_risk]` {#wildlife-risk}
 

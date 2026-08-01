@@ -129,6 +129,8 @@ public enum EventType
     ArtworkCreated          = 3108,  // character created something (art, craft, discovery)
     GoalFormed              = 3109,  // notable goal formed (Bond, Avenge, Create)
     GoalResolved            = 3110,  // notable goal achieved or abandoned
+    DebtIncurred            = 3111,  // M13 13.2: one character materially aided another, creating an obligation
+    DebtForgiven            = 3112,  // M13 13.2: a creditor released a debtor from their obligation
 
     // M2+ civilization/settlement (3200-range)
     CivilizationFounded     = 3201,
@@ -219,6 +221,8 @@ public static class VerbClassification
         EventType.ArtworkCreated          => VerbClass.Creation,
         EventType.GoalFormed              => VerbClass.Transformation,
         EventType.GoalResolved            => VerbClass.Transformation,
+        EventType.DebtIncurred            => VerbClass.Transfer,
+        EventType.DebtForgiven            => VerbClass.Maintenance,
         EventType.CivilizationFounded     => VerbClass.Creation,
         EventType.CivilizationCollapsed   => VerbClass.Destruction,
         EventType.SettlementFounded       => VerbClass.Creation,

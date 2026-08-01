@@ -26,6 +26,10 @@ public sealed record Negotiate(EntityId CharacterId, EntityId TargetId) : IComma
 // M13 13.0 — upgrades a high-trust Bond into marriage: RelationshipFlags.IsMarried|IsFamily
 // plus a new Family-kind Organization (the household). See CivTracker.ResolveMarriage.
 public sealed record ProposeMarriage(EntityId CharacterId, EntityId TargetId) : ICommand;
+// M13 13.2 — GranterId materially aids RecipientId (in need), creating a Debt obligation.
+public sealed record GrantAid(EntityId GranterId, EntityId RecipientId) : ICommand;
+// M13 13.2 — CreditorId forgives DebtorId's obligation: zeroes Debt, boosts Trust.
+public sealed record ForgiveDebt(EntityId CreditorId, EntityId DebtorId) : ICommand;
 public sealed record CreateArtwork(EntityId CharacterId) : ICommand;
 public sealed record FleeRegion(EntityId CharacterId, TileCoord Destination) : ICommand;
 

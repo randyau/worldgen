@@ -81,6 +81,10 @@ public static partial class CivTracker
                 ResolveNegotiate(ng, world, pending); break;
             case ProposeMarriage pm:
                 ResolveMarriage(pm, world, pending); break;
+            case GrantAid ga:
+                ResolveGrantAid(ga, world, pending); break;
+            case ForgiveDebt fd:
+                ResolveForgiveDebt(fd, world, pending); break;
             case BuildImprovement bi:
                 ResolveBuildImprovement(bi, world, pending); break;
         }
@@ -313,6 +317,71 @@ public static partial class CivTracker
         pending.Add(new PendingEvent(EventType.CharacterMarried, c.Location, null, payload,
             new[] { c.Id.Value }, new[] { target.Id.Value },
             ActorId: c.Id.Value, ActorName: c.Identity.Name));
+    }
+
+    // ─── Debt (M13 13.2) ────────────────────────────────────────────────────────
+
+    private static void ResolveGrantAid(GrantAid cmd, WorldState world, List<PendingEvent> pending)
+    {
+        if (world.GetEntity(cmd.GranterId) is not Tier1Character granter) return;
+        if (world.GetEntity(cmd.RecipientId) is not Tier1Character recipient) return;
+        if (!granter.IsAlive || !recipient.IsAlive) return;
+
+        var cfg = world.SimConfig.Debt;
+        var rel = world.Relationships.GetOrCreate(granter.Id, recipient.Id);
+        if (rel.Trust < cfg.AidTrustThreshold) return;
+        if (recipient.Needs.Food >= cfg.AidNeedThreshold && recipient.Needs.Safety >= cfg.AidNeedThreshold) return;
+
+        // Normalize the edge's signed Debt into "how much the recipient owes the granter",
+        // independent of which of the two landed as the canonical From — see RelationshipEdge.DebtorId.
+        float owedByRecipient = rel.DebtorId == recipient.Id ? Math.Abs(rel.Debt)
+                               : rel.DebtorId == granter.Id ? -Math.Abs(rel.Debt)
+                               : 0f;
+        float newOwed = Math.Clamp(owedByRecipient + cfg.AidDebtIncrement, -1f, 1f);
+        float sign = recipient.Id == rel.From ? 1f : -1f;
+
+        world.Relationships.Upsert(rel with
+        {
+            Debt  = newOwed * sign,
+            Trust = Math.Min(1f, rel.Trust + cfg.AidTrustGain)
+        });
+
+        recipient.Needs = recipient.Needs with
+        {
+            Food   = Math.Min(1f, recipient.Needs.Food + cfg.AidNeedRestore),
+            Safety = Math.Min(1f, recipient.Needs.Safety + cfg.AidNeedRestore)
+        };
+
+        var aidPayload = JsonSerializer.Serialize(new DebtIncurredPayload(
+            granter.Id.Value, granter.Identity.Name, recipient.Id.Value, recipient.Identity.Name,
+            cfg.AidDebtIncrement));
+        pending.Add(new PendingEvent(EventType.DebtIncurred, granter.Location, null, aidPayload,
+            new[] { granter.Id.Value }, new[] { recipient.Id.Value },
+            ActorId: granter.Id.Value, ActorName: granter.Identity.Name));
+    }
+
+    private static void ResolveForgiveDebt(ForgiveDebt cmd, WorldState world, List<PendingEvent> pending)
+    {
+        if (world.GetEntity(cmd.CreditorId) is not Tier1Character creditor) return;
+        if (world.GetEntity(cmd.DebtorId) is not Tier1Character debtor) return;
+        if (!creditor.IsAlive || !debtor.IsAlive) return;
+
+        var rel = world.Relationships.Get(creditor.Id, debtor.Id);
+        if (rel == null || rel.CreditorId != creditor.Id) return;
+        float forgiven = Math.Abs(rel.Debt);
+
+        var cfg = world.SimConfig.Debt;
+        world.Relationships.Upsert(rel with
+        {
+            Debt  = 0f,
+            Trust = Math.Min(1f, rel.Trust + cfg.ForgiveTrustGain)
+        });
+
+        var forgivePayload = JsonSerializer.Serialize(new DebtForgivenPayload(
+            creditor.Id.Value, creditor.Identity.Name, debtor.Id.Value, debtor.Identity.Name, forgiven));
+        pending.Add(new PendingEvent(EventType.DebtForgiven, creditor.Location, null, forgivePayload,
+            new[] { creditor.Id.Value }, new[] { debtor.Id.Value },
+            ActorId: creditor.Id.Value, ActorName: creditor.Identity.Name));
     }
 
     // ─── Rivalry ──────────────────────────────────────────────────────────────

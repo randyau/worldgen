@@ -171,6 +171,34 @@ public sealed class UtilityScorer
             }
         }
 
+        // GrantAid / ForgiveDebt — M13 13.2: Debt as an obligation mechanic. Single best co-located
+        // candidate per tick, mirroring the Ally/Negotiate pattern.
+        var debtCfg = world.SimConfig.Debt;
+        ICommand? bestDebtCmd = null;
+        float bestDebtScore = float.MinValue;
+        foreach (var e in world.GetEntitiesAt(c.Location))
+        {
+            if (e is not Tier1Character other || other.Id == c.Id || !other.IsAlive) continue;
+            var rel = world.GetRelationship(c.Id, other.Id);
+            if (rel == null) continue;
+
+            if (rel.Trust >= debtCfg.AidTrustThreshold
+                && (other.Needs.Food < debtCfg.AidNeedThreshold || other.Needs.Safety < debtCfg.AidNeedThreshold))
+            {
+                float score = Score(c, ActionType.GrantAid, c.Personality.Compassion, world, cfg);
+                if (score > bestDebtScore) { bestDebtScore = score; bestDebtCmd = new GrantAid(c.Id, other.Id); }
+            }
+            else if (rel.CreditorId == c.Id
+                     && Math.Abs(rel.Debt) >= debtCfg.ForgiveMinDebt
+                     && rel.Trust >= debtCfg.ForgiveTrustThreshold)
+            {
+                float score = Score(c, ActionType.ForgiveDebt, c.Personality.Compassion, world, cfg);
+                if (score > bestDebtScore) { bestDebtScore = score; bestDebtCmd = new ForgiveDebt(c.Id, other.Id); }
+            }
+        }
+        if (bestDebtCmd != null)
+            actions.Add(new(bestDebtCmd, bestDebtScore));
+
         // DeclareRivalry — nearby character with substantially low trust (not just one bad encounter).
         // Cap scales with Aggression: aggressive characters sustain more rivalries; peaceful ones almost none.
         int rivalMax = cfg.RivalryMaxBase + (int)(c.Personality.Aggression * cfg.RivalryMaxPerAggression);
@@ -231,7 +259,8 @@ public sealed class UtilityScorer
                     if (hostileEnough)
                     {
                         float warScore = Score(c, ActionType.War, c.Personality.Aggression, world, cfg)
-                                        * KinDampening(c, nearSettle.CivId, world, world.SimConfig.Family);
+                                        * KinDampening(c, nearSettle.CivId, world, world.SimConfig.Family)
+                                        * DebtDampening(c, nearSettle.CivId, world, world.SimConfig.Debt);
                         actions.Add(new(new DeclareWar(c.Id, nearSettle.CivId), warScore));
                         break;
                     }
@@ -256,7 +285,8 @@ public sealed class UtilityScorer
                     {
                         float successProb = c.Skills.Combat * c.Aptitude.Diligence;
                         float raidScore = Score(c, ActionType.Raid, successProb, world, cfg)
-                                         * KinDampening(c, settlement.CivId, world, world.SimConfig.Family);
+                                         * KinDampening(c, settlement.CivId, world, world.SimConfig.Family)
+                                         * DebtDampening(c, settlement.CivId, world, world.SimConfig.Debt);
                         actions.Add(new(new RaidSettlement(c.Id, coord), raidScore));
                         break;
                     }
@@ -401,7 +431,7 @@ public sealed class UtilityScorer
     // DECISION: ActionType is a private enum keeping the same integer indices as before.
     // UtilityAffinityTables.TryParseAction maps TOML names to these integer indices directly,
     // so adding a new ActionType requires updating both here and in TryParseAction.
-    private enum ActionType { Rest, Travel, Establish, Ally, Negotiate, Rivalry, War, Raid, Create, Flee, BuildImprovement, FoundCity, HuntBeast, SeaVoyage, Marry }
+    private enum ActionType { Rest, Travel, Establish, Ally, Negotiate, Rivalry, War, Raid, Create, Flee, BuildImprovement, FoundCity, HuntBeast, SeaVoyage, Marry, GrantAid, ForgiveDebt }
 
     // covet→conflict seam: GoalAdvancement already boosts War/Raid actions when a character has
     // a CovetArtifact goal, because GoalAffinity[CovetArtifact, War] and [CovetArtifact, Raid]
@@ -516,6 +546,8 @@ public sealed class UtilityScorer
         ActionType.HuntBeast        => c.Personality.Aggression * 0.7f + c.Skills.Combat * 0.3f,
         ActionType.SeaVoyage        => c.Personality.Ambition * 0.9f, // same flavor as FoundCity — ruler-delegated expansion
         ActionType.Marry            => c.Personality.Compassion * 0.6f + c.Personality.Loyalty * 0.4f,
+        ActionType.GrantAid         => c.Personality.Compassion,
+        ActionType.ForgiveDebt      => c.Personality.Compassion * 0.7f + c.Personality.Honesty * 0.3f,
         _                           => 0.2f
     };
 
@@ -671,6 +703,30 @@ public sealed class UtilityScorer
         }
         if (maxFamilyLoyalty <= 0f) return 1f;
         return 1f - maxFamilyLoyalty * (1f - cfg.KinInEnemyCivWarDampenMin);
+    }
+
+    // ─── M13 13.2 — Debt as an obligation mechanic ─────────────────────────────
+
+    /// <summary>
+    /// Dampens War/Raid desirability when the acting character owes a living creditor resident in
+    /// the target civ — "an indebted character protects/favors their creditor even against
+    /// self-interest" (roadmap proposal #2). Scales with how much of the edge's -1..1 Debt range is
+    /// owed, same shape as <see cref="KinDampening"/>.
+    /// </summary>
+    private static float DebtDampening(Tier1Character c, CivId targetCivId, IWorldStateReadOnly world, DebtConfig cfg)
+    {
+        if (!targetCivId.IsValid) return 1f;
+        float maxOwed = 0f;
+        foreach (var edge in world.GetRelationships(c.Id))
+        {
+            if (edge.DebtorId != c.Id) continue;
+            var creditorId = edge.CreditorId!.Value;
+            if (world.GetEntity(creditorId) is Tier1Character creditor
+                && creditor.IsAlive && creditor.CivId == targetCivId)
+                maxOwed = Math.Max(maxOwed, Math.Abs(edge.Debt));
+        }
+        if (maxOwed <= 0f) return 1f;
+        return 1f - maxOwed * (1f - cfg.DebtWarDampenMin);
     }
 
     // ─── Beast hunting ────────────────────────────────────────────────────────

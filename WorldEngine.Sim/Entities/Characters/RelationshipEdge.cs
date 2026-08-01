@@ -21,11 +21,15 @@ public sealed record RelationshipEdge(
     EntityId To,
     float Trust,    // -1.0 to 1.0 (negative = hostility)
     float Fear,     //  0.0 to 1.0
-    float Debt,     // -1.0 to 1.0 (negative = they owe me)
+    float Debt,     // -1.0 to 1.0, relative to From: positive = From owes To, negative = To owes From
     RelationshipFlags Flags)
 {
     public bool IsAlly    => Flags.HasFlag(RelationshipFlags.IsAlly);
     public bool IsRival   => Flags.HasFlag(RelationshipFlags.IsRival);
     public bool IsFamily  => Flags.HasFlag(RelationshipFlags.IsFamily);
     public bool IsMarried => Flags.HasFlag(RelationshipFlags.IsMarried);
+
+    // M13 13.2 — Debt as an obligation mechanic. Null when the edge carries no obligation.
+    public EntityId? DebtorId   => Debt > 0f ? From : Debt < 0f ? To   : null;
+    public EntityId? CreditorId => Debt > 0f ? To   : Debt < 0f ? From : null;
 }

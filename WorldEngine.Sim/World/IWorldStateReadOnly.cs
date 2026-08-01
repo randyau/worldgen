@@ -74,6 +74,9 @@ public interface IWorldStateReadOnly
     /// Religion), needed by weighted-loyalty conflict scoring (M12 design decision 2).</summary>
     Organization? GetOrganization(OrganizationId id);
     RelationshipEdge? GetRelationship(EntityId a, EntityId b);
+    /// <summary>M13 13.2 — all relationship edges touching this character; used by Debt-obligation
+    /// scoring (UtilityScorer.DebtDampening), which needs to see edges beyond the co-located set.</summary>
+    IEnumerable<RelationshipEdge> GetRelationships(EntityId id);
     int CountAlliances(EntityId id);
     int CountRivals(EntityId id);
 

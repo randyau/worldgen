@@ -94,6 +94,7 @@ public interface IWorldStateReadOnly
     IReadOnlyDictionary<TileCoord, TileCoord>       TerritoryMap   { get; }
     IReadOnlyDictionary<TileCoord, TileImprovement> ImprovementMap { get; }
     Civilization? GetCivilization(CivId civId);
+    Organization? GetOrganization(OrganizationId id);
     RelationshipEdge? GetRelationship(EntityId a, EntityId b);
     int CountAlliances(EntityId id);
     int CountRivals(EntityId id);
@@ -122,4 +123,4 @@ public sealed class StateCache
 }
 ```
 
-<!-- content-hash: 7152b6ffc4997347 -->
+<!-- content-hash: 3fa8ecdfa0569b49 -->

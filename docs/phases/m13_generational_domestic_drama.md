@@ -33,8 +33,17 @@ real family data to act on.
   living in the target civ, weighted by Family Loyalty vs. Civ Loyalty.
 - **13.1 — Activate Fear as a submission/appeasement axis.** Feared rivals get avoided/placated
   instead of only feeding Dominance/war, per the roadmap's mechanic proposal #1.
-- **13.2 — Activate Debt as an obligation mechanic.** Inheritable (ties to succession), forgivable
-  (reconciliation event). Roadmap proposal #2.
+- **13.2 — Activate Debt as an obligation mechanic. DONE.** New `GrantAid`/`ForgiveDebt` commands
+  (mirror `AllyWith`'s shape): a trusted character materially aids a co-located companion whose
+  Food or Safety need is critical, creating a signed `RelationshipEdge.Debt` obligation (`DebtorId`/
+  `CreditorId` helpers added to interpret the sign against the canonical From/To pair); a creditor
+  can later forgive it, boosting Trust. First behavioral consequence: `UtilityScorer.DebtDampening`
+  — mirrors 13.0's `KinDampening` — dampens War/Raid desirability when the acting character owes a
+  living creditor resident in the target civ, scaled by how much of the edge's Debt range is owed.
+  Inheritable: `CharacterBehaviorPhase.TransferDebtOnDeath` re-points a dead character's Debt edges
+  at their household Family-org heir (spouse preferred) rather than the obligation vanishing with
+  them — ties into the Family Organization built in 13.0, not the civ ruler succession seat.
+  Roadmap proposal #2.
 - **13.3 — Consequence-weight IsFamily/IsMarried.** Grief severity/probability scaled by relationship
   type; ruler cross-civ marriage as a real diplomatic lever (arranged marriage / alliance-cement).
   Roadmap proposal #3 (13.0 lands the marriage mechanic itself; this phase lands the *consequences*

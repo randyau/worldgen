@@ -327,6 +327,8 @@ public sealed class WorldState : IWorldStateReadOnly
     public RelationshipEdge? GetRelationship(EntityId a, EntityId b) =>
         Relationships.Get(a, b);
 
+    public IEnumerable<RelationshipEdge> GetRelationships(EntityId id) => Relationships.GetAll(id);
+
     public int CountAlliances(EntityId id) => Relationships.CountAlliances(id);
     public int CountRivals(EntityId id)    => Relationships.CountRivals(id);
 

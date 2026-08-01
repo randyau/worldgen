@@ -36,6 +36,7 @@ The `Type` column stores integer values. Use these constants in WHERE clauses:
   3105 = BattleOccurred    3106 = RivalryFormed   
   3107 = Negotiated        3108 = ArtworkCreated  
   3109 = GoalFormed        3110 = GoalResolved    
+  3111 = DebtIncurred      3112 = DebtForgiven    
 
 -- Civilization/Settlement (3200–3299)
   3201 = CivilizationFounded      3202 = CivilizationCollapsed  

@@ -20,6 +20,7 @@ public static class SimConfigValidator
         ValidateSettlement(cfg.Settlement, errors);
         ValidateReligion(cfg.Religion, errors);
         ValidateFamily(cfg.Family, errors);
+        ValidateDebt(cfg.Debt, errors);
         ValidateWar(cfg.War, errors);
         ValidateArtifacts(cfg.Artifacts, errors);
         ValidateEmissary(cfg.Emissary, errors);
@@ -187,6 +188,23 @@ public static class SimConfigValidator
         CheckProbability("family.trait_inheritance_weight", f.TraitInheritanceWeight, errors);
         CheckProbability("family.newborn_family_loyalty", f.NewbornFamilyLoyalty, errors);
         CheckProbability("family.kin_in_enemy_civ_war_dampen_min", f.KinInEnemyCivWarDampenMin, errors);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // [debt]
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private static void ValidateDebt(DebtConfig d, List<string> errors)
+    {
+        CheckProbability("debt.aid_trust_threshold", d.AidTrustThreshold, errors);
+        CheckProbability("debt.aid_need_threshold", d.AidNeedThreshold, errors);
+        CheckProbability("debt.aid_debt_increment", d.AidDebtIncrement, errors);
+        CheckProbability("debt.aid_trust_gain", d.AidTrustGain, errors);
+        CheckProbability("debt.aid_need_restore", d.AidNeedRestore, errors);
+        CheckProbability("debt.debt_war_dampen_min", d.DebtWarDampenMin, errors);
+        CheckProbability("debt.forgive_trust_threshold", d.ForgiveTrustThreshold, errors);
+        CheckProbability("debt.forgive_min_debt", d.ForgiveMinDebt, errors);
+        CheckProbability("debt.forgive_trust_gain", d.ForgiveTrustGain, errors);
     }
 
     // ─────────────────────────────────────────────────────────────────────────

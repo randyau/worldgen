@@ -27,6 +27,7 @@ public class SimConfig
     public ArtifactConfig        Artifacts       { get; set; } = new();
     public SeafaringConfig       Seafaring       { get; set; } = new();
     public FamilyConfig          Family          { get; set; } = new();
+    public DebtConfig            Debt            { get; set; } = new();
 
     // Loaded separately by AncestryLoader — not from sim_config.toml
     public AncestryRegistry AncestryRegistry { get; set; } = AncestryRegistry.Empty;
