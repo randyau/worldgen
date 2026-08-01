@@ -127,6 +127,73 @@ public static class CharacterFactory
         return character;
     }
 
+    /// <summary>
+    /// M13 13.0: spawns a child of two named parent characters. Rolls a fresh character the normal
+    /// way (ancestry-biased traits, name, lifespan) and then blends its Personality/Aptitude toward
+    /// the parent average by <see cref="FamilyConfig.TraitInheritanceWeight"/> — Personality and
+    /// Aptitude have no setters (stable-at-generation invariant), so the blended values must be
+    /// baked in at construction rather than mutated afterward. AncestryId is inherited from the
+    /// mother rather than resampled from biome — DECISION: simplest reasonable choice for
+    /// mixed-ancestry households; a full ancestry-mixing model is out of scope for 13.0.
+    /// </summary>
+    public static Tier1Character SpawnChild(
+        Tier1Character mother,
+        Tier1Character father,
+        TileCoord location,
+        BiomeType biome,
+        int worldSeed,
+        long entitySeq,
+        SimConfig config,
+        int birthYear)
+    {
+        var rolled = Spawn(location, biome, worldSeed, entitySeq, config, birthYear);
+        float w = config.Family.TraitInheritanceWeight;
+
+        var mp = mother.Personality; var fp = father.Personality; var rp = rolled.Personality;
+        var personality = new PersonalityVector(
+            Ambition:    BlendTrait(rp.Ambition,    mp.Ambition,    fp.Ambition,    w),
+            Greed:       BlendTrait(rp.Greed,       mp.Greed,       fp.Greed,       w),
+            Aggression:  BlendTrait(rp.Aggression,  mp.Aggression,  fp.Aggression,  w),
+            Compassion:  BlendTrait(rp.Compassion,  mp.Compassion,  fp.Compassion,  w),
+            Curiosity:   BlendTrait(rp.Curiosity,   mp.Curiosity,   fp.Curiosity,   w),
+            Creativity:  BlendTrait(rp.Creativity,  mp.Creativity,  fp.Creativity,  w),
+            Rationality: BlendTrait(rp.Rationality, mp.Rationality, fp.Rationality, w),
+            Wonder:      BlendTrait(rp.Wonder,      mp.Wonder,      fp.Wonder,      w),
+            Loyalty:     BlendTrait(rp.Loyalty,     mp.Loyalty,     fp.Loyalty,     w),
+            Sociability: BlendTrait(rp.Sociability, mp.Sociability, fp.Sociability, w),
+            Honesty:     BlendTrait(rp.Honesty,     mp.Honesty,     fp.Honesty,     w),
+            Stability:   BlendTrait(rp.Stability,   mp.Stability,   fp.Stability,   w));
+
+        var ma = mother.Aptitude; var fa = father.Aptitude; var ra = rolled.Aptitude;
+        var aptitude = new AptitudeVector(
+            Diligence:     BlendTrait(ra.Diligence,     ma.Diligence,     fa.Diligence,     w),
+            Focus:         BlendTrait(ra.Focus,         ma.Focus,         fa.Focus,         w),
+            Perfectionism: BlendTrait(ra.Perfectionism, ma.Perfectionism, fa.Perfectionism, w),
+            Composure:     BlendTrait(ra.Composure,     ma.Composure,     fa.Composure,     w),
+            Acuity:        BlendTrait(ra.Acuity,        ma.Acuity,        fa.Acuity,        w),
+            Ingenuity:     BlendTrait(ra.Ingenuity,     ma.Ingenuity,     fa.Ingenuity,     w));
+
+        var identity = rolled.Identity with
+        {
+            AncestryId = mother.Identity.AncestryId,
+            MotherId   = mother.Id,
+            FatherId   = father.Id,
+        };
+
+        return new Tier1Character(
+            id:           rolled.Id,
+            location:     rolled.Location,
+            personality:  personality,
+            aptitude:     aptitude,
+            skills:       rolled.Skills,
+            identity:     identity,
+            maxHealth:    rolled.MaxHealth,
+            maxAgeSeason: rolled.MaxAgeSeason);
+    }
+
+    private static float BlendTrait(float ancestryBiased, float motherVal, float fatherVal, float weight) =>
+        Math.Clamp(ancestryBiased * (1f - weight) + (motherVal + fatherVal) * 0.5f * weight, 0.1f, 0.9f);
+
     // Backward-compat overload for call sites that don't know the biome (Tier2 promotions, tests)
     public static Tier1Character Spawn(
         TileCoord location,

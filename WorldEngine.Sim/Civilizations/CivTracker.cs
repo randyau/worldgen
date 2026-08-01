@@ -79,6 +79,8 @@ public static partial class CivTracker
                 ResolveRaid(rs, world, pending); break;
             case Negotiate ng:
                 ResolveNegotiate(ng, world, pending); break;
+            case ProposeMarriage pm:
+                ResolveMarriage(pm, world, pending); break;
             case BuildImprovement bi:
                 ResolveBuildImprovement(bi, world, pending); break;
         }
@@ -254,6 +256,63 @@ public static partial class CivTracker
         pending.Add(new PendingEvent(EventType.AllianceFormed, c.Location, null, payload,
             new[] { c.Id.Value }, new[] { target.Id.Value },
             ActorId: c.Id.Value, ActorName: c.Identity.Name, CivId: c.CivId.Value));
+    }
+
+    // ─── Marriage (M13 13.0) ────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Upgrades a high-trust Bond into marriage: RelationshipFlags.IsMarried|IsFamily, plus a new
+    /// Family-kind Organization (the household) with both spouses as Members. This is the first
+    /// production case (besides civ founding) of a character gaining a *second* Membership
+    /// alongside their civ one — see M12 12.2's multi-membership schema and design decision 2
+    /// (weighted-loyalty conflict scoring, consumed by UtilityScorer's war/raid kin-dampening).
+    /// </summary>
+    private static void ResolveMarriage(ProposeMarriage cmd, WorldState world, List<PendingEvent> pending)
+    {
+        if (world.GetEntity(cmd.CharacterId) is not Tier1Character c) return;
+        if (world.GetEntity(cmd.TargetId) is not Tier1Character target) return;
+        if (!c.IsAlive || !target.IsAlive) return;
+
+        var rel = world.Relationships.GetOrCreate(c.Id, target.Id);
+        if (rel.IsMarried) return;
+
+        var famCfg = world.SimConfig.Family;
+        if (c.AgeSeason < famCfg.MarriageMinAgeSeasons || target.AgeSeason < famCfg.MarriageMinAgeSeasons) return;
+
+        // Leader-seat tiebreak: higher-Ambition spouse heads the new household. Arbitrary but
+        // deterministic (no RNG) — matches the "simplest reasonable choice" ambiguity rule.
+        bool cLeads = c.Personality.Ambition >= target.Personality.Ambition;
+        var leaderId = cLeads ? c.Id : target.Id;
+        string familyName = $"House of {(cLeads ? c.Identity.Name : target.Identity.Name)}";
+        var orgId = CreateOrganization(world, OrganizationKind.Family, familyName, leaderId);
+        var org = world.Organizations[orgId];
+
+        var cMembership = new Membership(orgId, cLeads ? OrganizationRole.Leader : OrganizationRole.Member, 1.0f);
+        var targetMembership = new Membership(orgId, cLeads ? OrganizationRole.Member : OrganizationRole.Leader, 1.0f);
+        c.Memberships.Add(cMembership);
+        target.Memberships.Add(targetMembership);
+        org.Members[c.Id] = cMembership;
+        org.Members[target.Id] = targetMembership;
+
+        world.Relationships.Upsert(rel with
+        {
+            Trust = Math.Min(1f, rel.Trust + 0.2f),
+            Flags = rel.Flags | RelationshipFlags.IsMarried | RelationshipFlags.IsFamily
+        });
+
+        foreach (var g in c.Goals)
+            if (g.Type == GoalType.Bond && g.TargetEntityId == target.Id) g.Progress = 1f;
+        foreach (var g in target.Goals)
+            if (g.Type == GoalType.Bond && g.TargetEntityId == c.Id) g.Progress = 1f;
+
+        c.Needs      = c.Needs with { Belonging = Math.Min(1f, c.Needs.Belonging + 0.2f) };
+        target.Needs = target.Needs with { Belonging = Math.Min(1f, target.Needs.Belonging + 0.2f) };
+
+        var payload = JsonSerializer.Serialize(new MarriagePayload(
+            c.Id.Value, c.Identity.Name, target.Id.Value, target.Identity.Name, orgId.Value));
+        pending.Add(new PendingEvent(EventType.CharacterMarried, c.Location, null, payload,
+            new[] { c.Id.Value }, new[] { target.Id.Value },
+            ActorId: c.Id.Value, ActorName: c.Identity.Name));
     }
 
     // ─── Rivalry ──────────────────────────────────────────────────────────────

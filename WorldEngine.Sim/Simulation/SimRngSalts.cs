@@ -21,6 +21,7 @@ namespace WorldEngine.Sim.Simulation;
 ///  3000–3099 CharacterBehaviorPhase (artwork)
 ///  4000–4099 ArtifactNameGenerator (name epithets/nouns — see ArtifactNameGenerator.cs)
 ///  5000–5099 Artifact lifecycle — battle forge, heroic-death forge, death inheritance
+///  6000–6099 CharacterBehaviorPhase (M13 family — childbirth)
 /// </summary>
 internal static class SimRngSalts
 {
@@ -74,4 +75,7 @@ internal static class SimRngSalts
     public const int ArtifactCategoryPick     = 5004; // CreatedGoodTaxonomy.PickCategory weighted roll (masterwork)
     public const int ArtifactBattleCategory   = 5005; // battle-forged weighted category roll (G-2)
     public const int ArtifactHeroicCategory   = 5006; // heroic-death weighted category roll (G-2)
+
+    // CharacterBehaviorPhase — M13 family: annual childbirth roll for married couples
+    public const int CharFamilyBirth          = 6000;
 }

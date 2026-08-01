@@ -36,6 +36,7 @@ One-line description of every non-trivial source file. Check here before running
 - `ElevationConfig.cs` — FastNoiseLite terrain noise and mountain/tectonic thresholds for world generation.
 - `EmissaryConfig.cs` — All constants governing the civ awareness and emissary system (M4.1). Loaded from the [emissary] section of sim_config.toml.
 - `EventsConfig.cs` — Nested config under [events.gate] in sim_config.toml. Controls which event types are always or never recorded, independent of tier.
+- `FamilyConfig.cs` — M13 13.0 — marriage formation, household Family Organization, and childbirth/inheritance knobs.
 - `ImprovementsConfig.cs` — Tile improvement food/production multipliers and build-cost constants.
 - `LocalGenConfig.cs` — Local-scale (10m-resolution) generation parameters: chunk size and world-tile subdivision (M11).
 - `ResourcePressureConfig.cs` — Food/water/resource pressure constants: shortage threshold, famine onset, and carrying-capacity weights.

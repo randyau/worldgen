@@ -24,6 +24,8 @@ public sealed record RelationshipEdge(
     float Debt,     // -1.0 to 1.0 (negative = they owe me)
     RelationshipFlags Flags)
 {
-    public bool IsAlly  => Flags.HasFlag(RelationshipFlags.IsAlly);
-    public bool IsRival => Flags.HasFlag(RelationshipFlags.IsRival);
+    public bool IsAlly    => Flags.HasFlag(RelationshipFlags.IsAlly);
+    public bool IsRival   => Flags.HasFlag(RelationshipFlags.IsRival);
+    public bool IsFamily  => Flags.HasFlag(RelationshipFlags.IsFamily);
+    public bool IsMarried => Flags.HasFlag(RelationshipFlags.IsMarried);
 }

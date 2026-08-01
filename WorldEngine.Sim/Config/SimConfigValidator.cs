@@ -19,6 +19,7 @@ public static class SimConfigValidator
         ValidateDisasters(cfg.Disasters, errors);
         ValidateSettlement(cfg.Settlement, errors);
         ValidateReligion(cfg.Religion, errors);
+        ValidateFamily(cfg.Family, errors);
         ValidateWar(cfg.War, errors);
         ValidateArtifacts(cfg.Artifacts, errors);
         ValidateEmissary(cfg.Emissary, errors);
@@ -172,6 +173,20 @@ public static class SimConfigValidator
         CheckProbability("religion.piety_founding_threshold", r.PietyFoundingThreshold, errors);
         CheckProbability("religion.wonder_founding_threshold", r.WonderFoundingThreshold, errors);
         CheckProbability("religion.religion_founding_progress_per_year", r.ReligionFoundingProgressPerYear, errors);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // [family]
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private static void ValidateFamily(FamilyConfig f, List<string> errors)
+    {
+        CheckProbability("family.marriage_trust_threshold", f.MarriageTrustThreshold, errors);
+        CheckProbability("family.marriage_compassion_threshold", f.MarriageCompassionThreshold, errors);
+        CheckProbability("family.childbirth_chance_per_year", f.ChildbirthChancePerYear, errors);
+        CheckProbability("family.trait_inheritance_weight", f.TraitInheritanceWeight, errors);
+        CheckProbability("family.newborn_family_loyalty", f.NewbornFamilyLoyalty, errors);
+        CheckProbability("family.kin_in_enemy_civ_war_dampen_min", f.KinInEnemyCivWarDampenMin, errors);
     }
 
     // ─────────────────────────────────────────────────────────────────────────

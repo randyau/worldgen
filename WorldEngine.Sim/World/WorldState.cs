@@ -332,6 +332,9 @@ public sealed class WorldState : IWorldStateReadOnly
 
     public Civilization? GetCivilization(CivId civId) =>
         Civilizations.TryGetValue(civId, out var civ) ? civ : null;
+
+    public Organization? GetOrganization(OrganizationId id) =>
+        Organizations.TryGetValue(id, out var org) ? org : null;
 }
 
 /// <summary>

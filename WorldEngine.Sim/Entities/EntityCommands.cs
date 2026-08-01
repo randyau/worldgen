@@ -23,6 +23,9 @@ public sealed record DeclareRivalry(EntityId CharacterId, EntityId TargetId) : I
 public sealed record DeclareWar(EntityId CharacterId, CivId TargetCivId) : ICommand;
 public sealed record RaidSettlement(EntityId CharacterId, TileCoord SettlementTile) : ICommand;
 public sealed record Negotiate(EntityId CharacterId, EntityId TargetId) : ICommand;
+// M13 13.0 — upgrades a high-trust Bond into marriage: RelationshipFlags.IsMarried|IsFamily
+// plus a new Family-kind Organization (the household). See CivTracker.ResolveMarriage.
+public sealed record ProposeMarriage(EntityId CharacterId, EntityId TargetId) : ICommand;
 public sealed record CreateArtwork(EntityId CharacterId) : ICommand;
 public sealed record FleeRegion(EntityId CharacterId, TileCoord Destination) : ICommand;
 

@@ -939,6 +939,20 @@ religion_founding_progress_per_year = 0.35  # progress per year; ~3 years to com
 religion_founding_cooldown_years    = 50    # per character: min years between foundings
 
 # =============================================================================
+# FAMILY (M13 13.0 — marriage, household Organization, childbirth/inheritance)
+# =============================================================================
+
+[family]
+marriage_trust_threshold        = 0.6   # Bond-goal trust required before either party proposes marriage
+marriage_compassion_threshold   = 0.4   # Compassion personality floor for proposing marriage
+marriage_min_age_seasons        = 60    # minimum age (seasons) before a character can marry
+childbirth_chance_per_year      = 0.15  # per-annual-tick chance a co-located married couple conceives
+max_children_per_couple         = 4     # living-children cap before childbirth stops rolling for a couple
+trait_inheritance_weight        = 0.4   # 0 = pure ancestry bias, 1 = pure parent-average trait roll
+newborn_family_loyalty          = 0.8   # starting Loyalty for a newborn's Family membership
+kin_in_enemy_civ_war_dampen_min = 0.2   # War/Raid score multiplier floor when a Family relative lives in the target civ
+
+# =============================================================================
 # UNREST / SECESSION (S2 splinter mechanic)
 # =============================================================================
 
@@ -1004,7 +1018,7 @@ alliance        = { ally = 1.0, negotiate = 0.5 }
 # Create goal: creation action is the only outlet
 create          = { create = 1.0 }
 # Bond goal: allying with a specific person is the goal; negotiation also builds bond
-bond            = { ally = 1.0, negotiate = 0.4 }
+bond            = { ally = 1.0, negotiate = 0.4, marry = 0.9 }
 # Avenge goal: raid is primary vengeance; war is the larger-scale option
 avenge          = { raid = 0.9, war = 0.8 }
 # Acquire goal: raid to take; travel to find

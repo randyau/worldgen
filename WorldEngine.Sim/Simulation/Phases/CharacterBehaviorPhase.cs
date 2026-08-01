@@ -123,9 +123,79 @@ public sealed class CharacterBehaviorPhase
         // Spawn next-generation heroes once per year (Spring tick only) — runs per-tick otherwise
         // iterates all settlements for no additional output and burns O(settlements) per tick.
         if (isAnnualTick)
+        {
             TrySpawnCivBorn(world, pending, tick);
+            TrySpawnFamilyBirths(world, pending, tick);
+        }
 
         return pending;
+    }
+
+    // ─── M13 13.0 — family childbirth ──────────────────────────────────────────
+
+    /// <summary>
+    /// Annual roll for each married couple (found via RelationshipEdge.IsMarried, not household
+    /// membership scanning — a Family Organization's Members also includes any children already
+    /// born into it, so the edge is the unambiguous source of "who are the two spouses").
+    /// </summary>
+    private void TrySpawnFamilyBirths(WorldState world, List<PendingEvent> pending, long tick)
+    {
+        var famCfg = world.SimConfig.Family;
+        foreach (var edge in world.Relationships.AllEdges.Where(e => e.IsMarried).ToList())
+        {
+            if (world.GetEntity(edge.From) is not Tier1Character mother || !mother.IsAlive) continue;
+            if (world.GetEntity(edge.To) is not Tier1Character father || !father.IsAlive) continue;
+            if (mother.Location != father.Location) continue;
+
+            var sharedFamilyMembership = mother.Memberships.FirstOrDefault(m =>
+                world.Organizations.TryGetValue(m.OrganizationId, out var o) && o.Kind == OrganizationKind.Family
+                && father.Memberships.Any(fm => fm.OrganizationId == m.OrganizationId));
+            if (sharedFamilyMembership == null) continue;
+            var familyOrg = world.Organizations[sharedFamilyMembership.OrganizationId];
+
+            int livingChildren = familyOrg.Members.Keys.Count(mid =>
+                world.GetEntity(mid) is Tier1Character kid && kid.IsAlive
+                && (kid.Identity.MotherId == mother.Id || kid.Identity.MotherId == father.Id)
+                && (kid.Identity.FatherId == mother.Id || kid.Identity.FatherId == father.Id));
+            if (livingChildren >= famCfg.MaxChildrenPerCouple) continue;
+
+            float roll = WorldRng.FloatAt(world.WorldSeed, (int)tick,
+                (int)(edge.From.Value & 0x7FFFFFFF), (int)(edge.To.Value & 0x7FFFFFFF), S.CharFamilyBirth);
+            if (roll > famCfg.ChildbirthChancePerYear) continue;
+
+            long seq = (60_000L + tick * 997L + edge.From.Value * 31 + edge.To.Value) & 0x7FFFFFFF;
+            var tileData = world.TileGrid.GetTile(mother.Location);
+            var child = CharacterFactory.SpawnChild(
+                mother, father, mother.Location, (BiomeType)tileData.BiomeType,
+                world.WorldSeed, seq, _simCfg, world.CurrentYear);
+            int bornOrdinal = world.ClaimNameOrdinal(child.Identity.Name);
+            child.Identity = child.Identity with { NameOrdinal = bornOrdinal };
+
+            var childMembership = new Membership(familyOrg.Id, OrganizationRole.Member, famCfg.NewbornFamilyLoyalty);
+            child.Memberships.Add(childMembership);
+            familyOrg.Members[child.Id] = childMembership;
+
+            // Inherit civ membership from whichever parent has one; mother's takes precedence
+            // when both do — arbitrary but deterministic (no RNG), same convention as the
+            // marriage leader-seat tiebreak.
+            var civId = mother.CivId.IsValid ? mother.CivId : father.CivId;
+            if (civId.IsValid)
+            {
+                CivTracker.SetCharacterCiv(child, civId, OrganizationRole.Member, world);
+                if (world.Civilizations.TryGetValue(civId, out var parentCiv))
+                    parentCiv.Members.Add(child.Id);
+            }
+
+            world.Entities.Add(child);
+
+            var payload = JsonSerializer.Serialize(new CharacterBornPayload(
+                child.Id.Value, child.Identity.Name, child.Identity.Epithet,
+                child.Personality.Ambition, child.Personality.Aggression,
+                Source: "family", AncestryId: child.Identity.AncestryId));
+            pending.Add(new PendingEvent(EventType.CharacterBorn, child.Location, null, payload,
+                new[] { child.Id.Value }, new[] { mother.Id.Value, father.Id.Value },
+                ActorId: child.Id.Value, ActorName: child.Identity.Name, CivId: civId.Value));
+        }
     }
 
     // ─── Civ-born character generation ───────────────────────────────────────
@@ -665,6 +735,7 @@ public sealed class CharacterBehaviorPhase
             case DeclareWar:
             case RaidSettlement:
             case Negotiate:
+            case ProposeMarriage:
                 CivTracker.Resolve(cmd, world, pending, _simCfg.SettlementNames);
                 break;
         }

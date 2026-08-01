@@ -1,6 +1,7 @@
 using WorldEngine.Sim.Civilizations;
 using WorldEngine.Sim.Config;
 using WorldEngine.Sim.Core;
+using WorldEngine.Sim.Organizations;
 using WorldEngine.Sim.World;
 using ImpType = WorldEngine.Sim.World.ImprovementType;
 
@@ -146,6 +147,30 @@ public sealed class UtilityScorer
         if (bestSocialCmd != null)
             actions.Add(new(bestSocialCmd, bestSocialScore));
 
+        // Marry — upgrade a high-trust Bond goal into marriage (M13 13.0). Targets the character's
+        // own Bond companion specifically (not any co-located character) so marriage follows from
+        // an existing attachment rather than an opportunistic proposal.
+        var famCfg = world.SimConfig.Family;
+        if (c.Personality.Compassion > famCfg.MarriageCompassionThreshold
+            && c.AgeSeason >= famCfg.MarriageMinAgeSeasons)
+        {
+            var bondGoal = c.Goals.FirstOrDefault(g => g.Type == GoalType.Bond && g.TargetEntityId.HasValue);
+            if (bondGoal != null
+                && world.GetEntity(bondGoal.TargetEntityId!.Value) is Tier1Character spouse
+                && spouse.IsAlive
+                && spouse.Location == c.Location
+                && spouse.AgeSeason >= famCfg.MarriageMinAgeSeasons)
+            {
+                var marriageRel = world.GetRelationship(c.Id, spouse.Id);
+                if (marriageRel != null && !marriageRel.IsMarried && marriageRel.Trust >= famCfg.MarriageTrustThreshold)
+                {
+                    float marryProb = (c.Personality.Compassion + c.Personality.Loyalty) * 0.5f;
+                    actions.Add(new(new ProposeMarriage(c.Id, spouse.Id),
+                        Score(c, ActionType.Marry, marryProb, world, cfg)));
+                }
+            }
+        }
+
         // DeclareRivalry — nearby character with substantially low trust (not just one bad encounter).
         // Cap scales with Aggression: aggressive characters sustain more rivalries; peaceful ones almost none.
         int rivalMax = cfg.RivalryMaxBase + (int)(c.Personality.Aggression * cfg.RivalryMaxPerAggression);
@@ -205,8 +230,9 @@ public sealed class UtilityScorer
 
                     if (hostileEnough)
                     {
-                        actions.Add(new(new DeclareWar(c.Id, nearSettle.CivId),
-                            Score(c, ActionType.War, c.Personality.Aggression, world, cfg)));
+                        float warScore = Score(c, ActionType.War, c.Personality.Aggression, world, cfg)
+                                        * KinDampening(c, nearSettle.CivId, world, world.SimConfig.Family);
+                        actions.Add(new(new DeclareWar(c.Id, nearSettle.CivId), warScore));
                         break;
                     }
                 }
@@ -229,8 +255,9 @@ public sealed class UtilityScorer
                     if (myCivForRaid.IsAtWarWith(settlement.CivId))
                     {
                         float successProb = c.Skills.Combat * c.Aptitude.Diligence;
-                        actions.Add(new(new RaidSettlement(c.Id, coord),
-                            Score(c, ActionType.Raid, successProb, world, cfg)));
+                        float raidScore = Score(c, ActionType.Raid, successProb, world, cfg)
+                                         * KinDampening(c, settlement.CivId, world, world.SimConfig.Family);
+                        actions.Add(new(new RaidSettlement(c.Id, coord), raidScore));
                         break;
                     }
                 }
@@ -374,7 +401,7 @@ public sealed class UtilityScorer
     // DECISION: ActionType is a private enum keeping the same integer indices as before.
     // UtilityAffinityTables.TryParseAction maps TOML names to these integer indices directly,
     // so adding a new ActionType requires updating both here and in TryParseAction.
-    private enum ActionType { Rest, Travel, Establish, Ally, Negotiate, Rivalry, War, Raid, Create, Flee, BuildImprovement, FoundCity, HuntBeast, SeaVoyage }
+    private enum ActionType { Rest, Travel, Establish, Ally, Negotiate, Rivalry, War, Raid, Create, Flee, BuildImprovement, FoundCity, HuntBeast, SeaVoyage, Marry }
 
     // covet→conflict seam: GoalAdvancement already boosts War/Raid actions when a character has
     // a CovetArtifact goal, because GoalAffinity[CovetArtifact, War] and [CovetArtifact, Raid]
@@ -488,6 +515,7 @@ public sealed class UtilityScorer
         ActionType.FoundCity        => c.Personality.Ambition * 0.9f,
         ActionType.HuntBeast        => c.Personality.Aggression * 0.7f + c.Skills.Combat * 0.3f,
         ActionType.SeaVoyage        => c.Personality.Ambition * 0.9f, // same flavor as FoundCity — ruler-delegated expansion
+        ActionType.Marry            => c.Personality.Compassion * 0.6f + c.Personality.Loyalty * 0.4f,
         _                           => 0.2f
     };
 
@@ -612,6 +640,37 @@ public sealed class UtilityScorer
             if (score > bestScore) { bestScore = score; best = coord; }
         }
         return best;
+    }
+
+    // ─── M13 13.0 — weighted-loyalty conflict scoring ──────────────────────────
+
+    /// <summary>
+    /// First real consumer of M12 design decision 2 (weighted-loyalty conflict scoring): dampens
+    /// War/Raid desirability when the acting character has a living Family-org relative (spouse,
+    /// child, or in-law sharing a household Organization) resident in the target civ. Every civ
+    /// Membership carries a fixed Loyalty of 1.0 (see Membership.CivId doc), so the character's own
+    /// Family-membership Loyalty is what modulates the dampening: a character who barely holds that
+    /// family tie (low Loyalty) is barely deterred; one who holds it strongly is dampened down to
+    /// <see cref="FamilyConfig.KinInEnemyCivWarDampenMin"/>.
+    /// </summary>
+    private static float KinDampening(Tier1Character c, CivId targetCivId, IWorldStateReadOnly world, FamilyConfig cfg)
+    {
+        if (!targetCivId.IsValid) return 1f;
+        float maxFamilyLoyalty = 0f;
+        foreach (var m in c.Memberships)
+        {
+            var org = world.GetOrganization(m.OrganizationId);
+            if (org == null || org.Kind != OrganizationKind.Family) continue;
+            foreach (var memberId in org.Members.Keys)
+            {
+                if (memberId == c.Id) continue;
+                if (world.GetEntity(memberId) is Tier1Character relative
+                    && relative.IsAlive && relative.CivId == targetCivId)
+                    maxFamilyLoyalty = Math.Max(maxFamilyLoyalty, m.Loyalty);
+            }
+        }
+        if (maxFamilyLoyalty <= 0f) return 1f;
+        return 1f - maxFamilyLoyalty * (1f - cfg.KinInEnemyCivWarDampenMin);
     }
 
     // ─── Beast hunting ────────────────────────────────────────────────────────

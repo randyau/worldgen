@@ -43,6 +43,10 @@ internal sealed record AllianceBrokenPayload(
 internal sealed record RivalryFormedPayload(
     long CharacterId, string CharacterName, long TargetId, string TargetName);
 
+internal sealed record MarriagePayload(
+    long CharacterAId, string CharacterAName, long CharacterBId, string CharacterBName,
+    long FamilyOrgId);
+
 internal sealed record WarDeclaredPayload(
     long DeclarerId, string DeclarerName,
     long DeclarerCivId, string DeclarerCivName,

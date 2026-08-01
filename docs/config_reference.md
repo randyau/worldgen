@@ -34,6 +34,7 @@ Edit values in `sim_config.toml`; all keys live there without recompiling.
 - [emissary](#emissary)
 - [war](#war)
 - [religion](#religion)
+- [family](#family)
 - [unrest](#unrest)
 - [utility_affinity.goal_affinity](#utility-affinitygoal-affinity)
 - [utility_affinity.action_needs](#utility-affinityaction-needs)
@@ -676,6 +677,19 @@ _Natural shelter recovery per tick when NOT on a settlement tile, by biome. Dens
 | `religion_founding_progress_per_year` | `0.35` | `SimConfig.Religion.ReligionFoundingProgressPerYear` | progress per year; ~3 years to complete |
 | `religion_founding_cooldown_years` | `50` | `SimConfig.Religion.ReligionFoundingCooldownYears` | per character: min years between foundings |
 
+## `[family]` {#family}
+
+| Key | Value | C# Property | Description |
+|-----|-------|-------------|-------------|
+| `marriage_trust_threshold` | `0.6` | `SimConfig.Family.MarriageTrustThreshold` | Bond-goal trust required before either party proposes marriage |
+| `marriage_compassion_threshold` | `0.4` | `SimConfig.Family.MarriageCompassionThreshold` | Compassion personality floor for proposing marriage |
+| `marriage_min_age_seasons` | `60` | `SimConfig.Family.MarriageMinAgeSeasons` | minimum age (seasons) before a character can marry |
+| `childbirth_chance_per_year` | `0.15` | `SimConfig.Family.ChildbirthChancePerYear` | per-annual-tick chance a co-located married couple conceives |
+| `max_children_per_couple` | `4` | `SimConfig.Family.MaxChildrenPerCouple` | living-children cap before childbirth stops rolling for a couple |
+| `trait_inheritance_weight` | `0.4` | `SimConfig.Family.TraitInheritanceWeight` | 0 = pure ancestry bias, 1 = pure parent-average trait roll |
+| `newborn_family_loyalty` | `0.8` | `SimConfig.Family.NewbornFamilyLoyalty` | starting Loyalty for a newborn's Family membership |
+| `kin_in_enemy_civ_war_dampen_min` | `0.2` | `SimConfig.Family.KinInEnemyCivWarDampenMin` | War/Raid score multiplier floor when a Family relative lives in the target civ |
+
 ## `[unrest]` {#unrest}
 
 | Key | Value | C# Property | Description |
@@ -705,7 +719,7 @@ _Natural shelter recovery per tick when NOT on a settlement tile, by biome. Dens
 | `dominance` | `{ war = 1.0, raid = 0.8 }` | `SimConfig.UtilityAffinity.GoalAffinity.Dominance` | Dominance goal: war is the primary expression; raid is an alternative |
 | `alliance` | `{ ally = 1.0, negotiate = 0.5 }` | `SimConfig.UtilityAffinity.GoalAffinity.Alliance` | Alliance goal: formal ally pact is ideal; negotiation builds toward it |
 | `create` | `{ create = 1.0 }` | `SimConfig.UtilityAffinity.GoalAffinity.Create` | Create goal: creation action is the only outlet |
-| `bond` | `{ ally = 1.0, negotiate = 0.4 }` | `SimConfig.UtilityAffinity.GoalAffinity.Bond` | Bond goal: allying with a specific person is the goal; negotiation also builds bond |
+| `bond` | `{ ally = 1.0, negotiate = 0.4, marry = 0.9 }` | `SimConfig.UtilityAffinity.GoalAffinity.Bond` | Bond goal: allying with a specific person is the goal; negotiation also builds bond |
 | `avenge` | `{ raid = 0.9, war = 0.8 }` | `SimConfig.UtilityAffinity.GoalAffinity.Avenge` | Avenge goal: raid is primary vengeance; war is the larger-scale option |
 | `acquire` | `{ raid = 0.7, travel = 0.5 }` | `SimConfig.UtilityAffinity.GoalAffinity.Acquire` | Acquire goal: raid to take; travel to find |
 | `flee` | `{ flee = 1.0, travel = 0.6 }` | `SimConfig.UtilityAffinity.GoalAffinity.Flee` | Flee goal: fleeing is direct; travel moves toward safety |

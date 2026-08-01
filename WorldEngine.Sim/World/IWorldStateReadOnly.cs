@@ -4,6 +4,7 @@ using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities;
 using WorldEngine.Sim.Entities.Artifacts;
 using WorldEngine.Sim.Entities.Characters;
+using WorldEngine.Sim.Organizations;
 using WorldEngine.Sim.Tiles;
 using System.Collections.Generic;
 
@@ -69,6 +70,9 @@ public interface IWorldStateReadOnly
     /// <summary>Tile → improvement record. One improvement per tile.</summary>
     IReadOnlyDictionary<TileCoord, TileImprovement> ImprovementMap { get; }
     Civilization? GetCivilization(CivId civId);
+    /// <summary>M13 13.0 — read-only lookup for a character's Organization memberships (Family/Guild/
+    /// Religion), needed by weighted-loyalty conflict scoring (M12 design decision 2).</summary>
+    Organization? GetOrganization(OrganizationId id);
     RelationshipEdge? GetRelationship(EntityId a, EntityId b);
     int CountAlliances(EntityId id);
     int CountRivals(EntityId id);
