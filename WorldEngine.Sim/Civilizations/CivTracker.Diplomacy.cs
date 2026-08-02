@@ -536,9 +536,13 @@ public static partial class CivTracker
             // Weak-neighbor: aggressor civ is resource-short → it becomes more aggressive
             float resourceShortBonusA = ComputeResourceShortageTension(a, world, wCfg);
 
+            // M13 13.4: a strong cross-civ friendship dampens tension accrual — "cross-civ
+            // friendship could dampen war tension" (roadmap proposal #4).
+            float friendshipDampenA = FriendshipDampening(a, b, world, wCfg);
+
             a.BorderTension[b.Id] = a.BorderTension.GetValueOrDefault(b.Id, 0f)
-                + proximity * aggrA * wCfg.TensionAccrualPerPair * crisisMult
-                + weakNeighborBonusA + resourceShortBonusA;
+                + (proximity * aggrA * wCfg.TensionAccrualPerPair * crisisMult
+                    + weakNeighborBonusA + resourceShortBonusA) * friendshipDampenA;
 
             // Symmetric: A may also be in crisis; B accrues tension against A
             float crisisMultB     = 1f;
@@ -546,9 +550,10 @@ public static partial class CivTracker
                 crisisMultB = wCfg.SuccessionCrisisWarTensionMult;
             float weakNeighborBonusB   = ComputeWeakNeighborTension(a, world, wCfg);
             float resourceShortBonusB  = ComputeResourceShortageTension(b, world, wCfg);
+            float friendshipDampenB    = FriendshipDampening(b, a, world, wCfg);
             b.BorderTension[a.Id] = b.BorderTension.GetValueOrDefault(a.Id, 0f)
-                + proximity * aggrB * wCfg.TensionAccrualPerPair * crisisMultB
-                + weakNeighborBonusB + resourceShortBonusB;
+                + (proximity * aggrB * wCfg.TensionAccrualPerPair * crisisMultB
+                    + weakNeighborBonusB + resourceShortBonusB) * friendshipDampenB;
         }
 
         foreach (var civ in activeCivs)
@@ -603,6 +608,33 @@ public static partial class CivTracker
         if (aggressorSettlements.Count == 0) return 0f;
         float meanFood = aggressorSettlements.Average(s => s.FoodPressureRatio);
         return meanFood < wCfg.ResourceShortageWarFoodThreshold ? wCfg.ResourceShortageTensionBonus : 0f;
+    }
+
+    /// <summary>
+    /// M13 13.4: "cross-civ friendship could dampen war tension" (roadmap proposal #4) — scans
+    /// civ <paramref name="from"/>'s non-ruler members for the strongest Trust edge to a living
+    /// member of civ <paramref name="to"/>; no such friendship found returns 1 (no dampening).
+    /// Same shape as UtilityScorer.KinDampening/DebtDampening/FearDampening, applied at civ scope
+    /// (over an Organization's whole membership) instead of a single character's relationships.
+    /// </summary>
+    private static float FriendshipDampening(Civilization from, Civilization to, WorldState world, WarConfig cfg)
+    {
+        var org = GetOrg(world, from);
+        if (org == null) return 1f;
+
+        float maxTrust = 0f;
+        foreach (var memberId in org.Members.Keys)
+        {
+            foreach (var edge in world.GetRelationships(memberId))
+            {
+                if (edge.Trust < cfg.FriendshipTrustThreshold) continue;
+                var otherId = edge.From == memberId ? edge.To : edge.From;
+                if (world.GetEntity(otherId) is Tier1Character other && other.IsAlive && other.CivId == to.Id)
+                    maxTrust = Math.Max(maxTrust, edge.Trust);
+            }
+        }
+        if (maxTrust <= 0f) return 1f;
+        return 1f - maxTrust * (1f - cfg.FriendshipWarDampenMin);
     }
 
     /// <summary>
@@ -988,6 +1020,12 @@ public static partial class CivTracker
                 if (ruler != null && world.GetEntity(targetCiv.RulerId) is Tier1Character targetRuler)
                     trust = world.Relationships.Get(civ.RulerId, targetRuler.Id)?.Trust ?? 0f;
 
+                // M13 13.4: "a trusted confidant could become an emissary candidate" (roadmap
+                // proposal #4) — a strong non-ruler cross-civ friendship credits toward the
+                // ruler-trust figure, opening a back channel even when the rulers barely know
+                // each other.
+                trust = Math.Max(trust, ConfidantTrustCredit(civ, targetCivId, world, cfg));
+
                 EmissaryPurpose? purpose = SelectEmissaryPurpose(ruler, trust, civ, targetCivId, cfg, world);
                 if (purpose is null) continue;
 
@@ -1045,6 +1083,33 @@ public static partial class CivTracker
         if (piety > 0.6f)
             return EmissaryPurpose.Religious;
         return null;
+    }
+
+    /// <summary>
+    /// M13 13.4: scans <paramref name="civ"/>'s non-ruler members for the strongest Trust edge to
+    /// a living member of <paramref name="targetCivId"/>'s civ, and returns that Trust scaled by
+    /// <see cref="EmissaryConfig.ConfidantTrustCredit"/> — deliberately worth less than the same
+    /// Trust held directly by the ruler. Same scan shape as CivTracker.Diplomacy's
+    /// FriendshipDampening, reused here to feed SelectEmissaryPurpose instead of tension accrual.
+    /// </summary>
+    private static float ConfidantTrustCredit(Civilization civ, CivId targetCivId, WorldState world, EmissaryConfig cfg)
+    {
+        var org = GetOrg(world, civ);
+        if (org == null) return 0f;
+
+        float maxTrust = 0f;
+        foreach (var memberId in org.Members.Keys)
+        {
+            if (memberId == civ.RulerId) continue;
+            foreach (var edge in world.GetRelationships(memberId))
+            {
+                if (edge.Trust <= 0f) continue;
+                var otherId = edge.From == memberId ? edge.To : edge.From;
+                if (world.GetEntity(otherId) is Tier1Character other && other.IsAlive && other.CivId == targetCivId)
+                    maxTrust = Math.Max(maxTrust, edge.Trust);
+            }
+        }
+        return maxTrust * cfg.ConfidantTrustCredit;
     }
 
     // ─── Emissary resolution ──────────────────────────────────────────────────

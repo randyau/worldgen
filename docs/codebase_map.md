@@ -32,6 +32,7 @@ One-line description of every non-trivial source file. Check here before running
 - `ClimateConfig.cs` — Temperature/moisture gradients, storm corridors, and climate drift constants.
 - `ConfigRegistry.cs` — Value kinds the generic settings UI knows how to render (M10 10.2, ui_design_framework.md §9.3).
 - `CulturalTraitsConfig.cs` — Thresholds that govern when a civilization acquires a permanent cultural trait. All constants loaded from [cultural_traits] section in sim_config.toml.
+- `DefectionConfig.cs` — M13 13.4: non-ruler bonds reaching the wider world — a cross-civ friendship strong enough that a character in personal crisis seeks asylum with their foreign confidant rather than enduring their own civ. Loaded from the [defection] section of sim_config.toml.
 - `DisasterConfig.cs` — Disaster probability and damage constants (wildfire, flood, eruption, earthquake, drought).
 - `ElevationConfig.cs` — FastNoiseLite terrain noise and mountain/tectonic thresholds for world generation.
 - `EmissaryConfig.cs` — All constants governing the civ awareness and emissary system (M4.1). Loaded from the [emissary] section of sim_config.toml.

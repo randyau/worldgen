@@ -87,6 +87,8 @@ public static partial class CivTracker
                 ResolveForgiveDebt(fd, world, pending); break;
             case Placate pl:
                 ResolvePlacate(pl, world, pending); break;
+            case Defect df:
+                ResolveDefect(df, world, pending); break;
             case BuildImprovement bi:
                 ResolveBuildImprovement(bi, world, pending); break;
         }
@@ -452,6 +454,48 @@ public static partial class CivTracker
             c.Id.Value, c.Identity.Name, target.Id.Value, target.Identity.Name));
         pending.Add(new PendingEvent(EventType.RivalryPlacated, c.Location, null, payload,
             new[] { c.Id.Value }, new[] { target.Id.Value },
+            ActorId: c.Id.Value, ActorName: c.Identity.Name));
+    }
+
+    /// <summary>
+    /// M13 13.4: "a cross-civ friendship could... trigger asylum/defection" (roadmap proposal #4)
+    /// — a non-ruler character in personal crisis (Wellbeing spiraling — gated in UtilityScorer's
+    /// candidate generation, not here) abandons their civ for a co-located foreign confidant's,
+    /// via the same SetCharacterCiv write path civ founding/childbirth/succession already use.
+    /// Rulers can't defect — there's no seat to hand off mid-command, only SuccessionResolver
+    /// retires one. Civs already at war with the confidant's civ can't be defected to either
+    /// (asylum, not treason).
+    /// </summary>
+    private static void ResolveDefect(Defect cmd, WorldState world, List<PendingEvent> pending)
+    {
+        if (world.GetEntity(cmd.CharacterId) is not Tier1Character c) return;
+        if (world.GetEntity(cmd.ConfidantId) is not Tier1Character confidant) return;
+        if (!c.IsAlive || !confidant.IsAlive) return;
+        if (!confidant.CivId.IsValid || confidant.CivId == c.CivId) return;
+        if (!world.Civilizations.TryGetValue(confidant.CivId, out var targetCiv) || targetCiv.IsCollapsed) return;
+
+        if (c.CivId.IsValid && world.Civilizations.TryGetValue(c.CivId, out var ownCiv))
+        {
+            if (ownCiv.RulerId == c.Id) return;
+            if (ownCiv.IsAtWarWith(confidant.CivId)) return;
+        }
+
+        var rel = world.Relationships.Get(c.Id, confidant.Id);
+        var cfg = world.SimConfig.Defection;
+        if (rel == null || rel.Trust < cfg.ConfidantTrustThreshold) return;
+
+        var oldCivId   = c.CivId;
+        var oldCivName = world.Civilizations.TryGetValue(oldCivId, out var oc) ? oc.Name : "";
+
+        SetCharacterCiv(c, confidant.CivId, OrganizationRole.Member, world);
+        world.Relationships.Upsert(rel with { Trust = Math.Min(1f, rel.Trust + cfg.PostDefectionTrustGain) });
+
+        var payload = JsonSerializer.Serialize(new CharacterDefectedPayload(
+            c.Id.Value, c.Identity.Name,
+            oldCivId.Value, oldCivName, confidant.CivId.Value, targetCiv.Name,
+            confidant.Id.Value, confidant.Identity.Name));
+        pending.Add(new PendingEvent(EventType.CharacterDefected, c.Location, null, payload,
+            new[] { c.Id.Value }, new[] { confidant.Id.Value },
             ActorId: c.Id.Value, ActorName: c.Identity.Name));
     }
 

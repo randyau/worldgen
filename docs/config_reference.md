@@ -37,6 +37,7 @@ Edit values in `sim_config.toml`; all keys live there without recompiling.
 - [family](#family)
 - [debt](#debt)
 - [fear](#fear)
+- [defection](#defection)
 - [unrest](#unrest)
 - [utility_affinity.goal_affinity](#utility-affinitygoal-affinity)
 - [utility_affinity.action_needs](#utility-affinityaction-needs)
@@ -635,6 +636,7 @@ _Natural shelter recovery per tick when NOT on a settlement tile, by biome. Dens
 | `diplomacy_alliance_min_trust` | `0.25` | `SimConfig.Emissary.DiplomacyAllianceMinTrust` | trust required after emissary to trigger AllianceFormed |
 | `spy_confidence_boost` | `0.4` | `SimConfig.Emissary.SpyConfidenceBoost` | how much the contact confidence improves from spy intel |
 | `religious_spread_awe_boost` | `0.3` | `SimConfig.Emissary.ReligiousSpreadAweBoost` | awe modifier added to target-civ chars on religious emissary |
+| `confidant_trust_credit` | `0.7` | `SimConfig.Emissary.ConfidantTrustCredit` | fraction of a confidant friendship's Trust credited toward ruler trust |
 
 ## `[war]` {#war}
 
@@ -671,6 +673,8 @@ _Natural shelter recovery per tick when NOT on a settlement tile, by biome. Dens
 | `coalition_trust_bonus` | `0.20` | `SimConfig.War.CoalitionTrustBonus` | trust boost per civ on each war declaration |
 | `war_min_civ_pop` | `300` | `SimConfig.War.WarMinCivPop` | population floor: war probability is 0 below this (bottleneck civ) |
 | `war_pop_ramp_range` | `700` | `SimConfig.War.WarPopRampRange` | population range over which war probability ramps 0→full (floor+range = fully unlocked) |
+| `friendship_trust_threshold` | `0.6` | `SimConfig.War.FriendshipTrustThreshold` | min Trust between a non-ruler pair (one per civ) to count as a cross-civ friendship |
+| `friendship_war_dampen_min` | `0.4` | `SimConfig.War.FriendshipWarDampenMin` | tension-accrual multiplier floor when the strongest such friendship is at max Trust |
 
 ## `[religion]` {#religion}
 
@@ -721,6 +725,14 @@ _Natural shelter recovery per tick when NOT on a settlement tile, by biome. Dens
 | `placate_trust_gain` | `0.1` | `SimConfig.Fear.PlacateTrustGain` | Trust nudge from successful placation |
 | `fear_war_dampen_min` | `0.3` | `SimConfig.Fear.FearWarDampenMin` | War/Raid score multiplier floor when maximally feared of someone in the target civ |
 
+## `[defection]` {#defection}
+
+| Key | Value | C# Property | Description |
+|-----|-------|-------------|-------------|
+| `confidant_trust_threshold` | `0.7` | `SimConfig.Defection.ConfidantTrustThreshold` | min Trust with a co-located foreign confidant to be considered for defection |
+| `wellbeing_crisis_threshold` | `-0.3` | `SimConfig.Defection.WellbeingCrisisThreshold` | Wellbeing must be at or below this before asylum-seeking becomes attractive |
+| `post_defection_trust_gain` | `0.2` | `SimConfig.Defection.PostDefectionTrustGain` | Trust gained between defector and confidant once the defection succeeds |
+
 ## `[unrest]` {#unrest}
 
 | Key | Value | C# Property | Description |
@@ -753,7 +765,7 @@ _Natural shelter recovery per tick when NOT on a settlement tile, by biome. Dens
 | `bond` | `{ ally = 1.0, negotiate = 0.4, marry = 0.9 }` | `SimConfig.UtilityAffinity.GoalAffinity.Bond` | Bond goal: allying with a specific person is the goal; negotiation also builds bond |
 | `avenge` | `{ raid = 0.9, war = 0.8 }` | `SimConfig.UtilityAffinity.GoalAffinity.Avenge` | Avenge goal: raid is primary vengeance; war is the larger-scale option |
 | `acquire` | `{ raid = 0.7, travel = 0.5 }` | `SimConfig.UtilityAffinity.GoalAffinity.Acquire` | Acquire goal: raid to take; travel to find |
-| `flee` | `{ flee = 1.0, travel = 0.6 }` | `SimConfig.UtilityAffinity.GoalAffinity.Flee` | Flee goal: fleeing is direct; travel moves toward safety |
+| `flee` | `{ flee = 1.0, travel = 0.6, defect = 0.5 }` | `SimConfig.UtilityAffinity.GoalAffinity.Flee` | Flee goal: fleeing is direct; travel moves toward safety Flee goal also covers Defect (M13 13.4): fleeing one's own civ for a trusted foreign confidant is a form of escape, distinct from FleeRegion's disaster-avoidance sense of the same goal. |
 | `grieve` | `{ rest = 0.7 }` | `SimConfig.UtilityAffinity.GoalAffinity.Grieve` | Grieve goal: rest and withdrawal (stays put, processes loss) |
 | `endure` | `{ rest = 0.9 }` | `SimConfig.UtilityAffinity.GoalAffinity.Endure` | Endure goal: rest heavily (hunker down through hardship) |
 | `protect` | `{ travel = 0.4 }` | `SimConfig.UtilityAffinity.GoalAffinity.Protect` | Protect goal: travel toward the protected person or settlement |
@@ -784,6 +796,7 @@ _Natural shelter recovery per tick when NOT on a settlement tile, by biome. Dens
 | `grant_aid` | `{ belonging = 0.50, _default = 0.0 }` | `SimConfig.UtilityAffinity.ActionNeeds.GrantAid` | GrantAid (M13 13.2): belonging-driven — helping a trusted, needy companion |
 | `forgive_debt` | `{ belonging = 0.40, _default = 0.0 }` | `SimConfig.UtilityAffinity.ActionNeeds.ForgiveDebt` | ForgiveDebt (M13 13.2): belonging-driven — releasing an obligation to repair a bond |
 | `placate` | `{ safety = 0.50, belonging = 0.20, _default = 0.0 }` | `SimConfig.UtilityAffinity.ActionNeeds.Placate` | Placate (M13 13.1): safety-driven — appeasing a feared rival is fundamentally self-preservation |
+| `defect` | `{ belonging = 0.50, safety = 0.30, _default = 0.0 }` | `SimConfig.UtilityAffinity.ActionNeeds.Defect` | Defect (M13 13.4): belonging-driven — seeking asylum with a trusted foreign confidant instead of enduring an unsafe/unwelcoming home civ. |
 
 ## `[wildlife_risk]` {#wildlife-risk}
 

@@ -861,6 +861,10 @@ diplomacy_alliance_min_trust    = 0.25   # trust required after emissary to trig
 spy_confidence_boost            = 0.4    # how much the contact confidence improves from spy intel
 religious_spread_awe_boost      = 0.3    # awe modifier added to target-civ chars on religious emissary
 
+# Confidant back-channel (M13 13.4): a non-ruler cross-civ friendship credits toward the
+# ruler-trust figure used to select an emissary's purpose.
+confidant_trust_credit          = 0.7    # fraction of a confidant friendship's Trust credited toward ruler trust
+
 # =============================================================================
 # WAR (M4 Phase 2 — Territory Dynamics & War Outcomes)
 # =============================================================================
@@ -931,6 +935,11 @@ coalition_trust_bonus                = 0.20  # trust boost per civ on each war d
 war_min_civ_pop                      = 300   # population floor: war probability is 0 below this (bottleneck civ)
 war_pop_ramp_range                   = 700   # population range over which war probability ramps 0→full (floor+range = fully unlocked)
 
+# Cross-civ friendship (M13 13.4): a non-ruler friendship spanning two civs dampens border-tension
+# accrual between them — "cross-civ friendship could dampen war tension" (roadmap proposal #4).
+friendship_trust_threshold           = 0.6   # min Trust between a non-ruler pair (one per civ) to count as a cross-civ friendship
+friendship_war_dampen_min            = 0.4   # tension-accrual multiplier floor when the strongest such friendship is at max Trust
+
 # =============================================================================
 # RELIGION (M4 Phase 3 — Religion founding via character goal)
 # =============================================================================
@@ -975,6 +984,15 @@ placate_aggression_max      = 0.4   # only low-Aggression characters placate; ag
 placate_fear_reduction      = 0.3   # Fear reduced per successful Placate
 placate_trust_gain          = 0.1   # Trust nudge from successful placation
 fear_war_dampen_min         = 0.3   # War/Raid score multiplier floor when maximally feared of someone in the target civ
+
+# =============================================================================
+# DEFECTION (M13 13.4 — non-ruler bonds reaching the wider world: asylum/defection)
+# =============================================================================
+
+[defection]
+confidant_trust_threshold    = 0.7    # min Trust with a co-located foreign confidant to be considered for defection
+wellbeing_crisis_threshold   = -0.3   # Wellbeing must be at or below this before asylum-seeking becomes attractive
+post_defection_trust_gain    = 0.2    # Trust gained between defector and confidant once the defection succeeds
 
 # =============================================================================
 # UNREST / SECESSION (S2 splinter mechanic)
@@ -1048,7 +1066,9 @@ avenge          = { raid = 0.9, war = 0.8 }
 # Acquire goal: raid to take; travel to find
 acquire         = { raid = 0.7, travel = 0.5 }
 # Flee goal: fleeing is direct; travel moves toward safety
-flee            = { flee = 1.0, travel = 0.6 }
+# Flee goal also covers Defect (M13 13.4): fleeing one's own civ for a trusted foreign confidant
+# is a form of escape, distinct from FleeRegion's disaster-avoidance sense of the same goal.
+flee            = { flee = 1.0, travel = 0.6, defect = 0.5 }
 # Grieve goal: rest and withdrawal (stays put, processes loss)
 grieve          = { rest = 0.7 }
 # Endure goal: rest heavily (hunker down through hardship)
@@ -1103,6 +1123,9 @@ grant_aid        = { belonging = 0.50, _default = 0.0 }
 forgive_debt     = { belonging = 0.40, _default = 0.0 }
 # Placate (M13 13.1): safety-driven — appeasing a feared rival is fundamentally self-preservation
 placate          = { safety = 0.50, belonging = 0.20, _default = 0.0 }
+# Defect (M13 13.4): belonging-driven — seeking asylum with a trusted foreign confidant instead of
+# enduring an unsafe/unwelcoming home civ.
+defect           = { belonging = 0.50, safety = 0.30, _default = 0.0 }
 
 # ─── Wildlife raid risk by biome (D3) ─────────────────────────────────────────
 # Per-biome multiplier applied to settlement.wildlife_attack_base_chance.

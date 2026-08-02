@@ -64,8 +64,21 @@ real family data to act on.
   are their civ's current ruler and the civs aren't at war — reuses the M12 design decision 1
   alliance-survives-succession mechanism rather than a bespoke marriage-alliance path. Roadmap
   proposal #3.
-- **13.4 — Non-ruler bonds reach the wider world.** Trusted confidant → emissary candidate; cross-civ
-  friendship dampens war tension / triggers asylum-defection. Roadmap proposal #4.
+- **13.4 — Non-ruler bonds reach the wider world. DONE.** Before this, only the *ruler's* personal
+  RelationshipEdge ever escaped the character layer (reused verbatim as civ diplomacy). Three
+  mechanisms, all reusing the existing emissary/tension systems per the roadmap:
+  `CivTracker.ConfidantTrustCredit` scans a civ's non-ruler members for the strongest Trust edge to
+  a living member of a target civ and credits a fraction of it (`EmissaryConfig.ConfidantTrustCredit`,
+  0.7) toward the ruler-trust figure `SelectEmissaryPurpose` uses — a strong civilian back channel
+  can open Diplomacy dispatch even when the rulers barely trust each other. `CivTracker.
+  FriendshipDampening` — same scan shape, applied to the annual border-tension accrual instead —
+  dampens tension buildup between two civs proportional to their strongest cross-civ friendship
+  (`WarConfig.FriendshipTrustThreshold`/`FriendshipWarDampenMin`). New `Defect` command: a non-ruler
+  character whose Wellbeing has spiraled (`DefectionConfig.WellbeingCrisisThreshold`) and who holds
+  a co-located, sufficiently-trusted foreign confidant (`ConfidantTrustThreshold`) abandons their
+  civ for the confidant's via the same `SetCharacterCiv` write path civ founding/childbirth/
+  succession already use; rulers can't defect, and asylum is refused into a civ already at war with
+  the defector's own. Roadmap proposal #4.
 - **13.5 — New relationship-transition events.** Reconciliation, Feud, Estrangement, Oath-breaking
   (violated Debt). Roadmap proposal #5.
 

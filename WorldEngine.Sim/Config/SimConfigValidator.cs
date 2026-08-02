@@ -22,6 +22,7 @@ public static class SimConfigValidator
         ValidateFamily(cfg.Family, errors);
         ValidateDebt(cfg.Debt, errors);
         ValidateFear(cfg.Fear, errors);
+        ValidateDefection(cfg.Defection, errors);
         ValidateWar(cfg.War, errors);
         ValidateArtifacts(cfg.Artifacts, errors);
         ValidateEmissary(cfg.Emissary, errors);
@@ -223,6 +224,18 @@ public static class SimConfigValidator
     }
 
     // ─────────────────────────────────────────────────────────────────────────
+    // [defection]
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private static void ValidateDefection(DefectionConfig d, List<string> errors)
+    {
+        CheckTrust("defection.confidant_trust_threshold", d.ConfidantTrustThreshold, errors);
+        if (d.WellbeingCrisisThreshold < -1f || d.WellbeingCrisisThreshold > 1f)
+            errors.Add($"[defection] wellbeing_crisis_threshold must be in [-1, 1] (got {d.WellbeingCrisisThreshold})");
+        CheckProbability("defection.post_defection_trust_gain", d.PostDefectionTrustGain, errors);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // [war]
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -248,6 +261,10 @@ public static class SimConfigValidator
             errors.Add($"[war] military_strength_bonus_scale must be ≥ 0 (got {w.MilitaryStrengthBonusScale})");
         if (w.MilitaryStrengthBonusCap < 0f)
             errors.Add($"[war] military_strength_bonus_cap must be ≥ 0 (got {w.MilitaryStrengthBonusCap})");
+
+        // M13 13.4: cross-civ friendship dampening
+        CheckTrust("war.friendship_trust_threshold", w.FriendshipTrustThreshold, errors);
+        CheckProbability("war.friendship_war_dampen_min", w.FriendshipWarDampenMin, errors);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -293,6 +310,7 @@ public static class SimConfigValidator
         CheckProbability("emissary.trade_trust_gain", e.TradeTrustGain, errors);
         CheckProbability("emissary.spy_confidence_boost", e.SpyConfidenceBoost, errors);
         CheckProbability("emissary.religious_spread_awe_boost", e.ReligiousSpreadAweBoost, errors);
+        CheckProbability("emissary.confidant_trust_credit", e.ConfidantTrustCredit, errors);
 
         // Trust fields (unlike the probabilities above) span the Trust scale, [-1, 1].
         CheckTrust("emissary.trade_dispatch_min_trust", e.TradeDispatchMinTrust, errors);

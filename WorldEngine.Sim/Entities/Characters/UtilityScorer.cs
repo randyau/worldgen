@@ -220,6 +220,30 @@ public sealed class UtilityScorer
                 actions.Add(new(bestPlacateCmd, bestPlacateScore));
         }
 
+        // Defect — M13 13.4: non-ruler bonds reaching the wider world. A character in personal
+        // crisis (Wellbeing spiraling) with a co-located, strongly-trusted foreign confidant may
+        // seek asylum in the confidant's civ instead of enduring their own. Rulers never consider
+        // this (ResolveDefect also refuses it — see there for why).
+        var defectCfg = world.SimConfig.Defection;
+        bool isRulerForDefect = c.CivId.IsValid && world.GetCivilization(c.CivId)?.RulerId == c.Id;
+        if (!isRulerForDefect && c.Wellbeing <= defectCfg.WellbeingCrisisThreshold)
+        {
+            ICommand? bestDefectCmd = null;
+            float bestDefectScore = float.MinValue;
+            foreach (var e in world.GetEntitiesAt(c.Location))
+            {
+                if (e is not Tier1Character other || other.Id == c.Id || !other.IsAlive) continue;
+                if (!other.CivId.IsValid || other.CivId == c.CivId) continue;
+                var rel = world.GetRelationship(c.Id, other.Id);
+                if (rel == null || rel.Trust < defectCfg.ConfidantTrustThreshold) continue;
+
+                float score = Score(c, ActionType.Defect, rel.Trust, world, cfg);
+                if (score > bestDefectScore) { bestDefectScore = score; bestDefectCmd = new Defect(c.Id, other.Id); }
+            }
+            if (bestDefectCmd != null)
+                actions.Add(new(bestDefectCmd, bestDefectScore));
+        }
+
         // DeclareRivalry — nearby character with substantially low trust (not just one bad encounter).
         // Cap scales with Aggression: aggressive characters sustain more rivalries; peaceful ones almost none.
         int rivalMax = cfg.RivalryMaxBase + (int)(c.Personality.Aggression * cfg.RivalryMaxPerAggression);
@@ -454,7 +478,7 @@ public sealed class UtilityScorer
     // DECISION: ActionType is a private enum keeping the same integer indices as before.
     // UtilityAffinityTables.TryParseAction maps TOML names to these integer indices directly,
     // so adding a new ActionType requires updating both here and in TryParseAction.
-    private enum ActionType { Rest, Travel, Establish, Ally, Negotiate, Rivalry, War, Raid, Create, Flee, BuildImprovement, FoundCity, HuntBeast, SeaVoyage, Marry, GrantAid, ForgiveDebt, Placate }
+    private enum ActionType { Rest, Travel, Establish, Ally, Negotiate, Rivalry, War, Raid, Create, Flee, BuildImprovement, FoundCity, HuntBeast, SeaVoyage, Marry, GrantAid, ForgiveDebt, Placate, Defect }
 
     // covet→conflict seam: GoalAdvancement already boosts War/Raid actions when a character has
     // a CovetArtifact goal, because GoalAffinity[CovetArtifact, War] and [CovetArtifact, Raid]
@@ -572,6 +596,7 @@ public sealed class UtilityScorer
         ActionType.GrantAid         => c.Personality.Compassion,
         ActionType.ForgiveDebt      => c.Personality.Compassion * 0.7f + c.Personality.Honesty * 0.3f,
         ActionType.Placate          => (1f - c.Personality.Aggression) * 0.6f + c.Personality.Compassion * 0.4f,
+        ActionType.Defect           => (1f - c.Personality.Loyalty) * 0.7f + c.Personality.Curiosity * 0.3f,
         _                           => 0.2f
     };
 

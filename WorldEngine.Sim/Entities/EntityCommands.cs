@@ -32,6 +32,8 @@ public sealed record GrantAid(EntityId GranterId, EntityId RecipientId) : IComma
 public sealed record ForgiveDebt(EntityId CreditorId, EntityId DebtorId) : ICommand;
 // M13 13.1 — CharacterId appeases an existing, feared rival: reduces Fear, nudges Trust up.
 public sealed record Placate(EntityId CharacterId, EntityId TargetId) : ICommand;
+// M13 13.4 — CharacterId defects to ConfidantId's civ, seeking asylum with a trusted foreign friend.
+public sealed record Defect(EntityId CharacterId, EntityId ConfidantId) : ICommand;
 public sealed record CreateArtwork(EntityId CharacterId) : ICommand;
 public sealed record FleeRegion(EntityId CharacterId, TileCoord Destination) : ICommand;
 

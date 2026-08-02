@@ -58,6 +58,12 @@ internal sealed record DebtForgivenPayload(
 internal sealed record RivalryPlacatedPayload(
     long CharacterId, string CharacterName, long TargetId, string TargetName);
 
+// M13 13.4 — non-ruler bonds reaching the wider world: asylum/defection.
+internal sealed record CharacterDefectedPayload(
+    long CharacterId, string CharacterName,
+    long OldCivId, string OldCivName, long NewCivId, string NewCivName,
+    long ConfidantId, string ConfidantName);
+
 internal sealed record WarDeclaredPayload(
     long DeclarerId, string DeclarerName,
     long DeclarerCivId, string DeclarerCivName,

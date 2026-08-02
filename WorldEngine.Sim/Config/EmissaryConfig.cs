@@ -74,4 +74,15 @@ public sealed class EmissaryConfig
 
     /// <summary>Awe modifier added to target-civ characters on successful Religious emissary.</summary>
     public float ReligiousSpreadAweBoost            { get; set; } = 0.3f;
+
+    // ─── Confidant back-channel (M13 13.4) ───────────────────────────────────
+
+    /// <summary>
+    /// Fraction of a non-ruler cross-civ friendship's Trust credited toward the ruler-trust figure
+    /// used to select an emissary's purpose — "a trusted confidant could become an emissary
+    /// candidate" (roadmap proposal #4). A strong civilian back channel can open Diplomacy dispatch
+    /// even when the rulers themselves barely know each other, but is deliberately worth less than
+    /// the same Trust held by the ruler directly (hence &lt; 1.0).
+    /// </summary>
+    public float ConfidantTrustCredit               { get; set; } = 0.7f;
 }

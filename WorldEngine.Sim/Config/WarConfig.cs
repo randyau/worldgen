@@ -182,4 +182,18 @@ public sealed class WarConfig
     /// The bottleneck civ (lower pop of the two) determines the ramp factor.
     /// </summary>
     public int WarPopRampRange { get; set; } = 700;
+
+    // ─── Cross-civ friendship (M13 13.4) ─────────────────────────────────────
+
+    /// <summary>
+    /// Minimum Trust between a non-ruler pair (one per civ) to count as a cross-civ friendship
+    /// that dampens border-tension accrual between their civs.
+    /// </summary>
+    public float FriendshipTrustThreshold { get; set; } = 0.6f;
+
+    /// <summary>
+    /// Border-tension accrual multiplier floor when the strongest cross-civ friendship found is
+    /// at maximum Trust (1.0). Same shape as FearConfig.FearWarDampenMin / DebtConfig.DebtWarDampenMin.
+    /// </summary>
+    public float FriendshipWarDampenMin { get; set; } = 0.4f;
 }
