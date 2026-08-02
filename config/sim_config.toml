@@ -466,6 +466,12 @@ goal_sociability_threshold   = 0.5   # minimum Sociability to generate Alliance 
 goal_compassion_threshold    = 0.5   # minimum Compassion to generate Bond goal
 goal_ingenuity_threshold     = 0.55  # minimum Ingenuity to generate Create goal
 goal_diligence_threshold     = 0.45  # minimum Diligence to generate BuildImprovement goal
+# M13 13.5 balance: ceiling on simultaneous *discretionary* goals (Dominance/Alliance/Bond/Create/
+# BuildImprovement/SlayBeast/CovetArtifact — not Survive/Grieve/Avenge/FoundCity/SeaVoyage, which
+# are existential or externally imposed). Without this, goals stack freely (up to ~10 for a
+# high-trait character) and GoalAdvancement scoring is perpetually dominated by something, crowding
+# out idle/opportunistic behavior (Rest, GrantAid, Placate, Ally, Negotiate).
+max_concurrent_goals         = 2
 avenge_aggression_threshold  = 0.6   # minimum Aggression to form Avenge goal on mourning
 avenge_intensity_threshold   = 0.5   # minimum grief intensity required to form Avenge goal
 bond_trust_threshold         = 0.5   # minimum relationship Trust before a character qualifies as Bond companion
@@ -548,8 +554,13 @@ tier2_needs_decay_food      = 0.06
 tier2_needs_decay_safety    = 0.04
 tier2_needs_decay_belonging = 0.03
 tier2_needs_decay_status    = 0.04
-tier2_ambient_food_recovery         = 0.07  # lower food web
-tier2_ambient_safety_recovery       = 0.05  # ambient safety
+# M13 13.5 balance fix: these were previously ABOVE their matching decay rates (0.07 > 0.06 decay,
+# 0.05 > 0.04 decay), so Tier2 Food/Safety only ever rose and pinned at 1.0 forever — GrantAid's
+# "recipient in need" check (AidNeedThreshold) could never fire. Food now nets -0.01/tick, matching
+# Tier1's own Food net decay rate (needs_decay_food 0.08 - ambient_food_recovery 0.07); Safety nets
+# to 0, matching Tier1's Safety parity (needs_decay_safety 0.05 == ambient_safety_recovery 0.05).
+tier2_ambient_food_recovery         = 0.05  # lower food web
+tier2_ambient_safety_recovery       = 0.04  # ambient safety
 tier2_settlement_belonging_recovery = 0.05  # extra Belonging recovery while on a settlement tile
 tier2_settlement_status_recovery_base = 0.03  # Status recovery at settlement = this × Diligence
 tier2_crystal_ambition_threshold    = 0.8   # min Ambition to roll for crystallization into Tier1

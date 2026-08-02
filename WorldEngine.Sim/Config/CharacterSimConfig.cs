@@ -305,6 +305,14 @@ public sealed class CharacterSimConfig
     public float GoalCompassionThreshold    { get; set; } = 0.5f;  // Bond goal
     public float GoalIngenuityThreshold     { get; set; } = 0.55f; // Create goal
     public float GoalDiligenceThreshold     { get; set; } = 0.45f; // BuildImprovement goal
+    // M13 13.5 balance: ceiling on simultaneous *discretionary* goals (Dominance, Alliance, Bond,
+    // Create, BuildImprovement, SlayBeast, CovetArtifact — NOT Survive/Grieve/Avenge/FoundCity/
+    // SeaVoyage, which are existential or externally imposed, not lifestyle choices). Without a
+    // ceiling these stack freely (up to ~10 at once with high-trait personalities), leaving a
+    // character's GoalAdvancement scoring perpetually dominated by *something* and crowding out
+    // idle/opportunistic behavior (Rest, GrantAid, Placate, Ally, Negotiate) that only wins the
+    // utility softmax when goals aren't already claiming the character's attention.
+    public int   MaxConcurrentGoals         { get; set; } = 2;
     // Avenge goal: triggered on ally death if aggression exceeds threshold and grief intensity is strong enough
     public float AvengeAggressionThreshold  { get; set; } = 0.6f;
     public float AvengeIntensityThreshold   { get; set; } = 0.5f;
@@ -381,8 +389,10 @@ public sealed class CharacterSimConfig
     public float Tier2NeedsDecayBelonging { get; set; } = 0.03f;
     public float Tier2NeedsDecayStatus   { get; set; } = 0.04f;
     // Ambient recovery — background regeneration every tick, independent of location.
-    public float Tier2AmbientFoodRecovery       { get; set; } = 0.07f;
-    public float Tier2AmbientSafetyRecovery     { get; set; } = 0.05f;
+    // M13 13.5: kept below their matching decay rates (mirrors Tier1's own Food net-decay/Safety-
+    // parity balance) so Food can actually bind instead of pinning at 1.0 forever.
+    public float Tier2AmbientFoodRecovery       { get; set; } = 0.05f;
+    public float Tier2AmbientSafetyRecovery     { get; set; } = 0.04f;
     // Extra recovery while on a settlement tile.
     public float Tier2SettlementBelongingRecovery { get; set; } = 0.05f;
     // Status recovery at a settlement scales with Diligence: this × Diligence.

@@ -376,6 +376,7 @@ Edit values in `sim_config.toml`; all keys live there without recompiling.
 | `goal_compassion_threshold` | `0.5` | `SimConfig.Character.GoalCompassionThreshold` | minimum Compassion to generate Bond goal |
 | `goal_ingenuity_threshold` | `0.55` | `SimConfig.Character.GoalIngenuityThreshold` | minimum Ingenuity to generate Create goal |
 | `goal_diligence_threshold` | `0.45` | `SimConfig.Character.GoalDiligenceThreshold` | minimum Diligence to generate BuildImprovement goal |
+| `max_concurrent_goals` | `2` | `SimConfig.Character.MaxConcurrentGoals` | M13 13.5 balance: ceiling on simultaneous *discretionary* goals (Dominance/Alliance/Bond/Create/ BuildImprovement/SlayBeast/CovetArtifact — not Survive/Grieve/Avenge/FoundCity/SeaVoyage, which are existential or externally imposed). Without this, goals stack freely (up to ~10 for a high-trait character) and GoalAdvancement scoring is perpetually dominated by something, crowding out idle/opportunistic behavior (Rest, GrantAid, Placate, Ally, Negotiate). |
 | `avenge_aggression_threshold` | `0.6` | `SimConfig.Character.AvengeAggressionThreshold` | minimum Aggression to form Avenge goal on mourning |
 | `avenge_intensity_threshold` | `0.5` | `SimConfig.Character.AvengeIntensityThreshold` | minimum grief intensity required to form Avenge goal |
 | `bond_trust_threshold` | `0.5` | `SimConfig.Character.BondTrustThreshold` | minimum relationship Trust before a character qualifies as Bond companion |
@@ -432,8 +433,8 @@ Edit values in `sim_config.toml`; all keys live there without recompiling.
 | `tier2_needs_decay_safety` | `0.04` | `SimConfig.Character.Tier2NeedsDecaySafety` |  |
 | `tier2_needs_decay_belonging` | `0.03` | `SimConfig.Character.Tier2NeedsDecayBelonging` |  |
 | `tier2_needs_decay_status` | `0.04` | `SimConfig.Character.Tier2NeedsDecayStatus` |  |
-| `tier2_ambient_food_recovery` | `0.07` | `SimConfig.Character.Tier2AmbientFoodRecovery` | lower food web |
-| `tier2_ambient_safety_recovery` | `0.05` | `SimConfig.Character.Tier2AmbientSafetyRecovery` | ambient safety |
+| `tier2_ambient_food_recovery` | `0.05` | `SimConfig.Character.Tier2AmbientFoodRecovery` | lower food web |
+| `tier2_ambient_safety_recovery` | `0.04` | `SimConfig.Character.Tier2AmbientSafetyRecovery` | ambient safety |
 | `tier2_settlement_belonging_recovery` | `0.05` | `SimConfig.Character.Tier2SettlementBelongingRecovery` | extra Belonging recovery while on a settlement tile |
 | `tier2_settlement_status_recovery_base` | `0.03` | `SimConfig.Character.Tier2SettlementStatusRecoveryBase` | Status recovery at settlement = this × Diligence |
 | `tier2_crystal_ambition_threshold` | `0.8` | `SimConfig.Character.Tier2CrystalAmbitionThreshold` | min Ambition to roll for crystallization into Tier1 |

@@ -823,6 +823,10 @@ public sealed class CharacterBehaviorPhase
             case RaidSettlement:
             case Negotiate:
             case ProposeMarriage:
+            case GrantAid:
+            case ForgiveDebt:
+            case Placate:
+            case Defect:
                 CivTracker.Resolve(cmd, world, pending, _simCfg.SettlementNames);
                 break;
         }

@@ -173,12 +173,41 @@ public sealed class UtilityScorer
 
         // GrantAid / ForgiveDebt — M13 13.2: Debt as an obligation mechanic. Single best co-located
         // candidate per tick, mirroring the Ally/Negotiate pattern.
+        // M13 13.5 balance: widened from exact-tile to PerceptionRadius (same reach DeclareRivalry
+        // already uses) — Tier1 characters are rare and mostly stationary, so gating personal
+        // interactions on landing on the exact same tile left Debt/Fear/Defection structurally
+        // unreachable even when two characters were near enough to plausibly be aware of each other.
         var debtCfg = world.SimConfig.Debt;
         ICommand? bestDebtCmd = null;
         float bestDebtScore = float.MinValue;
-        foreach (var e in world.GetEntitiesAt(c.Location))
+        foreach (var e in world.GetEntitiesInRadius(c.Location, cfg.PerceptionRadius))
         {
-            if (e is not Tier1Character other || other.Id == c.Id || !other.IsAlive) continue;
+            if (e.Id == c.Id || !e.IsAlive) continue;
+
+            // M13 13.5 balance: a co-located Tier2 townsperson of the granter's own settlement is
+            // aidable via the same "shared homeland" shortcut Bond formation already uses for Tier2
+            // companions — no pre-existing Trust edge required (nothing in the sim ever raises
+            // ordinary same-civ Trust from its 0 default, so gating on it left Debt unreachable).
+            if (e is Tier2Character t2 && t2.Location == c.Location
+                && t2.Livelihood.SettlementTile == c.Location)
+            {
+                var t2Rel = world.GetRelationship(c.Id, t2.Id);
+                if (t2.Needs.Food < debtCfg.AidNeedThreshold || t2.Needs.Safety < debtCfg.AidNeedThreshold)
+                {
+                    float score = Score(c, ActionType.GrantAid, c.Personality.Compassion, world, cfg);
+                    if (score > bestDebtScore) { bestDebtScore = score; bestDebtCmd = new GrantAid(c.Id, t2.Id); }
+                }
+                else if (t2Rel != null && t2Rel.CreditorId == c.Id
+                         && Math.Abs(t2Rel.Debt) >= debtCfg.ForgiveMinDebt
+                         && t2Rel.Trust >= debtCfg.ForgiveTrustThreshold)
+                {
+                    float score = Score(c, ActionType.ForgiveDebt, c.Personality.Compassion, world, cfg);
+                    if (score > bestDebtScore) { bestDebtScore = score; bestDebtCmd = new ForgiveDebt(c.Id, t2.Id); }
+                }
+                continue;
+            }
+
+            if (e is not Tier1Character other) continue;
             var rel = world.GetRelationship(c.Id, other.Id);
             if (rel == null) continue;
 
@@ -206,7 +235,7 @@ public sealed class UtilityScorer
         {
             ICommand? bestPlacateCmd = null;
             float bestPlacateScore = float.MinValue;
-            foreach (var e in world.GetEntitiesAt(c.Location))
+            foreach (var e in world.GetEntitiesInRadius(c.Location, cfg.PerceptionRadius))
             {
                 if (e is not Tier1Character other || other.Id == c.Id || !other.IsAlive) continue;
                 var rel = world.GetRelationship(c.Id, other.Id);
@@ -230,7 +259,7 @@ public sealed class UtilityScorer
         {
             ICommand? bestDefectCmd = null;
             float bestDefectScore = float.MinValue;
-            foreach (var e in world.GetEntitiesAt(c.Location))
+            foreach (var e in world.GetEntitiesInRadius(c.Location, cfg.PerceptionRadius))
             {
                 if (e is not Tier1Character other || other.Id == c.Id || !other.IsAlive) continue;
                 if (!other.CivId.IsValid || other.CivId == c.CivId) continue;

@@ -160,10 +160,18 @@ public static class GoalManager
         bool isFounder = c.CivId.IsValid && world.ActiveFounders.Contains(c.Id);
         var myCiv = c.CivId.IsValid ? world.GetCivilization(c.CivId) : null;
 
-        if (!hasDominance && c.Personality.Aggression > cfg.GoalAggressionThreshold)
+        // M13 13.5 balance: shared ceiling on discretionary goal formation — see MaxConcurrentGoals.
+        // Incremented after each successful Add below so later blocks in the same tick see it too.
+        int activeDiscretionaryGoals = c.Goals.Count(g => !g.IsComplete && g.Type is
+            GoalType.Dominance or GoalType.Alliance or GoalType.Bond or GoalType.Create
+            or GoalType.BuildImprovement or GoalType.SlayBeast or GoalType.CovetArtifact);
+        bool hasGoalRoom() => activeDiscretionaryGoals < cfg.MaxConcurrentGoals;
+
+        if (hasGoalRoom() && !hasDominance && c.Personality.Aggression > cfg.GoalAggressionThreshold)
         {
             var rival = FindNearbyRival(c, world, cfg.RivalSearchRadius);
             if (rival.HasValue)
+            {
                 c.Goals.Add(new GoalData
                 {
                     Type           = GoalType.Dominance,
@@ -171,12 +179,15 @@ public static class GoalManager
                     Priority       = c.Personality.Aggression * 0.7f,
                     StaleSince     = (int)currentTick, FormedTick = (int)currentTick
                 });
+                activeDiscretionaryGoals++;
+            }
         }
 
-        if (!hasAlliance && c.Personality.Sociability > cfg.GoalSociabilityThreshold)
+        if (hasGoalRoom() && !hasAlliance && c.Personality.Sociability > cfg.GoalSociabilityThreshold)
         {
             var potential = FindNearbyNeutral(c, world, cfg.AllianceSearchRadius);
             if (potential.HasValue)
+            {
                 c.Goals.Add(new GoalData
                 {
                     Type           = GoalType.Alliance,
@@ -184,11 +195,13 @@ public static class GoalManager
                     Priority       = c.Personality.Sociability * 0.6f,
                     StaleSince     = (int)currentTick, FormedTick = (int)currentTick
                 });
+                activeDiscretionaryGoals++;
+            }
         }
 
         // Bond goal: compassionate characters form attachments to high-trust co-located chars.
         // Each bond must target a different person — check existing bonds don't already cover this companion.
-        if (hasBondRoom && c.Personality.Compassion > cfg.GoalCompassionThreshold)
+        if (hasGoalRoom() && hasBondRoom && c.Personality.Compassion > cfg.GoalCompassionThreshold)
         {
             var alreadyBonded = c.Goals
                 .Where(g => g.Type == GoalType.Bond && g.TargetEntityId.HasValue)
@@ -207,6 +220,7 @@ public static class GoalManager
                     StaleSince     = (int)currentTick, FormedTick = (int)currentTick
                 };
                 c.Goals.Add(bondGoal);
+                activeDiscretionaryGoals++;
                 pending.Add(MakeGoalEvent(EventType.GoalFormed, c, bondGoal));
             }
         }
@@ -214,7 +228,7 @@ public static class GoalManager
         // Create goal: high-Ingenuity characters want to make things.
         // Cooldown prevents immediate re-formation after completing a project.
         bool createCooldownClear = currentTick - c.LastCreateCompletedTick > cfg.CreateGoalCooldownTicks;
-        if (!hasCreate && createCooldownClear && c.Aptitude.Ingenuity > cfg.GoalIngenuityThreshold
+        if (hasGoalRoom() && !hasCreate && createCooldownClear && c.Aptitude.Ingenuity > cfg.GoalIngenuityThreshold
             && !c.Goals.Any(g => g.Type == GoalType.Grieve))
         {
             var createGoal = new GoalData
@@ -226,13 +240,14 @@ public static class GoalManager
                 StaleSince = (int)currentTick, FormedTick = (int)currentTick
             };
             c.Goals.Add(createGoal);
+            activeDiscretionaryGoals++;
             pending.Add(MakeGoalEvent(EventType.GoalFormed, c, createGoal));
         }
 
         // BuildImprovement goal: hard-working civ members on unimproved territory tiles claim one to build on.
         // Runs only when character is actually standing on such a tile (saves evaluating every civ member every tick).
         bool hasBuildGoal = c.Goals.Any(g => g.Type == GoalType.BuildImprovement);
-        if (!hasBuildGoal && c.CivId.IsValid && c.Aptitude.Diligence > cfg.GoalDiligenceThreshold)
+        if (hasGoalRoom() && !hasBuildGoal && c.CivId.IsValid && c.Aptitude.Diligence > cfg.GoalDiligenceThreshold)
         {
             if (world.TerritoryMap.TryGetValue(c.Location, out var cityTile)
                 && !world.ImprovementMap.ContainsKey(c.Location))
@@ -270,6 +285,7 @@ public static class GoalManager
                             FormedTick  = (int)currentTick,
                         };
                         c.Goals.Add(buildGoal);
+                        activeDiscretionaryGoals++;
                         pending.Add(MakeGoalEvent(EventType.GoalFormed, c, buildGoal));
                     }
                 }
@@ -279,7 +295,7 @@ public static class GoalManager
         // SlayBeast goal: combat-capable, aggressive non-rulers hunt nearby legendary beasts.
         bool hasSlayGoal = c.Goals.Any(g => g.Type == GoalType.SlayBeast);
         bool isRuler     = myCiv?.RulerId == c.Id; // rulers govern settlements, not hunt beasts
-        if (!hasSlayGoal
+        if (hasGoalRoom() && !hasSlayGoal
             && !isRuler
             && c.Skills.Combat > cfg.SlayBeastCombatThreshold
             && c.Personality.Aggression > cfg.SlayBeastAggressionThreshold)
@@ -297,6 +313,7 @@ public static class GoalManager
                     StaleSince     = (int)currentTick, FormedTick = (int)currentTick
                 };
                 c.Goals.Add(huntGoal);
+                activeDiscretionaryGoals++;
                 pending.Add(MakeGoalEvent(EventType.GoalFormed, c, huntGoal));
             }
         }
@@ -308,7 +325,7 @@ public static class GoalManager
         // multi-artifact coveting that would drown out other goal types.
         var artifactCfg = world.SimConfig.Artifacts;
         int activeCovetCount = c.Goals.Count(g => g.Type == GoalType.CovetArtifact);
-        if (activeCovetCount < artifactCfg.CovetMaxGoals
+        if (hasGoalRoom() && activeCovetCount < artifactCfg.CovetMaxGoals
             && c.Personality.Ambition >= artifactCfg.CovetAmbitionThreshold)
         {
             // Collect artifact IDs already being coveted so we don't form duplicates
@@ -357,6 +374,7 @@ public static class GoalManager
                 };
                 c.Goals.Add(covetGoal);
                 activeCovetCount++;
+                activeDiscretionaryGoals++;
                 alreadyCoveting.Add(artifact.Id);
 
                 // Emit GoalFormed using the shared payload — TargetId carries the artifact id value
@@ -378,7 +396,7 @@ public static class GoalManager
                 // CovetArtifact goals for artifact owners from foreign civs — see the
                 // // covet→conflict seam: comment in UtilityScorer for the consumption point.
 
-                if (activeCovetCount >= artifactCfg.CovetMaxGoals) break;
+                if (activeCovetCount >= artifactCfg.CovetMaxGoals || !hasGoalRoom()) break;
             }
         }
 

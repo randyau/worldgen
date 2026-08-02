@@ -98,3 +98,73 @@ real family data to act on.
   specific edge takes a `DebtConfig.OathBreakTrustPenalty` hit, and `OathBroken` fires.
 
 Phases are additive; each should ship with its own tests and be committed independently.
+
+## Post-completion balance pass (2026-08-02)
+
+After 13.5 shipped, a multi-seed 300-year calibration run (`eventStore.CountEventsOfType` per M13
+`EventType`) found most non-marriage M13 mechanics fired **zero times ever**, across all seeds.
+Root causes found and fixed, in the order uncovered:
+
+1. **`Tier2Character.Needs.Food`/`Safety` never actually decayed** — `Tier2AmbientFoodRecovery`
+   (0.07) exceeded `Tier2NeedsDecayFood` (0.06), and `Tier2AmbientSafetyRecovery` (0.05) exceeded
+   `Tier2NeedsDecaySafety` (0.04), so both needs monotonically rose and pinned at 1.0 forever.
+   `GrantAid`'s "recipient in need" check could never trigger. Fixed by dropping both recovery
+   rates below their decay rates (mirrors Tier1's own Food/Safety net-decay balance in
+   `NeedsUpdater`) — see `CharacterSimConfig.Tier2AmbientFoodRecovery`/`Tier2AmbientSafetyRecovery`.
+2. **Debt (`GrantAid`/`ForgiveDebt`) required a pre-existing Tier1-Tier1 `RelationshipEdge` Trust
+   ≥ threshold** — but nothing in the sim ever raises ordinary same-civ Trust from its 0 default
+   (the one exception, `AllyWith`, is explicitly cross-civ-only). Fixed by letting a co-located
+   Tier2 townsperson of the granter's own settlement qualify via the same "shared homeland is
+   enough" shortcut `GoalManager.FindHighTrustCompanion` already uses for Bond formation — no
+   registry threshold needed. See `CivTracker.TryGetNeeds`/`RestoreNeeds`/`DisplayName` and the
+   Tier2 branch in `UtilityScorer`'s GrantAid/ForgiveDebt candidate loop.
+3. **Personal-interaction candidate loops (`GrantAid`/`ForgiveDebt`/`Placate`/`Defect`) required
+   landing on the exact same tile** (`world.GetEntitiesAt`), unlike `DeclareRivalry` which already
+   used a `PerceptionRadius` scan — widened to match, since Tier1 characters are rare and mostly
+   stationary.
+4. **The critical one: `GrantAid`/`ForgiveDebt`/`Placate`/`Defect` were never wired into
+   `CharacterBehaviorPhase.ResolveCommand`'s dispatch switch.** `UtilityScorer.SelectAction` was
+   selecting them constantly (confirmed via temporary instrumentation: `GrantAid` alone was chosen
+   2113 times in one 300-year run) but `ResolveCommand`'s switch had no matching case, so they
+   silently no-op'd on every single tick since 13.1/13.2/13.4 shipped. Only the CivTracker-level
+   unit tests (which call `CivTracker.Resolve` directly, bypassing `ResolveCommand`) ever exercised
+   these mechanics — the full-sim path was dead. Fixed by adding the four missing cases (mirrors
+   the existing `AllyWith`/`DeclareRivalry`/etc. cases, all of which route to
+   `CivTracker.Resolve`).
+5. **Goal-stacking left little idle/opportunistic time.** Every discretionary goal type (Dominance,
+   Alliance, Bond×N, Create, BuildImprovement, SlayBeast, CovetArtifact×N) formed independently
+   with no shared ceiling — a character could hold ~6-10 simultaneously, so `GoalAdvancement`
+   scoring was almost always dominated by *something*, crowding out Rest/GrantAid/Placate/Ally/
+   Negotiate. Added `CharacterSimConfig.MaxConcurrentGoals` (2) as a shared ceiling on
+   Dominance/Alliance/Bond/Create/BuildImprovement/SlayBeast/CovetArtifact formation — Survive/
+   Grieve/Avenge/FoundCity/SeaVoyage are excluded (existential or externally imposed, not
+   discretionary "wants").
+
+**Result:** `DebtIncurred` went from 0 to 918-2113 per 300-year run (3 seeds); `DebtForgiven` 0 to
+308-689; `CharacterDefected` 0 to 0-7. `RivalryFormed` and everything downstream of it
+(`RivalryPlacated`, `RivalsReconciled`, `RivalryEscalatedToFeud`, `CharacterEstranged`,
+`OathBroken`) remained at 0 across all 3 seeds — this is a *different*, still-open constraint:
+these require two named Tier1 characters (rare, single digits to ~15 alive at once) to personally
+interact cross-civ, which is much rarer than the same-civ community-aid path Debt now uses. Not
+fixed this pass — flagged in `M13RelationshipEventBalanceTests` as a ceiling-only (no floor)
+assertion pending a dedicated Tier1 cross-civ contact-frequency pass.
+
+New balance test: `WorldEngine.Tests/Balance/M13RelationshipEventBalanceTests.cs` (3 seeds × 300
+years, cumulative `EventType` counts per the project's observed-healthy-±-margin philosophy — see
+`docs/balance_invariants.md`).
+
+The `MaxConcurrentGoals` cap (fix 5 above, final value 2) legitimately shifted two existing pre-M13
+invariants in `config/balance_invariants.toml`:
+- `goals_formed_cumulative_min` was calibrated at 2241–3145 (pre-cap); most `GoalFormed` events
+  come from exactly the discretionary goal types now capped, so cumulative goals-formed dropped
+  ~5x to 402–657 post-cap. Re-calibrated the floor from 500 to 250 (~40% below new observed floor).
+- `goals_formed_ytd` (a ONE-YEAR snapshot at year 300, min was 1) started failing for seed 42 —
+  at the new lower/burstier formation cadence, a single specific year can legitimately land on 0
+  new goals by chance, without indicating the "formation silently drops to 0" regression this
+  guard exists to catch (a value of 3 for the cap didn't fix this either — it's inherent to
+  per-year sampling at low volume, not a cap-value tuning problem). Lowered min to 0; the
+  cumulative floor above is the robust version of the same regression guard now.
+
+Both are legitimate re-calibrations per the project's own procedure (a mechanic change
+deliberately shifting a metric → re-run the sweep, update the band, document why), not band
+weakening to dodge a real regression — see each band's TOML rationale field.

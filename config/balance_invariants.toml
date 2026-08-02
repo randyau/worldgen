@@ -95,12 +95,20 @@
   value = 10
   rationale = "Post-D4 observed 0–3 active diseases at year 300 (mean ~1). Disease is now structural (density × contact × famine); max=10 guards runaway outbreak cascade."
 
-  # Observed: 7–17 goals formed at year 300 (annual rate). Min=1 guards observation-A5
-  # regression (emotional events never firing). Max=100 is a sanity cap.
+  # Observed: 7–17 goals formed at year 300 (annual rate), pre-M13-13.5. Min=1 guarded
+  # observation-A5 regression (emotional events never firing). Max=100 is a sanity cap.
+  # M13 13.5 balance pass (2026-08-02) added CharacterSimConfig.MaxConcurrentGoals=2 (a shared
+  # ceiling on discretionary goal formation so idle/opportunistic behavior gets real airtime —
+  # see docs/phases/archive/m13_generational_domestic_drama.md). This makes formation sparser and
+  # burstier: a single specific year (this is a ONE-YEAR snapshot, not a cumulative measure) can
+  # legitimately land on 0 new goals for a given seed by chance, without indicating the A5-class
+  # "formation silently drops to 0" regression this band exists to catch. The cumulative version
+  # of this same guard (year_300.goals_formed_cumulative_min, re-calibrated in the same pass) is
+  # the robust check now; min lowered to 0 here since a single sparse year is expected, not a bug.
   [year_300.goals_formed_ytd]
-  min = 1
+  min = 0
   max = 100
-  rationale = "Observed 7–17 goals/year at year 300. Min=1 guards goal-formation regression (observation A5)."
+  rationale = "Re-calibrated 2026-08-02 after M13 13.5's MaxConcurrentGoals cap made per-year goal formation sparse/bursty enough that a single year can land on 0 by chance. goals_formed_cumulative_min is the robust regression guard now; this band keeps only the max=100 runaway-formation sanity cap."
 
   # Observed: 0 wars across all 300 years for all 3 seeds. The war system exists but
   # border tension rarely crosses the declaration threshold with the current population
@@ -111,11 +119,18 @@
   value = 8
   rationale = "Post-D5 observed 3-5 simultaneous wars at year 300 (opportunistic causes add weak_neighbor + resource_shortage triggers). Max=8 caps runaway war state."
 
-  # Observed: goals_formed_ytd cumulative over 300 years ranges 2241–3145.
-  # This guards the A5-class regression where goal formation silently drops to 0.
+  # Observed: goals_formed_ytd cumulative over 300 years ranges 2241–3145 (pre-M13-13.5).
+  # M13 13.5 balance pass (2026-08-02) added CharacterSimConfig.MaxConcurrentGoals (a shared
+  # ceiling of 2 on simultaneous discretionary goals — Dominance/Alliance/Bond/Create/
+  # BuildImprovement/SlayBeast/CovetArtifact) so characters get real idle/opportunistic time
+  # instead of goal-stacking (up to ~6-10 at once) perpetually dominating utility scoring. This
+  # deliberately throttles GoalFormed volume ~5x (most of that event type comes from exactly the
+  # discretionary types now capped) — re-observed 402–657 post-change. Min lowered accordingly.
+  # This guards the A5-class regression where goal formation silently drops to 0, not a specific
+  # volume target.
   [year_300.goals_formed_cumulative_min]
-  value = 500
-  rationale = "Observed 2241–3145 cumulative goals formed by year 300. Min=500 catches formation regression."
+  value = 250
+  rationale = "Re-calibrated 2026-08-02 after M13 13.5's MaxConcurrentGoals cap: observed 402–657 (was 2241–3145 pre-cap). Min=250 (~40% below new observed floor) still catches formation regression without re-litigating the deliberate ~5x volume drop from the goal-cap rebalance."
 
   # S4 multipolarity guard: no civ may snowball into a globe-spanning empire.
   # Post-S4 observed max 3-5 cities per civ; splinter mechanic caps organic size ~6-7.

@@ -338,16 +338,69 @@ public static partial class CivTracker
 
     // ─── Debt (M13 13.2) ────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// M13 13.5 balance pass: Debt/GrantAid was gated on a pre-existing Tier1-Tier1 RelationshipEdge
+    /// Trust — but nothing in the sim ever raises that Trust from its 0 default for ordinary same-civ
+    /// pairs, so the mechanic was structurally unreachable. Recipients can now also be a co-located
+    /// Tier2 townsperson, reusing the same "shared homeland is enough" shortcut
+    /// <see cref="GoalManager"/>'s Bond formation already uses for Tier2 companions (no registry
+    /// threshold needed) — see <c>TryGetNeeds</c>/<c>RestoreNeeds</c>/<c>DisplayName</c> below.
+    /// </summary>
+    private static bool TryGetNeeds(IEntity e, out float food, out float safety)
+    {
+        switch (e)
+        {
+            case Tier1Character t1: food = t1.Needs.Food; safety = t1.Needs.Safety; return true;
+            case Tier2Character t2: food = t2.Needs.Food; safety = t2.Needs.Safety; return true;
+            default: food = 1f; safety = 1f; return false;
+        }
+    }
+
+    private static void RestoreNeeds(IEntity e, float amount)
+    {
+        switch (e)
+        {
+            case Tier1Character t1:
+                t1.Needs = t1.Needs with
+                {
+                    Food   = Math.Min(1f, t1.Needs.Food + amount),
+                    Safety = Math.Min(1f, t1.Needs.Safety + amount)
+                };
+                break;
+            case Tier2Character t2:
+                t2.Needs = t2.Needs with
+                {
+                    Food   = Math.Min(1f, t2.Needs.Food + amount),
+                    Safety = Math.Min(1f, t2.Needs.Safety + amount)
+                };
+                break;
+        }
+    }
+
+    private static string DisplayName(IEntity e) => e switch
+    {
+        Tier1Character t1 => t1.Identity.Name,
+        Tier2Character t2 => t2.Name,
+        _ => "?"
+    };
+
     private static void ResolveGrantAid(GrantAid cmd, WorldState world, List<PendingEvent> pending)
     {
         if (world.GetEntity(cmd.GranterId) is not Tier1Character granter) return;
-        if (world.GetEntity(cmd.RecipientId) is not Tier1Character recipient) return;
-        if (!granter.IsAlive || !recipient.IsAlive) return;
+        var recipient = world.GetEntity(cmd.RecipientId);
+        if (recipient == null || !granter.IsAlive || !recipient.IsAlive) return;
+        if (!TryGetNeeds(recipient, out float recipFood, out float recipSafety)) return;
 
         var cfg = world.SimConfig.Debt;
         var rel = world.Relationships.GetOrCreate(granter.Id, recipient.Id);
-        if (rel.Trust < cfg.AidTrustThreshold) return;
-        if (recipient.Needs.Food >= cfg.AidNeedThreshold && recipient.Needs.Safety >= cfg.AidNeedThreshold) return;
+
+        // Tier1-Tier1 requires an already-trusted relationship; a co-located Tier2 townsperson of
+        // the granter's own settlement needs no pre-existing edge (shared-homeland shortcut).
+        bool isCommunityShortcut = recipient is Tier2Character t2
+            && t2.Livelihood.SettlementTile == granter.Location;
+        if (recipient is Tier1Character && rel.Trust < cfg.AidTrustThreshold) return;
+        if (recipient is Tier2Character && !isCommunityShortcut) return;
+        if (recipFood >= cfg.AidNeedThreshold && recipSafety >= cfg.AidNeedThreshold) return;
 
         // Normalize the edge's signed Debt into "how much the recipient owes the granter",
         // independent of which of the two landed as the canonical From — see RelationshipEdge.DebtorId.
@@ -363,14 +416,10 @@ public static partial class CivTracker
             Trust = Math.Min(1f, rel.Trust + cfg.AidTrustGain)
         });
 
-        recipient.Needs = recipient.Needs with
-        {
-            Food   = Math.Min(1f, recipient.Needs.Food + cfg.AidNeedRestore),
-            Safety = Math.Min(1f, recipient.Needs.Safety + cfg.AidNeedRestore)
-        };
+        RestoreNeeds(recipient, cfg.AidNeedRestore);
 
         var aidPayload = JsonSerializer.Serialize(new DebtIncurredPayload(
-            granter.Id.Value, granter.Identity.Name, recipient.Id.Value, recipient.Identity.Name,
+            granter.Id.Value, granter.Identity.Name, recipient.Id.Value, DisplayName(recipient),
             cfg.AidDebtIncrement));
         pending.Add(new PendingEvent(EventType.DebtIncurred, granter.Location, null, aidPayload,
             new[] { granter.Id.Value }, new[] { recipient.Id.Value },
@@ -380,8 +429,8 @@ public static partial class CivTracker
     private static void ResolveForgiveDebt(ForgiveDebt cmd, WorldState world, List<PendingEvent> pending)
     {
         if (world.GetEntity(cmd.CreditorId) is not Tier1Character creditor) return;
-        if (world.GetEntity(cmd.DebtorId) is not Tier1Character debtor) return;
-        if (!creditor.IsAlive || !debtor.IsAlive) return;
+        var debtor = world.GetEntity(cmd.DebtorId);
+        if (debtor == null || !creditor.IsAlive || !debtor.IsAlive) return;
 
         var rel = world.Relationships.Get(creditor.Id, debtor.Id);
         if (rel == null || rel.CreditorId != creditor.Id) return;
@@ -395,7 +444,7 @@ public static partial class CivTracker
         });
 
         var forgivePayload = JsonSerializer.Serialize(new DebtForgivenPayload(
-            creditor.Id.Value, creditor.Identity.Name, debtor.Id.Value, debtor.Identity.Name, forgiven));
+            creditor.Id.Value, creditor.Identity.Name, debtor.Id.Value, DisplayName(debtor), forgiven));
         pending.Add(new PendingEvent(EventType.DebtForgiven, creditor.Location, null, forgivePayload,
             new[] { creditor.Id.Value }, new[] { debtor.Id.Value },
             ActorId: creditor.Id.Value, ActorName: creditor.Identity.Name));
