@@ -54,6 +54,10 @@ internal sealed record DebtIncurredPayload(
 internal sealed record DebtForgivenPayload(
     long CreditorId, string CreditorName, long DebtorId, string DebtorName, float ForgivenMagnitude);
 
+// M13 13.1 — Fear as a submission/appeasement axis.
+internal sealed record RivalryPlacatedPayload(
+    long CharacterId, string CharacterName, long TargetId, string TargetName);
+
 internal sealed record WarDeclaredPayload(
     long DeclarerId, string DeclarerName,
     long DeclarerCivId, string DeclarerCivName,

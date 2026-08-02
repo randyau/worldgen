@@ -31,8 +31,16 @@ real family data to act on.
   First real consumer of M12 design decision 2 (weighted-loyalty conflict scoring): `UtilityScorer`'s
   War/Raid candidate generation dampens score when the acting character has a Family-org relative
   living in the target civ, weighted by Family Loyalty vs. Civ Loyalty.
-- **13.1 — Activate Fear as a submission/appeasement axis.** Feared rivals get avoided/placated
-  instead of only feeding Dominance/war, per the roadmap's mechanic proposal #1.
+- **13.1 — Activate Fear as a submission/appeasement axis. DONE.** New `Placate` command (mirrors
+  `AllyWith`'s shape): a low-Aggression character facing an existing, sufficiently feared rival
+  (`RelationshipEdge.Fear`, previously written once as a flat +0.1 on rivalry formation and never
+  read by anything) appeases them instead of escalating — reduces Fear, nudges Trust up, but does
+  not itself end the rivalry (that's 13.5's Reconciliation). `ResolveRivalry` now scales the Fear
+  increment by how much more formidable the target is than the declarer (Combat/Aggression), not a
+  flat bump. `UtilityScorer.FearDampening` — mirrors 13.0's `KinDampening`/13.2's `DebtDampening` —
+  is the passive "avoided" half: dampens War/Raid desirability when the acting character fears a
+  rival resident in the target civ, scaled by Fear magnitude; stacks with the other two dampeners.
+  Roadmap proposal #1.
 - **13.2 — Activate Debt as an obligation mechanic. DONE.** New `GrantAid`/`ForgiveDebt` commands
   (mirror `AllyWith`'s shape): a trusted character materially aids a co-located companion whose
   Food or Safety need is critical, creating a signed `RelationshipEdge.Debt` obligation (`DebtorId`/

@@ -48,7 +48,7 @@ public interface ICommand { }
 ```
 
 ## IWorldStateReadOnly
-**File:** `WorldEngine.Sim/World/IWorldStateReadOnly.cs:16`  
+**File:** `WorldEngine.Sim/World/IWorldStateReadOnly.cs:17`  
 **Kind:** `interface`
 
 ```csharp
@@ -96,6 +96,7 @@ public interface IWorldStateReadOnly
     Civilization? GetCivilization(CivId civId);
     Organization? GetOrganization(OrganizationId id);
     RelationshipEdge? GetRelationship(EntityId a, EntityId b);
+    IEnumerable<RelationshipEdge> GetRelationships(EntityId id);
     int CountAlliances(EntityId id);
     int CountRivals(EntityId id);
 
@@ -123,4 +124,4 @@ public sealed class StateCache
 }
 ```
 
-<!-- content-hash: 3fa8ecdfa0569b49 -->
+<!-- content-hash: 0dd8f1c610f29f17 -->

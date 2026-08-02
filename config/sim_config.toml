@@ -963,6 +963,15 @@ forgive_trust_threshold = 0.6   # creditor must trust the debtor this much befor
 forgive_min_debt        = 0.2   # minimum |Debt| owed before forgiveness is considered
 forgive_trust_gain      = 0.2   # Trust gained by both parties when debt is forgiven
 
+[fear]
+rivalry_base_fear_increment = 0.1   # Fear added when a rivalry first forms (matches the original hardcoded value)
+rivalry_fear_power_scale    = 0.5   # extra Fear from the target's Combat/Aggression edge over the declarer's
+placate_fear_threshold      = 0.4   # minimum Fear toward an existing rival before appeasement becomes attractive
+placate_aggression_max      = 0.4   # only low-Aggression characters placate; aggressive ones confront despite fear
+placate_fear_reduction      = 0.3   # Fear reduced per successful Placate
+placate_trust_gain          = 0.1   # Trust nudge from successful placation
+fear_war_dampen_min         = 0.3   # War/Raid score multiplier floor when maximally feared of someone in the target civ
+
 # =============================================================================
 # UNREST / SECESSION (S2 splinter mechanic)
 # =============================================================================
@@ -1088,6 +1097,8 @@ marry            = { belonging = 0.60, _default = 0.0 }
 grant_aid        = { belonging = 0.50, _default = 0.0 }
 # ForgiveDebt (M13 13.2): belonging-driven — releasing an obligation to repair a bond
 forgive_debt     = { belonging = 0.40, _default = 0.0 }
+# Placate (M13 13.1): safety-driven — appeasing a feared rival is fundamentally self-preservation
+placate          = { safety = 0.50, belonging = 0.20, _default = 0.0 }
 
 # ─── Wildlife raid risk by biome (D3) ─────────────────────────────────────────
 # Per-biome multiplier applied to settlement.wildlife_attack_base_chance.

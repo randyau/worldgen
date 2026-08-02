@@ -30,6 +30,8 @@ public sealed record ProposeMarriage(EntityId CharacterId, EntityId TargetId) : 
 public sealed record GrantAid(EntityId GranterId, EntityId RecipientId) : ICommand;
 // M13 13.2 — CreditorId forgives DebtorId's obligation: zeroes Debt, boosts Trust.
 public sealed record ForgiveDebt(EntityId CreditorId, EntityId DebtorId) : ICommand;
+// M13 13.1 — CharacterId appeases an existing, feared rival: reduces Fear, nudges Trust up.
+public sealed record Placate(EntityId CharacterId, EntityId TargetId) : ICommand;
 public sealed record CreateArtwork(EntityId CharacterId) : ICommand;
 public sealed record FleeRegion(EntityId CharacterId, TileCoord Destination) : ICommand;
 

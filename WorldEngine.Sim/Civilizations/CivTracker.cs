@@ -85,6 +85,8 @@ public static partial class CivTracker
                 ResolveGrantAid(ga, world, pending); break;
             case ForgiveDebt fd:
                 ResolveForgiveDebt(fd, world, pending); break;
+            case Placate pl:
+                ResolvePlacate(pl, world, pending); break;
             case BuildImprovement bi:
                 ResolveBuildImprovement(bi, world, pending); break;
         }
@@ -395,16 +397,47 @@ public static partial class CivTracker
         var rel = world.Relationships.GetOrCreate(c.Id, target.Id);
         if (rel.IsRival) return;
 
+        // M13 13.1: Fear scales with how much more formidable the target is than the declarer —
+        // a rivalry with a stronger opponent is scarier than one with a weaker one, not a flat bump.
+        var fearCfg = world.SimConfig.Fear;
+        float declarerPower = (c.Skills.Combat + c.Personality.Aggression) * 0.5f;
+        float targetPower   = (target.Skills.Combat + target.Personality.Aggression) * 0.5f;
+        float fearIncrement = fearCfg.RivalryBaseFearIncrement
+                             + Math.Max(0f, targetPower - declarerPower) * fearCfg.RivalryFearPowerScale;
+
         world.Relationships.Upsert(rel with
         {
             Trust = Math.Min(rel.Trust, -0.1f),
-            Fear  = Math.Min(1f, rel.Fear + 0.1f),
+            Fear  = Math.Min(1f, rel.Fear + fearIncrement),
             Flags = rel.Flags | RelationshipFlags.IsRival
         });
 
         var payload = JsonSerializer.Serialize(new RivalryFormedPayload(
             c.Id.Value, c.Identity.Name, target.Id.Value, target.Identity.Name));
         pending.Add(new PendingEvent(EventType.RivalryFormed, c.Location, null, payload,
+            new[] { c.Id.Value }, new[] { target.Id.Value },
+            ActorId: c.Id.Value, ActorName: c.Identity.Name));
+    }
+
+    private static void ResolvePlacate(Placate cmd, WorldState world, List<PendingEvent> pending)
+    {
+        if (world.GetEntity(cmd.CharacterId) is not Tier1Character c) return;
+        if (world.GetEntity(cmd.TargetId) is not Tier1Character target) return;
+        if (!c.IsAlive || !target.IsAlive) return;
+
+        var rel = world.Relationships.Get(c.Id, target.Id);
+        if (rel == null || !rel.IsRival || rel.Fear <= 0f) return;
+
+        var cfg = world.SimConfig.Fear;
+        world.Relationships.Upsert(rel with
+        {
+            Fear  = Math.Max(0f, rel.Fear - cfg.PlacateFearReduction),
+            Trust = Math.Min(1f, rel.Trust + cfg.PlacateTrustGain)
+        });
+
+        var payload = JsonSerializer.Serialize(new RivalryPlacatedPayload(
+            c.Id.Value, c.Identity.Name, target.Id.Value, target.Identity.Name));
+        pending.Add(new PendingEvent(EventType.RivalryPlacated, c.Location, null, payload,
             new[] { c.Id.Value }, new[] { target.Id.Value },
             ActorId: c.Id.Value, ActorName: c.Identity.Name));
     }

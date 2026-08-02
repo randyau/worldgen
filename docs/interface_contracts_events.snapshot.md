@@ -138,6 +138,8 @@ public enum EventType
     ArtworkCreated          = 3108,  // character created something (art, craft, discovery)
     GoalFormed              = 3109,  // notable goal formed (Bond, Avenge, Create)
     GoalResolved            = 3110,  // notable goal achieved or abandoned
+    DebtIncurred            = 3111,  // M13 13.2: one character materially aided another, creating an obligation
+    DebtForgiven            = 3112,  // M13 13.2: a creditor released a debtor from their obligation
 
     // M2+ civilization/settlement (3200-range)
     CivilizationFounded     = 3201,
@@ -197,4 +199,4 @@ public enum EventType
 }
 ```
 
-<!-- content-hash: 4b761e7504d7ce01 -->
+<!-- content-hash: 683ea1c054f8f17d -->

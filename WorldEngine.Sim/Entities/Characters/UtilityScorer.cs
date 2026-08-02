@@ -199,6 +199,27 @@ public sealed class UtilityScorer
         if (bestDebtCmd != null)
             actions.Add(new(bestDebtCmd, bestDebtScore));
 
+        // Placate — M13 13.1: Fear as a submission/appeasement axis. A low-Aggression character
+        // facing a feared existing rival prefers appeasement over further escalation.
+        var fearCfg = world.SimConfig.Fear;
+        if (c.Personality.Aggression <= fearCfg.PlacateAggressionMax)
+        {
+            ICommand? bestPlacateCmd = null;
+            float bestPlacateScore = float.MinValue;
+            foreach (var e in world.GetEntitiesAt(c.Location))
+            {
+                if (e is not Tier1Character other || other.Id == c.Id || !other.IsAlive) continue;
+                var rel = world.GetRelationship(c.Id, other.Id);
+                if (rel == null || !rel.IsRival || rel.Fear < fearCfg.PlacateFearThreshold) continue;
+
+                float placateProb = (1f - c.Personality.Aggression) * rel.Fear;
+                float score = Score(c, ActionType.Placate, placateProb, world, cfg);
+                if (score > bestPlacateScore) { bestPlacateScore = score; bestPlacateCmd = new Placate(c.Id, other.Id); }
+            }
+            if (bestPlacateCmd != null)
+                actions.Add(new(bestPlacateCmd, bestPlacateScore));
+        }
+
         // DeclareRivalry — nearby character with substantially low trust (not just one bad encounter).
         // Cap scales with Aggression: aggressive characters sustain more rivalries; peaceful ones almost none.
         int rivalMax = cfg.RivalryMaxBase + (int)(c.Personality.Aggression * cfg.RivalryMaxPerAggression);
@@ -260,7 +281,8 @@ public sealed class UtilityScorer
                     {
                         float warScore = Score(c, ActionType.War, c.Personality.Aggression, world, cfg)
                                         * KinDampening(c, nearSettle.CivId, world, world.SimConfig.Family)
-                                        * DebtDampening(c, nearSettle.CivId, world, world.SimConfig.Debt);
+                                        * DebtDampening(c, nearSettle.CivId, world, world.SimConfig.Debt)
+                                        * FearDampening(c, nearSettle.CivId, world, world.SimConfig.Fear);
                         actions.Add(new(new DeclareWar(c.Id, nearSettle.CivId), warScore));
                         break;
                     }
@@ -286,7 +308,8 @@ public sealed class UtilityScorer
                         float successProb = c.Skills.Combat * c.Aptitude.Diligence;
                         float raidScore = Score(c, ActionType.Raid, successProb, world, cfg)
                                          * KinDampening(c, settlement.CivId, world, world.SimConfig.Family)
-                                         * DebtDampening(c, settlement.CivId, world, world.SimConfig.Debt);
+                                         * DebtDampening(c, settlement.CivId, world, world.SimConfig.Debt)
+                                         * FearDampening(c, settlement.CivId, world, world.SimConfig.Fear);
                         actions.Add(new(new RaidSettlement(c.Id, coord), raidScore));
                         break;
                     }
@@ -431,7 +454,7 @@ public sealed class UtilityScorer
     // DECISION: ActionType is a private enum keeping the same integer indices as before.
     // UtilityAffinityTables.TryParseAction maps TOML names to these integer indices directly,
     // so adding a new ActionType requires updating both here and in TryParseAction.
-    private enum ActionType { Rest, Travel, Establish, Ally, Negotiate, Rivalry, War, Raid, Create, Flee, BuildImprovement, FoundCity, HuntBeast, SeaVoyage, Marry, GrantAid, ForgiveDebt }
+    private enum ActionType { Rest, Travel, Establish, Ally, Negotiate, Rivalry, War, Raid, Create, Flee, BuildImprovement, FoundCity, HuntBeast, SeaVoyage, Marry, GrantAid, ForgiveDebt, Placate }
 
     // covet→conflict seam: GoalAdvancement already boosts War/Raid actions when a character has
     // a CovetArtifact goal, because GoalAffinity[CovetArtifact, War] and [CovetArtifact, Raid]
@@ -548,6 +571,7 @@ public sealed class UtilityScorer
         ActionType.Marry            => c.Personality.Compassion * 0.6f + c.Personality.Loyalty * 0.4f,
         ActionType.GrantAid         => c.Personality.Compassion,
         ActionType.ForgiveDebt      => c.Personality.Compassion * 0.7f + c.Personality.Honesty * 0.3f,
+        ActionType.Placate          => (1f - c.Personality.Aggression) * 0.6f + c.Personality.Compassion * 0.4f,
         _                           => 0.2f
     };
 
@@ -727,6 +751,31 @@ public sealed class UtilityScorer
         }
         if (maxOwed <= 0f) return 1f;
         return 1f - maxOwed * (1f - cfg.DebtWarDampenMin);
+    }
+
+    // ─── M13 13.1 — Fear as a submission/appeasement axis ──────────────────────
+
+    /// <summary>
+    /// Dampens War/Raid desirability when the acting character has an existing rival who scares
+    /// them (Fear on the shared edge) resident in the target civ — the "avoided" half of "feared
+    /// rivals get avoided or placated rather than confronted" (roadmap proposal #1). Placate is the
+    /// active outlet; this is the passive one. Same shape as <see cref="KinDampening"/>/
+    /// <see cref="DebtDampening"/>.
+    /// </summary>
+    private static float FearDampening(Tier1Character c, CivId targetCivId, IWorldStateReadOnly world, FearConfig cfg)
+    {
+        if (!targetCivId.IsValid) return 1f;
+        float maxFear = 0f;
+        foreach (var edge in world.GetRelationships(c.Id))
+        {
+            if (!edge.IsRival || edge.Fear <= 0f) continue;
+            var otherId = edge.From == c.Id ? edge.To : edge.From;
+            if (world.GetEntity(otherId) is Tier1Character rival
+                && rival.IsAlive && rival.CivId == targetCivId)
+                maxFear = Math.Max(maxFear, edge.Fear);
+        }
+        if (maxFear <= 0f) return 1f;
+        return 1f - maxFear * (1f - cfg.FearWarDampenMin);
     }
 
     // ─── Beast hunting ────────────────────────────────────────────────────────

@@ -131,6 +131,7 @@ public enum EventType
     GoalResolved            = 3110,  // notable goal achieved or abandoned
     DebtIncurred            = 3111,  // M13 13.2: one character materially aided another, creating an obligation
     DebtForgiven            = 3112,  // M13 13.2: a creditor released a debtor from their obligation
+    RivalryPlacated         = 3113,  // M13 13.1: a character appeased a feared rival instead of confronting them
 
     // M2+ civilization/settlement (3200-range)
     CivilizationFounded     = 3201,
@@ -223,6 +224,7 @@ public static class VerbClassification
         EventType.GoalResolved            => VerbClass.Transformation,
         EventType.DebtIncurred            => VerbClass.Transfer,
         EventType.DebtForgiven            => VerbClass.Maintenance,
+        EventType.RivalryPlacated         => VerbClass.Maintenance,
         EventType.CivilizationFounded     => VerbClass.Creation,
         EventType.CivilizationCollapsed   => VerbClass.Destruction,
         EventType.SettlementFounded       => VerbClass.Creation,

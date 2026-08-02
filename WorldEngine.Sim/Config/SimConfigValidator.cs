@@ -21,6 +21,7 @@ public static class SimConfigValidator
         ValidateReligion(cfg.Religion, errors);
         ValidateFamily(cfg.Family, errors);
         ValidateDebt(cfg.Debt, errors);
+        ValidateFear(cfg.Fear, errors);
         ValidateWar(cfg.War, errors);
         ValidateArtifacts(cfg.Artifacts, errors);
         ValidateEmissary(cfg.Emissary, errors);
@@ -205,6 +206,20 @@ public static class SimConfigValidator
         CheckProbability("debt.forgive_trust_threshold", d.ForgiveTrustThreshold, errors);
         CheckProbability("debt.forgive_min_debt", d.ForgiveMinDebt, errors);
         CheckProbability("debt.forgive_trust_gain", d.ForgiveTrustGain, errors);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // [fear]
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private static void ValidateFear(FearConfig f, List<string> errors)
+    {
+        CheckProbability("fear.rivalry_base_fear_increment", f.RivalryBaseFearIncrement, errors);
+        CheckProbability("fear.placate_fear_threshold", f.PlacateFearThreshold, errors);
+        CheckProbability("fear.placate_aggression_max", f.PlacateAggressionMax, errors);
+        CheckProbability("fear.placate_fear_reduction", f.PlacateFearReduction, errors);
+        CheckProbability("fear.placate_trust_gain", f.PlacateTrustGain, errors);
+        CheckProbability("fear.fear_war_dampen_min", f.FearWarDampenMin, errors);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
