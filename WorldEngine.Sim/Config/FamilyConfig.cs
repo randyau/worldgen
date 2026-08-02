@@ -23,4 +23,9 @@ public class FamilyConfig
     /// <summary>War/Raid score multiplier floor applied when a character has a Family-org relative
     /// living in the target civ and Family Loyalty &gt;= Civ Loyalty (full dampening).</summary>
     public float KinInEnemyCivWarDampenMin   { get; set; } = 0.2f;
+
+    /// <summary>M13 13.5 — Estrangement: annual check on married couples. Trust at/below this
+    /// clears IsMarried|IsFamily instead of the marriage persisting indefinitely regardless of
+    /// how the relationship has decayed.</summary>
+    public float EstrangementTrustThreshold  { get; set; } = -0.3f;
 }

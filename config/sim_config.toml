@@ -964,6 +964,7 @@ max_children_per_couple         = 4     # living-children cap before childbirth 
 trait_inheritance_weight        = 0.4   # 0 = pure ancestry bias, 1 = pure parent-average trait roll
 newborn_family_loyalty          = 0.8   # starting Loyalty for a newborn's Family membership
 kin_in_enemy_civ_war_dampen_min = 0.2   # War/Raid score multiplier floor when a Family relative lives in the target civ
+estrangement_trust_threshold    = -0.3  # M13 13.5: annual check — married-edge Trust at/below this ends the marriage
 
 [debt]
 aid_trust_threshold     = 0.4   # granter must already trust the recipient this much before offering aid
@@ -975,6 +976,7 @@ debt_war_dampen_min     = 0.3   # War/Raid score multiplier floor when maximally
 forgive_trust_threshold = 0.6   # creditor must trust the debtor this much before forgiving
 forgive_min_debt        = 0.2   # minimum |Debt| owed before forgiveness is considered
 forgive_trust_gain      = 0.2   # Trust gained by both parties when debt is forgiven
+oath_break_trust_penalty = 0.4  # M13 13.5: Trust lost on the violated edge when a debtor wars/raids their own creditor's civ instead
 
 [fear]
 rivalry_base_fear_increment = 0.1   # Fear added when a rivalry first forms (matches the original hardcoded value)
@@ -984,6 +986,10 @@ placate_aggression_max      = 0.4   # only low-Aggression characters placate; ag
 placate_fear_reduction      = 0.3   # Fear reduced per successful Placate
 placate_trust_gain          = 0.1   # Trust nudge from successful placation
 fear_war_dampen_min         = 0.3   # War/Raid score multiplier floor when maximally feared of someone in the target civ
+reconciliation_fear_threshold  = 0.1   # M13 13.5: Placate ends the rivalry outright once Fear drops to/below this...
+reconciliation_trust_threshold = 0.3   # ...and Trust has risen to/above this
+feud_trust_penalty             = 0.2   # extra Trust lost when a rivalry is re-declared while already active
+feud_fear_increment            = 0.15  # extra Fear added on the same escalation
 
 # =============================================================================
 # DEFECTION (M13 13.4 — non-ruler bonds reaching the wider world: asylum/defection)

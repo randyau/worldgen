@@ -190,6 +190,8 @@ public static class SimConfigValidator
         CheckProbability("family.trait_inheritance_weight", f.TraitInheritanceWeight, errors);
         CheckProbability("family.newborn_family_loyalty", f.NewbornFamilyLoyalty, errors);
         CheckProbability("family.kin_in_enemy_civ_war_dampen_min", f.KinInEnemyCivWarDampenMin, errors);
+        if (f.EstrangementTrustThreshold < -1f || f.EstrangementTrustThreshold > 1f)
+            errors.Add($"[family] estrangement_trust_threshold must be in [-1, 1] (got {f.EstrangementTrustThreshold})");
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -207,6 +209,7 @@ public static class SimConfigValidator
         CheckProbability("debt.forgive_trust_threshold", d.ForgiveTrustThreshold, errors);
         CheckProbability("debt.forgive_min_debt", d.ForgiveMinDebt, errors);
         CheckProbability("debt.forgive_trust_gain", d.ForgiveTrustGain, errors);
+        CheckProbability("debt.oath_break_trust_penalty", d.OathBreakTrustPenalty, errors);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -221,6 +224,10 @@ public static class SimConfigValidator
         CheckProbability("fear.placate_fear_reduction", f.PlacateFearReduction, errors);
         CheckProbability("fear.placate_trust_gain", f.PlacateTrustGain, errors);
         CheckProbability("fear.fear_war_dampen_min", f.FearWarDampenMin, errors);
+        CheckProbability("fear.reconciliation_fear_threshold", f.ReconciliationFearThreshold, errors);
+        CheckProbability("fear.reconciliation_trust_threshold", f.ReconciliationTrustThreshold, errors);
+        CheckProbability("fear.feud_trust_penalty", f.FeudTrustPenalty, errors);
+        CheckProbability("fear.feud_fear_increment", f.FeudFearIncrement, errors);
     }
 
     // ─────────────────────────────────────────────────────────────────────────

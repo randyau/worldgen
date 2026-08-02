@@ -253,8 +253,11 @@ public sealed class UtilityScorer
             {
                 if (e is not Tier1Character other || other.Id == c.Id || !other.IsAlive) continue;
                 var rel = world.GetRelationship(c.Id, other.Id);
+                // M13 13.5: also fires against an existing (non-Feud) rival — CivTracker.ResolveRivalry
+                // treats a re-declaration against an already-active rival as escalation into a Feud
+                // rather than forming a new one, so a Feud edge is the only thing excluded here.
                 if ((rel?.Trust ?? 0f) < cfg.RivalryTrustThreshold
-                    && !(rel?.IsRival ?? false))
+                    && !(rel?.IsFeud ?? false))
                 {
                     actions.Add(new(new DeclareRivalry(c.Id, other.Id),
                         Score(c, ActionType.Rivalry, 1.0f, world, cfg)));

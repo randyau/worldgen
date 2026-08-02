@@ -133,6 +133,10 @@ public enum EventType
     DebtForgiven            = 3112,  // M13 13.2: a creditor released a debtor from their obligation
     RivalryPlacated         = 3113,  // M13 13.1: a character appeased a feared rival instead of confronting them
     CharacterDefected       = 3114,  // M13 13.4: a distressed character abandoned their civ for a trusted foreign confidant's
+    RivalsReconciled        = 3115,  // M13 13.5: a placated rivalry cooled enough (low Fear, positive Trust) to end outright
+    RivalryEscalatedToFeud  = 3116,  // M13 13.5: a rivalry re-declared while already active deepened into a Feud
+    CharacterEstranged      = 3117,  // M13 13.5: a married couple's Trust decayed far enough to end the marriage
+    OathBroken              = 3118,  // M13 13.5: a debtor warred/raided their own creditor's civ instead of honoring the debt
 
     // M2+ civilization/settlement (3200-range)
     CivilizationFounded     = 3201,
@@ -227,6 +231,10 @@ public static class VerbClassification
         EventType.DebtForgiven            => VerbClass.Maintenance,
         EventType.RivalryPlacated         => VerbClass.Maintenance,
         EventType.CharacterDefected       => VerbClass.Transformation,
+        EventType.RivalsReconciled        => VerbClass.Maintenance,
+        EventType.RivalryEscalatedToFeud  => VerbClass.Conflict,
+        EventType.CharacterEstranged      => VerbClass.Destruction,
+        EventType.OathBroken              => VerbClass.Destruction,
         EventType.CivilizationFounded     => VerbClass.Creation,
         EventType.CivilizationCollapsed   => VerbClass.Destruction,
         EventType.SettlementFounded       => VerbClass.Creation,

@@ -1,6 +1,6 @@
 # M13 — Generational & Domestic Drama
 
-**Status:** IN PROGRESS — started 2026-08-01.
+**Status:** COMPLETE — 2026-08-02. All phases 13.0–13.5 shipped.
 
 See `docs/roadmap.md` § "M12–M18 — Narrative Depth Expansion" for the full design rationale and
 the 2026-07-30 relationship-system audit this milestone is built on. This doc tracks phase
@@ -79,7 +79,22 @@ real family data to act on.
   civ for the confidant's via the same `SetCharacterCiv` write path civ founding/childbirth/
   succession already use; rulers can't defect, and asylum is refused into a civ already at war with
   the defector's own. Roadmap proposal #4.
-- **13.5 — New relationship-transition events.** Reconciliation, Feud, Estrangement, Oath-breaking
-  (violated Debt). Roadmap proposal #5.
+- **13.5 — New relationship-transition events. DONE.** Cheap, reusing existing substrates rather
+  than new commands/systems (roadmap proposal #5): **Reconciliation** — `ResolvePlacate` now checks
+  whether Fear has cooled to/below `FearConfig.ReconciliationFearThreshold` and Trust warmed to/above
+  `ReconciliationTrustThreshold`; if so the rivalry (and any Feud) ends outright, firing
+  `RivalsReconciled` — 13.1 deliberately left this to 13.5 rather than having Placate itself end the
+  rivalry. **Feud** — `UtilityScorer`'s rivalry candidate gate now also fires against an existing
+  (non-Feud) rival instead of excluding all rivals; `CivTracker.ResolveRivalry` treats a
+  re-declaration against an already-active rival as escalation (`RelationshipFlags.IsFeud`, extra
+  Trust/Fear penalty, `RivalryEscalatedToFeud`) rather than a no-op. **Estrangement** — new annual
+  `CharacterBehaviorPhase.CheckMarriageEstrangement` (same discovery method as 13.0's
+  `TrySpawnFamilyBirths`: scan `IsMarried` edges) clears `IsMarried|IsFamily` and fires
+  `CharacterEstranged` once a married edge's Trust decays to/below
+  `FamilyConfig.EstrangementTrustThreshold`; the household Family Organization/membership is left
+  intact. **Oath-breaking** — new `CivTracker.CheckOathBreaking`, called from both `ResolveWar` and
+  `ResolveRaid`, mirrors `UtilityScorer.DebtDampening`'s scan but as the consequence when a debtor
+  wars/raids their own creditor's civ anyway despite the dampener: the debt is wiped to 0, the
+  specific edge takes a `DebtConfig.OathBreakTrustPenalty` hit, and `OathBroken` fires.
 
 Phases are additive; each should ship with its own tests and be committed independently.

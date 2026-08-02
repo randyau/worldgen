@@ -126,6 +126,7 @@ public sealed class CharacterBehaviorPhase
         {
             TrySpawnCivBorn(world, pending, tick);
             TrySpawnFamilyBirths(world, pending, tick);
+            CheckMarriageEstrangement(world, pending);
         }
 
         return pending;
@@ -195,6 +196,38 @@ public sealed class CharacterBehaviorPhase
             pending.Add(new PendingEvent(EventType.CharacterBorn, child.Location, null, payload,
                 new[] { child.Id.Value }, new[] { mother.Id.Value, father.Id.Value },
                 ActorId: child.Id.Value, ActorName: child.Identity.Name, CivId: civId.Value));
+        }
+    }
+
+    // ─── M13 13.5 — Estrangement ────────────────────────────────────────────────
+
+    /// <summary>
+    /// Annual check on every married edge (same discovery method as <see cref="TrySpawnFamilyBirths"/>):
+    /// a marriage whose Trust has decayed to/below FamilyConfig.EstrangementTrustThreshold ends —
+    /// clears IsMarried|IsFamily rather than the flags persisting regardless of how the personal
+    /// relationship has actually decayed (roadmap proposal #5). The household Family Organization
+    /// and its membership are left intact — divorce ends the personal bond, not shared lineage/
+    /// inheritance records already built on it.
+    /// </summary>
+    private void CheckMarriageEstrangement(WorldState world, List<PendingEvent> pending)
+    {
+        var famCfg = world.SimConfig.Family;
+        foreach (var edge in world.Relationships.AllEdges.Where(e => e.IsMarried).ToList())
+        {
+            if (world.GetEntity(edge.From) is not Tier1Character a || !a.IsAlive) continue;
+            if (world.GetEntity(edge.To) is not Tier1Character b || !b.IsAlive) continue;
+            if (edge.Trust > famCfg.EstrangementTrustThreshold) continue;
+
+            world.Relationships.Upsert(edge with
+            {
+                Flags = edge.Flags & ~(RelationshipFlags.IsMarried | RelationshipFlags.IsFamily)
+            });
+
+            var payload = JsonSerializer.Serialize(new CharacterEstrangedPayload(
+                a.Id.Value, a.Identity.Name, b.Id.Value, b.Identity.Name));
+            pending.Add(new PendingEvent(EventType.CharacterEstranged, a.Location, null, payload,
+                new[] { a.Id.Value }, new[] { b.Id.Value },
+                ActorId: a.Id.Value, ActorName: a.Identity.Name));
         }
     }
 

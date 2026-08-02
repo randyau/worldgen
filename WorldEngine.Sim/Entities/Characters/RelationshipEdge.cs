@@ -7,7 +7,10 @@ namespace WorldEngine.Sim.Entities.Characters;
 public enum RelationshipFlags
 {
     None = 0, IsAlly = 1, IsRival = 2,
-    IsFamily = 8, IsMarried = 16
+    IsFamily = 8, IsMarried = 16,
+    // M13 13.5: a rivalry re-declared while already active escalates into a Feud — deeper
+    // Trust/Fear penalty, cleared only by Reconciliation alongside IsRival.
+    IsFeud = 32
 }
 
 /// <summary>
@@ -28,6 +31,7 @@ public sealed record RelationshipEdge(
     public bool IsRival   => Flags.HasFlag(RelationshipFlags.IsRival);
     public bool IsFamily  => Flags.HasFlag(RelationshipFlags.IsFamily);
     public bool IsMarried => Flags.HasFlag(RelationshipFlags.IsMarried);
+    public bool IsFeud    => Flags.HasFlag(RelationshipFlags.IsFeud);
 
     // M13 13.2 — Debt as an obligation mechanic. Null when the edge carries no obligation.
     public EntityId? DebtorId   => Debt > 0f ? From : Debt < 0f ? To   : null;

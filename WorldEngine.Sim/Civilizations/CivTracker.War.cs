@@ -22,7 +22,42 @@ public static partial class CivTracker
         var declCiv = world.GetCivilization(c.CivId);
         var targCiv = world.GetCivilization(cmd.TargetCivId);
         if (declCiv == null || targCiv == null || declCiv.IsCollapsed || targCiv.IsCollapsed) return;
+        CheckOathBreaking(c, targCiv.Id, world, pending);
         StartWarBetween(declCiv, targCiv, WarCause.CharacterEncounter, world, pending);
+    }
+
+    /// <summary>
+    /// M13 13.5 — Oath-breaking: the debtor half of DebtDampening's War/Raid check (which only
+    /// biases the utility score, not a hard block) sometimes wars/raids their own creditor's civ
+    /// anyway. When that happens the debt is violated rather than quietly persisting: it's wiped
+    /// to 0 and the specific edge takes a heavy Trust penalty, distinct from any general war-time
+    /// ruler-pair trust hit. Roadmap proposal #5.
+    /// </summary>
+    private static void CheckOathBreaking(Tier1Character actor, CivId targetCivId, WorldState world, List<PendingEvent> pending)
+    {
+        if (!targetCivId.IsValid) return;
+        foreach (var edge in world.Relationships.GetAll(actor.Id).ToList())
+        {
+            if (edge.DebtorId != actor.Id) continue;
+            var creditorId = edge.CreditorId!.Value;
+            if (world.GetEntity(creditorId) is not Tier1Character creditor
+                || !creditor.IsAlive || creditor.CivId != targetCivId) continue;
+
+            var cfg = world.SimConfig.Debt;
+            float broken = Math.Abs(edge.Debt);
+            world.Relationships.Upsert(edge with
+            {
+                Debt  = 0f,
+                Trust = Math.Max(-1f, edge.Trust - cfg.OathBreakTrustPenalty)
+            });
+
+            var payload = JsonSerializer.Serialize(new OathBrokenPayload(
+                actor.Id.Value, actor.Identity.Name, creditor.Id.Value, creditor.Identity.Name,
+                actor.CivId.IsValid ? actor.CivId.Value : 0, targetCivId.Value, broken));
+            pending.Add(new PendingEvent(EventType.OathBroken, actor.Location, null, payload,
+                new[] { actor.Id.Value }, new[] { creditor.Id.Value },
+                ActorId: actor.Id.Value, ActorName: actor.Identity.Name));
+        }
     }
 
     /// <summary>
@@ -322,6 +357,8 @@ public static partial class CivTracker
     {
         if (world.GetEntity(cmd.CharacterId) is not Tier1Character raider) return;
         if (!world.Settlements.TryGetValue(cmd.SettlementTile, out var settlement)) return;
+
+        CheckOathBreaking(raider, settlement.CivId, world, pending);
 
         var raidCfg = world.SimConfig.War;  // D5: raid knobs consolidated in WarConfig
         int damage = raidCfg.RaidDamageMin

@@ -13,4 +13,7 @@ public class DebtConfig
     public float ForgiveTrustThreshold { get; set; } = 0.6f;  // creditor must trust the debtor this much before forgiving
     public float ForgiveMinDebt        { get; set; } = 0.2f;  // minimum |Debt| owed before forgiveness is considered
     public float ForgiveTrustGain      { get; set; } = 0.2f;  // Trust gained by both parties when debt is forgiven
+
+    // M13 13.5 — Oath-breaking: a debtor who wars/raids their own creditor's civ anyway.
+    public float OathBreakTrustPenalty { get; set; } = 0.4f;  // Trust lost on the violated edge when the debt is broken instead of honored
 }

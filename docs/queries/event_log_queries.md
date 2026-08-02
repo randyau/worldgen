@@ -31,13 +31,15 @@ The `Type` column stores integer values. Use these constants in WHERE clauses:
   3007 = CharacterSpiraling    
 
 -- Character actions (3100–3199)
-  3101 = AllianceFormed       3102 = AllianceBroken     
-  3103 = WarDeclared          3104 = WarEnded           
-  3105 = BattleOccurred       3106 = RivalryFormed      
-  3107 = Negotiated           3108 = ArtworkCreated     
-  3109 = GoalFormed           3110 = GoalResolved       
-  3111 = DebtIncurred         3112 = DebtForgiven       
-  3113 = RivalryPlacated      3114 = CharacterDefected  
+  3101 = AllianceFormed            3102 = AllianceBroken          
+  3103 = WarDeclared               3104 = WarEnded                
+  3105 = BattleOccurred            3106 = RivalryFormed           
+  3107 = Negotiated                3108 = ArtworkCreated          
+  3109 = GoalFormed                3110 = GoalResolved            
+  3111 = DebtIncurred              3112 = DebtForgiven            
+  3113 = RivalryPlacated           3114 = CharacterDefected       
+  3115 = RivalsReconciled          3116 = RivalryEscalatedToFeud  
+  3117 = CharacterEstranged        3118 = OathBroken              
 
 -- Civilization/Settlement (3200–3299)
   3201 = CivilizationFounded      3202 = CivilizationCollapsed  

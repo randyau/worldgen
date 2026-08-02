@@ -410,11 +410,32 @@ public static partial class CivTracker
         if (world.GetEntity(cmd.TargetId) is not Tier1Character target) return;
 
         var rel = world.Relationships.GetOrCreate(c.Id, target.Id);
-        if (rel.IsRival) return;
+        var fearCfg = world.SimConfig.Fear;
+
+        // M13 13.5: a rivalry re-declared while already active deepens into a Feud instead of
+        // no-op'ing — "cheap given CivSplintered-style patterns already exist" (roadmap proposal
+        // #5). A Feud that's already maximally escalated has nothing further to do.
+        if (rel.IsRival)
+        {
+            if (rel.IsFeud) return;
+
+            world.Relationships.Upsert(rel with
+            {
+                Trust = Math.Max(-1f, rel.Trust - fearCfg.FeudTrustPenalty),
+                Fear  = Math.Min(1f, rel.Fear + fearCfg.FeudFearIncrement),
+                Flags = rel.Flags | RelationshipFlags.IsFeud
+            });
+
+            var feudPayload = JsonSerializer.Serialize(new RivalryEscalatedToFeudPayload(
+                c.Id.Value, c.Identity.Name, target.Id.Value, target.Identity.Name));
+            pending.Add(new PendingEvent(EventType.RivalryEscalatedToFeud, c.Location, null, feudPayload,
+                new[] { c.Id.Value }, new[] { target.Id.Value },
+                ActorId: c.Id.Value, ActorName: c.Identity.Name));
+            return;
+        }
 
         // M13 13.1: Fear scales with how much more formidable the target is than the declarer —
         // a rivalry with a stronger opponent is scarier than one with a weaker one, not a flat bump.
-        var fearCfg = world.SimConfig.Fear;
         float declarerPower = (c.Skills.Combat + c.Personality.Aggression) * 0.5f;
         float targetPower   = (target.Skills.Combat + target.Personality.Aggression) * 0.5f;
         float fearIncrement = fearCfg.RivalryBaseFearIncrement
@@ -444,17 +465,33 @@ public static partial class CivTracker
         if (rel == null || !rel.IsRival || rel.Fear <= 0f) return;
 
         var cfg = world.SimConfig.Fear;
-        world.Relationships.Upsert(rel with
-        {
-            Fear  = Math.Max(0f, rel.Fear - cfg.PlacateFearReduction),
-            Trust = Math.Min(1f, rel.Trust + cfg.PlacateTrustGain)
-        });
+        float newFear  = Math.Max(0f, rel.Fear - cfg.PlacateFearReduction);
+        float newTrust = Math.Min(1f, rel.Trust + cfg.PlacateTrustGain);
+
+        // M13 13.5: Reconciliation — Placate itself never ended a rivalry (13.1 deferred that
+        // deliberately); once enough placation has cooled Fear and warmed Trust past both
+        // thresholds, the rivalry (and any Feud it escalated into) ends outright here.
+        bool reconciles = newFear <= cfg.ReconciliationFearThreshold && newTrust >= cfg.ReconciliationTrustThreshold;
+        var newFlags = reconciles
+            ? rel.Flags & ~(RelationshipFlags.IsRival | RelationshipFlags.IsFeud)
+            : rel.Flags;
+
+        world.Relationships.Upsert(rel with { Fear = newFear, Trust = newTrust, Flags = newFlags });
 
         var payload = JsonSerializer.Serialize(new RivalryPlacatedPayload(
             c.Id.Value, c.Identity.Name, target.Id.Value, target.Identity.Name));
         pending.Add(new PendingEvent(EventType.RivalryPlacated, c.Location, null, payload,
             new[] { c.Id.Value }, new[] { target.Id.Value },
             ActorId: c.Id.Value, ActorName: c.Identity.Name));
+
+        if (reconciles)
+        {
+            var reconPayload = JsonSerializer.Serialize(new RivalsReconciledPayload(
+                c.Id.Value, c.Identity.Name, target.Id.Value, target.Identity.Name));
+            pending.Add(new PendingEvent(EventType.RivalsReconciled, c.Location, null, reconPayload,
+                new[] { c.Id.Value }, new[] { target.Id.Value },
+                ActorId: c.Id.Value, ActorName: c.Identity.Name));
+        }
     }
 
     /// <summary>

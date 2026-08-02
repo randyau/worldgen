@@ -698,6 +698,7 @@ _Natural shelter recovery per tick when NOT on a settlement tile, by biome. Dens
 | `trait_inheritance_weight` | `0.4` | `SimConfig.Family.TraitInheritanceWeight` | 0 = pure ancestry bias, 1 = pure parent-average trait roll |
 | `newborn_family_loyalty` | `0.8` | `SimConfig.Family.NewbornFamilyLoyalty` | starting Loyalty for a newborn's Family membership |
 | `kin_in_enemy_civ_war_dampen_min` | `0.2` | `SimConfig.Family.KinInEnemyCivWarDampenMin` | War/Raid score multiplier floor when a Family relative lives in the target civ |
+| `estrangement_trust_threshold` | `-0.3` | `SimConfig.Family.EstrangementTrustThreshold` | M13 13.5: annual check — married-edge Trust at/below this ends the marriage |
 
 ## `[debt]` {#debt}
 
@@ -712,6 +713,7 @@ _Natural shelter recovery per tick when NOT on a settlement tile, by biome. Dens
 | `forgive_trust_threshold` | `0.6` | `SimConfig.Debt.ForgiveTrustThreshold` | creditor must trust the debtor this much before forgiving |
 | `forgive_min_debt` | `0.2` | `SimConfig.Debt.ForgiveMinDebt` | minimum \|Debt\| owed before forgiveness is considered |
 | `forgive_trust_gain` | `0.2` | `SimConfig.Debt.ForgiveTrustGain` | Trust gained by both parties when debt is forgiven |
+| `oath_break_trust_penalty` | `0.4` | `SimConfig.Debt.OathBreakTrustPenalty` | M13 13.5: Trust lost on the violated edge when a debtor wars/raids their own creditor's civ instead |
 
 ## `[fear]` {#fear}
 
@@ -724,6 +726,10 @@ _Natural shelter recovery per tick when NOT on a settlement tile, by biome. Dens
 | `placate_fear_reduction` | `0.3` | `SimConfig.Fear.PlacateFearReduction` | Fear reduced per successful Placate |
 | `placate_trust_gain` | `0.1` | `SimConfig.Fear.PlacateTrustGain` | Trust nudge from successful placation |
 | `fear_war_dampen_min` | `0.3` | `SimConfig.Fear.FearWarDampenMin` | War/Raid score multiplier floor when maximally feared of someone in the target civ |
+| `reconciliation_fear_threshold` | `0.1` | `SimConfig.Fear.ReconciliationFearThreshold` | M13 13.5: Placate ends the rivalry outright once Fear drops to/below this... |
+| `reconciliation_trust_threshold` | `0.3` | `SimConfig.Fear.ReconciliationTrustThreshold` | ...and Trust has risen to/above this |
+| `feud_trust_penalty` | `0.2` | `SimConfig.Fear.FeudTrustPenalty` | extra Trust lost when a rivalry is re-declared while already active |
+| `feud_fear_increment` | `0.15` | `SimConfig.Fear.FeudFearIncrement` | extra Fear added on the same escalation |
 
 ## `[defection]` {#defection}
 

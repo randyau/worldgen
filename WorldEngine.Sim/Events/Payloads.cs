@@ -64,6 +64,20 @@ internal sealed record CharacterDefectedPayload(
     long OldCivId, string OldCivName, long NewCivId, string NewCivName,
     long ConfidantId, string ConfidantName);
 
+// M13 13.5 — new relationship-transition events.
+internal sealed record RivalsReconciledPayload(
+    long CharacterId, string CharacterName, long TargetId, string TargetName);
+
+internal sealed record RivalryEscalatedToFeudPayload(
+    long CharacterId, string CharacterName, long TargetId, string TargetName);
+
+internal sealed record CharacterEstrangedPayload(
+    long CharacterAId, string CharacterAName, long CharacterBId, string CharacterBName);
+
+internal sealed record OathBrokenPayload(
+    long DebtorId, string DebtorName, long CreditorId, string CreditorName,
+    long DebtorCivId, long CreditorCivId, float DebtBroken);
+
 internal sealed record WarDeclaredPayload(
     long DeclarerId, string DeclarerName,
     long DeclarerCivId, string DeclarerCivName,
