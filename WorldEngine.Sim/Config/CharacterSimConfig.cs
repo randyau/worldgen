@@ -324,6 +324,13 @@ public sealed class CharacterSimConfig
     public float GriefWellbeingShock        { get; set; } = 0.4f;
     // Grief Intensity below this → grief goal auto-completes (grief resolved)
     public float GriefCompletionThreshold   { get; set; } = 0.05f;
+    // M13 13.3: grief is not uniform across relationship types — a spouse's death cuts deepest,
+    // family next, an ordinary bonded companion least. Multiplies the mourner's Bond intensity
+    // (clamped to 1.0) before it becomes Grieve goal Intensity/Priority, wellbeing shock, and the
+    // Avenge-goal gate — so probability of vengeance scales with relationship type too, not just severity.
+    public float GriefSpouseMultiplier      { get; set; } = 1.6f;
+    public float GriefFamilyMultiplier      { get; set; } = 1.3f;
+    public float GriefStrangerMultiplier    { get; set; } = 1.0f;
     // Wellbeing gain rate multipliers for specific goal types (fraction of WellbeingGoalGainRate)
     public float WellbeingEndureMultiplier  { get; set; } = 0.5f;  // Endure: slow negative progress
     public float WellbeingSurviveMultiplier { get; set; } = 0.3f;  // Survive: urgent but temporary

@@ -523,6 +523,10 @@ grief_drain_rate                = 0.015   # Wellbeing drain per tick per Grieve 
 grief_decay_rate                = 0.004   # grief intensity decay per tick (raised from 0.002 — was ~31yr grief period, now ~15yr)
 grief_wellbeing_shock           = 0.4     # fraction of grief intensity applied as immediate Wellbeing shock on mourning
 grief_completion_threshold      = 0.05    # grief Intensity below this → grief goal auto-completes (grief resolved)
+# M13 13.3: grief scaled by relationship type (spouse > family > bonded stranger), not uniform
+grief_spouse_multiplier         = 1.6     # multiplies Bond intensity when the deceased was IsMarried
+grief_family_multiplier         = 1.3     # multiplies Bond intensity when the deceased was IsFamily (not spouse)
+grief_stranger_multiplier       = 1.0     # baseline: an ordinary bonded companion, no Family/Married flag
 # Wellbeing drain multipliers for specific goal types (fraction of wellbeing_goal_gain_rate)
 wellbeing_endure_multiplier     = 0.5     # Endure: slow draining perseverance
 wellbeing_survive_multiplier    = 0.3     # Survive: urgent pressure but lower emotional weight

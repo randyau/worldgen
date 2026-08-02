@@ -414,6 +414,9 @@ Edit values in `sim_config.toml`; all keys live there without recompiling.
 | `grief_decay_rate` | `0.004` | `SimConfig.Character.GriefDecayRate` | grief intensity decay per tick (raised from 0.002 — was ~31yr grief period, now ~15yr) |
 | `grief_wellbeing_shock` | `0.4` | `SimConfig.Character.GriefWellbeingShock` | fraction of grief intensity applied as immediate Wellbeing shock on mourning |
 | `grief_completion_threshold` | `0.05` | `SimConfig.Character.GriefCompletionThreshold` | grief Intensity below this → grief goal auto-completes (grief resolved) |
+| `grief_spouse_multiplier` | `1.6` | `SimConfig.Character.GriefSpouseMultiplier` | multiplies Bond intensity when the deceased was IsMarried |
+| `grief_family_multiplier` | `1.3` | `SimConfig.Character.GriefFamilyMultiplier` | multiplies Bond intensity when the deceased was IsFamily (not spouse) |
+| `grief_stranger_multiplier` | `1.0` | `SimConfig.Character.GriefStrangerMultiplier` | baseline: an ordinary bonded companion, no Family/Married flag |
 | `wellbeing_endure_multiplier` | `0.5` | `SimConfig.Character.WellbeingEndureMultiplier` | Endure: slow draining perseverance |
 | `wellbeing_survive_multiplier` | `0.3` | `SimConfig.Character.WellbeingSurviveMultiplier` | Survive: urgent pressure but lower emotional weight |
 | `wellbeing_flee_multiplier` | `0.4` | `SimConfig.Character.WellbeingFleeMultiplier` | Flee: flight-or-fight stress |

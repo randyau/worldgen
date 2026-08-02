@@ -306,6 +306,19 @@ public static partial class CivTracker
             Flags = rel.Flags | RelationshipFlags.IsMarried | RelationshipFlags.IsFamily
         });
 
+        // M13 13.3: ruler cross-civ marriage as a real diplomatic lever — since civ diplomacy
+        // already reuses the ruler's personal RelationshipEdge (CivTracker.Diplomacy.cs), an
+        // arranged marriage between two current rulers cements the same Organization-to-Organization
+        // alliance fact ResolveAlly forms, so it survives either ruler's later death or succession
+        // (M12 design decision 1) rather than evaporating with the personal edge.
+        if (c.CivId.IsValid && target.CivId.IsValid
+            && c.CivId != target.CivId
+            && world.Civilizations.TryGetValue(c.CivId, out var cCiv) && cCiv.RulerId == c.Id
+            && world.Civilizations.TryGetValue(target.CivId, out var tCiv) && tCiv.RulerId == target.Id
+            && !cCiv.IsAtWarWith(target.CivId)
+            && GetOrg(world, cCiv) is { } cOrg && GetOrg(world, tCiv) is { } tOrg)
+            FormOrgAlliance(cOrg, tOrg);
+
         foreach (var g in c.Goals)
             if (g.Type == GoalType.Bond && g.TargetEntityId == target.Id) g.Progress = 1f;
         foreach (var g in target.Goals)

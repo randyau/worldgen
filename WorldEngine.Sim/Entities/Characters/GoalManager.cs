@@ -530,7 +530,16 @@ public static class GoalManager
 
             bond.IsComplete = true; // mark bond resolved
 
-            float intensity = bond.Intensity;
+            // M13 13.3: grief is not uniform across relationship types — a spouse's death cuts
+            // deepest, family next, an ordinary bonded companion least. This also scales the
+            // Avenge-goal gate below (higher intensity crosses AvengeIntensityThreshold more
+            // easily), so the roadmap's "severity/probability scaled by relationship type" both
+            // fall out of the same multiplier.
+            var rel = world.GetRelationship(c.Id, deadId);
+            float relMultiplier = rel?.IsMarried == true ? cfg.GriefSpouseMultiplier
+                                 : rel?.IsFamily == true ? cfg.GriefFamilyMultiplier
+                                 : cfg.GriefStrangerMultiplier;
+            float intensity = Math.Clamp(bond.Intensity * relMultiplier, 0f, 1f);
             c.Goals.Add(new GoalData
             {
                 Type           = GoalType.Grieve,
@@ -596,8 +605,10 @@ public static class GoalManager
     public static void EmitGriefEvent(
         Tier1Character mourner, EntityId deadId, string deadName, List<PendingEvent> pending)
     {
-        var bond = mourner.Goals.FirstOrDefault(g => g.Type == GoalType.Bond && g.TargetEntityId == deadId);
-        float intensity = bond?.Intensity ?? 0.3f;
+        // Read the Grieve goal (not the now-complete Bond goal) so the emitted intensity reflects
+        // ApplyGriefToMourners' relationship-type multiplier (M13 13.3), not the pre-multiplier Bond value.
+        var grief = mourner.Goals.FirstOrDefault(g => g.Type == GoalType.Grieve && g.TargetEntityId == deadId);
+        float intensity = grief?.Intensity ?? 0.3f;
         var payload = JsonSerializer.Serialize(new CharacterGriefPayload(
             mourner.Id.Value, mourner.Identity.Name,
             deadId.Value, deadName,

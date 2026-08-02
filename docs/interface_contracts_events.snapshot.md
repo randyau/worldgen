@@ -140,6 +140,7 @@ public enum EventType
     GoalResolved            = 3110,  // notable goal achieved or abandoned
     DebtIncurred            = 3111,  // M13 13.2: one character materially aided another, creating an obligation
     DebtForgiven            = 3112,  // M13 13.2: a creditor released a debtor from their obligation
+    RivalryPlacated         = 3113,  // M13 13.1: a character appeased a feared rival instead of confronting them
 
     // M2+ civilization/settlement (3200-range)
     CivilizationFounded     = 3201,
@@ -199,4 +200,4 @@ public enum EventType
 }
 ```
 
-<!-- content-hash: 683ea1c054f8f17d -->
+<!-- content-hash: fc7372428e07dc3f -->

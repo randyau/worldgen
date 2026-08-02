@@ -52,10 +52,18 @@ real family data to act on.
   at their household Family-org heir (spouse preferred) rather than the obligation vanishing with
   them — ties into the Family Organization built in 13.0, not the civ ruler succession seat.
   Roadmap proposal #2.
-- **13.3 — Consequence-weight IsFamily/IsMarried.** Grief severity/probability scaled by relationship
-  type; ruler cross-civ marriage as a real diplomatic lever (arranged marriage / alliance-cement).
-  Roadmap proposal #3 (13.0 lands the marriage mechanic itself; this phase lands the *consequences*
-  being genuinely differentiated by relationship type rather than uniform).
+- **13.3 — Consequence-weight IsFamily/IsMarried. DONE.** `GoalManager.ApplyGriefToMourners` now
+  multiplies Bond intensity by `GriefSpouseMultiplier`/`GriefFamilyMultiplier`/`GriefStrangerMultiplier`
+  (1.6/1.3/1.0) based on the mourner-deceased `RelationshipEdge`'s `IsMarried`/`IsFamily` flags before
+  it becomes Grieve goal Intensity/Priority, immediate Wellbeing shock, and the Avenge-goal gate —
+  previously the Bond→Grieve pipeline was the *only* behavioral consequence of any bond and wasn't
+  gated by relationship type at all (a spouse and a co-located trusted stranger grieved identically).
+  `EmitGriefEvent` now reads the Grieve goal's (post-multiplier) Intensity instead of the stale Bond
+  value. Ruler cross-civ marriage is now a real diplomatic lever: `ResolveMarriage` forms the same
+  Organization-to-Organization alliance fact `ResolveAlly` does (`FormOrgAlliance`) when both spouses
+  are their civ's current ruler and the civs aren't at war — reuses the M12 design decision 1
+  alliance-survives-succession mechanism rather than a bespoke marriage-alliance path. Roadmap
+  proposal #3.
 - **13.4 — Non-ruler bonds reach the wider world.** Trusted confidant → emissary candidate; cross-civ
   friendship dampens war tension / triggers asylum-defection. Roadmap proposal #4.
 - **13.5 — New relationship-transition events.** Reconciliation, Feud, Estrangement, Oath-breaking
