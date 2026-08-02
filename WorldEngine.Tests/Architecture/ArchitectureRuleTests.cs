@@ -316,6 +316,73 @@ public class ArchitectureRuleTests
         Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
 
     // ─────────────────────────────────────────────────────────────────
+    // Rule (h) — every command CivTracker.Resolve knows how to handle must also be dispatched
+    // to it from CharacterBehaviorPhase.ResolveCommand — the actual per-tick call site
+    // (_scorer.SelectAction → ResolveCommand). CivTracker.Resolve's switch has no default case
+    // either, so a command present in one switch but not the other silently no-ops forever in
+    // the real simulation despite passing unit tests that call CivTracker.Resolve directly.
+    //
+    // This is a real bug class, not a hypothetical: GrantAid/ForgiveDebt/Placate/Defect were
+    // added to CivTracker.Resolve across M13 13.1/13.2/13.4 but never added to
+    // CharacterBehaviorPhase.ResolveCommand — found 2026-08-02 via a multi-seed balance
+    // calibration run showing these mechanics fired literally zero times ever in the full sim.
+    // See docs/phases/archive/m13_generational_domestic_drama.md's "Post-completion balance
+    // pass" section. [[feedback_command_dispatch_wiring]]
+    // ─────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void CivTrackerCommands_AreAllDispatchedFromResolveCommand()
+    {
+        string civTrackerPath = Path.Combine(RepoRoot, "WorldEngine.Sim", "Civilizations", "CivTracker.cs");
+        string behaviorPath   = Path.Combine(RepoRoot, "WorldEngine.Sim", "Simulation", "Phases", "CharacterBehaviorPhase.cs");
+
+        var civTrackerCases = ExtractSwitchCaseTypes(File.ReadAllText(civTrackerPath), "public static void Resolve(");
+        var resolveCommandCases = ExtractSwitchCaseTypes(File.ReadAllText(behaviorPath), "private void ResolveCommand(");
+
+        civTrackerCases.Should().NotBeEmpty("sanity check: the extractor found CivTracker.Resolve's switch cases");
+        resolveCommandCases.Should().NotBeEmpty("sanity check: the extractor found ResolveCommand's switch cases");
+
+        var missing = civTrackerCases.Except(resolveCommandCases).ToList();
+        missing.Should().BeEmpty(
+            because: "every command type CivTracker.Resolve handles must also be a case in " +
+                     "CharacterBehaviorPhase.ResolveCommand's switch, or the utility scorer can select " +
+                     "it every tick while it silently no-ops forever in the real simulation (see rule (h) comment above)");
+    }
+
+    /// <summary>
+    /// Text-scan extraction (matches this file's existing UI-rule pattern) of the command-type
+    /// names appearing as `case TypeName` (with or without a bound variable, or trailing `:`)
+    /// inside the `switch (cmd)` block of the named method.
+    /// </summary>
+    private static HashSet<string> ExtractSwitchCaseTypes(string sourceText, string methodSignature)
+    {
+        int methodStart = sourceText.IndexOf(methodSignature, StringComparison.Ordinal);
+        if (methodStart < 0) return new HashSet<string>();
+
+        int switchIdx = sourceText.IndexOf("switch (cmd)", methodStart, StringComparison.Ordinal);
+        if (switchIdx < 0) return new HashSet<string>();
+
+        int braceStart = sourceText.IndexOf('{', switchIdx);
+        int depth = 0;
+        int i = braceStart;
+        for (; i < sourceText.Length; i++)
+        {
+            if (sourceText[i] == '{') depth++;
+            else if (sourceText[i] == '}')
+            {
+                depth--;
+                if (depth == 0) break;
+            }
+        }
+        string switchBody = sourceText.Substring(braceStart, i - braceStart);
+
+        var caseRegex = new System.Text.RegularExpressions.Regex(@"case\s+(\w+)\b");
+        return caseRegex.Matches(switchBody)
+            .Select(m => m.Groups[1].Value)
+            .ToHashSet();
+    }
+
+    // ─────────────────────────────────────────────────────────────────
     // Helpers
     // ─────────────────────────────────────────────────────────────────
 

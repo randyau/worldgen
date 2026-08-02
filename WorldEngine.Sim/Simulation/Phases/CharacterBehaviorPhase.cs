@@ -827,6 +827,7 @@ public sealed class CharacterBehaviorPhase
             case ForgiveDebt:
             case Placate:
             case Defect:
+            case BuildImprovement:
                 CivTracker.Resolve(cmd, world, pending, _simCfg.SettlementNames);
                 break;
         }

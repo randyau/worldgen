@@ -53,6 +53,20 @@ public class SpotlightCommandTests
         return (loop, cmdQueue);
     }
 
+    /// <summary>
+    /// Polls for a condition instead of a fixed sleep — the fixed `Task.Delay(150)` this replaced
+    /// raced a background SimLoop thread and was flaky under full-suite parallel CPU contention
+    /// (passed reliably alone, intermittently failed under load). Polling short-circuits as soon
+    /// as the condition is true (fast in the common case) while tolerating far more contention
+    /// than a single fixed delay before timing out.
+    /// </summary>
+    private static async Task WaitUntil(Func<bool> condition, int timeoutMs = 5000, int pollMs = 5)
+    {
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        while (!condition() && sw.ElapsedMilliseconds < timeoutMs)
+            await Task.Delay(pollMs);
+    }
+
     private static Tier1Character MakeTier1(EntityId id, TileCoord loc) => new(
         id, loc,
         PersonalityVector.Default, AptitudeVector.Default, SkillVector.Default,
@@ -69,11 +83,11 @@ public class SpotlightCommandTests
         var (loop, cmdQueue) = MakeLoop(world);
         loop.Start();
         cmdQueue.Enqueue(new EnterSpotlight(character.Id));
-        await Task.Delay(150);
+        await WaitUntil(() => world.SpotlightCharacterId == character.Id);
         world.SpotlightCharacterId.Should().Be(character.Id, "sanity check: spotlight was entered");
 
         cmdQueue.Enqueue(new ExitSpotlight());
-        await Task.Delay(150);
+        await WaitUntil(() => world.SpotlightCharacterId is null);
         loop.Stop();
 
         world.SpotlightCharacterId.Should().BeNull();
@@ -91,10 +105,10 @@ public class SpotlightCommandTests
         var (loop, cmdQueue) = MakeLoop(world);
         loop.Start();
         cmdQueue.Enqueue(new EnterSpotlight(character.Id));
-        await Task.Delay(150);
+        await WaitUntil(() => world.SpotlightCharacterId == character.Id);
 
         cmdQueue.Enqueue(new SetSpotlightMoveIntent(target));
-        await Task.Delay(150);
+        await WaitUntil(() => world.SpotlightIntent?.MoveTarget == target);
         loop.Stop();
 
         world.SpotlightIntent.Should().NotBeNull();
@@ -111,10 +125,10 @@ public class SpotlightCommandTests
         var (loop, cmdQueue) = MakeLoop(world);
         loop.Start();
         cmdQueue.Enqueue(new EnterSpotlight(character.Id));
-        await Task.Delay(150);
+        await WaitUntil(() => world.SpotlightCharacterId == character.Id);
 
         cmdQueue.Enqueue(new SetSpotlightGoalIntent(GoalType.FoundCity));
-        await Task.Delay(150);
+        await WaitUntil(() => world.SpotlightIntent?.GoalIntent == GoalType.FoundCity);
         loop.Stop();
 
         world.SpotlightIntent.Should().NotBeNull();
@@ -133,10 +147,10 @@ public class SpotlightCommandTests
         var (loop, cmdQueue) = MakeLoop(world);
         loop.Start();
         cmdQueue.Enqueue(new EnterSpotlight(character.Id));
-        await Task.Delay(150);
+        await WaitUntil(() => world.SpotlightCharacterId == character.Id);
 
         cmdQueue.Enqueue(new SetSpotlightSocialIntent(other.Id));
-        await Task.Delay(150);
+        await WaitUntil(() => world.SpotlightIntent?.SocialTarget == other.Id);
         loop.Stop();
 
         world.SpotlightIntent.Should().NotBeNull();
@@ -151,7 +165,10 @@ public class SpotlightCommandTests
         loop.Start();
 
         cmdQueue.Enqueue(new SetSpotlightMoveIntent(new TileCoord(1, 1)));
-        await Task.Delay(150);
+        // No positive state change to poll for here (we're asserting the command was a no-op) —
+        // instead wait for the loop to have actually ticked forward, proving it had the
+        // opportunity to process the queued command before we assert it didn't.
+        await WaitUntil(() => world.CurrentTick > 10);
         loop.Stop();
 
         world.SpotlightIntent.Should().BeNull("a move-intent command with no active spotlight must not create one");

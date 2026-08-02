@@ -111,6 +111,12 @@ public class ClimateDriftTests
         var seen = new HashSet<float>();
         for (int y = 0; y < 100; y++)
         {
+            // RunTick reads world.CurrentYear for the cyclical term but never advances it itself —
+            // that's normally SimLoop's job (SimLoop.cs increments CurrentYear once per year).
+            // Without this, CurrentYear stays frozen at its initial value for every iteration, the
+            // sine term never moves, and the test could never have passed once the secular trend
+            // saturated — this was a test bug, not a sim bug.
+            world.CurrentYear = y + 1;
             world.CurrentSeason = Season.Spring;
             phase.RunTick(world, new List<PendingEvent>(), isAnnualTick: true);
             seen.Add(world.GlobalTemperatureAnomaly);
