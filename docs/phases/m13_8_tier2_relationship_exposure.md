@@ -39,7 +39,34 @@ into crystallization.
 
 ## Phase sequence
 
-- **13.8.0 — Tier2 as an eligible target for more Tier1 relationship actions.**
+- **13.8.0 — Harden Tier1-only civ-level isolation (regression guard, built and merged before
+  13.8.1 enables Tier2 targeting).**
+  Most rivalry-driven effects operate at civ level (war, alliance, territory), while a Tier2 is
+  just a high-ranking specialist/citizen — it shouldn't be able to move those civ-level dials.
+  Auditing every consumer of `IsRival` found this is *already* true today, but only as an
+  accident of each loop's type filter, never as a deliberate, protected invariant:
+  - War hostility check (`UtilityScorer.cs` ~322-324) — `if (e2 is not Tier1Character enemy ...)
+    continue;`
+  - Fear-based War/Raid dampening (`UtilityScorer.FearDampening`, ~827-833) — same guard on the
+    rival lookup
+  - Dominance goal target search (`GoalManager.FindNearbyRival`) and Alliance goal exclusion
+    (`FindNearbyNeutral`) — both iterate `e is Tier1Character other`
+  - Territorial pressure gate (`CharacterBehaviorPhase.cs` ~939-945) — same guard
+  Before 13.8.1 relaxes `ResolveRivalry`/`ResolvePlacate`'s Tier1-only target guard (the one
+  change actually required to let a Tier2 become a rival at all), make each of these five sites'
+  Tier1-only behavior explicit and protected:
+  - Add a `// Tier1-only by design — see docs/phases/m13_8_tier2_relationship_exposure.md` comment
+    at each of the 5 sites.
+  - Add a regression test (e.g. `Tier2RivalryIsolationTests.cs`) that constructs a Tier1 with a
+    Tier2 rival and asserts none of War-eligibility, `FearDampening`, `FindNearbyRival`,
+    `FindNearbyNeutral`, or the territorial-pressure gate react to it — one test file proving the
+    structural invariant holds, mirroring the `ArchitectureRuleTests`-style "prove an invariant,
+    don't just trust the current code shape" pattern already used this milestone for command
+    dispatch (see `feedback_command_dispatch_wiring` memory).
+  Pure hardening of already-correct behavior — no new mechanic, no balance risk — so this can ship
+  independently and doesn't block on the rest of 13.8's design settling.
+
+- **13.8.1 — Tier2 as an eligible target for more Tier1 relationship actions.**
   Extend `UtilityScorer`'s candidate loops for `Bond`, `DeclareRivalry`, and `Placate` to accept a
   co-located Tier2 candidate, mirroring the existing `GrantAid`/`ForgiveDebt` Tier2 branch exactly
   (same `GetEntitiesInRadius` scan, same "is this a valid target" checks). Extend the matching
@@ -55,7 +82,7 @@ into crystallization.
   needs to be built. Grief already has a working Tier2 precedent to mirror (`GoalManager.
   ApplyGriefToMourners` already notifies Tier1 mourners of a Tier2 death).
 
-- **13.8.1 — Notability: relationship-exposure tracking that feeds crystallization.**
+- **13.8.2 — Notability: relationship-exposure tracking that feeds crystallization.**
   Add a lightweight counter on `Tier2Character` (mirrors the existing `LastCreateCompletedTick`/
   `LastNotableWorkTick` per-character-field pattern — touched only when relevant, never scanned
   population-wide) bumped whenever the character is the target of a Bond/Rivalry/Placate/GrantAid/
@@ -66,7 +93,7 @@ into crystallization.
   looking at what keeps the *existing* Status-only crystallization rate (already balance-tested)
   from being swamped.
 
-- **13.8.2 — Balance & performance validation.**
+- **13.8.3 — Balance & performance validation.**
   Multi-seed sweep (same 42/777/9999 convention as the M13 lifespan-fix pass) confirming: (a)
   `CharacterCrystallized` rate increases moderately, not to a runaway "everyone gets promoted"
   regime that would balloon Tier1 population back toward Tier2 scale; (b) wall-clock time for a
@@ -79,14 +106,19 @@ into crystallization.
 
 ## Open design notes carried into implementation
 
+- **Resolved 2026-08-03 by 13.8.0 above:** whether Tier2 rivalry needs special-casing to stay out
+  of civ-level war/alliance/territory effects. It doesn't need new isolation work — every consumer
+  already filters to `Tier1Character` incidentally — but that incidental protection needs to become
+  an explicit, tested invariant before 13.8.1 makes Tier2 a valid rivalry target, so a future
+  refactor can't quietly remove a type filter that's secretly load-bearing.
 - Which exact actions besides Bond/Rivalry/Placate are worth extending to Tier2 targets is a
-  judgment call at 13.8.0 build time — `DeclareRivalry` and `Placate` in particular raise the
+  judgment call at 13.8.1 build time — `DeclareRivalry` and `Placate` in particular raise the
   question of whether a Tier2 "loses" a rivalry the way a Tier1 would (they have no goals/utility
   scoring to respond with a counter-action), so a Tier2-targeted Rivalry may need to resolve more
   passively than a Tier1-Tier1 one (e.g. it can be Placated by the Tier1 side but never
   Tier2-initiated-Feud-escalated, since escalation today is driven by the rival re-declaring, which
   requires a scorer Tier2 doesn't have).
-- 13.8.1's Notability field is intentionally NOT the same as `Needs.Status` (already an existing,
+- 13.8.2's Notability field is intentionally NOT the same as `Needs.Status` (already an existing,
   decaying, settlement/trade-driven need feeding `TryCrystallize` today) — keep them separate so
   "currently prominent in the community" and "was recently touched by Tier1 drama" stay legible as
   distinct signals in telemetry, even though both currently gate the same promotion roll.
