@@ -55,6 +55,23 @@ namespace WorldEngine.Tests.Balance;
 /// Bands widened accordingly below. Whether this rate is itself something to brake (a Notability/
 /// crystallization-rate look, or a marriage-specific cooldown) rather than just re-observe is exactly
 /// what M13.8.2 (Notability) and M13.8.3 (balance/perf validation) are for — not decided here.
+///
+/// **2026-08-03 Fear/Placate rebalance:** diagnosed why RivalsReconciled/CharacterEstranged/
+/// OathBroken had never fired in ANY calibration run since M13.5, not just a small-sample
+/// artifact — `FearConfig.PlacateFearThreshold` (0.4) was structurally unreachable by a same-power
+/// rivalry (max achievable Fear was `RivalryBaseFearIncrement` 0.1, +`FeudFearIncrement` 0.15 =
+/// 0.25) and *always* unreachable by a Tier2 rivalry (target power is always 0 — see
+/// `CivTracker.TargetPower`), so `Placate` never got scored as a candidate action for either case.
+/// Rebalanced: `PlacateFearThreshold` 0.4→0.05 (any formed rivalry now qualifies immediately),
+/// `PlacateFearReduction` 0.3→0.05 (several successful placations drain a rivalry instead of one,
+/// giving Trust room to climb before Fear hits 0 and blocks further Placate resolution),
+/// `PlacateTrustGain` 0.1→0.2 (climbs to `ReconciliationTrustThreshold` in ~2 placations for a
+/// plain rivalry, ~4 for a Feud — deliberately more work for the more escalated case). Re-observed:
+/// RivalryPlacated 51-154 (was 0-3), RivalsReconciled 7-18 (was 0 in every prior run) — the
+/// diagnosed sink now actually engages. CharacterEstranged/OathBroken remain 0 — these gate on
+/// unrelated mechanics (marriage-Trust hardship drift; a narrow Tier1-Tier1-debt-vs-war-target
+/// intersection) that weren't part of this diagnosis, and are left as a separate, lower-confidence
+/// follow-up rather than adjusted speculatively here.
 /// </summary>
 [Trait("Category", "Balance")]
 public class M13RelationshipEventBalanceTests
@@ -102,11 +119,19 @@ public class M13RelationshipEventBalanceTests
         // grew substantially now that characters survive long enough to accumulate real rivalry
         // history; floors moved off 0 since all 3 seeds now reliably form at least some rivalries.
         [EventType.RivalryFormed]          = new Band(10, 60),
-        [EventType.RivalryPlacated]        = new Band(0, 10),
+        // Re-calibrated 2026-08-03 with the Fear/Placate rebalance (see class doc): Placate is now
+        // reachable for any formed rivalry instead of only steep power-mismatches, so it fires far
+        // more — observed 51-154 (was 0-3).
+        [EventType.RivalryPlacated]        = new Band(20, 220),
         [EventType.RivalryEscalatedToFeud] = new Band(10, 55),
 
-        // Known gap (see class doc) — ceiling-only, no floor asserted yet; no evidence these fire at all.
-        [EventType.RivalsReconciled]       = new Band(0, 20),
+        // Re-calibrated 2026-08-03: the Fear/Placate rebalance above closed the gap that kept this
+        // at 0 in every prior run (see class doc) — observed 7-18, now a real floor+ceiling instead
+        // of a ceiling-only "no evidence this fires" band.
+        [EventType.RivalsReconciled]       = new Band(3, 30),
+        // Still 0 in all 3 seeds — gates on unrelated mechanics (marriage-Trust hardship drift for
+        // Estrangement; a narrow Tier1-Tier1-debt-vs-war-target intersection for OathBroken) that
+        // weren't part of the Fear/Placate diagnosis. Left as ceiling-only pending a separate look.
         [EventType.CharacterEstranged]     = new Band(0, 20),
         [EventType.OathBroken]             = new Band(0, 20),
     };

@@ -576,7 +576,12 @@ public static partial class CivTracker
         // M13 13.5: Reconciliation — Placate itself never ended a rivalry (13.1 deferred that
         // deliberately); once enough placation has cooled Fear and warmed Trust past both
         // thresholds, the rivalry (and any Feud it escalated into) ends outright here.
-        bool reconciles = newFear <= cfg.ReconciliationFearThreshold && newTrust >= cfg.ReconciliationTrustThreshold;
+        // Epsilon guards the boundary against float accumulation noise — a rivalry landing exactly
+        // on the threshold (e.g. after repeated Placate additions/subtractions) shouldn't fail
+        // reconciliation over a ~1e-7 rounding difference.
+        const float thresholdEpsilon = 1e-4f;
+        bool reconciles = newFear <= cfg.ReconciliationFearThreshold + thresholdEpsilon
+                       && newTrust >= cfg.ReconciliationTrustThreshold - thresholdEpsilon;
         var newFlags = reconciles
             ? rel.Flags & ~(RelationshipFlags.IsRival | RelationshipFlags.IsFeud)
             : rel.Flags;

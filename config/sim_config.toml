@@ -1017,10 +1017,16 @@ oath_break_trust_penalty = 0.4  # M13 13.5: Trust lost on the violated edge when
 [fear]
 rivalry_base_fear_increment = 0.1   # Fear added when a rivalry first forms (matches the original hardcoded value)
 rivalry_fear_power_scale    = 0.5   # extra Fear from the target's Combat/Aggression edge over the declarer's
-placate_fear_threshold      = 0.4   # minimum Fear toward an existing rival before appeasement becomes attractive
+# 2026-08-03 rebalance: old threshold (0.4) was unreachable by a same-power or Tier2 rivalry
+# (max achievable Fear was 0.25 with Feud) — Placate never got scored, so RivalsReconciled/
+# CharacterEstranged/OathBroken never fired in any balance run. Lowered so any formed rivalry
+# qualifies immediately; reduction lowered in tandem so several placations drain it (not one),
+# giving trust_gain room to climb to reconciliation_trust_threshold before Fear hits 0 and blocks
+# further Placate resolution.
+placate_fear_threshold      = 0.05  # minimum Fear toward an existing rival before appeasement becomes attractive
 placate_aggression_max      = 0.4   # only low-Aggression characters placate; aggressive ones confront despite fear
-placate_fear_reduction      = 0.3   # Fear reduced per successful Placate
-placate_trust_gain          = 0.1   # Trust nudge from successful placation
+placate_fear_reduction      = 0.05  # Fear reduced per successful Placate — several placations drain a rivalry, not one
+placate_trust_gain          = 0.2   # Trust nudge from successful placation
 fear_war_dampen_min         = 0.3   # War/Raid score multiplier floor when maximally feared of someone in the target civ
 reconciliation_fear_threshold  = 0.1   # M13 13.5: Placate ends the rivalry outright once Fear drops to/below this...
 reconciliation_trust_threshold = 0.3   # ...and Trust has risen to/above this

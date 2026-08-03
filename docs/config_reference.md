@@ -733,10 +733,10 @@ _Natural shelter recovery per tick when NOT on a settlement tile, by biome. Dens
 |-----|-------|-------------|-------------|
 | `rivalry_base_fear_increment` | `0.1` | `SimConfig.Fear.RivalryBaseFearIncrement` | Fear added when a rivalry first forms (matches the original hardcoded value) |
 | `rivalry_fear_power_scale` | `0.5` | `SimConfig.Fear.RivalryFearPowerScale` | extra Fear from the target's Combat/Aggression edge over the declarer's |
-| `placate_fear_threshold` | `0.4` | `SimConfig.Fear.PlacateFearThreshold` | minimum Fear toward an existing rival before appeasement becomes attractive |
+| `placate_fear_threshold` | `0.05` | `SimConfig.Fear.PlacateFearThreshold` | minimum Fear toward an existing rival before appeasement becomes attractive |
 | `placate_aggression_max` | `0.4` | `SimConfig.Fear.PlacateAggressionMax` | only low-Aggression characters placate; aggressive ones confront despite fear |
-| `placate_fear_reduction` | `0.3` | `SimConfig.Fear.PlacateFearReduction` | Fear reduced per successful Placate |
-| `placate_trust_gain` | `0.1` | `SimConfig.Fear.PlacateTrustGain` | Trust nudge from successful placation |
+| `placate_fear_reduction` | `0.05` | `SimConfig.Fear.PlacateFearReduction` | Fear reduced per successful Placate — several placations drain a rivalry, not one |
+| `placate_trust_gain` | `0.2` | `SimConfig.Fear.PlacateTrustGain` | Trust nudge from successful placation |
 | `fear_war_dampen_min` | `0.3` | `SimConfig.Fear.FearWarDampenMin` | War/Raid score multiplier floor when maximally feared of someone in the target civ |
 | `reconciliation_fear_threshold` | `0.1` | `SimConfig.Fear.ReconciliationFearThreshold` | M13 13.5: Placate ends the rivalry outright once Fear drops to/below this... |
 | `reconciliation_trust_threshold` | `0.3` | `SimConfig.Fear.ReconciliationTrustThreshold` | ...and Trust has risen to/above this |
