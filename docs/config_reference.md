@@ -348,6 +348,10 @@ Edit values in `sim_config.toml`; all keys live there without recompiling.
 | `civ_birth_chance_per_season` | `0.01` | `SimConfig.Character.CivBirthChancePerSeason` | 1% per year at min-pop; keeps character count manageable for performance |
 | `territorial_aggression_min` | `0.55` | `SimConfig.Character.TerritorialAggressionMin` | chars below this aggression don't apply pressure |
 | `territorial_trust_drain` | `0.025` | `SimConfig.Character.TerritorialTrustDrain` | trust lost per tick; ~-0.1 in 1 season → rivalry within a year |
+| `same_civ_familiarity_base_rate` | `0.0015` | `SimConfig.Character.SameCivFamiliarityBaseRate` | always-on per-tick companionship growth |
+| `same_civ_warmth_bonus_rate` | `0.003` | `SimConfig.Character.SameCivWarmthBonusRate` | extra growth × avg(Sociability, Compassion) |
+| `same_civ_friction_base_rate` | `0.0015` | `SimConfig.Character.SameCivFrictionBaseRate` | always-on per-tick friction (petty jealousy exists even in compatible pairs) |
+| `same_civ_friction_rate` | `0.014` | `SimConfig.Character.SameCivFrictionRate` | extra drain × avg(\|Ambition diff\|, \|Aggression diff\|) |
 | `beast_encounter_aggression_min` | `0.3` | `SimConfig.Character.BeastEncounterAggressionMin` | beasts below this aggression are passive toward characters |
 | `beast_encounter_chance` | `0.15` | `SimConfig.Character.BeastEncounterChance` | probability of attack per shared tick (~every 7 ticks) |
 | `beast_damage_multiplier` | `0.3` | `SimConfig.Character.BeastDamageMultiplier` | beast.Strength × this = damage dealt to character |
@@ -700,6 +704,9 @@ _Natural shelter recovery per tick when NOT on a settlement tile, by biome. Dens
 | `newborn_family_loyalty` | `0.8` | `SimConfig.Family.NewbornFamilyLoyalty` | starting Loyalty for a newborn's Family membership |
 | `kin_in_enemy_civ_war_dampen_min` | `0.2` | `SimConfig.Family.KinInEnemyCivWarDampenMin` | War/Raid score multiplier floor when a Family relative lives in the target civ |
 | `estrangement_trust_threshold` | `-0.3` | `SimConfig.Family.EstrangementTrustThreshold` | M13 13.5: annual check — married-edge Trust at/below this ends the marriage |
+| `marriage_hardship_need_threshold` | `0.4` | `SimConfig.Family.MarriageHardshipNeedThreshold` | either spouse's Food/Safety below this counts as hardship |
+| `marriage_hardship_trust_drain` | `0.16` | `SimConfig.Family.MarriageHardshipTrustDrain` | annual Trust drain on the marriage edge during hardship |
+| `childbirth_trust_gain` | `0.05` | `SimConfig.Family.ChildbirthTrustGain` | marital Trust bump per successful childbirth |
 
 ## `[debt]` {#debt}
 

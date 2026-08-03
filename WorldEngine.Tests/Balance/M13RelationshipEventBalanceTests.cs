@@ -19,22 +19,31 @@ namespace WorldEngine.Tests.Balance;
 /// (via <c>EventStore.CountEventsOfType</c>) rather than year-300 snapshot metrics, since these are
 /// per-history-tallies, not point-in-time world state.
 ///
-/// Calibration run (2026-08-02, post M13 13.5 dispatch-bug fix): seeds 42/777/9999, 300 years,
-/// default config. Cumulative counts observed: CharacterMarried 0-4, CharacterBorn 136-219,
-/// DebtIncurred 918-2113, DebtForgiven 308-689, CharacterDefected 0-7, CharacterGrieved 14-25.
-/// RivalryFormed/RivalryPlacated/RivalsReconciled/RivalryEscalatedToFeud/CharacterEstranged/
-/// OathBroken were all 0 across all 3 seeds — see rationale below the bands.
+/// Calibration run (2026-08-02, after M13 13.6's same-civ Trust economy pass — see
+/// docs/phases/archive/m13_generational_domestic_drama.md): seeds 42/777/9999, 300 years, default
+/// config. Cumulative counts observed: CharacterMarried 0-4, CharacterBorn 141-212,
+/// DebtIncurred 938-1987, DebtForgiven 274-696, CharacterDefected 0-5, CharacterGrieved 18-35,
+/// RivalryFormed 1-37, RivalryPlacated 0-3, RivalryEscalatedToFeud 1-32.
+/// RivalsReconciled/CharacterEstranged/OathBroken remained 0 across all 3 seeds — see rationale
+/// below the bands.
 ///
-/// **Known gap (not yet fixed):** Rivalry-derived mechanics require two Tier1 (named) characters
-/// to personally interact — either share a rivalry needing Trust to drift below -0.4 (mostly a
-/// cross-civ dynamic), or hold a cross-civ Debt/Trust relationship. Tier1 characters are rare
-/// (single digits to ~15 alive at once) and largely stationary once settled; cross-civ *personal*
-/// contact is much rarer than the aid-a-hungry-townsperson path 13.5 unblocked (which only needed
-/// same-civ contact, reachable via the Tier2 companion shortcut). Getting these off zero requires
-/// either longer runs, more Tier1 population, or deliberately more Tier1 cross-civ travel — out of
-/// scope for this pass. These bands assert a ceiling only (catch runaway firing) and do not assert
-/// a floor (catch total absence) — do NOT read the ceiling-only assertion as "this is fine forever";
-/// revisit once cross-civ Tier1 contact frequency is addressed.
+/// **Known gap (not yet fixed):** tracing why Estrangement stayed at 0 even after tripling the
+/// marriage-hardship sink (identical output before/after — the sim is deterministic, so identical
+/// output means the branch never ran, not that it's just weak) led to a much bigger, separate
+/// finding: `Tier1Character.AgeSeason` increments once per TICK (confirmed by
+/// `CharacterSimConfig.Tier2MaxAgeSeasonsMin`'s own "~38 years at 16 ticks/year" comment), but the
+/// "human" ancestry (`config/ancestries.toml`) sets `min/max_lifespan_seasons = 60/200` — 3.75 to
+/// 12.5 *real* years, not enough time for a marriage (or most slow-building relationship
+/// mechanics) to develop before natural death. `FamilyConfig.MarriageMinAgeSeasons=60` (3.75y) and
+/// `CharacterSimConfig.MinRulerAgeSeasons=32` (2y) corroborate the same units mismatch. Other
+/// ancestries (elf 50-125y, dwarf 20-50y, orc 25-75y) look correctly scaled for 16 ticks/year,
+/// suggesting `TicksPerSeasonalChange` was raised at some point without rescaling every
+/// `*Seasons`-suffixed duration constant to match — a cross-cutting fix well beyond a Trust-economy
+/// pass, flagged for a dedicated follow-up rather than expanded into here. RivalryFormed/
+/// RivalryPlacated/RivalryEscalatedToFeud went from "always exactly 0" to "fires, but seed 42's
+/// count (1) is too close to 0 to safely assert a nonzero floor yet" — ceilings tightened to the
+/// new observed range, floor still 0 pending the lifespan fix widening the sample. RivalsReconciled/
+/// CharacterEstranged/OathBroken remain fully ceiling-only (no evidence they can fire yet at all).
 /// </summary>
 [Trait("Category", "Balance")]
 public class M13RelationshipEventBalanceTests
@@ -70,11 +79,16 @@ public class M13RelationshipEventBalanceTests
         // sufficiently-trusted foreign confidant — so a wide low-count band, no assumed floor.
         [EventType.CharacterDefected] = new Band(0, 20),
 
-        // Known gap (see class doc) — ceiling-only, no floor asserted yet.
-        [EventType.RivalryFormed]          = new Band(0, 30),
-        [EventType.RivalryPlacated]        = new Band(0, 30),
+        // M13 13.6 same-civ Trust economy pass unblocked these (previously always exactly 0).
+        // Observed 1-37 / 0-3 / 1-32 across 3 seeds — wide variance from Tier1 population sparsity,
+        // so no floor yet (seed 42's RivalryFormed=1 is too close to 0 to assert reliably), but the
+        // ceiling now reflects real usage instead of "any nonzero value is already anomalous".
+        [EventType.RivalryFormed]          = new Band(0, 55),
+        [EventType.RivalryPlacated]        = new Band(0, 10),
+        [EventType.RivalryEscalatedToFeud] = new Band(0, 48),
+
+        // Known gap (see class doc) — ceiling-only, no floor asserted yet; no evidence these fire at all.
         [EventType.RivalsReconciled]       = new Band(0, 20),
-        [EventType.RivalryEscalatedToFeud] = new Band(0, 20),
         [EventType.CharacterEstranged]     = new Band(0, 20),
         [EventType.OathBroken]             = new Band(0, 20),
     };

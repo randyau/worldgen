@@ -213,6 +213,23 @@ public sealed class CharacterSimConfig
     public float TerritorialAggressionMin { get; set; } = 0.55f; // aggression threshold to apply pressure
     public float TerritorialTrustDrain    { get; set; } = 0.025f; // trust lost per tick; ~-0.1 in 4 ticks (1 season)
 
+    // M13 13.6 — same-civ Trust economy. Cross-civ contact has always had both a source (first-
+    // meeting/AllyWith) and a sink (cultural distance/personality mismatch/territorial pressure)
+    // for personal Trust; ordinary same-civ Tier1-Tier1 pairs had neither — Trust sat frozen at 0
+    // forever unless an explicit command (Marriage, GrantAid, Placate) touched it, and those
+    // commands themselves mostly required Trust already being at a level nothing built. This pair
+    // is the general "companionship" source/sink for co-located same-civ pairs: compatible
+    // personalities (high Sociability/Compassion) drift toward Bond/Marriage eligibility,
+    // competitive ones (mismatched Ambition/Aggression) drift toward same-civ Rivalry/Feud
+    // eligibility — both existing pipelines, unblocked rather than replaced. Also the mechanism
+    // that finally lets Estrangement move a married couple's Trust (they're a co-located same-civ
+    // pair too), and incidentally gives parent-child pairs an organic Trust edge for the first
+    // time (they're commonly co-located same-civ pairs as well).
+    public float SameCivFamiliarityBaseRate  { get; set; } = 0.0015f; // always-on per-tick companionship growth
+    public float SameCivWarmthBonusRate      { get; set; } = 0.003f;  // extra growth × avg(Sociability, Compassion)
+    public float SameCivFrictionBaseRate     { get; set; } = 0.0015f; // always-on per-tick friction (petty jealousy exists even in compatible pairs)
+    public float SameCivFrictionRate         { get; set; } = 0.014f;  // extra drain × avg(|Ambition diff|, |Aggression diff|)
+
     // Beast encounters — predators on the same tile can attack characters
     public float BeastEncounterAggressionMin { get; set; } = 0.3f;  // beasts below this are passive
     public float BeastEncounterChance        { get; set; } = 0.15f; // probability of attack per shared tick

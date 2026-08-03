@@ -422,6 +422,16 @@ civ_birth_chance_per_season = 0.01  # 1% per year at min-pop; keeps character co
 territorial_aggression_min    = 0.55  # chars below this aggression don't apply pressure
 territorial_trust_drain       = 0.025 # trust lost per tick; ~-0.1 in 1 season → rivalry within a year
 
+# M13 13.6 — same-civ Trust economy: co-located same-civ Tier1 pairs previously had no source or
+# sink at all (only cross-civ pairs did). Warmth (Sociability/Compassion) grows Trust toward Bond/
+# Marriage/Debt eligibility; clash (Ambition/Aggression mismatch) drains it toward the same-civ
+# Rivalry/Feud threshold. Also unblocks Estrangement (a married edge is a co-located same-civ pair
+# too) and incidentally gives parent-child pairs an organic Trust edge.
+same_civ_familiarity_base_rate = 0.0015 # always-on per-tick companionship growth
+same_civ_warmth_bonus_rate     = 0.003  # extra growth × avg(Sociability, Compassion)
+same_civ_friction_base_rate    = 0.0015 # always-on per-tick friction (petty jealousy exists even in compatible pairs)
+same_civ_friction_rate         = 0.014  # extra drain × avg(|Ambition diff|, |Aggression diff|)
+
 # Beast encounters: predatory beasts on the same tile can attack wandering characters
 beast_encounter_aggression_min = 0.3  # beasts below this aggression are passive toward characters
 beast_encounter_chance         = 0.15 # probability of attack per shared tick (~every 7 ticks)
@@ -976,6 +986,13 @@ trait_inheritance_weight        = 0.4   # 0 = pure ancestry bias, 1 = pure paren
 newborn_family_loyalty          = 0.8   # starting Loyalty for a newborn's Family membership
 kin_in_enemy_civ_war_dampen_min = 0.2   # War/Raid score multiplier floor when a Family relative lives in the target civ
 estrangement_trust_threshold    = -0.3  # M13 13.5: annual check — married-edge Trust at/below this ends the marriage
+
+# M13 13.6 — marriage-specific hardship sink/childbirth source, on top of the general same-civ
+# companionship drift ([character] same_civ_*). Gives Estrangement a distinct "poverty strained
+# the marriage" cause, and lets shared joy (childbirth) reinforce the bond, not just Belonging.
+marriage_hardship_need_threshold = 0.4  # either spouse's Food/Safety below this counts as hardship
+marriage_hardship_trust_drain    = 0.16 # annual Trust drain on the marriage edge during hardship
+childbirth_trust_gain            = 0.05 # marital Trust bump per successful childbirth
 
 [debt]
 aid_trust_threshold     = 0.4   # granter must already trust the recipient this much before offering aid

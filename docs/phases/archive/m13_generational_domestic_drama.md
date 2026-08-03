@@ -168,3 +168,69 @@ invariants in `config/balance_invariants.toml`:
 Both are legitimate re-calibrations per the project's own procedure (a mechanic change
 deliberately shifting a metric → re-run the sweep, update the band, document why), not band
 weakening to dodge a real regression — see each band's TOML rationale field.
+
+## 13.6 — Same-civ Trust economy (2026-08-02)
+
+Post-completion reflection surfaced a systemic gap underneath the balance pass above: the sources
+and sinks for `RelationshipEdge.Trust` were never modeled out as a deliberate economy — mechanics
+were added one at a time (marriage, Debt, Rivalry, Estrangement) each assuming Trust could reach
+the levels they gate on, without anything actually producing those levels for ordinary same-civ
+Tier1-Tier1 pairs. Audit:
+
+- **Cross-civ contact** already had both a source (first-meeting ancestry modifier, `AllyWith`
+  +0.3) and a sink (`ApplyPassiveDrains`'s cultural-distance/personality-mismatch drain,
+  `ApplyTerritorialPressure`, war declaration) — reasonably well modeled already.
+- **Same-civ Tier1-Tier1 pairs had neither.** Trust sat frozen at its 0 default forever unless an
+  explicit command touched it (Marriage +0.2, GrantAid +0.15, Placate +0.1) — and those commands
+  themselves mostly required Trust already being at a level (Bond's 0.5, Debt's 0.4) nothing ever
+  built. This is why Debt needed yesterday's Tier2-companion shortcut to become reachable at all,
+  and it's the same reason Estrangement (a married edge is a same-civ pair too) and same-civ
+  Rivalry/Feud (the roadmap's "romantic, professional, succession disputes *within* a family" —
+  13.1/13.5 instead reused the pre-existing cross-civ-oriented Rivalry system, which same-civ pairs
+  could never enter) were both structurally blocked.
+
+**Fix — modeled a small, explicit source/sink pair per interaction type:**
+- `CharacterBehaviorPhase.ApplySameCivFamiliarity` (new, mirrors `ApplyPassiveDrains`'s per-tick
+  co-located-pair structure): **source** — "warmth" growth scaled by average Sociability/Compassion
+  (`SameCivFamiliarityBaseRate` + `SameCivWarmthBonusRate`); **sink** — "clash" drain scaled by
+  Ambition/Aggression mismatch, plus a small always-on baseline (`SameCivFrictionBaseRate` +
+  `SameCivFrictionRate`) so even compatible pairs feel some friction. Applies to any co-located
+  same-civ pair (excludes only fully-escalated Feud edges) — this is also what finally lets a
+  married couple's Trust move at all, and incidentally gives parent-child pairs an organic Trust
+  edge for the first time (they're commonly co-located same-civ pairs too), without any dedicated
+  parent-child code.
+- `FamilyConfig.MarriageHardshipNeedThreshold`/`MarriageHardshipTrustDrain` (new, in
+  `CheckMarriageEstrangement`): a marriage-specific **sink** — poverty (either spouse's Food/Safety
+  below threshold) drains marital Trust annually, giving Estrangement a distinct "hard times tore
+  them apart" cause beyond baseline personality drift.
+- `FamilyConfig.ChildbirthTrustGain` (new, in `TrySpawnFamilyBirths`): a marriage-specific
+  **source** — childbirth nudges marital Trust up too, not just Belonging.
+
+**Result** (3 seeds × 300 years, calibrated iteratively — see tuning history in commit history):
+`RivalryFormed` 0→1-37, `RivalryEscalatedToFeud` 0→1-32, `RivalryPlacated` 0→0-3, `CharacterMarried`
+improved (more organic same-civ formation, less reliant on lucky cross-civ ancestry rolls).
+`RivalsReconciled`/`CharacterEstranged`/`OathBroken` remained at 0 even after tripling the hardship
+drain and raising its threshold — since the sim is fully deterministic, *identical* output across
+different config values meant the hardship branch never executed at all, not that it was just weak.
+
+**Bigger finding while chasing that:** tracing why led to `Tier1Character.AgeSeason` incrementing
+once per **tick** (confirmed by `CharacterSimConfig.Tier2MaxAgeSeasonsMin`'s own "~38 years at 16
+ticks/year" comment) combined with the "human" ancestry's `min/max_lifespan_seasons = 60/200`
+(`config/ancestries.toml`) — 3.75 to 12.5 *real* years, nowhere near enough time for a marriage (or
+most slow-building relationship mechanics) to develop before natural death.
+`FamilyConfig.MarriageMinAgeSeasons=60` (3.75y) and `CharacterSimConfig.MinRulerAgeSeasons=32` (2y)
+corroborate the same units mismatch. Other ancestries (elf 50-125y, dwarf 20-50y, orc 25-75y) look
+correctly scaled for 16 ticks/year, suggesting `TicksPerSeasonalChange` was raised at some point
+(likely from 1 to 4, i.e. 4→16 ticks/year) without rescaling every `*Seasons`-suffixed duration
+constant to match. **Not fixed this pass** — a cross-cutting change (touches every `*Seasons`
+config across `config/sim_config.toml` and `config/ancestries.toml`, plus every existing balance
+invariant that would need re-recalibrating afterward) well beyond a Trust-economy pass. Flagged for
+a dedicated follow-up. This is very likely the dominant root cause behind most of this session's
+"mechanic technically works but almost never fires" findings — Tier1 characters (the humans among
+them, at least) may simply not live long enough for slow-accumulating relationship mechanics to
+matter.
+
+New tests: `WorldEngine.Tests/Unit/SameCivTrustEconomyTests.cs` (5 unit tests — source/sink
+movement, cross-civ isolation, Feud exclusion, hardship-driven Estrangement, no-hardship no-op).
+`M13RelationshipEventBalanceTests.cs` bands updated to reflect the newly-unblocked Rivalry/Feud
+reality.

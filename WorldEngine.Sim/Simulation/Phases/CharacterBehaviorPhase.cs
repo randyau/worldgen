@@ -69,6 +69,7 @@ public sealed class CharacterBehaviorPhase
                 EmitSpiralEvent(c, pending);
             ApplyTerritorialPressure(c, world, tick);
             ApplyPassiveDrains(c, world);
+            ApplySameCivFamiliarity(c, world);
             CheckBeastEncounters(c, world, pending, tick);
             // Catch wound death from beast/battle damage accumulated this tick
             if (c.IsAlive && c.Health <= 0)
@@ -189,6 +190,13 @@ public sealed class CharacterBehaviorPhase
 
             world.Entities.Add(child);
 
+            // M13 13.6 — childbirth milestone source: shared joy reinforces the marriage, not just
+            // the individual Belonging bump above.
+            world.Relationships.Upsert(edge with
+            {
+                Trust = Math.Min(1f, edge.Trust + famCfg.ChildbirthTrustGain)
+            });
+
             var payload = JsonSerializer.Serialize(new CharacterBornPayload(
                 child.Id.Value, child.Identity.Name, child.Identity.Epithet,
                 child.Personality.Ambition, child.Personality.Aggression,
@@ -216,11 +224,23 @@ public sealed class CharacterBehaviorPhase
         {
             if (world.GetEntity(edge.From) is not Tier1Character a || !a.IsAlive) continue;
             if (world.GetEntity(edge.To) is not Tier1Character b || !b.IsAlive) continue;
-            if (edge.Trust > famCfg.EstrangementTrustThreshold) continue;
 
-            world.Relationships.Upsert(edge with
+            // M13 13.6 — hardship sink: poverty strains a marriage on top of whatever the general
+            // same-civ companionship drift (ApplySameCivFamiliarity) already did this year, giving
+            // Estrangement a distinct "hard times tore them apart" cause, not just baseline
+            // personality mismatch.
+            bool hardship = a.Needs.Food < famCfg.MarriageHardshipNeedThreshold || a.Needs.Safety < famCfg.MarriageHardshipNeedThreshold
+                         || b.Needs.Food < famCfg.MarriageHardshipNeedThreshold || b.Needs.Safety < famCfg.MarriageHardshipNeedThreshold;
+            var current = hardship
+                ? edge with { Trust = Math.Max(-1f, edge.Trust - famCfg.MarriageHardshipTrustDrain) }
+                : edge;
+            if (hardship) world.Relationships.Upsert(current);
+
+            if (current.Trust > famCfg.EstrangementTrustThreshold) continue;
+
+            world.Relationships.Upsert(current with
             {
-                Flags = edge.Flags & ~(RelationshipFlags.IsMarried | RelationshipFlags.IsFamily)
+                Flags = current.Flags & ~(RelationshipFlags.IsMarried | RelationshipFlags.IsFamily)
             });
 
             var payload = JsonSerializer.Serialize(new CharacterEstrangedPayload(
@@ -946,7 +966,7 @@ public sealed class CharacterBehaviorPhase
         foreach (var e in world.GetEntitiesAt(c.Location))
         {
             if (e is not Tier1Character other || other.Id == c.Id || !other.IsAlive) continue;
-            // Only drain between chars of different civs; same-civ relations handled by territorial pressure
+            // Only drain between chars of different civs; same-civ pairs use ApplySameCivFamiliarity instead.
             if (c.CivId == other.CivId) continue;
 
             bool isFirstMeeting = world.Relationships.Get(c.Id, other.Id) == null;
@@ -988,6 +1008,41 @@ public sealed class CharacterBehaviorPhase
             trust -= stabilityDiff * _cfg.PersonalityMismatchDrainRate;
 
             world.Relationships.Upsert(rel with { Trust = Math.Clamp(trust, -1f, 1f) });
+        }
+    }
+
+    // ─── Same-civ Trust economy (M13 13.6) ─────────────────────────────────────
+
+    /// <summary>
+    /// Applied each tick for every pair of co-located characters from the SAME civ — the
+    /// counterpart <see cref="ApplyPassiveDrains"/> never had. Warmth (Sociability/Compassion)
+    /// grows Trust toward Bond/Marriage/Debt eligibility; clash (Ambition/Aggression mismatch)
+    /// drains it toward the existing DeclareRivalry threshold, which was never reachable for
+    /// same-civ pairs before (only cross-civ contact could push Trust negative). Also the reason
+    /// a married couple's Trust can move at all now (Estrangement's precondition) and, as a side
+    /// effect, gives parent-child pairs their first organic Trust edge (commonly co-located
+    /// same-civ pairs too) — a companion is not built, personality compatibility just quietly does
+    /// the work for whichever pairing happens to be nearby.
+    /// </summary>
+    private void ApplySameCivFamiliarity(Tier1Character c, WorldState world)
+    {
+        foreach (var e in world.GetEntitiesAt(c.Location))
+        {
+            if (e is not Tier1Character other || other.Id == c.Id || !other.IsAlive) continue;
+            if (!c.CivId.IsValid || c.CivId != other.CivId) continue;
+
+            var rel = world.Relationships.GetOrCreate(c.Id, other.Id);
+            if (rel.IsFeud) continue; // fully escalated — Reconciliation is the only way back
+
+            float warmth = (c.Personality.Sociability + other.Personality.Sociability
+                          + c.Personality.Compassion  + other.Personality.Compassion) * 0.25f;
+            float growth = _cfg.SameCivFamiliarityBaseRate + _cfg.SameCivWarmthBonusRate * warmth;
+
+            float clash = (Math.Abs(c.Personality.Ambition   - other.Personality.Ambition)
+                         + Math.Abs(c.Personality.Aggression - other.Personality.Aggression)) * 0.5f;
+            float friction = _cfg.SameCivFrictionBaseRate + _cfg.SameCivFrictionRate * clash;
+
+            world.Relationships.Upsert(rel with { Trust = Math.Clamp(rel.Trust + growth - friction, -1f, 1f) });
         }
     }
 
