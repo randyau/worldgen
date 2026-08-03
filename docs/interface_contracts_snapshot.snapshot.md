@@ -191,8 +191,8 @@ public sealed class AncestryConfig
 {
     public string   Id          { get; set; } = "human";
     public string   DisplayName { get; set; } = "Human";
-    public int MinLifespanSeasons { get; set; } = 60;
-    public int MaxLifespanSeasons { get; set; } = 200;
+    public int MinLifespanSeasons { get; set; } = 600;
+    public int MaxLifespanSeasons { get; set; } = 1200;
     public float BiasAmbition    { get; set; } = 0f;
     public float BiasGreed       { get; set; } = 0f;
     public float BiasAggression  { get; set; } = 0f;
@@ -267,4 +267,4 @@ public sealed record CharacterWatchSnapshot(
     IReadOnlyList<GoalWatchEntry> Goals);
 ```
 
-<!-- content-hash: 93e33c099a4f3126 -->
+<!-- content-hash: 2713736a5be37920 -->

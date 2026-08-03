@@ -448,6 +448,13 @@ M12–M18 extends them instead of duplicating them.
      existing emissary and civ-tension systems rather than new ones.
   5. New relationship-transition events, cheap given `CivSplintered`-style patterns already
      exist: Reconciliation, Feud, Estrangement, Oath-breaking (a violated `Debt`).
+- **M13.8 — Tier2 Relationship Exposure.** PLANNED (scoped 2026-08-03), sequenced before M14 — see
+  `docs/phases/m13_8_tier2_relationship_exposure.md`. Lets Tier1 relationship actions
+  (Bond/Rivalry/Placate/Marriage) target a co-located Tier2 character the same way `GrantAid`/
+  `ForgiveDebt` already do (Tier1-initiated, Tier1-scanned, Tier2-received — never a Tier2-side
+  scorer, preserving the scale split), and adds a Notability signal so a Tier2 pulled into enough
+  Tier1-driven drama crystallizes into a hero, closing a gap where `TryCrystallize` today only
+  reads Ambition/Status/RNG with zero input from relationships.
 - **M14 — Economy & Independent Wealth.** Trade routes as persistent entities between settlements (replacing the current one-shot `MerchantTradeCompleted` transaction) that can be severed by war/disaster/piracy, creating dependency and scarcity stories. Wealthy merchant characters/dynasties as a power track independent of political rulership — wealth that buys influence or funds factions without holding a title. Guilds/monopolies model as `Organization`s (M12), whose heads use the generalized succession mechanic. Debt and economic ruin as a civ-level failure mode distinct from military collapse. Builds on M9's economic-depth foundation (per-capita demand, settlement specialization) and the trade-network topology M9 deliberately left out of scope; also the second consumer (after M18) of Tier2-role behavior variability.
 - **M15 — Religion, Deepened.** Schism — reuse the `CivSplintered` pattern (`3212`) for religions splitting into competing sects, now modeled as an `Organization` (M12) with real followers instead of a flavor event. Heresy/persecution short of holy war. Pilgrimage as a goal type. Religious leaders as a third power track alongside rulers (political) and merchants (M14, economic), using the generalized succession mechanic for a religious-leader seat (e.g. contested succession of a high priest).
 - **M16 — Disasters, Reworked.** Eruptions currently fire (`DisasterConfig`/`[disasters]`) but have no gameplay consequence — wire real effects (destroyed settlements/improvements, ash-driven famine, displacement). Expand disaster variety beyond wildfire/beasts: flood, drought, earthquake, blight/crop disease, harsh winter. Model disasters as multi-year recovery arcs rather than single-tick events, so they leave a visible scar in a settlement's history instead of resolving instantly.
