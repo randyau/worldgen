@@ -9,8 +9,8 @@ public sealed class AncestryConfig
     public string   Id          { get; set; } = "human";
     public string   DisplayName { get; set; } = "Human";
 
-    public int MinLifespanSeasons { get; set; } = 60;
-    public int MaxLifespanSeasons { get; set; } = 200;
+    public int MinLifespanSeasons { get; set; } = 600;
+    public int MaxLifespanSeasons { get; set; } = 1200;
 
     // Personality biases — added to the Gaussian mean.
     // +0.2 shifts average from 0.5 → 0.7; individual noise (stddev ≈ 0.2) stays equal to max bias.

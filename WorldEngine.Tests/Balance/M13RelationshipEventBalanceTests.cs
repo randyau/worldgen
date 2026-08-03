@@ -19,31 +19,33 @@ namespace WorldEngine.Tests.Balance;
 /// (via <c>EventStore.CountEventsOfType</c>) rather than year-300 snapshot metrics, since these are
 /// per-history-tallies, not point-in-time world state.
 ///
-/// Calibration run (2026-08-02, after M13 13.6's same-civ Trust economy pass — see
-/// docs/phases/archive/m13_generational_domestic_drama.md): seeds 42/777/9999, 300 years, default
-/// config. Cumulative counts observed: CharacterMarried 0-4, CharacterBorn 141-212,
-/// DebtIncurred 938-1987, DebtForgiven 274-696, CharacterDefected 0-5, CharacterGrieved 18-35,
-/// RivalryFormed 1-37, RivalryPlacated 0-3, RivalryEscalatedToFeud 1-32.
-/// RivalsReconciled/CharacterEstranged/OathBroken remained 0 across all 3 seeds — see rationale
-/// below the bands.
+/// Calibration run (2026-08-02, after fixing the human-ancestry lifespan units-mismatch bug — see
+/// docs/phases/archive/m13_generational_domestic_drama.md and the project_human_lifespan_units_bug
+/// memory): seeds 42/777/9999, 300 years, default config. Cumulative counts observed:
+/// CharacterMarried 0-10, CharacterBorn 69-112, DebtIncurred 1049-2281, DebtForgiven 506-1036,
+/// CharacterDefected 1-51, CharacterGrieved 23-50, RivalryFormed 16-40, RivalryPlacated 0-3,
+/// RivalryEscalatedToFeud 16-34. RivalsReconciled/CharacterEstranged/OathBroken remained 0 across
+/// all 3 seeds — see rationale below the bands.
 ///
-/// **Known gap (not yet fixed):** tracing why Estrangement stayed at 0 even after tripling the
-/// marriage-hardship sink (identical output before/after — the sim is deterministic, so identical
-/// output means the branch never ran, not that it's just weak) led to a much bigger, separate
-/// finding: `Tier1Character.AgeSeason` increments once per TICK (confirmed by
-/// `CharacterSimConfig.Tier2MaxAgeSeasonsMin`'s own "~38 years at 16 ticks/year" comment), but the
-/// "human" ancestry (`config/ancestries.toml`) sets `min/max_lifespan_seasons = 60/200` — 3.75 to
-/// 12.5 *real* years, not enough time for a marriage (or most slow-building relationship
-/// mechanics) to develop before natural death. `FamilyConfig.MarriageMinAgeSeasons=60` (3.75y) and
-/// `CharacterSimConfig.MinRulerAgeSeasons=32` (2y) corroborate the same units mismatch. Other
-/// ancestries (elf 50-125y, dwarf 20-50y, orc 25-75y) look correctly scaled for 16 ticks/year,
-/// suggesting `TicksPerSeasonalChange` was raised at some point without rescaling every
-/// `*Seasons`-suffixed duration constant to match — a cross-cutting fix well beyond a Trust-economy
-/// pass, flagged for a dedicated follow-up rather than expanded into here. RivalryFormed/
-/// RivalryPlacated/RivalryEscalatedToFeud went from "always exactly 0" to "fires, but seed 42's
-/// count (1) is too close to 0 to safely assert a nonzero floor yet" — ceilings tightened to the
-/// new observed range, floor still 0 pending the lifespan fix widening the sample. RivalsReconciled/
-/// CharacterEstranged/OathBroken remain fully ceiling-only (no evidence they can fire yet at all).
+/// **The lifespan fix:** `Tier1Character.AgeSeason` increments once per tick (16 ticks/year), but
+/// `config/ancestries.toml`'s "human" ancestry set `min/max_lifespan_seasons = 60/200` — 3.75 to
+/// 12.5 *real* years, not enough time for a marriage (or most slow-building relationship mechanics)
+/// to develop before natural death. Fixed to 600/1200 (~37.5-75y), matching the already-correct
+/// Tier2/elf/dwarf/dark_elf/orc/halfling values. `FamilyConfig.MarriageMinAgeSeasons` (60→240) and
+/// `CharacterSimConfig.MinRulerAgeSeasons` (32→96) had the same units mismatch, also fixed. This
+/// surfaced a second bug: `Defect` had no cooldown, so a character in a chronic Wellbeing crisis
+/// with now-decades-long lifespans could re-select it every tick a different-civ confidant was
+/// available — one seed hit 640 defections before `DefectionConfig.DefectionCooldownTicks` was
+/// added (64 ticks = 4 years); the same seed now lands at 51, a real but no longer runaway count.
+///
+/// RivalryFormed/RivalryPlacated/RivalryEscalatedToFeud counts grew substantially (characters now
+/// survive long enough to accumulate real rivalry history) and floors are now safely nonzero.
+/// RivalsReconciled/CharacterEstranged/OathBroken still didn't fire in any of the 3 seeds even with
+/// realistic lifespans — but CharacterMarried itself is still low-volume (0-10 over 300 years,
+/// bounded by how few Tier1 "named" characters exist at once), so the marriage-hardship→Estrangement
+/// and Feud→Reconciliation pathways likely just have too small a sample in a single 300-year/seed
+/// run to hit yet, not a re-confirmed structural block. Left ceiling-only pending a dedicated look
+/// at Tier1 population scale rather than expanded into here.
 /// </summary>
 [Trait("Category", "Balance")]
 public class M13RelationshipEventBalanceTests
@@ -59,13 +61,13 @@ public class M13RelationshipEventBalanceTests
     // follow-up pass per project convention — see docs/balance_invariants.md).
     private static readonly Dictionary<EventType, Band> Bands = new()
     {
-        // Reliable across all 3 seeds pre-fix and post-fix; unaffected by the 13.5 dispatch bugfix.
-        [EventType.CharacterBorn]   = new Band(80, 320),
+        // Re-calibrated 2026-08-02 after the lifespan fix (observed 69-112, was 80-320 pre-fix —
+        // longer lives mean fewer deaths mean fewer replacement births).
+        [EventType.CharacterBorn]   = new Band(40, 320),
         [EventType.CharacterGrieved] = new Band(5, 60),
 
-        // Marriage is real but low-volume given how few Tier1 characters exist; seed 42 hit 0 in
-        // calibration, so no floor — only a ceiling to catch runaway marriage-spam.
-        [EventType.CharacterMarried] = new Band(0, 12),
+        // Marriage is real but low-volume given how few Tier1 characters exist. Observed 0-10.
+        [EventType.CharacterMarried] = new Band(0, 15),
 
         // M13 13.5 dispatch-bug fix (GrantAid/ForgiveDebt were never wired into
         // CharacterBehaviorPhase.ResolveCommand's switch — silently no-op'd every time the utility
@@ -75,17 +77,18 @@ public class M13RelationshipEventBalanceTests
         [EventType.DebtIncurred]  = new Band(400, 3200),
         [EventType.DebtForgiven]  = new Band(120, 1100),
 
-        // Same dispatch-bug fix unblocked Defect. Rare — requires Wellbeing crisis + a
-        // sufficiently-trusted foreign confidant — so a wide low-count band, no assumed floor.
-        [EventType.CharacterDefected] = new Band(0, 20),
+        // Re-calibrated 2026-08-02: the lifespan fix let a chronic-Wellbeing-crisis character
+        // re-select Defect every tick a foreign confidant was available (640 defections in one
+        // seed pre-DefectionCooldownTicks). With the cooldown, observed 1-51 — still occasionally
+        // high for a single seed with a persistently miserable character, so ceiling stays generous.
+        [EventType.CharacterDefected] = new Band(0, 80),
 
-        // M13 13.6 same-civ Trust economy pass unblocked these (previously always exactly 0).
-        // Observed 1-37 / 0-3 / 1-32 across 3 seeds — wide variance from Tier1 population sparsity,
-        // so no floor yet (seed 42's RivalryFormed=1 is too close to 0 to assert reliably), but the
-        // ceiling now reflects real usage instead of "any nonzero value is already anomalous".
-        [EventType.RivalryFormed]          = new Band(0, 55),
+        // Re-calibrated 2026-08-02 after the lifespan fix. Observed 16-40 / 0-3 / 16-34 — counts
+        // grew substantially now that characters survive long enough to accumulate real rivalry
+        // history; floors moved off 0 since all 3 seeds now reliably form at least some rivalries.
+        [EventType.RivalryFormed]          = new Band(10, 60),
         [EventType.RivalryPlacated]        = new Band(0, 10),
-        [EventType.RivalryEscalatedToFeud] = new Band(0, 48),
+        [EventType.RivalryEscalatedToFeud] = new Band(10, 55),
 
         // Known gap (see class doc) — ceiling-only, no floor asserted yet; no evidence these fire at all.
         [EventType.RivalsReconciled]       = new Band(0, 20),

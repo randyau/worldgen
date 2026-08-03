@@ -61,6 +61,11 @@ public sealed class Tier1Character : SimEntity
     // Tick when the most recent Create goal completed (used to gate re-formation)
     public int LastCreateCompletedTick { get; internal set; } = -1;
 
+    // Tick when the character last defected to another civ (used to gate re-defection —
+    // without this a character stuck in a chronic Wellbeing crisis with an available foreign
+    // confidant re-selects Defect every tick, once for each civ swap, indefinitely)
+    public int LastDefectionTick { get; internal set; } = -1;
+
     // Year when the character last created artwork (gates ArtworkCreated events per cooldown period)
     public int LastArtworkYear { get; internal set; } = -999;
 

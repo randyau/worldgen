@@ -234,3 +234,57 @@ New tests: `WorldEngine.Tests/Unit/SameCivTrustEconomyTests.cs` (5 unit tests �
 movement, cross-civ isolation, Feud exclusion, hardship-driven Estrangement, no-hardship no-op).
 `M13RelationshipEventBalanceTests.cs` bands updated to reflect the newly-unblocked Rivalry/Feud
 reality.
+
+## 13.7 — Human lifespan units-mismatch fix + rebalance (2026-08-02)
+
+Fixed the lifespan bug flagged at the end of 13.6. Checked `git log -p` for
+`ticks_per_seasonal_change` first — it has been `4` (16 ticks/year) since the line was introduced;
+there was never an earlier "1 tick/season" regime to mathematically rescale from. The mismatch is
+just that `config/ancestries.toml`'s human entry (and a few other `*Seasons` constants) were
+authored without checking against the actual 16-ticks/year runtime rate, while `Tier2MaxAgeSeasonsMin/
+Max` had already been fixed correctly at some earlier point (600/1200, "~38/75 years at 16
+ticks/year") — that fix is the precedent this pass followed for every other stale constant, rather
+than changing the increment mechanism itself.
+
+**Fixed** (config-only, no simulation-loop restructuring):
+- `ancestries.toml` human `min/max_lifespan_seasons`: 60/200 → 600/1200 (matches the already-correct
+  Tier2/elf/dwarf/dark_elf/orc/halfling scaling)
+- `AncestryConfig` and `CharacterSimConfig.MaxAgeSeasonsMin/Max` (fallback for characters without
+  ancestry data): 80/200 → 600/1200
+- `CharacterSimConfig.MinRulerAgeSeasons`: 32 (2y) → 96 (6y) — the original comment's stated intent
+  was "8 years... comfortably below every ancestry's shortest floor"; used 6y instead of 8y so it
+  stays below orc's floor (120 = 7.5y) after the ancestry rescale
+- `FamilyConfig.MarriageMinAgeSeasons`: 60 (3.75y) → 240 (15y)
+- `CharacterSimConfig.GoalStaleSeasonLimit`: 8 → 32 — restores the comment's stated "2 years"
+- UI age display (`CharacterWatchPanel`, `BeastProfilePanel`) divided `AgeSeason` by 4 for a
+  "years" readout; since AgeSeason is actually 16/year, this was showing ages ~4x too old. Fixed to
+  divide by 16.
+
+**Surfaced a second, genuine bug while calibrating:** a chronic-Wellbeing-crisis character with no
+cooldown on `Defect` re-selected it every tick a different-civ confidant was available, bouncing
+between civs indefinitely once lifespans got long enough for a crisis to persist for years — one
+seed hit 640 `CharacterDefected` events before the fix (vs. 1-2 in the other two seeds). Fixed with
+`DefectionConfig.DefectionCooldownTicks` (64 ticks = 4 years) and `Tier1Character.LastDefectionTick`,
+mirroring the existing `LastCreateCompletedTick` cooldown pattern. Re-observed 51 for the same seed
+post-fix — a real but no longer runaway count.
+
+**Multi-seed, multi-ancestry sanity sweep** (seeds 42/777/9999, 300 years, all 6 ancestries sampled
+via `CharacterDied` payload `AncestryId`/`AgeSeason`, "old age" cause only): human 54.8-58.7y (target
+~37.5-75y), elf 70.8-89.5y (~50-125y), dwarf 33.9-49.4y (~20-50y), dark_elf 46.1-53.1y (~25-75y), orc
+11.7-16.2y (~7.5-20y), halfling 16.2-26.1y (~10-30y) — every ancestry lands within its designed
+range with old age as the dominant death cause across all seeds; no race is anomalous or broken.
+
+**Balance fallout, recalibrated:** `config/balance_invariants.toml`'s `world_population` band
+dropped and widened (3500-22000 → 1600-9000; observed 2757-6414) — longer Tier1 lifespans mean
+slower turnover and more inter-seed variance from early-vs-late civ founding, not a regression.
+`M13RelationshipEventBalanceTests.cs` bands updated: `CharacterBorn` floor lowered (fewer deaths →
+fewer replacement births), `CharacterDefected` ceiling raised to fit the post-cooldown-fix 1-51
+range, `RivalryFormed`/`RivalryEscalatedToFeud` floors moved off 0 (all 3 seeds now reliably
+accumulate real rivalry history over decades instead of dying before it can form).
+
+**Still open:** `RivalsReconciled`/`CharacterEstranged`/`OathBroken` remained at 0 in all 3 seeds
+even with realistic lifespans now in place. `CharacterMarried` itself is still low-volume (0-10 over
+300 years — bounded by how few Tier1 "named" characters exist at once), so the
+marriage-hardship→Estrangement and Feud→Reconciliation pathways likely just have too small a sample
+in a single 300-year/seed run to hit yet, rather than a re-confirmed structural block. A candidate
+for a dedicated look at Tier1 population scale, not chased further in this pass.

@@ -40,6 +40,26 @@
 #     carry_cap_* per-biome table removed (was dead code — capacity was already food-ledger derived).
 #   Food now binds: min_food_ratio < 1.0 occurs 4–13 years per 300-year run in drought+near-cap events.
 #
+# Calibration run (2026-08-02, after fixing the human-ancestry lifespan units-mismatch bug —
+#   AgeSeason increments once per tick at 16 ticks/year, but human min/max_lifespan_seasons was
+#   60/200 [~3.75-12.5 real years]; rescaled to 600/1200 [~37.5-75y], matching Tier2/elf/dwarf/
+#   dark_elf/orc/halfling which were already correctly scaled. Also fixed a runaway-defection bug
+#   this surfaced: Defect had no cooldown, so a character stuck in a chronic Wellbeing crisis with
+#   now-decades-long lifespans could re-select Defect every tick a different-civ confidant was
+#   available (640 defections observed in one seed before the fix); added DefectionCooldownTicks.
+#   See docs/phases/archive/m13_generational_domestic_drama.md and the project_human_lifespan_units_bug
+#   memory for the full writeup):
+#   Seeds: 42, 777, 9999  |  Years: 300  |  default config (no profile)
+#   Observed @300: pop 2757-6414 (much lower + wider spread than the pre-fix 6290-15436 band —
+#     Tier1 population dynamics are downstream of lifespan; longer lives mean slower turnover and
+#     more inter-seed variance from early-vs-late civ founding), active_civs 4-8, settlements 8-10,
+#     food 1.77-3.46, wellbeing -0.52..-0.22, wars_active 0, active_diseases 0-1.
+#   Per-ancestry sanity check (all 6 ancestries sampled, avg age at "old age" death):
+#     human 54.8-58.7y (target ~37.5-75y), elf 70.8-89.5y (~50-125y), dwarf 33.9-49.4y (~20-50y),
+#     dark_elf 46.1-53.1y (~25-75y), orc 11.7-16.2y (~7.5-20y), halfling 16.2-26.1y (~10-30y) —
+#     all ancestries land within their designed lifespan range with old age as the dominant death
+#     cause; no race is anomalous or broken.
+#
 # See docs/balance_invariants.md for philosophy and update procedure.
 
 # ── Checkpoint: Year 300 ─────────────────────────────────────────────────────
@@ -61,9 +81,9 @@
   # (500→50), which tightens the food ceiling and reduces logistic growth ceiling.
   # D1 goal: food should actually bind → capacity is intentionally tighter now.
   [year_300.world_population]
-  min = 3500
-  max = 22000
-  rationale = "Post-D1 observed 6290–15436 (mean 10134). Reduced from pre-D1 range (4500–26000) due to tighter food ceiling. ±40% margin."
+  min = 1600
+  max = 9000
+  rationale = "Re-calibrated 2026-08-02 after the human lifespan units-mismatch fix. Observed 2757-6414 (was 6290-15436 pre-fix) — longer Tier1 lifespans mean slower character turnover and wider inter-seed variance from early-vs-late civ founding, not a regression. ±40% margin on the observed range."
 
   # Observed: 5–11 settlements. Unchanged from pre-D1.
   # 2026-08-02: seed=42 has been stably, deterministically producing exactly 5.00 settlements at

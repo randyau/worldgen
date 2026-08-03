@@ -96,7 +96,7 @@ public sealed class CharacterWatchPanel : IToggleablePanel
         // ── Header ──────────────────────────────────────────────────────────
         string epithet = w.Epithet.Length > 0 ? $" the {w.Epithet}" : "";
         _content.Add(SectionHeader.Build($"{w.Name}{epithet}"));
-        _content.Add(new WeText($"Civ: {w.CivName}  |  Age: {w.AgeSeasons}s  ({w.AgeSeasons / 4} yrs)", color: UiTheme.ColorRole.TextSecondary));
+        _content.Add(new WeText($"Civ: {w.CivName}  |  Age: {w.AgeSeasons}s  ({w.AgeSeasons / 16} yrs)", color: UiTheme.ColorRole.TextSecondary));
         _content.Add(new WeText($"Location: ({w.Location.X}, {w.Location.Y}) — {w.BiomeName}", color: UiTheme.ColorRole.TextSecondary));
 
         // ── Wellbeing ────────────────────────────────────────────────────────
@@ -187,7 +187,7 @@ public sealed class CharacterWatchPanel : IToggleablePanel
         _content.Add(SectionHeader.Build($"{basic.Name}{tag}"));
         if (basic.SpeciesId.Length > 0)
             _content.Add(new WeText($"Species: {basic.SpeciesId}", color: UiTheme.ColorRole.TextSecondary));
-        _content.Add(new WeText($"Age: {basic.AgeSeasons}s ({basic.AgeSeasons / 4} yrs)", color: UiTheme.ColorRole.TextSecondary));
+        _content.Add(new WeText($"Age: {basic.AgeSeasons}s ({basic.AgeSeasons / 16} yrs)", color: UiTheme.ColorRole.TextSecondary));
         _content.Add(new WeText($"Location: ({basic.Location.X}, {basic.Location.Y}) — {basic.BiomeName}", color: UiTheme.ColorRole.TextSecondary));
 
         var grid = new KeyValueGrid();

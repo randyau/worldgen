@@ -18,4 +18,12 @@ public sealed class DefectionConfig
 
     /// <summary>Trust gained between defector and confidant once the defection succeeds.</summary>
     public float PostDefectionTrustGain { get; set; } = 0.2f;
+
+    /// <summary>
+    /// Ticks after a defection before the same character is eligible to defect again. Without
+    /// this, a character stuck in a chronic Wellbeing crisis re-selects Defect on every tick a
+    /// different-civ confidant is available, bouncing between civs indefinitely over a long life.
+    /// 64 ticks = 4 years at 16 ticks/year.
+    /// </summary>
+    public int DefectionCooldownTicks { get; set; } = 64;
 }

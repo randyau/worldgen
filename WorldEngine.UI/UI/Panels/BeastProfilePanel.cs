@@ -72,7 +72,7 @@ public sealed class BeastProfilePanel : IToggleablePanel
         var grid = new KeyValueGrid();
         grid.Add("Health", $"{beast.HealthFraction:P0}");
         if (beast.FoodFraction >= 0f) grid.Add("Food", $"{beast.FoodFraction:P0}");
-        grid.Add("Age", $"{beast.AgeSeason}s ({beast.AgeSeason / 4} yrs)");
+        grid.Add("Age", $"{beast.AgeSeason}s ({beast.AgeSeason / 16} yrs)");
         grid.Add("Status", beast.IsAlive ? "Alive" : "Dead");
         _content.Add(grid);
     }

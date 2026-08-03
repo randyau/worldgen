@@ -6,17 +6,20 @@ namespace WorldEngine.Sim.Config;
 public sealed class CharacterSimConfig
 {
     public int   InitialCount           { get; set; } = 20;
-    public int   MaxAgeSeasonsMin       { get; set; } = 80;
-    public int   MaxAgeSeasonsMax       { get; set; } = 200;
+    // Fallback lifespan range for characters without ancestry data. AgeSeason increments once
+    // per tick (16 ticks/year — SimLoopConfig.TicksPerYear), so this is ~37.5-75 years; matches
+    // the "human" ancestry baseline and Tier2MaxAgeSeasonsMin/Max.
+    public int   MaxAgeSeasonsMin       { get; set; } = 600;
+    public int   MaxAgeSeasonsMax       { get; set; } = 1200;
     public int   MaxHealth              { get; set; } = 100;
 
     // Minimum AgeSeason for a character to be eligible for succession to ruler.
-    // 32 seasons = 8 years — excludes literal infants/toddlers while still allowing
-    // child/teen monarchs (historically plausible, and comfortably below every
-    // ancestry's shortest MinLifespanSeasons floor of 60, so it never single-handedly
+    // 96 seasons = 6 years at 16 ticks/year — excludes literal infants/toddlers while still
+    // allowing child/teen monarchs (historically plausible, and comfortably below every
+    // ancestry's shortest MinLifespanSeasons floor of 120 [orc], so it never single-handedly
     // forces a succession crisis). If no living member clears this bar, the civ falls
     // through to the existing "no successor found" succession-crisis path.
-    public int   MinRulerAgeSeasons     { get; set; } = 32;
+    public int   MinRulerAgeSeasons     { get; set; } = 96;
 
     // Needs decay per season (all 0.0–1.0 range)
     public float NeedsDecaySafety       { get; set; } = 0.05f;
@@ -335,8 +338,8 @@ public sealed class CharacterSimConfig
     public float AvengeIntensityThreshold   { get; set; } = 0.5f;
     // Trust floor: minimum relationship trust before Bond goal considers a companion
     public float BondTrustThreshold         { get; set; } = 0.5f;
-    // Seasons a goal can stall (progress < 10%) before being pruned
-    public int   GoalStaleSeasonLimit       { get; set; } = 8;
+    // Ticks a goal can stall (progress < 10%) before being pruned. 32 = 2 years at 16 ticks/year.
+    public int   GoalStaleSeasonLimit       { get; set; } = 32;
     // Radii used when searching for nearby rival / neutral / companion targets
     public int   RivalSearchRadius          { get; set; } = 5;
     public int   AllianceSearchRadius       { get; set; } = 4;

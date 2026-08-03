@@ -227,6 +227,7 @@ public sealed record Tier1EntityDto(
     int    LastReligionFoundedYear,
     // Local-scale position foundation (M11 11.6) — null until a future milestone populates it.
     string? LocalChunkKey = null,
+    int    LastDefectionTick = -1,
     string? LocalPositionKey = null);
 
 public sealed record Tier2EntityDto(

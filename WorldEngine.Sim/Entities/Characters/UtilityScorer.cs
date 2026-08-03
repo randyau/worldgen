@@ -255,7 +255,8 @@ public sealed class UtilityScorer
         // this (ResolveDefect also refuses it — see there for why).
         var defectCfg = world.SimConfig.Defection;
         bool isRulerForDefect = c.CivId.IsValid && world.GetCivilization(c.CivId)?.RulerId == c.Id;
-        if (!isRulerForDefect && c.Wellbeing <= defectCfg.WellbeingCrisisThreshold)
+        bool defectCooldownClear = world.CurrentTick - c.LastDefectionTick > defectCfg.DefectionCooldownTicks;
+        if (!isRulerForDefect && defectCooldownClear && c.Wellbeing <= defectCfg.WellbeingCrisisThreshold)
         {
             ICommand? bestDefectCmd = null;
             float bestDefectScore = float.MinValue;

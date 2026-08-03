@@ -258,7 +258,8 @@ internal static class WorldStateMapper
             LastArtworkYear: c.LastArtworkYear,
             LastReligionFoundedYear: c.LastReligionFoundedYear,
             LocalChunkKey: c.LocalChunk.HasValue ? ChunkKey(c.LocalChunk.Value) : null,
-            LocalPositionKey: c.LocalPosition.HasValue ? LocalKey(c.LocalPosition.Value) : null);
+            LocalPositionKey: c.LocalPosition.HasValue ? LocalKey(c.LocalPosition.Value) : null,
+            LastDefectionTick: c.LastDefectionTick);
     }
 
     private static Tier2EntityDto MapTier2(Tier2Character c)
@@ -599,6 +600,7 @@ internal static class WorldStateMapper
         character.LastReligionFoundedYear   = d.LastReligionFoundedYear;
         character.LocalChunk                = d.LocalChunkKey    is not null ? ParseChunk(d.LocalChunkKey)    : null;
         character.LocalPosition             = d.LocalPositionKey is not null ? ParseLocal(d.LocalPositionKey) : null;
+        character.LastDefectionTick         = d.LastDefectionTick;
 
         foreach (var gd in d.Goals)
             character.Goals.Add(new GoalData

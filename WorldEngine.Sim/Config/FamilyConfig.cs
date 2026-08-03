@@ -7,8 +7,8 @@ public class FamilyConfig
     public float MarriageTrustThreshold      { get; set; } = 0.6f;
     /// <summary>Compassion personality floor for proposing marriage.</summary>
     public float MarriageCompassionThreshold { get; set; } = 0.4f;
-    /// <summary>Minimum age (in seasons) before a character can marry.</summary>
-    public int   MarriageMinAgeSeasons       { get; set; } = 60;
+    /// <summary>Minimum AgeSeason before a character can marry. 240 = 15 years at 16 ticks/year.</summary>
+    public int   MarriageMinAgeSeasons       { get; set; } = 240;
 
     /// <summary>Per-annual-tick chance a married couple, co-located, conceives a child.</summary>
     public float ChildbirthChancePerYear     { get; set; } = 0.15f;

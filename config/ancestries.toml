@@ -3,7 +3,9 @@
 # Personality bias fields are offsets on the Gaussian mean (base 0.5).
 # +0.2 shifts average from 0.5 → 0.7; individual noise (stddev ≈ 0.2) equals max bias,
 # keeping individuals more variable than their ancestry stereotype.
-# Lifespan is in seasons (4 seasons/year).
+# Lifespan is in AgeSeason units. Despite the name, AgeSeason increments once per simulation
+# TICK (SimLoopConfig.TicksPerYear = 16 ticks/year), not once per literal season — confirm
+# against TicksPerYear before eyeballing a "years" value from these numbers.
 
 # =============================================================================
 # HUMAN — baseline; no biases; appears in most biomes
@@ -11,8 +13,8 @@
 [[ancestry]]
 id                    = "human"
 display_name          = "Human"
-min_lifespan_seasons  = 60
-max_lifespan_seasons  = 200
+min_lifespan_seasons  = 600
+max_lifespan_seasons  = 1200
 spawn_weights         = { grassland = 2.0, plains = 2.0, savanna = 2.0, temperate_forest = 1.5, boreal_forest = 1.0, hills = 1.5, desert = 1.0, tundra = 0.5 }
 first_meeting_trust   = { elf = 0.0, dwarf = 0.05, dark_elf = -0.05, orc = -0.05, halfling = 0.10 }
 cultural_distance     = { elf = 0.10, dwarf = 0.15, dark_elf = 0.40, orc = 0.35, halfling = 0.10 }

@@ -273,10 +273,10 @@ Edit values in `sim_config.toml`; all keys live there without recompiling.
 | Key | Value | C# Property | Description |
 |-----|-------|-------------|-------------|
 | `initial_count` | `14` | `SimConfig.Character.InitialCount` |  |
-| `max_age_seasons_min` | `80` | `SimConfig.Character.MaxAgeSeasonsMin` |  |
-| `max_age_seasons_max` | `200` | `SimConfig.Character.MaxAgeSeasonsMax` |  |
+| `max_age_seasons_min` | `600` | `SimConfig.Character.MaxAgeSeasonsMin` | ~37.5 years at 16 ticks/year; fallback for characters without ancestry data |
+| `max_age_seasons_max` | `1200` | `SimConfig.Character.MaxAgeSeasonsMax` | ~75 years |
 | `max_health` | `100` | `SimConfig.Character.MaxHealth` |  |
-| `min_ruler_age_seasons` | `32` | `SimConfig.Character.MinRulerAgeSeasons` | 8 years; succession skips members younger than this (no infant monarchs) |
+| `min_ruler_age_seasons` | `96` | `SimConfig.Character.MinRulerAgeSeasons` | 6 years at 16 ticks/year; succession skips members younger than this (no infant monarchs) |
 | `needs_decay_safety` | `0.05` | `SimConfig.Character.NeedsDecaySafety` |  |
 | `needs_decay_food` | `0.08` | `SimConfig.Character.NeedsDecayFood` |  |
 | `needs_decay_shelter` | `0.04` | `SimConfig.Character.NeedsDecayShelter` |  |
@@ -384,7 +384,7 @@ Edit values in `sim_config.toml`; all keys live there without recompiling.
 | `avenge_aggression_threshold` | `0.6` | `SimConfig.Character.AvengeAggressionThreshold` | minimum Aggression to form Avenge goal on mourning |
 | `avenge_intensity_threshold` | `0.5` | `SimConfig.Character.AvengeIntensityThreshold` | minimum grief intensity required to form Avenge goal |
 | `bond_trust_threshold` | `0.5` | `SimConfig.Character.BondTrustThreshold` | minimum relationship Trust before a character qualifies as Bond companion |
-| `goal_stale_season_limit` | `8` | `SimConfig.Character.GoalStaleSeasonLimit` | seasons (2 years) without progress before a non-Grieve goal is pruned |
+| `goal_stale_season_limit` | `32` | `SimConfig.Character.GoalStaleSeasonLimit` | ticks (2 years at 16 ticks/year) without progress before a non-Grieve goal is pruned |
 | `rival_search_radius` | `5` | `SimConfig.Character.RivalSearchRadius` | tile radius when scanning for nearby rivals (Dominance goal) |
 | `alliance_search_radius` | `4` | `SimConfig.Character.AllianceSearchRadius` | tile radius when scanning for nearby neutrals (Alliance goal) |
 | `bond_search_radius` | `3` | `SimConfig.Character.BondSearchRadius` | tile radius when scanning for Bond companions |
@@ -697,7 +697,7 @@ _Natural shelter recovery per tick when NOT on a settlement tile, by biome. Dens
 |-----|-------|-------------|-------------|
 | `marriage_trust_threshold` | `0.6` | `SimConfig.Family.MarriageTrustThreshold` | Bond-goal trust required before either party proposes marriage |
 | `marriage_compassion_threshold` | `0.4` | `SimConfig.Family.MarriageCompassionThreshold` | Compassion personality floor for proposing marriage |
-| `marriage_min_age_seasons` | `60` | `SimConfig.Family.MarriageMinAgeSeasons` | minimum age (seasons) before a character can marry |
+| `marriage_min_age_seasons` | `240` | `SimConfig.Family.MarriageMinAgeSeasons` | minimum AgeSeason before a character can marry (15 years at 16 ticks/year) |
 | `childbirth_chance_per_year` | `0.15` | `SimConfig.Family.ChildbirthChancePerYear` | per-annual-tick chance a co-located married couple conceives |
 | `max_children_per_couple` | `4` | `SimConfig.Family.MaxChildrenPerCouple` | living-children cap before childbirth stops rolling for a couple |
 | `trait_inheritance_weight` | `0.4` | `SimConfig.Family.TraitInheritanceWeight` | 0 = pure ancestry bias, 1 = pure parent-average trait roll |
@@ -746,6 +746,7 @@ _Natural shelter recovery per tick when NOT on a settlement tile, by biome. Dens
 | `confidant_trust_threshold` | `0.7` | `SimConfig.Defection.ConfidantTrustThreshold` | min Trust with a co-located foreign confidant to be considered for defection |
 | `wellbeing_crisis_threshold` | `-0.3` | `SimConfig.Defection.WellbeingCrisisThreshold` | Wellbeing must be at or below this before asylum-seeking becomes attractive |
 | `post_defection_trust_gain` | `0.2` | `SimConfig.Defection.PostDefectionTrustGain` | Trust gained between defector and confidant once the defection succeeds |
+| `defection_cooldown_ticks` | `64` | `SimConfig.Defection.DefectionCooldownTicks` | ticks before the same character can defect again (4 years at 16 ticks/year) |
 
 ## `[unrest]` {#unrest}
 

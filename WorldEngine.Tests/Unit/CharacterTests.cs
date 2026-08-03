@@ -102,8 +102,8 @@ public sealed class CharacterTests
     public void Factory_AgeIsWithinReasonableBounds()
     {
         // Ancestry now controls lifespan — range depends on which ancestry is rolled.
-        // Human min is 60 seasons; elf max is 2000 seasons. Check for sanity not exact config bounds.
-        const int absoluteMin = 30;   // shorter than the shortest ancestry
+        // Human min is 600 seasons; elf max is 2000 seasons. Check for sanity not exact config bounds.
+        const int absoluteMin = 100;  // shorter than the shortest ancestry (orc: 120)
         const int absoluteMax = 2500; // longer than the longest ancestry
         var cfg = DefaultConfig();
         for (int i = 0; i < 50; i++)
@@ -111,6 +111,23 @@ public sealed class CharacterTests
             var c = CharacterFactory.Spawn(new TileCoord(0, 0), worldSeed: i * 17, entitySeq: 10_000 + i, cfg, birthYear: 1);
             c.MaxAgeSeason.Should().BeInRange(absoluteMin, absoluteMax);
         }
+    }
+
+    [Fact]
+    public void Factory_HumanLifespan_IsPlausibleRealYears()
+    {
+        // Regression guard for the AgeSeason units-mismatch bug (fixed 2026-08-02): AgeSeason
+        // increments once per simulation tick (16 ticks/year — SimLoopConfig.TicksPerYear), so
+        // human min/max_lifespan_seasons must be large enough to yield a plausible medieval-ish
+        // human lifespan, not the ~3.75-12.5 real years the pre-fix 60/200 values produced.
+        var cfg = DefaultConfig();
+        var human = cfg.AncestryRegistry.GetOrHuman("human");
+        const int ticksPerYear = 16;
+
+        (human.MinLifespanSeasons / (float)ticksPerYear).Should().BeGreaterThanOrEqualTo(30f,
+            "a human ancestry's shortest possible lifespan should be at least a few decades");
+        (human.MaxLifespanSeasons / (float)ticksPerYear).Should().BeLessThanOrEqualTo(100f,
+            "a human ancestry's longest possible lifespan shouldn't rival long-lived ancestries like elves");
     }
 
     // ─── NeedsVector ──────────────────────────────────────────────────────────

@@ -323,10 +323,10 @@ starvation_health_loss     = 5     # health points lost per season when FoodNeed
 
 [character]
 initial_count             = 14
-max_age_seasons_min       = 80
-max_age_seasons_max       = 200
+max_age_seasons_min       = 600   # ~37.5 years at 16 ticks/year; fallback for characters without ancestry data
+max_age_seasons_max       = 1200  # ~75 years
 max_health                = 100
-min_ruler_age_seasons     = 32    # 8 years; succession skips members younger than this (no infant monarchs)
+min_ruler_age_seasons     = 96    # 6 years at 16 ticks/year; succession skips members younger than this (no infant monarchs)
 needs_decay_safety        = 0.05
 needs_decay_food          = 0.08
 needs_decay_shelter       = 0.04
@@ -485,7 +485,7 @@ max_concurrent_goals         = 2
 avenge_aggression_threshold  = 0.6   # minimum Aggression to form Avenge goal on mourning
 avenge_intensity_threshold   = 0.5   # minimum grief intensity required to form Avenge goal
 bond_trust_threshold         = 0.5   # minimum relationship Trust before a character qualifies as Bond companion
-goal_stale_season_limit      = 8     # seasons (2 years) without progress before a non-Grieve goal is pruned
+goal_stale_season_limit      = 32    # ticks (2 years at 16 ticks/year) without progress before a non-Grieve goal is pruned
 rival_search_radius          = 5     # tile radius when scanning for nearby rivals (Dominance goal)
 alliance_search_radius       = 4     # tile radius when scanning for nearby neutrals (Alliance goal)
 bond_search_radius           = 3     # tile radius when scanning for Bond companions
@@ -979,7 +979,7 @@ religion_founding_cooldown_years    = 50    # per character: min years between f
 [family]
 marriage_trust_threshold        = 0.6   # Bond-goal trust required before either party proposes marriage
 marriage_compassion_threshold   = 0.4   # Compassion personality floor for proposing marriage
-marriage_min_age_seasons        = 60    # minimum age (seasons) before a character can marry
+marriage_min_age_seasons        = 240   # minimum AgeSeason before a character can marry (15 years at 16 ticks/year)
 childbirth_chance_per_year      = 0.15  # per-annual-tick chance a co-located married couple conceives
 max_children_per_couple         = 4     # living-children cap before childbirth stops rolling for a couple
 trait_inheritance_weight        = 0.4   # 0 = pure ancestry bias, 1 = pure parent-average trait roll
@@ -1027,6 +1027,7 @@ feud_fear_increment            = 0.15  # extra Fear added on the same escalation
 confidant_trust_threshold    = 0.7    # min Trust with a co-located foreign confidant to be considered for defection
 wellbeing_crisis_threshold   = -0.3   # Wellbeing must be at or below this before asylum-seeking becomes attractive
 post_defection_trust_gain    = 0.2    # Trust gained between defector and confidant once the defection succeeds
+defection_cooldown_ticks     = 64     # ticks before the same character can defect again (4 years at 16 ticks/year)
 
 # =============================================================================
 # UNREST / SECESSION (S2 splinter mechanic)

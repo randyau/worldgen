@@ -575,6 +575,7 @@ public static partial class CivTracker
 
         SetCharacterCiv(c, confidant.CivId, OrganizationRole.Member, world);
         world.Relationships.Upsert(rel with { Trust = Math.Min(1f, rel.Trust + cfg.PostDefectionTrustGain) });
+        c.LastDefectionTick = (int)world.CurrentTick;
 
         var payload = JsonSerializer.Serialize(new CharacterDefectedPayload(
             c.Id.Value, c.Identity.Name,
