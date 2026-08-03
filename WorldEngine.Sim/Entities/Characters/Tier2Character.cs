@@ -23,6 +23,11 @@ public sealed class Tier2Character : SimEntity
     // Masterwork flag — set when exceptional work fires; only one per lifetime (// V2: ARTIFACT)
     public bool HasMasterwork       { get; internal set; } = false;
 
+    // M13.8.2: recent Tier1-driven relationship exposure (Bond/Rivalry/Placate/GrantAid/
+    // ForgiveDebt targeting this character), decaying each tick. Feeds TryCrystallize's gate
+    // alongside Needs.Status — see docs/phases/m13_8_tier2_relationship_exposure.md.
+    public float Notability { get; internal set; } = 0f;
+
     public Tier2Character(
         EntityId id,
         TileCoord location,
@@ -38,6 +43,10 @@ public sealed class Tier2Character : SimEntity
         Livelihood  = livelihood;
         Needs       = NeedsVector4.Default;
     }
+
+    // M13.8.2: bump Notability when targeted by a Tier1-driven relationship action
+    // (Bond/Rivalry/Placate/GrantAid/ForgiveDebt) — called from CivTracker/GoalManager resolution.
+    public void GainNotability(float amount) => Notability = Math.Min(1f, Notability + amount);
 
     protected override string SnapshotName         => Name;
     protected override string SnapshotSpeciesId    => string.Empty;

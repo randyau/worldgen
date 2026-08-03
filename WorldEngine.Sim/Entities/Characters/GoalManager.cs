@@ -222,6 +222,10 @@ public static class GoalManager
                 c.Goals.Add(bondGoal);
                 activeDiscretionaryGoals++;
                 pending.Add(MakeGoalEvent(EventType.GoalFormed, c, bondGoal));
+
+                // M13.8.2: a Tier2 companion just became the target of a Bond goal — Notability.
+                if (world.GetEntity(companion.Value) is Tier2Character bondedT2)
+                    bondedT2.GainNotability(cfg.Tier2NotabilityGainPerEvent);
             }
         }
 

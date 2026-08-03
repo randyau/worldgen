@@ -167,6 +167,9 @@ public sealed class Tier2BehaviorPhase
         }
 
         c.Needs = n;
+
+        // M13.8.2: Notability decays each tick — it tracks recent drama exposure, not a permanent trait.
+        c.Notability = Math.Max(0f, c.Notability - _cfg.Tier2NotabilityDecayRate);
     }
 
     // ─── Role Behavior ────────────────────────────────────────────────────────
@@ -492,10 +495,18 @@ public sealed class Tier2BehaviorPhase
     private void TryCrystallize(
         Tier2Character c, WorldState world, List<PendingEvent> pending, long tick)
     {
-        if (c.Personality.Ambition < _cfg.Tier2CrystalAmbitionThreshold
-            || c.Needs.Status < _cfg.Tier2CrystalStatusThreshold) return;
+        if (c.Personality.Ambition < _cfg.Tier2CrystalAmbitionThreshold) return;
+
+        // M13.8.2: a Tier2 recently pulled into Tier1-driven drama (Notability) can satisfy the
+        // gate on its own, without needing high settlement Status too — "currently prominent in
+        // the community" and "recently touched by Tier1 drama" are distinct paths to the same roll.
+        bool statusGate = c.Needs.Status >= _cfg.Tier2CrystalStatusThreshold
+                        || c.Notability   >= _cfg.Tier2CrystalNotabilityThreshold;
+        if (!statusGate) return;
+
+        float chance = _cfg.Tier2CrystalChance + c.Notability * _cfg.Tier2CrystalNotabilityChanceBonus;
         float r = world.GetRandomFloat(c.Id, S.T2General);
-        if (r > _cfg.Tier2CrystalChance) return;
+        if (r > chance) return;
 
         PromoteToTier1(c, world, _simCfg, pending);
     }

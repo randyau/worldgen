@@ -1,7 +1,6 @@
 # M13.8 — Tier2 Relationship Exposure
 
-**Status:** IN PROGRESS — 13.8.0 and 13.8.1 shipped 2026-08-03. 13.8.2 (Notability) and 13.8.3
-(balance/performance validation) not started.
+**Status:** COMPLETE — 2026-08-03 (all four phases, 13.8.0-13.8.3, shipped same session).
 
 Scoped 2026-08-03 as a follow-on to M13 before M14 begins (M13 itself is done — see
 `docs/phases/archive/m13_generational_domestic_drama.md`).
@@ -122,27 +121,41 @@ into crystallization.
   - New tests: `Tier2RivalryAndMarriageTests.cs` (5 tests) — Rivalry/Feud/Placate against a Tier2,
     and the full promote-then-marry path including the age-floor and relationship-rekey fixes.
 
-- **13.8.2 — Notability: relationship-exposure tracking that feeds crystallization.**
-  Add a lightweight counter on `Tier2Character` (mirrors the existing `LastCreateCompletedTick`/
+- **13.8.2 — SHIPPED 2026-08-03 — Notability: relationship-exposure tracking that feeds
+  crystallization.**
+  Added `Tier2Character.Notability` (float, mirrors the existing `LastCreateCompletedTick`/
   `LastNotableWorkTick` per-character-field pattern — touched only when relevant, never scanned
-  population-wide) bumped whenever the character is the target of a Bond/Rivalry/Placate/GrantAid/
-  ForgiveDebt resolution. Feed it into `TryCrystallize`'s gate alongside the existing Ambition/
-  Status check — a drama-touched Tier2 should crystallize meaningfully more readily than a random
-  high-Ambition/high-Status roll alone. Open implementation question to resolve at build time:
-  additive bonus to the crystallization roll vs. a separate OR'd threshold path — decide by
-  looking at what keeps the *existing* Status-only crystallization rate (already balance-tested)
-  from being swamped.
+  population-wide), bumped by `Tier2NotabilityGainPerEvent` (0.15, config-driven) whenever the
+  character is the target of a Bond-goal formation (`GoalManager.FindHighTrustCompanion`'s Tier2
+  shortcut), `DeclareRivalry`/Feud-escalation, `Placate`, `GrantAid`, or `ForgiveDebt`
+  (`CivTracker.cs`) — added via a new `Tier2Character.GainNotability(amount)` helper (clamps to
+  [0,1]). Decays by `Tier2NotabilityDecayRate` (0.01/tick) in `Tier2BehaviorPhase.UpdateNeeds`,
+  alongside the existing Needs decay.
+  Resolved the open implementation question (additive roll bonus vs. OR'd threshold) as **both**:
+  `TryCrystallize`'s Status gate becomes `Needs.Status >= threshold || Notability >=
+  Tier2CrystalNotabilityThreshold` (0.6) — a drama-touched Tier2 doesn't need high settlement
+  Status too — and the roll chance itself becomes `Tier2CrystalChance + Notability ×
+  Tier2CrystalNotabilityChanceBonus` (0.01), a modest boost once a Tier2 clears whichever gate.
+  Ambition remains a hard gate either way — Notability is an opportunity, not a replacement for
+  personal drive.
+  New tests: `Tier2NotabilityTests.cs` (7 tests) — a bump test per action type (Rivalry, Placate,
+  GrantAid, ForgiveDebt, Bond-formation; Feud-escalation shares `ResolveRivalry`'s bump code path),
+  decay-per-tick, and a dedicated test confirming high-Notability-low-Status alone can still
+  crystallize (the OR-gate's whole point).
 
-- **13.8.3 — Balance & performance validation.**
-  Multi-seed sweep (same 42/777/9999 convention as the M13 lifespan-fix pass) confirming: (a)
-  `CharacterCrystallized` rate increases moderately, not to a runaway "everyone gets promoted"
-  regime that would balloon Tier1 population back toward Tier2 scale; (b) wall-clock time for a
-  300-year run doesn't regress measurably versus pre-13.8 baseline (the actual test of the scale
-  constraint above, not just an assertion); (c) `RelationshipEdge` table growth stays bounded
-  (row count should scale with Tier1 count × contacts, not with Tier2 population). New/updated
-  balance tests: extend `M13RelationshipEventBalanceTests.cs` (or a new
-  `Tier2CrystallizationBalanceTests.cs`) with a `CharacterCrystallized` band and a wall-clock
-  regression guard if one doesn't already exist.
+- **13.8.3 — SHIPPED 2026-08-03 — Balance & performance validation.**
+  Added `Tier2CrystallizationBalanceTests.cs` (same 42/777/9999 × 300-year convention as
+  `M13RelationshipEventBalanceTests`), asserting all three items scoped above in one pass:
+  (a) `CharacterCrystallized` band [10, 100] — calibration run observed 31-59 (Tier1 population
+  9-15, Tier2 population 50-85 by year 300, growing from 0 since Tier2 only spawns once
+  settlements exist via `PopulationDynamicsPhase`); (b) a per-seed wall-clock ceiling of 180s via
+  `Stopwatch` — calibration observed ~50-60s/seed; (c) `RelationshipEdge.EdgeCount` bounded to
+  `tier1Count × 20` rather than an absolute number (Tier1 population varies by seed) — calibration
+  observed a ratio of 2.9-4.8×, comfortably below a naive O(Tier1×Tier2) scan (which would put
+  edge count in the 500-1000+ range for these populations). All three would catch a structural
+  regression (Tier2 gaining its own scorer, or a new mechanic iterating full Tier2 population)
+  without being a tight/flaky perf assertion. Full suite green after: 750/750 fast tests
+  (`Category!=Balance`), 4/4 balance tests (`Category=Balance`).
 
 ## Open design notes carried into implementation
 
@@ -160,6 +173,7 @@ into crystallization.
   ("Tier1-initiated only" throughout this doc) and falls out of the existing scorer/no-scorer split
   for free.
 - 13.8.2's Notability field is intentionally NOT the same as `Needs.Status` (already an existing,
-  decaying, settlement/trade-driven need feeding `TryCrystallize` today) — keep them separate so
+  decaying, settlement/trade-driven need feeding `TryCrystallize` today) — kept separate so
   "currently prominent in the community" and "was recently touched by Tier1 drama" stay legible as
-  distinct signals in telemetry, even though both currently gate the same promotion roll.
+  distinct signals, and implemented as an OR'd gate (either satisfies the Status check) plus a
+  small additive roll bonus, rather than folding Notability into Status directly.

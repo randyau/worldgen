@@ -468,6 +468,8 @@ public static partial class CivTracker
         pending.Add(new PendingEvent(EventType.DebtIncurred, granter.Location, null, aidPayload,
             new[] { granter.Id.Value }, new[] { recipient.Id.Value },
             ActorId: granter.Id.Value, ActorName: granter.Identity.Name));
+        if (recipient is Tier2Character aidedT2)
+            aidedT2.GainNotability(world.SimConfig.Character.Tier2NotabilityGainPerEvent);
     }
 
     private static void ResolveForgiveDebt(ForgiveDebt cmd, WorldState world, List<PendingEvent> pending)
@@ -492,6 +494,8 @@ public static partial class CivTracker
         pending.Add(new PendingEvent(EventType.DebtForgiven, creditor.Location, null, forgivePayload,
             new[] { creditor.Id.Value }, new[] { debtor.Id.Value },
             ActorId: creditor.Id.Value, ActorName: creditor.Identity.Name));
+        if (debtor is Tier2Character forgivenT2)
+            forgivenT2.GainNotability(world.SimConfig.Character.Tier2NotabilityGainPerEvent);
     }
 
     // ─── Rivalry ──────────────────────────────────────────────────────────────
@@ -527,6 +531,8 @@ public static partial class CivTracker
             pending.Add(new PendingEvent(EventType.RivalryEscalatedToFeud, c.Location, null, feudPayload,
                 new[] { c.Id.Value }, new[] { target.Id.Value },
                 ActorId: c.Id.Value, ActorName: c.Identity.Name));
+            if (target is Tier2Character feudT2)
+                feudT2.GainNotability(world.SimConfig.Character.Tier2NotabilityGainPerEvent);
             return;
         }
 
@@ -549,6 +555,8 @@ public static partial class CivTracker
         pending.Add(new PendingEvent(EventType.RivalryFormed, c.Location, null, payload,
             new[] { c.Id.Value }, new[] { target.Id.Value },
             ActorId: c.Id.Value, ActorName: c.Identity.Name));
+        if (target is Tier2Character rivalT2)
+            rivalT2.GainNotability(world.SimConfig.Character.Tier2NotabilityGainPerEvent);
     }
 
     private static void ResolvePlacate(Placate cmd, WorldState world, List<PendingEvent> pending)
@@ -580,6 +588,8 @@ public static partial class CivTracker
         pending.Add(new PendingEvent(EventType.RivalryPlacated, c.Location, null, payload,
             new[] { c.Id.Value }, new[] { target.Id.Value },
             ActorId: c.Id.Value, ActorName: c.Identity.Name));
+        if (target is Tier2Character placatedT2)
+            placatedT2.GainNotability(world.SimConfig.Character.Tier2NotabilityGainPerEvent);
 
         if (reconciles)
         {

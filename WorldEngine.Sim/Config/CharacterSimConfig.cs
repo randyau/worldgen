@@ -421,6 +421,17 @@ public sealed class CharacterSimConfig
     public float Tier2CrystalAmbitionThreshold  { get; set; } = 0.8f;
     public float Tier2CrystalStatusThreshold    { get; set; } = 0.7f;
 
+    // M13.8.2: Notability — tracks recent Tier1-driven relationship exposure (Bond/Rivalry/
+    // Placate/GrantAid/ForgiveDebt targeting this Tier2), separate from the decaying Needs.Status
+    // so "currently prominent in the community" and "recently touched by Tier1 drama" stay
+    // legible as distinct crystallization signals. Notability alone can satisfy the Status gate
+    // (a drama-touched Tier2 crystallizes without needing high settlement Status too), and also
+    // adds a small bonus to the crystallization roll itself.
+    public float Tier2NotabilityGainPerEvent        { get; set; } = 0.15f;  // per targeted event
+    public float Tier2NotabilityDecayRate           { get; set; } = 0.01f;  // per tick, mirrors Needs decay
+    public float Tier2CrystalNotabilityThreshold    { get; set; } = 0.6f;   // OR'd with Status threshold above
+    public float Tier2CrystalNotabilityChanceBonus  { get; set; } = 0.01f; // × Notability, added to Tier2CrystalChance
+
     // ─── Masterwork artifact quality ──────────────────────────────────────────
     // Quality = base + roll × rollScale, clamped [0,1]. Higher exceptional-work roll → higher quality.
     public float MasterworkQualityBase          { get; set; } = 0.6f;

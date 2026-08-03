@@ -576,6 +576,14 @@ tier2_settlement_status_recovery_base = 0.03  # Status recovery at settlement = 
 tier2_crystal_ambition_threshold    = 0.8   # min Ambition to roll for crystallization into Tier1
 tier2_crystal_status_threshold      = 0.7   # min Status to roll for crystallization into Tier1
 
+# M13.8.2: Notability — Tier1-driven relationship exposure (Bond/Rivalry/Placate/GrantAid/
+# ForgiveDebt targeting this Tier2) as an alternate/boosted path into crystallization, kept
+# separate from the decaying Needs.Status signal above.
+tier2_notability_gain_per_event       = 0.15  # added to Notability per targeted event
+tier2_notability_decay_rate           = 0.01  # per tick, mirrors Needs decay
+tier2_crystal_notability_threshold    = 0.6   # OR'd with tier2_crystal_status_threshold above
+tier2_crystal_notability_chance_bonus = 0.01  # × Notability, added to tier2_crystal_chance
+
 # Masterwork artifact quality: base + exceptional-work roll × rollScale, clamped [0,1]
 masterwork_quality_base       = 0.6
 masterwork_quality_roll_scale = 0.4

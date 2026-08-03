@@ -443,6 +443,10 @@ Edit values in `sim_config.toml`; all keys live there without recompiling.
 | `tier2_settlement_status_recovery_base` | `0.03` | `SimConfig.Character.Tier2SettlementStatusRecoveryBase` | Status recovery at settlement = this × Diligence |
 | `tier2_crystal_ambition_threshold` | `0.8` | `SimConfig.Character.Tier2CrystalAmbitionThreshold` | min Ambition to roll for crystallization into Tier1 |
 | `tier2_crystal_status_threshold` | `0.7` | `SimConfig.Character.Tier2CrystalStatusThreshold` | min Status to roll for crystallization into Tier1 |
+| `tier2_notability_gain_per_event` | `0.15` | `SimConfig.Character.Tier2NotabilityGainPerEvent` | added to Notability per targeted event |
+| `tier2_notability_decay_rate` | `0.01` | `SimConfig.Character.Tier2NotabilityDecayRate` | per tick, mirrors Needs decay |
+| `tier2_crystal_notability_threshold` | `0.6` | `SimConfig.Character.Tier2CrystalNotabilityThreshold` | OR'd with tier2_crystal_status_threshold above |
+| `tier2_crystal_notability_chance_bonus` | `0.01` | `SimConfig.Character.Tier2CrystalNotabilityChanceBonus` | × Notability, added to tier2_crystal_chance |
 | `masterwork_quality_base` | `0.6` | `SimConfig.Character.MasterworkQualityBase` | Masterwork artifact quality: base + exceptional-work roll × rollScale, clamped [0,1] |
 | `masterwork_quality_roll_scale` | `0.4` | `SimConfig.Character.MasterworkQualityRollScale` |  |
 | `merchant_trade_chance` | `0.15` | `SimConfig.Character.MerchantTradeChance` | per-tick probability a merchant attempts a trade |
