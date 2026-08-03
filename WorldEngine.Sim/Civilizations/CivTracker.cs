@@ -5,6 +5,7 @@ using WorldEngine.Sim.Entities;
 using WorldEngine.Sim.Entities.Characters;
 using WorldEngine.Sim.Events;
 using WorldEngine.Sim.Organizations;
+using WorldEngine.Sim.Simulation.Phases;
 using WorldEngine.Sim.Tiles;
 using WorldEngine.Sim.World;
 
@@ -278,13 +279,25 @@ public static partial class CivTracker
     private static void ResolveMarriage(ProposeMarriage cmd, WorldState world, List<PendingEvent> pending)
     {
         if (world.GetEntity(cmd.CharacterId) is not Tier1Character c) return;
-        if (world.GetEntity(cmd.TargetId) is not Tier1Character target) return;
+        var famCfg = world.SimConfig.Family;
+
+        // M13.8.1: proposing marriage to a Tier2 promotes them to Tier1 first (reusing
+        // TryCrystallize's promotion path, triggered here rather than rolled) — the marriage then
+        // resolves as an ordinary Tier1-Tier1 marriage below. Keeps Family Organization membership
+        // and succession eligibility Tier1-only long-term rather than building a parallel
+        // Tier2-compatible path. See docs/phases/m13_8_tier2_relationship_exposure.md.
+        Tier1Character? target = world.GetEntity(cmd.TargetId) switch
+        {
+            Tier1Character t1 => t1,
+            Tier2Character t2 when t2.IsAlive => PromoteForMarriage(t2, world, famCfg, pending),
+            _ => null
+        };
+        if (target == null) return;
         if (!c.IsAlive || !target.IsAlive) return;
 
         var rel = world.Relationships.GetOrCreate(c.Id, target.Id);
         if (rel.IsMarried) return;
 
-        var famCfg = world.SimConfig.Family;
         if (c.AgeSeason < famCfg.MarriageMinAgeSeasons || target.AgeSeason < famCfg.MarriageMinAgeSeasons) return;
 
         // Leader-seat tiebreak: higher-Ambition spouse heads the new household. Arbitrary but
@@ -384,6 +397,37 @@ public static partial class CivTracker
         _ => "?"
     };
 
+    /// <summary>
+    /// M13.8.1: a "how formidable is this target" proxy for Fear scaling in
+    /// <see cref="ResolveRivalry"/>, generalized to accept a Tier2 rivalry target. Tier2 has no
+    /// Skills/Combat or Aggression trait (<see cref="PersonalityVector6"/> is a cut-down 6-trait
+    /// vector with neither), so a Tier2 target never scales Fear beyond the flat base increment —
+    /// a specialist/citizen isn't a combat threat the way a Tier1 warlord is.
+    /// </summary>
+    private static float TargetPower(IEntity e) => e switch
+    {
+        Tier1Character t1 => (t1.Skills.Combat + t1.Personality.Aggression) * 0.5f,
+        _ => 0f
+    };
+
+    /// <summary>
+    /// M13.8.1: promotes a Tier2 to Tier1 as part of resolving a marriage proposal, then floors the
+    /// newly-rolled AgeSeason at <see cref="FamilyConfig.MarriageMinAgeSeasons"/> if the normal
+    /// adult-fraction roll (clamped only to MinRulerAgeSeasons, a lower bar) landed below it —
+    /// without this, ResolveMarriage's own age check immediately below could reject the marriage
+    /// the same tick it promotes them, permanently orphaning the proposer's Bond goal (which would
+    /// keep pointing at the now-dead pre-promotion Tier2 EntityId forever, since Bond target lookup
+    /// only re-attempts Marry while the goal's original target is alive).
+    /// </summary>
+    private static Tier1Character PromoteForMarriage(
+        Tier2Character t2, WorldState world, FamilyConfig famCfg, List<PendingEvent> pending)
+    {
+        var promoted = Tier2BehaviorPhase.PromoteToTier1(t2, world, world.SimConfig, pending);
+        if (promoted.AgeSeason < famCfg.MarriageMinAgeSeasons)
+            promoted.AgeSeason = famCfg.MarriageMinAgeSeasons;
+        return promoted;
+    }
+
     private static void ResolveGrantAid(GrantAid cmd, WorldState world, List<PendingEvent> pending)
     {
         if (world.GetEntity(cmd.GranterId) is not Tier1Character granter) return;
@@ -456,7 +500,10 @@ public static partial class CivTracker
         DeclareRivalry cmd, WorldState world, List<PendingEvent> pending)
     {
         if (world.GetEntity(cmd.CharacterId) is not Tier1Character c) return;
-        if (world.GetEntity(cmd.TargetId) is not Tier1Character target) return;
+        // M13.8.1: a Tier2 is a valid rivalry target too (Tier1-initiated only — see
+        // docs/phases/m13_8_tier2_relationship_exposure.md). DisplayName/TargetPower generalize the
+        // fields Tier2 doesn't have (Identity.Name, Skills/Aggression).
+        if (world.GetEntity(cmd.TargetId) is not IEntity target || target is not (Tier1Character or Tier2Character)) return;
 
         var rel = world.Relationships.GetOrCreate(c.Id, target.Id);
         var fearCfg = world.SimConfig.Fear;
@@ -476,7 +523,7 @@ public static partial class CivTracker
             });
 
             var feudPayload = JsonSerializer.Serialize(new RivalryEscalatedToFeudPayload(
-                c.Id.Value, c.Identity.Name, target.Id.Value, target.Identity.Name));
+                c.Id.Value, c.Identity.Name, target.Id.Value, DisplayName(target)));
             pending.Add(new PendingEvent(EventType.RivalryEscalatedToFeud, c.Location, null, feudPayload,
                 new[] { c.Id.Value }, new[] { target.Id.Value },
                 ActorId: c.Id.Value, ActorName: c.Identity.Name));
@@ -485,8 +532,8 @@ public static partial class CivTracker
 
         // M13 13.1: Fear scales with how much more formidable the target is than the declarer —
         // a rivalry with a stronger opponent is scarier than one with a weaker one, not a flat bump.
-        float declarerPower = (c.Skills.Combat + c.Personality.Aggression) * 0.5f;
-        float targetPower   = (target.Skills.Combat + target.Personality.Aggression) * 0.5f;
+        float declarerPower = TargetPower(c);
+        float targetPower   = TargetPower(target);
         float fearIncrement = fearCfg.RivalryBaseFearIncrement
                              + Math.Max(0f, targetPower - declarerPower) * fearCfg.RivalryFearPowerScale;
 
@@ -498,7 +545,7 @@ public static partial class CivTracker
         });
 
         var payload = JsonSerializer.Serialize(new RivalryFormedPayload(
-            c.Id.Value, c.Identity.Name, target.Id.Value, target.Identity.Name));
+            c.Id.Value, c.Identity.Name, target.Id.Value, DisplayName(target)));
         pending.Add(new PendingEvent(EventType.RivalryFormed, c.Location, null, payload,
             new[] { c.Id.Value }, new[] { target.Id.Value },
             ActorId: c.Id.Value, ActorName: c.Identity.Name));
@@ -507,7 +554,8 @@ public static partial class CivTracker
     private static void ResolvePlacate(Placate cmd, WorldState world, List<PendingEvent> pending)
     {
         if (world.GetEntity(cmd.CharacterId) is not Tier1Character c) return;
-        if (world.GetEntity(cmd.TargetId) is not Tier1Character target) return;
+        // M13.8.1: a Tier2 rival can be placated too — see ResolveRivalry above.
+        if (world.GetEntity(cmd.TargetId) is not IEntity target || target is not (Tier1Character or Tier2Character)) return;
         if (!c.IsAlive || !target.IsAlive) return;
 
         var rel = world.Relationships.Get(c.Id, target.Id);
@@ -528,7 +576,7 @@ public static partial class CivTracker
         world.Relationships.Upsert(rel with { Fear = newFear, Trust = newTrust, Flags = newFlags });
 
         var payload = JsonSerializer.Serialize(new RivalryPlacatedPayload(
-            c.Id.Value, c.Identity.Name, target.Id.Value, target.Identity.Name));
+            c.Id.Value, c.Identity.Name, target.Id.Value, DisplayName(target)));
         pending.Add(new PendingEvent(EventType.RivalryPlacated, c.Location, null, payload,
             new[] { c.Id.Value }, new[] { target.Id.Value },
             ActorId: c.Id.Value, ActorName: c.Identity.Name));
@@ -536,7 +584,7 @@ public static partial class CivTracker
         if (reconciles)
         {
             var reconPayload = JsonSerializer.Serialize(new RivalsReconciledPayload(
-                c.Id.Value, c.Identity.Name, target.Id.Value, target.Identity.Name));
+                c.Id.Value, c.Identity.Name, target.Id.Value, DisplayName(target)));
             pending.Add(new PendingEvent(EventType.RivalsReconciled, c.Location, null, reconPayload,
                 new[] { c.Id.Value }, new[] { target.Id.Value },
                 ActorId: c.Id.Value, ActorName: c.Identity.Name));

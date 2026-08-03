@@ -44,8 +44,17 @@ namespace WorldEngine.Tests.Balance;
 /// realistic lifespans — but CharacterMarried itself is still low-volume (0-10 over 300 years,
 /// bounded by how few Tier1 "named" characters exist at once), so the marriage-hardship→Estrangement
 /// and Feud→Reconciliation pathways likely just have too small a sample in a single 300-year/seed
-/// run to hit yet, not a re-confirmed structural block. Left ceiling-only pending a dedicated look
-/// at Tier1 population scale rather than expanded into here.
+/// run to hit yet, not a re-confirmed structural block.
+///
+/// **M13.8.1 update (2026-08-03):** Tier2 became a valid Bond/Marry target (mirroring
+/// GrantAid/ForgiveDebt's Tier2 shortcut — see docs/phases/m13_8_tier2_relationship_exposure.md), and
+/// proposing marriage to a Tier2 auto-crystallizes them to Tier1 as part of resolving the command.
+/// This massively widened CharacterMarried's Tier1-scarcity bottleneck (Tier2 is the bulk background
+/// population): re-observed 32-67 (was 0-10). CharacterGrieved rose too (114 in one seed, was 23-50)
+/// — more marriages compounding into more crystallizations, more population, more deaths to mourn.
+/// Bands widened accordingly below. Whether this rate is itself something to brake (a Notability/
+/// crystallization-rate look, or a marriage-specific cooldown) rather than just re-observe is exactly
+/// what M13.8.2 (Notability) and M13.8.3 (balance/perf validation) are for — not decided here.
 /// </summary>
 [Trait("Category", "Balance")]
 public class M13RelationshipEventBalanceTests
@@ -64,10 +73,16 @@ public class M13RelationshipEventBalanceTests
         // Re-calibrated 2026-08-02 after the lifespan fix (observed 69-112, was 80-320 pre-fix —
         // longer lives mean fewer deaths mean fewer replacement births).
         [EventType.CharacterBorn]   = new Band(40, 320),
-        [EventType.CharacterGrieved] = new Band(5, 60),
 
-        // Marriage is real but low-volume given how few Tier1 characters exist. Observed 0-10.
-        [EventType.CharacterMarried] = new Band(0, 15),
+        // Re-calibrated 2026-08-03 after M13.8.1's marriage-to-Tier2 crystallization: population
+        // grows faster now (more marriages → more crystallizations), so more deaths to mourn.
+        // Observed 114 in one seed (was 23-50 pre-13.8.1); ceiling raised with margin.
+        [EventType.CharacterGrieved] = new Band(5, 150),
+
+        // Re-calibrated 2026-08-03: M13.8.1 let a Bond goal target a Tier2 (Tier1's scarcity
+        // bottleneck lifted — Tier2 is the bulk background population), and marrying one
+        // auto-crystallizes them. Observed 32-67 (was 0-10 pre-13.8.1); floor now safely nonzero.
+        [EventType.CharacterMarried] = new Band(20, 95),
 
         // M13 13.5 dispatch-bug fix (GrantAid/ForgiveDebt were never wired into
         // CharacterBehaviorPhase.ResolveCommand's switch — silently no-op'd every time the utility

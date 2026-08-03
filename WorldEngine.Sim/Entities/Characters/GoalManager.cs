@@ -593,6 +593,8 @@ public static class GoalManager
         }
     }
 
+    // Tier1-only by design — see docs/phases/m13_8_tier2_relationship_exposure.md (M13.8.0). A
+    // Tier2 rival must never be offered as a Dominance-goal target. Do not widen this to Tier2Character.
     private static EntityId? FindNearbyRival(Tier1Character c, IWorldStateReadOnly world, int radius)
     {
         foreach (var e in world.GetEntitiesInRadius(c.Location, radius))
@@ -606,6 +608,8 @@ public static class GoalManager
         return null;
     }
 
+    // Tier1-only by design — see docs/phases/m13_8_tier2_relationship_exposure.md (M13.8.0). A
+    // Tier2 must never be offered as an Alliance-goal target. Do not widen this to Tier2Character.
     private static EntityId? FindNearbyNeutral(Tier1Character c, IWorldStateReadOnly world, int radius)
     {
         foreach (var e in world.GetEntitiesInRadius(c.Location, radius))

@@ -149,23 +149,26 @@ public sealed class UtilityScorer
 
         // Marry — upgrade a high-trust Bond goal into marriage (M13 13.0). Targets the character's
         // own Bond companion specifically (not any co-located character) so marriage follows from
-        // an existing attachment rather than an opportunistic proposal.
+        // an existing attachment rather than an opportunistic proposal. M13.8.1: the Bond companion
+        // may be a Tier2 (FindHighTrustCompanion already allows same-civ Tier2 bonds) — proposing
+        // marriage to one is still scored here; CivTracker.ResolveMarriage promotes them to Tier1
+        // first when the command resolves.
         var famCfg = world.SimConfig.Family;
         if (c.Personality.Compassion > famCfg.MarriageCompassionThreshold
             && c.AgeSeason >= famCfg.MarriageMinAgeSeasons)
         {
             var bondGoal = c.Goals.FirstOrDefault(g => g.Type == GoalType.Bond && g.TargetEntityId.HasValue);
-            if (bondGoal != null
-                && world.GetEntity(bondGoal.TargetEntityId!.Value) is Tier1Character spouse
-                && spouse.IsAlive
-                && spouse.Location == c.Location
-                && spouse.AgeSeason >= famCfg.MarriageMinAgeSeasons)
+            SimEntity? spouseEntity = bondGoal != null ? world.GetEntity(bondGoal.TargetEntityId!.Value) as SimEntity : null;
+            if (spouseEntity is Tier1Character or Tier2Character
+                && spouseEntity.IsAlive
+                && spouseEntity.Location == c.Location
+                && spouseEntity.AgeSeason >= famCfg.MarriageMinAgeSeasons)
             {
-                var marriageRel = world.GetRelationship(c.Id, spouse.Id);
+                var marriageRel = world.GetRelationship(c.Id, spouseEntity.Id);
                 if (marriageRel != null && !marriageRel.IsMarried && marriageRel.Trust >= famCfg.MarriageTrustThreshold)
                 {
                     float marryProb = (c.Personality.Compassion + c.Personality.Loyalty) * 0.5f;
-                    actions.Add(new(new ProposeMarriage(c.Id, spouse.Id),
+                    actions.Add(new(new ProposeMarriage(c.Id, spouseEntity.Id),
                         Score(c, ActionType.Marry, marryProb, world, cfg)));
                 }
             }
@@ -229,7 +232,8 @@ public sealed class UtilityScorer
             actions.Add(new(bestDebtCmd, bestDebtScore));
 
         // Placate — M13 13.1: Fear as a submission/appeasement axis. A low-Aggression character
-        // facing a feared existing rival prefers appeasement over further escalation.
+        // facing a feared existing rival prefers appeasement over further escalation. M13.8.1: a
+        // Tier2 rival can be placated too (the Tier1 side is always the one initiating regardless).
         var fearCfg = world.SimConfig.Fear;
         if (c.Personality.Aggression <= fearCfg.PlacateAggressionMax)
         {
@@ -237,7 +241,8 @@ public sealed class UtilityScorer
             float bestPlacateScore = float.MinValue;
             foreach (var e in world.GetEntitiesInRadius(c.Location, cfg.PerceptionRadius))
             {
-                if (e is not Tier1Character other || other.Id == c.Id || !other.IsAlive) continue;
+                if (e is not SimEntity other || other is not (Tier1Character or Tier2Character)) continue;
+                if (other.Id == c.Id || !other.IsAlive) continue;
                 var rel = world.GetRelationship(c.Id, other.Id);
                 if (rel == null || !rel.IsRival || rel.Fear < fearCfg.PlacateFearThreshold) continue;
 
@@ -276,12 +281,17 @@ public sealed class UtilityScorer
 
         // DeclareRivalry — nearby character with substantially low trust (not just one bad encounter).
         // Cap scales with Aggression: aggressive characters sustain more rivalries; peaceful ones almost none.
+        // M13.8.1: a Tier2 is a valid rivalry target too — Tier1-initiated only, since Tier2 has no
+        // scorer to reciprocate, escalate to Feud, or seek Reconciliation on its own (see
+        // docs/phases/m13_8_tier2_relationship_exposure.md for the isolation this deliberately keeps:
+        // civ-level consumers of IsRival — war, alliance, territory — stay Tier1Character-only).
         int rivalMax = cfg.RivalryMaxBase + (int)(c.Personality.Aggression * cfg.RivalryMaxPerAggression);
         if (world.CountRivals(c.Id) < rivalMax)
         {
             foreach (var e in world.GetEntitiesInRadius(c.Location, cfg.PerceptionRadius))
             {
-                if (e is not Tier1Character other || other.Id == c.Id || !other.IsAlive) continue;
+                if (e is not SimEntity other || other is not (Tier1Character or Tier2Character)) continue;
+                if (other.Id == c.Id || !other.IsAlive) continue;
                 var rel = world.GetRelationship(c.Id, other.Id);
                 // M13 13.5: also fires against an existing (non-Feud) rival — CivTracker.ResolveRivalry
                 // treats a re-declaration against an already-active rival as escalation into a Feud
@@ -321,6 +331,9 @@ public sealed class UtilityScorer
                     bool hostileEnough = false;
                     foreach (var e2 in world.GetEntitiesInRadius(c.Location, cfg.PerceptionRadius))
                     {
+                        // Tier1-only by design — see docs/phases/m13_8_tier2_relationship_exposure.md
+                        // (M13.8.0). A Tier2 rival must never justify a war; only a Tier1 with real
+                        // civ standing can. Do not widen this to include Tier2Character.
                         if (e2 is not Tier1Character enemy || !enemy.IsAlive || enemy.Id == c.Id) continue;
                         if (enemy.CivId != nearSettle.CivId) continue;
                         var rel = world.GetRelationship(c.Id, enemy.Id);
@@ -828,6 +841,8 @@ public sealed class UtilityScorer
         {
             if (!edge.IsRival || edge.Fear <= 0f) continue;
             var otherId = edge.From == c.Id ? edge.To : edge.From;
+            // Tier1-only by design — see docs/phases/m13_8_tier2_relationship_exposure.md (M13.8.0).
+            // A Tier2 rival must never dampen War/Raid desirability. Do not widen this to Tier2Character.
             if (world.GetEntity(otherId) is Tier1Character rival
                 && rival.IsAlive && rival.CivId == targetCivId)
                 maxFear = Math.Max(maxFear, edge.Fear);

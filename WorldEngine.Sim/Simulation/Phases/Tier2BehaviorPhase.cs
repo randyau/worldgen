@@ -69,6 +69,21 @@ public sealed class Tier2BehaviorPhase
         {
             string deathCause = c.AgeSeason >= c.MaxAgeSeason ? "old age" : "needs";
             c.IsAlive = false;
+
+            // M13.8.1: a Tier2 can now be a rivalry target (CivTracker.ResolveRivalry) — mirror
+            // CharacterBehaviorPhase.KillCharacter's cleanup so a dead Tier2 doesn't leave a
+            // dangling IsRival edge inflating the surviving Tier1's CountRivals cap forever.
+            foreach (var edge in world.Relationships.GetAll(c.Id).ToList())
+            {
+                if (edge.IsRival)
+                {
+                    world.Relationships.Upsert(edge with
+                    {
+                        Flags = edge.Flags & ~RelationshipFlags.IsRival
+                    });
+                }
+            }
+
             var deathPayload = JsonSerializer.Serialize(new CharacterDeathPayload(
                 c.Id.Value, c.Name, deathCause, c.AgeSeason));
             pending.Add(new PendingEvent(EventType.CharacterDied, c.Location, null, deathPayload,
@@ -482,22 +497,46 @@ public sealed class Tier2BehaviorPhase
         float r = world.GetRandomFloat(c.Id, S.T2General);
         if (r > _cfg.Tier2CrystalChance) return;
 
+        PromoteToTier1(c, world, _simCfg, pending);
+    }
+
+    /// <summary>
+    /// Promotes a Tier2 character to a full Tier1 hero, removing them from the Tier2 population and
+    /// spawning a matching-name Tier1 in their place. Extracted from <see cref="TryCrystallize"/> so
+    /// M13.8.1's marriage-to-Tier2 path (<c>CivTracker.ResolveMarriage</c>) can trigger the same
+    /// promotion directly — a Tier1 proposing marriage to a Tier2 promotes them first, then the
+    /// marriage resolves as an ordinary Tier1-Tier1 marriage — without duplicating the spawn logic.
+    /// </summary>
+    public static Tier1Character PromoteToTier1(
+        Tier2Character c, WorldState world, SimConfig simCfg, List<PendingEvent> pending)
+    {
         c.IsAlive = false; // remove from Tier2 list
 
-        // Spawn a Tier1 with matching name and elevated personality
+        // Spawn a Tier1 with matching name and elevated personality. startAsAdult: true — this
+        // represents a Tier2 who already existed (and already accumulated a real Tier2 age), not a
+        // newborn; without it the promoted Tier1 spawns at AgeSeason 0, which broke M13.8.1's
+        // marriage-to-Tier2 path (ResolveMarriage's MarriageMinAgeSeasons check would immediately
+        // fail right after promotion). Same reasoning CharacterFactory.Spawn's own doc comment gives
+        // for civ-founding/succession-backfill spawns.
         var promoted = CharacterFactory.Spawn(
             location:   c.Location,
             biome:      (BiomeType)world.TileGrid.GetTile(c.Location).BiomeType,
             worldSeed:  world.WorldSeed,
             entitySeq:  (int)(c.Id.Value & 0x7FFFFFFF),
-            config:     _simCfg,
-            birthYear:  world.CurrentYear);
+            config:     simCfg,
+            birthYear:  world.CurrentYear,
+            startAsAdult: true);
 
         int promotedOrdinal = world.ClaimNameOrdinal(promoted.Identity.Name);
         if (promotedOrdinal > 0)
             promoted.Identity = promoted.Identity with { NameOrdinal = promotedOrdinal };
 
         world.Entities.Add(promoted);
+
+        // Carry over accumulated Trust/Fear/rivalry/Bond history onto the new EntityId — without
+        // this, promotion silently resets every relationship the Tier2 had built up back to a blank
+        // edge (see docs/phases/m13_8_tier2_relationship_exposure.md).
+        world.Relationships.RekeyEntity(c.Id, promoted.Id);
 
         pending.Add(new PendingEvent(EventType.CharacterCrystallized, c.Location, null,
             JsonSerializer.Serialize(new CharacterCrystallizedPayload(
@@ -511,5 +550,7 @@ public sealed class Tier2BehaviorPhase
                 Source: "crystallized")),
             new[] { promoted.Id.Value },
             ActorId: promoted.Id.Value, ActorName: promoted.Identity.Name));
+
+        return promoted;
     }
 }

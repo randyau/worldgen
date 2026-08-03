@@ -938,6 +938,9 @@ public sealed class CharacterBehaviorPhase
 
         foreach (var e in world.GetEntitiesAt(c.Location))
         {
+            // Tier1-only by design — see docs/phases/m13_8_tier2_relationship_exposure.md (M13.8.0).
+            // A co-located Tier2 must never accrue territorial-pressure drain. Do not widen this to
+            // Tier2Character (which has no CivId to compare against anyway).
             if (e is not Tier1Character other || other.Id == c.Id || !other.IsAlive) continue;
             if (other.CivId == c.CivId) continue; // same civ — no pressure
 

@@ -1,6 +1,7 @@
 # M13.8 — Tier2 Relationship Exposure
 
-**Status:** PLANNED — not started.
+**Status:** IN PROGRESS — 13.8.0 and 13.8.1 shipped 2026-08-03. 13.8.2 (Notability) and 13.8.3
+(balance/performance validation) not started.
 
 Scoped 2026-08-03 as a follow-on to M13 before M14 begins (M13 itself is done — see
 `docs/phases/archive/m13_generational_domestic_drama.md`).
@@ -39,8 +40,8 @@ into crystallization.
 
 ## Phase sequence
 
-- **13.8.0 — Harden Tier1-only civ-level isolation (regression guard, built and merged before
-  13.8.1 enables Tier2 targeting).**
+- **13.8.0 — SHIPPED 2026-08-03 — Harden Tier1-only civ-level isolation (regression guard, built
+  and merged before 13.8.1 enables Tier2 targeting).**
   Most rivalry-driven effects operate at civ level (war, alliance, territory), while a Tier2 is
   just a high-ranking specialist/citizen — it shouldn't be able to move those civ-level dials.
   Auditing every consumer of `IsRival` found this is *already* true today, but only as an
@@ -65,8 +66,11 @@ into crystallization.
     dispatch (see `feedback_command_dispatch_wiring` memory).
   Pure hardening of already-correct behavior — no new mechanic, no balance risk — so this can ship
   independently and doesn't block on the rest of 13.8's design settling.
+  **Shipped:** explicit comments at all 5 sites; `Tier2RivalryIsolationTests.cs` (5 tests) proving
+  the invariant behaviorally, including a positive-control test (an equivalent Tier1 rival *does*
+  justify war) to prove the Tier2 absence is caused by the type filter, not a missing precondition.
 
-- **13.8.1 — Tier2 as an eligible target for more Tier1 relationship actions.**
+- **13.8.1 — SHIPPED 2026-08-03 — Tier2 as an eligible target for more Tier1 relationship actions.**
   Extend `UtilityScorer`'s candidate loops for `Bond`, `DeclareRivalry`, and `Placate` to accept a
   co-located Tier2 candidate, mirroring the existing `GrantAid`/`ForgiveDebt` Tier2 branch exactly
   (same `GetEntitiesInRadius` scan, same "is this a valid target" checks). Extend the matching
@@ -81,6 +85,42 @@ into crystallization.
   Organization membership Tier1-only long-term — no Tier2-compatible childbirth/succession path
   needs to be built. Grief already has a working Tier2 precedent to mirror (`GoalManager.
   ApplyGriefToMourners` already notifies Tier1 mourners of a Tier2 death).
+
+  **Shipped, plus two bugs the build surfaced and fixed along the way (not scoped in advance):**
+  - **Bond's Tier2 path already existed** — `GoalManager.FindHighTrustCompanion` already lets a
+    Bond goal target a same-civ co-located Tier2 (the M13 balance pass's "shared homeland" shortcut,
+    reused for GrantAid/ForgiveDebt). Only the Marry candidate check (`UtilityScorer.cs` ~150-172)
+    was still hard-typed to `Tier1Character`, silently dropping any Bond goal that happened to
+    target a Tier2 — generalized to `SimEntity` (`Tier1Character or Tier2Character`).
+  - **Promotion resets AgeSeason to 0** — `PromoteToTier1` (extracted from `TryCrystallize` so
+    `ResolveMarriage` can trigger the same promotion path) spawns via `CharacterFactory.Spawn`
+    without `startAsAdult: true`, so a freshly-promoted Tier1 started as an infant — which broke
+    the very next line of `ResolveMarriage` (the `MarriageMinAgeSeasons` check) every time. Fixed by
+    passing `startAsAdult: true` (this also improves the pre-existing organic crystallization path,
+    which had the same latent bug, just never exercised by an immediately-following age check).
+    Added `PromoteForMarriage` to additionally floor the rolled age at `MarriageMinAgeSeasons`
+    specifically, since the adult-fraction roll is only clamped to the lower `MinRulerAgeSeasons`
+    bar and could still land below the marriage threshold.
+  - **Relationship history was getting discarded on promotion** — promotion assigns the new Tier1 a
+    new `EntityId` (well, usually the same *numeric* value as the dying Tier2's, since
+    `CharacterFactory.Spawn`'s `entitySeq`-derived id reuses it — but a distinct `EntityId` value in
+    the type system either way), so `RelationshipEdge`s keyed to the old Tier2 id — including the
+    very Bond-Trust edge a Tier2-marriage depends on — would otherwise silently reset to a blank
+    edge. Added `RelationshipGraph.RekeyEntity(oldId, newId)`, called from `PromoteToTier1` for
+    every promotion (not just marriage-triggered ones), so accumulated Trust/Fear/rivalry carries
+    over regardless of which path promoted them.
+  - **Tier2 death left dangling rival edges** — a Tier2 rival that dies of old age (Tier2's own
+    lifecycle, unrelated to promotion) never had its `IsRival` edges cleared, unlike
+    `CharacterBehaviorPhase.KillCharacter`'s existing Tier1 cleanup — added the same cleanup to
+    `Tier2BehaviorPhase.UpdateLifecycle`'s death branch so a dead Tier2 doesn't permanently inflate
+    the surviving Tier1's `CountRivals` cap.
+  - **Balance fallout:** `CharacterMarried`'s Tier1-population bottleneck lifted substantially now
+    that Tier2 (the bulk population) is eligible — re-observed 32-67 over 300 years (was 0-10).
+    `CharacterGrieved` rose too (114 in one seed, was 23-50) from the resulting population growth.
+    `M13RelationshipEventBalanceTests.cs` bands widened accordingly; whether this rate itself needs
+    a brake is left to 13.8.2/13.8.3 rather than decided here.
+  - New tests: `Tier2RivalryAndMarriageTests.cs` (5 tests) — Rivalry/Feud/Placate against a Tier2,
+    and the full promote-then-marry path including the age-floor and relationship-rekey fixes.
 
 - **13.8.2 — Notability: relationship-exposure tracking that feeds crystallization.**
   Add a lightweight counter on `Tier2Character` (mirrors the existing `LastCreateCompletedTick`/
@@ -111,13 +151,14 @@ into crystallization.
   already filters to `Tier1Character` incidentally — but that incidental protection needs to become
   an explicit, tested invariant before 13.8.1 makes Tier2 a valid rivalry target, so a future
   refactor can't quietly remove a type filter that's secretly load-bearing.
-- Which exact actions besides Bond/Rivalry/Placate are worth extending to Tier2 targets is a
-  judgment call at 13.8.1 build time — `DeclareRivalry` and `Placate` in particular raise the
-  question of whether a Tier2 "loses" a rivalry the way a Tier1 would (they have no goals/utility
-  scoring to respond with a counter-action), so a Tier2-targeted Rivalry may need to resolve more
-  passively than a Tier1-Tier1 one (e.g. it can be Placated by the Tier1 side but never
-  Tier2-initiated-Feud-escalated, since escalation today is driven by the rival re-declaring, which
-  requires a scorer Tier2 doesn't have).
+- **Resolved 2026-08-03 by 13.8.1:** whether a Tier2-targeted Rivalry needs to resolve more
+  passively than Tier1-Tier1. It does, and no special-casing was needed to make it so — Feud
+  escalation and Reconciliation both require the *acting* character (whichever side calls
+  `DeclareRivalry`/`Placate`) to have a scorer, and only Tier1 does. So a Tier2 rival can be
+  escalated to Feud or Placated toward Reconciliation, but only ever by the Tier1 side choosing to;
+  the Tier2 itself can never initiate either transition, which is exactly the intended asymmetry
+  ("Tier1-initiated only" throughout this doc) and falls out of the existing scorer/no-scorer split
+  for free.
 - 13.8.2's Notability field is intentionally NOT the same as `Needs.Status` (already an existing,
   decaying, settlement/trade-driven need feeding `TryCrystallize` today) — keep them separate so
   "currently prominent in the community" and "was recently touched by Tier1 drama" stay legible as

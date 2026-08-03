@@ -1,3 +1,4 @@
+using System.Linq;
 using WorldEngine.Sim.Core;
 
 namespace WorldEngine.Sim.Entities.Characters;
@@ -98,6 +99,23 @@ public sealed class RelationshipGraph
         var edge = new RelationshipEdge(a, b, Trust: 0f, Fear: 0f, Debt: 0f, Flags: RelationshipFlags.None);
         Upsert(edge);
         return edge;
+    }
+
+    /// <summary>
+    /// M13.8.1: re-keys every edge touching <paramref name="oldId"/> onto <paramref name="newId"/>
+    /// instead — used when a Tier2 character is promoted to Tier1 (a brand new EntityId), so
+    /// accumulated Trust/Fear/rivalry/Bond history isn't silently discarded and reset to a blank
+    /// edge under the new identity. See Tier2BehaviorPhase.PromoteToTier1.
+    /// </summary>
+    public void RekeyEntity(EntityId oldId, EntityId newId)
+    {
+        foreach (var edge in GetAll(oldId).ToList())
+        {
+            var otherId = edge.From == oldId ? edge.To : edge.From;
+            Remove(oldId, otherId);
+            var rekeyed = edge.From == oldId ? edge with { From = newId } : edge with { To = newId };
+            Upsert(rekeyed);
+        }
     }
 
     private void AddNeighbor(EntityId owner, EntityId neighbor)
