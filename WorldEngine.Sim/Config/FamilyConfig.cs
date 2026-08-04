@@ -26,16 +26,25 @@ public class FamilyConfig
 
     /// <summary>M13 13.5 — Estrangement: annual check on married couples. Trust at/below this
     /// clears IsMarried|IsFamily instead of the marriage persisting indefinitely regardless of
-    /// how the relationship has decayed.</summary>
-    public float EstrangementTrustThreshold  { get; set; } = -0.3f;
+    /// how the relationship has decayed.
+    /// 2026-08-03 rebalance: `ResolveMarriage` sets Trust to `min(1, priorTrust + 0.2)` at the
+    /// moment of marriage (and proposal itself requires Trust >= MarriageTrustThreshold 0.6), so
+    /// married Trust starts around 0.8-1.0, and ChildbirthTrustGain/the general same-civ
+    /// companionship drift below both push it upward further from there. The old threshold (-0.3)
+    /// needed a ~1.1-1.3 point swing that hardship alone (see MarriageHardshipTrustDrain) could
+    /// never plausibly deliver — calibration observed married-edge Trust pinned at 0.80-1.00 in
+    /// every seed, CharacterEstranged never firing. Loosened so a marriage that's genuinely
+    /// soured — not driven all the way to active hatred — can actually end.</summary>
+    public float EstrangementTrustThreshold  { get; set; } = 0.65f;
 
     /// <summary>M13 13.6 — marriage-specific hardship sink, on top of the general same-civ
     /// companionship drift (CharacterSimConfig.SameCivFamiliarityBaseRate/FrictionRate): annual
     /// Trust drain on a married edge when either spouse's Food or Safety need has been critical,
     /// giving Estrangement a distinct "poverty strained the marriage" cause rather than only ever
-    /// following from baseline personality mismatch.</summary>
+    /// following from baseline personality mismatch. Raised 2026-08-03 alongside
+    /// EstrangementTrustThreshold — see that field's comment for the reachability math.</summary>
     public float MarriageHardshipNeedThreshold { get; set; } = 0.4f;
-    public float MarriageHardshipTrustDrain     { get; set; } = 0.16f;
+    public float MarriageHardshipTrustDrain     { get; set; } = 0.5f;
 
     /// <summary>M13 13.6 — marriage-specific milestone source: childbirth nudges marital Trust up
     /// a little too, not just Belonging — shared joy reinforces the bond.</summary>

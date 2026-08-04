@@ -193,7 +193,7 @@ public class RelationshipTransitionsTests
         var rel = world.Relationships.GetOrCreate(a.Id, b.Id);
         world.Relationships.Upsert(rel with
         {
-            Trust = 0.5f,
+            Trust = 0.9f,
             Flags = RelationshipFlags.IsMarried | RelationshipFlags.IsFamily
         });
 
@@ -251,5 +251,39 @@ public class RelationshipTransitionsTests
         CivTracker.Resolve(new RaidSettlement(raider.Id, tile), world, pending);
 
         pending.Should().NotContain(e => e.Type == EventType.OathBroken);
+    }
+
+    /// <summary>
+    /// 2026-08-03 rebalance: OathBroken no longer requires the war/raid target to be specifically
+    /// the creditor's own civ — calibration found that triple coincidence (a rare Tier1-Tier1 debt
+    /// edge existing, AND the debtor specifically warring THAT creditor's civ, AND before the debt
+    /// got forgiven) never fired in 300 years × 3 seeds. Any war/raid declared while any debt is
+    /// outstanding now breaks it, wherever the war is aimed — see CheckOathBreaking's updated doc.
+    /// </summary>
+    [Fact]
+    public void Raid_AgainstUnrelatedThirdCiv_StillBreaksOutstandingDebtToADifferentCiv()
+    {
+        var world = WorldTestHelper.CreateSmallWorld(seed: 99);
+        var tile = FindLandTile(world);
+        var (_, civA) = SpawnRuler(world, tile, 81L, "CivA");
+        var (_, civB) = SpawnRuler(world, tile, 82L, "CivB");
+        var (_, civC) = SpawnRuler(world, tile, 83L, "CivC");
+        var raider   = SpawnMember(world, tile, 84L, civA);
+        var creditor = SpawnMember(world, tile, 85L, civB);
+        var defender = SpawnMember(world, tile, 86L, civC);
+        world.Settlements[tile] = new SettlementStub(
+            FounderId: defender.Id, CivId: civC, Tile: tile, FoundedYear: 0,
+            Population: 10, Health: 100, Name: "ThirdPartyTown");
+
+        var rel = world.Relationships.GetOrCreate(raider.Id, creditor.Id);
+        float sign = raider.Id == rel.From ? 1f : -1f;
+        world.Relationships.Upsert(rel with { Debt = 0.6f * sign, Trust = 0.5f });
+
+        var pending = new List<PendingEvent>();
+        CivTracker.Resolve(new RaidSettlement(raider.Id, tile), world, pending);
+
+        var after = world.Relationships.Get(raider.Id, creditor.Id)!;
+        after.Debt.Should().Be(0f, "debt to civB breaks even though the raid targeted unrelated civC");
+        pending.Should().Contain(e => e.Type == EventType.OathBroken);
     }
 }

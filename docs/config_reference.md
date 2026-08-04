@@ -707,9 +707,9 @@ _Natural shelter recovery per tick when NOT on a settlement tile, by biome. Dens
 | `trait_inheritance_weight` | `0.4` | `SimConfig.Family.TraitInheritanceWeight` | 0 = pure ancestry bias, 1 = pure parent-average trait roll |
 | `newborn_family_loyalty` | `0.8` | `SimConfig.Family.NewbornFamilyLoyalty` | starting Loyalty for a newborn's Family membership |
 | `kin_in_enemy_civ_war_dampen_min` | `0.2` | `SimConfig.Family.KinInEnemyCivWarDampenMin` | War/Raid score multiplier floor when a Family relative lives in the target civ |
-| `estrangement_trust_threshold` | `-0.3` | `SimConfig.Family.EstrangementTrustThreshold` | M13 13.5: annual check — married-edge Trust at/below this ends the marriage |
+| `estrangement_trust_threshold` | `0.65` | `SimConfig.Family.EstrangementTrustThreshold` | M13 13.5: annual check — married-edge Trust at/below this ends the marriage |
 | `marriage_hardship_need_threshold` | `0.4` | `SimConfig.Family.MarriageHardshipNeedThreshold` | either spouse's Food/Safety below this counts as hardship |
-| `marriage_hardship_trust_drain` | `0.16` | `SimConfig.Family.MarriageHardshipTrustDrain` | annual Trust drain on the marriage edge during hardship |
+| `marriage_hardship_trust_drain` | `0.5` | `SimConfig.Family.MarriageHardshipTrustDrain` | annual Trust drain on the marriage edge during hardship (raised 2026-08-03, see threshold comment above) |
 | `childbirth_trust_gain` | `0.05` | `SimConfig.Family.ChildbirthTrustGain` | marital Trust bump per successful childbirth |
 
 ## `[debt]` {#debt}
@@ -726,6 +726,8 @@ _Natural shelter recovery per tick when NOT on a settlement tile, by biome. Dens
 | `forgive_min_debt` | `0.2` | `SimConfig.Debt.ForgiveMinDebt` | minimum \|Debt\| owed before forgiveness is considered |
 | `forgive_trust_gain` | `0.2` | `SimConfig.Debt.ForgiveTrustGain` | Trust gained by both parties when debt is forgiven |
 | `oath_break_trust_penalty` | `0.4` | `SimConfig.Debt.OathBreakTrustPenalty` | M13 13.5: Trust lost on the violated edge when a debtor wars/raids their own creditor's civ instead |
+| `tier1_aid_priority_bonus` | `1.2` | `SimConfig.Debt.Tier1AidPriorityBonus` | 2026-08-03: a Tier1-Tier1 aid candidate scores identically to the far more common Tier2 shortcut, so whichever tier a granter's radius scan reaches first wins the tick's single best-candidate slot — Tier1-Tier1 Debt never won that tie. Breaks the tie in the Tier1 pair's favor. |
+| `tier1_aid_need_threshold` | `0.9` | `SimConfig.Debt.Tier1AidNeedThreshold` | Separate, milder need threshold for the same-civ Tier1-Tier1 shortcut, so the already-calibrated Tier2 Debt volume (aid_need_threshold above) isn't touched — two same-civ Tier1s co-located AND one hitting a full crisis (<0.3) simultaneously proved too rare to ever fire in calibration. |
 
 ## `[fear]` {#fear}
 

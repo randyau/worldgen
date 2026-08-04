@@ -28,20 +28,29 @@ public static partial class CivTracker
 
     /// <summary>
     /// M13 13.5 — Oath-breaking: the debtor half of DebtDampening's War/Raid check (which only
-    /// biases the utility score, not a hard block) sometimes wars/raids their own creditor's civ
-    /// anyway. When that happens the debt is violated rather than quietly persisting: it's wiped
-    /// to 0 and the specific edge takes a heavy Trust penalty, distinct from any general war-time
-    /// ruler-pair trust hit. Roadmap proposal #5.
+    /// biases the utility score, not a hard block) sometimes wars/raids anyway despite an
+    /// outstanding debt. When that happens the debt is violated rather than quietly persisting:
+    /// it's wiped to 0 and the specific edge takes a heavy Trust penalty, distinct from any
+    /// general war-time ruler-pair trust hit. Roadmap proposal #5.
+    ///
+    /// 2026-08-03: originally required the war/raid TARGET to be specifically the creditor's own
+    /// civ ("you attacked the very people you owe"). Calibration found this a triple coincidence
+    /// too narrow to ever fire: a Tier1-Tier1 debt edge is already rare (creditor can only be
+    /// Tier1 — GrantAid's granter is always Tier1, so a Tier1 becomes a debtor only via another
+    /// Tier1's aid), and it also needed the debtor to specifically war *that* creditor's civ,
+    /// not just any civ, in the same narrow window before the debt got forgiven. Loosened to: any
+    /// war/raid declared while ANY debt to ANY (living, still-owed) Tier1 creditor is outstanding
+    /// breaks that specific debt — "went to war while owing an obligation, wherever it was aimed"
+    /// is still a defensible reading of Oath-breaking, and removes the "against this exact civ"
+    /// coincidence rather than the underlying rarity of Tier1-Tier1 debt itself.
     /// </summary>
-    private static void CheckOathBreaking(Tier1Character actor, CivId targetCivId, WorldState world, List<PendingEvent> pending)
+    private static void CheckOathBreaking(Tier1Character actor, CivId warTargetCivId, WorldState world, List<PendingEvent> pending)
     {
-        if (!targetCivId.IsValid) return;
         foreach (var edge in world.Relationships.GetAll(actor.Id).ToList())
         {
             if (edge.DebtorId != actor.Id) continue;
             var creditorId = edge.CreditorId!.Value;
-            if (world.GetEntity(creditorId) is not Tier1Character creditor
-                || !creditor.IsAlive || creditor.CivId != targetCivId) continue;
+            if (world.GetEntity(creditorId) is not Tier1Character creditor || !creditor.IsAlive) continue;
 
             var cfg = world.SimConfig.Debt;
             float broken = Math.Abs(edge.Debt);
@@ -53,7 +62,7 @@ public static partial class CivTracker
 
             var payload = JsonSerializer.Serialize(new OathBrokenPayload(
                 actor.Id.Value, actor.Identity.Name, creditor.Id.Value, creditor.Identity.Name,
-                actor.CivId.IsValid ? actor.CivId.Value : 0, targetCivId.Value, broken));
+                actor.CivId.IsValid ? actor.CivId.Value : 0, warTargetCivId.Value, broken));
             pending.Add(new PendingEvent(EventType.OathBroken, actor.Location, null, payload,
                 new[] { actor.Id.Value }, new[] { creditor.Id.Value },
                 ActorId: actor.Id.Value, ActorName: actor.Identity.Name));

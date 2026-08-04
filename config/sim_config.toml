@@ -993,16 +993,26 @@ max_children_per_couple         = 4     # living-children cap before childbirth 
 trait_inheritance_weight        = 0.4   # 0 = pure ancestry bias, 1 = pure parent-average trait roll
 newborn_family_loyalty          = 0.8   # starting Loyalty for a newborn's Family membership
 kin_in_enemy_civ_war_dampen_min = 0.2   # War/Raid score multiplier floor when a Family relative lives in the target civ
-estrangement_trust_threshold    = -0.3  # M13 13.5: annual check — married-edge Trust at/below this ends the marriage
+# 2026-08-03 rebalance: ResolveMarriage sets Trust to min(1, prior+0.2) at marriage time (itself
+# gated on Trust >= marriage_trust_threshold 0.6), so married Trust starts ~0.8-1.0 and only climbs
+# from there (childbirth_trust_gain, same-civ companionship drift). The old threshold (-0.3) needed
+# a ~1.1-1.3 swing that hardship alone could never plausibly deliver — calibration observed married
+# Trust pinned at 0.80-1.00 in every seed, CharacterEstranged never firing in any run since M13.5.
+estrangement_trust_threshold    = 0.65  # M13 13.5: annual check — married-edge Trust at/below this ends the marriage
 
 # M13 13.6 — marriage-specific hardship sink/childbirth source, on top of the general same-civ
 # companionship drift ([character] same_civ_*). Gives Estrangement a distinct "poverty strained
 # the marriage" cause, and lets shared joy (childbirth) reinforce the bond, not just Belonging.
 marriage_hardship_need_threshold = 0.4  # either spouse's Food/Safety below this counts as hardship
-marriage_hardship_trust_drain    = 0.16 # annual Trust drain on the marriage edge during hardship
+marriage_hardship_trust_drain    = 0.5  # annual Trust drain on the marriage edge during hardship (raised 2026-08-03, see threshold comment above)
 childbirth_trust_gain            = 0.05 # marital Trust bump per successful childbirth
 
 [debt]
+# 2026-08-03: kept at original values — the real Tier1-Tier1 GrantAid blocker was that ordinary
+# (non-married) Tier1-Tier1 Trust essentially never reaches any meaningful level at all
+# (calibration observed a ~0.0-0.36 ceiling across 3 seeds). Fixed via a same-civ shortcut in
+# UtilityScorer/CivTracker (mirrors the existing Tier2 "shared homeland" shortcut) instead of
+# chasing these thresholds further down — they still gate the already-trusted-stranger case.
 aid_trust_threshold     = 0.4   # granter must already trust the recipient this much before offering aid
 aid_need_threshold      = 0.3   # recipient's Food or Safety must be below this to qualify for aid
 aid_debt_increment      = 0.3   # |Debt| added toward the granter per GrantAid
@@ -1013,6 +1023,14 @@ forgive_trust_threshold = 0.6   # creditor must trust the debtor this much befor
 forgive_min_debt        = 0.2   # minimum |Debt| owed before forgiveness is considered
 forgive_trust_gain      = 0.2   # Trust gained by both parties when debt is forgiven
 oath_break_trust_penalty = 0.4  # M13 13.5: Trust lost on the violated edge when a debtor wars/raids their own creditor's civ instead
+# 2026-08-03: a Tier1-Tier1 aid candidate scores identically to the far more common Tier2 shortcut,
+# so whichever tier a granter's radius scan reaches first wins the tick's single best-candidate
+# slot — Tier1-Tier1 Debt never won that tie. Breaks the tie in the Tier1 pair's favor.
+tier1_aid_priority_bonus = 1.2
+# Separate, milder need threshold for the same-civ Tier1-Tier1 shortcut, so the already-calibrated
+# Tier2 Debt volume (aid_need_threshold above) isn't touched — two same-civ Tier1s co-located AND
+# one hitting a full crisis (<0.3) simultaneously proved too rare to ever fire in calibration.
+tier1_aid_need_threshold = 0.9
 
 [fear]
 rivalry_base_fear_increment = 0.1   # Fear added when a rivalry first forms (matches the original hardcoded value)

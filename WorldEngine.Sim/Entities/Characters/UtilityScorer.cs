@@ -214,17 +214,28 @@ public sealed class UtilityScorer
             var rel = world.GetRelationship(c.Id, other.Id);
             if (rel == null) continue;
 
-            if (rel.Trust >= debtCfg.AidTrustThreshold
-                && (other.Needs.Food < debtCfg.AidNeedThreshold || other.Needs.Safety < debtCfg.AidNeedThreshold))
+            // 2026-08-03: calibration found ordinary (non-married) Tier1-Tier1 Trust essentially
+            // never clears AidTrustThreshold on its own — ApplySameCivFamiliarity's organic growth
+            // tops out well below it in practice (observed ceiling ~0.0-0.36 across 3 seeds), the
+            // same "nothing raises ordinary same-civ Trust from its 0 default" problem the Tier2
+            // shortcut above was already built to route around. A same-civ Tier1 in need is aidable
+            // the identical way: fellow citizenship is enough, no pre-existing Trust required.
+            // Tier1AidPriorityBonus also breaks the tie against the Tier2 shortcut's identical score
+            // formula, since Tier2's greater numbers would otherwise permanently win the tick's
+            // single bestDebtCmd slot.
+            bool sameCivShortcut = c.CivId.IsValid && c.CivId == other.CivId;
+            float needThreshold = sameCivShortcut ? debtCfg.Tier1AidNeedThreshold : debtCfg.AidNeedThreshold;
+            if ((rel.Trust >= debtCfg.AidTrustThreshold || sameCivShortcut)
+                && (other.Needs.Food < needThreshold || other.Needs.Safety < needThreshold))
             {
-                float score = Score(c, ActionType.GrantAid, c.Personality.Compassion, world, cfg);
+                float score = Score(c, ActionType.GrantAid, c.Personality.Compassion, world, cfg) * debtCfg.Tier1AidPriorityBonus;
                 if (score > bestDebtScore) { bestDebtScore = score; bestDebtCmd = new GrantAid(c.Id, other.Id); }
             }
             else if (rel.CreditorId == c.Id
                      && Math.Abs(rel.Debt) >= debtCfg.ForgiveMinDebt
                      && rel.Trust >= debtCfg.ForgiveTrustThreshold)
             {
-                float score = Score(c, ActionType.ForgiveDebt, c.Personality.Compassion, world, cfg);
+                float score = Score(c, ActionType.ForgiveDebt, c.Personality.Compassion, world, cfg) * debtCfg.Tier1AidPriorityBonus;
                 if (score > bestDebtScore) { bestDebtScore = score; bestDebtCmd = new ForgiveDebt(c.Id, other.Id); }
             }
         }

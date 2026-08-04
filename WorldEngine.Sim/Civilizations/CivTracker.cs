@@ -438,13 +438,19 @@ public static partial class CivTracker
         var cfg = world.SimConfig.Debt;
         var rel = world.Relationships.GetOrCreate(granter.Id, recipient.Id);
 
-        // Tier1-Tier1 requires an already-trusted relationship; a co-located Tier2 townsperson of
-        // the granter's own settlement needs no pre-existing edge (shared-homeland shortcut).
+        // 2026-08-03: ordinary (non-married) Tier1-Tier1 Trust essentially never clears
+        // AidTrustThreshold on its own (calibration observed ~0.0-0.36 ceiling) — a same-civ Tier1
+        // in need is aidable via the identical "no pre-existing edge required" shortcut the Tier2
+        // townsperson case already uses below, mirrored here via UtilityScorer's matching gate.
         bool isCommunityShortcut = recipient is Tier2Character t2
             && t2.Livelihood.SettlementTile == granter.Location;
-        if (recipient is Tier1Character && rel.Trust < cfg.AidTrustThreshold) return;
+        bool isSameCivShortcut = recipient is Tier1Character t1Recipient
+            && granter.CivId.IsValid && granter.CivId == t1Recipient.CivId;
+        if (recipient is Tier1Character && rel.Trust < cfg.AidTrustThreshold && !isSameCivShortcut) return;
         if (recipient is Tier2Character && !isCommunityShortcut) return;
-        if (recipFood >= cfg.AidNeedThreshold && recipSafety >= cfg.AidNeedThreshold) return;
+        // Same-civ Tier1-Tier1 aid uses a milder, dedicated need threshold — see Tier1AidNeedThreshold.
+        float needThreshold = isSameCivShortcut ? cfg.Tier1AidNeedThreshold : cfg.AidNeedThreshold;
+        if (recipFood >= needThreshold && recipSafety >= needThreshold) return;
 
         // Normalize the edge's signed Debt into "how much the recipient owes the granter",
         // independent of which of the two landed as the canonical From — see RelationshipEdge.DebtorId.
