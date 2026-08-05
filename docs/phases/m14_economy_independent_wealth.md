@@ -546,6 +546,68 @@ oversight later):**
   conflict-escalation paths, not a replacement for either. Scoped narrowly to `CovetArtifact`
   because it's the only goal type with an existing "wants a specific unowned thing" shape; other
   goal types are not touched in M14.
+
+  **Shipped 2026-08-05.** `PricingService.ArtifactBaseValue`/`ArtifactEffectivePrice` add the
+  artifact-pricing formula; `EconomyConfig.ArtifactCategoryBaseValue`/
+  `DefaultArtifactCategoryBaseValue` seed a new per-`ArtifactCategory` value ranking (Relic/Regalia
+  highest, Artwork lowest) — no existing rarity/value table was actually keyed by `ArtifactCategory`
+  (`CreatedGoodTaxonomy.CategoryWeights` is a category-*selection* probability table, not a value
+  ranking, and `Artifact` only stores the resolved `Category`, not the originating
+  `CreatedGoodType`), so this is a new seeded table rather than a reuse of an existing one — see
+  `EconomyConfig`'s doc comment for the full reasoning. New `PurchaseArtifact(BuyerId, ArtifactId)`
+  command (`EntityCommands.cs`) resolved immediately by `Economy/ArtifactPurchaseResolver.TryResolve`
+  from within `GoalManager.UpdateGoals`'s `WorldState` overload — the same non-`CivTracker`/
+  non-`ResolveCommand` exemption already documented for `CompleteMerchantTrade`/`FormTradeRoute`,
+  consistent with that same method's existing claim-if-Lost path already mutating `WorldState`
+  directly with no command at all. Willingness gate (`EconomyConfig.PurchaseWillingnessThreshold`,
+  0.5) combines the owner's Personality.Compassion (Loyalty for Tier2, which has no Compassion axis)
+  with any existing `RelationshipEdge.Trust` toward the buyer (0 for strangers) — deliberately not
+  Trust alone, to avoid the M13.5-era Estrangement/OathBroken unreachable-threshold failure mode.
+  Settlement-owned artifacts have no personality to gate on and are always willing once the price
+  itself is met; a settlement-side sale credits the settlement's `ResourceStores["gold"]` with the
+  price's gold-equivalent value (reversing decision 4's conversion), symmetric with a
+  Character-owned sale crediting the owner's `Wealth` directly. New `EventType.ArtifactPurchased =
+  3504` (continuing the 3500 range from 14.2's `CaravanRaided = 3503`), classified `VerbClass
+  .Transfer`/`PopulationImpact.None` (same shape as `TradePaid`), with `Presenter.cs`/
+  `CharacterProfilePanel.cs`/`EventLogPanel.cs` wired following the 14.1/14.2 pattern.
+
+  **Instrument-first finding, required a real fix before the mechanic could fire at all (not just a
+  config tweak):** a full-worldgen instrument run (5 seeds, 300 years, `TestSimConfig.Default()`)
+  showed `ArtifactPurchased` firing 0/5 times — not because the purchase logic was wrong, but
+  because **no living `Tier1Character` ever held any `Wealth` at all** in any seed. Root cause:
+  14.1's `Tier2BehaviorPhase.ResolveMerchantTrade` only ever debited a destination's gold/silver/gems
+  reserves, and those three commodities essentially never populate any settlement's `ResourceStores`
+  at this world-generation scale (gold deposit tiles exist — 1-6 per world — but never land inside
+  any settlement's owned territory), so `TradePaid` fired 0 times too despite the pre-existing
+  `MerchantTradeCompleted` status marker firing 17-246 times per seed — the entire M14 Wealth
+  substrate was reachable in hand-built unit tests but dead in organic full-sim play. Two additive
+  fixes, both landed in this same session (not deferred, since 14.3 cannot be verified reachable
+  without them): (1) `EconomyConfig.MoneyEquivalentCommodities` (new, replaces the hardcoded
+  `PreciousCommodities` array — itself a latent CLAUDE.md "no hardcoded constant" violation)
+  broadens the payable-currency set to include iron/copper, which are far more commonly mined;
+  this in turn required excluding the just-traded `cmd.Resource` from the payable set in
+  `ResolveMerchantTrade` (caught by two existing 14.1/M9 regression tests going red the moment the
+  broadened list let a destination "pay" using the very units of the resource just physically
+  delivered to it in the same trade — fixed, both tests green again). (2) `Tier2BehaviorPhase`'s
+  dead-Tier2 handling now drops a dying merchant's `Wealth` as a `WealthDrop` at their home
+  settlement tile (decision 5's existing mechanism, previously scoped to `Tier1Character` death
+  only — `LivelihoodData.EmployerId`, the only Tier1 reference a Tier2 carries, is never actually
+  assigned anywhere in the codebase, so there was no reliable direct link to hand Wealth to
+  instead). After both fixes plus lowering `ArtifactValueMultiplier` (3.0 → 1.5, since
+  `GlobalPriceIndex` is floor-pinned at 0.25 for the first few centuries per decision 8's documented
+  warm-up transient, and the still-small early Wealth pool made even the cheapest artifact category
+  unaffordable at 3.0), a re-run fired `ArtifactPurchased` in 3 of 5 seeds (42, 9999, 123 — up to 4
+  times in one seed), kept as `ArtifactPurchaseTests.ShortRun_ArtifactPurchased_FiresAcrossA
+  PlausibleFractionOfSeeds` (Balance-tagged, asserts ≥2/5 seeds fire at least once) — the same
+  partial-seed reachability bar already accepted for `OathBroken`
+  (`M13RelationshipEventBalanceTests`: "confirmed firing... in 4 of 8 other seeds sampled" while
+  landing at 0 in the three canonical seeds). Full fire-rate calibration is still 14.5's job.
+  Tests: `WorldEngine.Tests/Unit/ArtifactPurchaseTests.cs` — pricing formula, real two-sided Wealth
+  transfer (Character and Settlement owner cases), blocked-when-unaffordable/unwilling/Lost/
+  already-owned gates, `GoalManager` integration (purchase path additive alongside the untouched
+  claim-if-Lost path), and the instrument-first integration test above. Full `scripts/test-fast.sh`
+  (791 tests) and the Balance suite (5 tests, including this phase's new one) pass with zero
+  warnings.
 - **14.4 — Guild organizations, treasuries, and civ-level economic ruin.** Populate
   `OrganizationKind.Guild` for the first time (merchant characters with sustained trade
   volume/Wealth form or join a Guild, mirroring how Family orgs form in M13.0). Guild heads use

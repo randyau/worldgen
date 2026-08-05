@@ -58,6 +58,28 @@ public sealed class Tier2BehaviorPhase
                 if (world.GetEntity(mournerId) is Tier1Character mourner && mourner.IsAlive)
                     GoalManager.EmitGriefEvent(mourner, dead.Id, dead.Name, pending);
             }
+
+            // M14 14.3 (reachability fix) — a dead Tier2 merchant's earned Wealth (14.1/14.2's only
+            // Wealth source) previously simply vanished: decision 5's death disposition (WealthDrop
+            // + inheritance) was scoped to Tier1Character.TransferWealthOnDeath only, and
+            // LivelihoodData.EmployerId (the only Tier1 reference on a Tier2) is never actually
+            // assigned anywhere in the codebase (grepped — no assignment site exists), so there is
+            // no reliable link to hand it to directly. Left as-is, this made 14.3's purchase gate
+            // structurally unreachable: an instrument-first run (5 seeds, 300 years) confirmed zero
+            // living Tier1Character ever held nonzero Wealth, so "buyer's Wealth >= price" could
+            // never pass for any buyer, regardless of price/willingness tuning. Fix: extend the
+            // *existing* WealthDrop mechanism (decision 5) to Tier2 death too — dropped at the
+            // merchant's home SettlementTile (where a civ's Tier1 ruler/founder is most likely to
+            // pass through) rather than their possibly-mid-caravan current Location, then claimed
+            // by ClaimWealthDrops exactly like a Tier1's own drop. Same opportunistic co-location
+            // mechanic already established for Tier1 deaths, not a new mechanism.
+            if (dead.Wealth > 0f)
+            {
+                var dropTile = dead.Livelihood.SettlementTile != default ? dead.Livelihood.SettlementTile : dead.Location;
+                world.WealthDrops.Add(new WealthDrop(dropTile, dead.Wealth, (int)tick));
+                dead.AddWealth(-dead.Wealth);
+            }
+
             world.Entities.Remove(dead.Id);
         }
 
@@ -584,11 +606,6 @@ public sealed class Tier2BehaviorPhase
         return civA.IsAtWarWith(b.CivId);
     }
 
-    // M14 14.1 — precious commodities that act as money-equivalent (decision 4). Debited/credited
-    // in priority order (gold, then silver, then gems) so a payment first draws down the most
-    // common store before touching rarer ones.
-    private static readonly string[] PreciousCommodities = { "gold", "silver", "gems" };
-
     /// <summary>
     /// Resolves a CompleteMerchantTrade command: prices the traded good at the destination
     /// (PricingService.EffectivePrice, decisions 7/8), has the destination pay in precious-
@@ -619,11 +636,20 @@ public sealed class Tier2BehaviorPhase
         // Destination pays what it can, commodity by commodity, never going negative — a
         // destination with no precious-commodity reserves simply can't pay (natural scarcity
         // gate; the physical-goods transfer already happened above and is unaffected).
+        // DECISION (14.3 instrument-first fix): exclude cmd.Resource itself from the payable set —
+        // otherwise, once MoneyEquivalentCommodities was broadened beyond gold/silver/gems to
+        // include commonly-mined iron/copper (see that config field's doc comment for why), the
+        // destination could immediately "pay" using the very units of cmd.Resource this same trade
+        // just physically delivered to it a few lines above, self-referentially undercutting the
+        // goods transfer the merchant was supposedly delivering. Caught by two existing 14.1/M9
+        // regression tests (MerchantTradeWealthTests/EconomicDepthTests) once the broadened list
+        // made a traded commodity double as its own payment currency.
         float remaining = totalValue;
         var debited = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);
-        foreach (var commodity in PreciousCommodities)
+        foreach (var commodity in cfg.MoneyEquivalentCommodities)
         {
             if (remaining <= 0f) break;
+            if (string.Equals(commodity, cmd.Resource, StringComparison.OrdinalIgnoreCase)) continue;
             float available = destStores.TryGetValue(commodity, out float a) ? a : 0f;
             if (available <= 0f) continue;
             float unitValue = cfg.GetBaseValue(commodity);

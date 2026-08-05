@@ -100,6 +100,7 @@ public static class SignificanceClassifier
             EventType.TradeRouteFormed         => PopulationImpact.Minor,
             EventType.TradeRouteSevered        => PopulationImpact.Moderate,
             EventType.CaravanRaided            => PopulationImpact.Minor,
+            EventType.ArtifactPurchased        => PopulationImpact.None,
             _                                 => PopulationImpact.None,
         };
     }

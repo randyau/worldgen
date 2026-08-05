@@ -308,6 +308,12 @@ internal sealed record ArtifactCreatedPayload(
 internal sealed record ArtifactTransferredPayload(
     long ArtifactId, string ArtifactName, string FromOwner, string ToOwner, string Reason);
 
+// M14 14.3 — a CovetArtifact goal-holder bought the coveted artifact from its living owner.
+// Price is the full Wealth transferred (PricingService.ArtifactEffectivePrice at resolution time).
+internal sealed record ArtifactPurchasedPayload(
+    long ArtifactId, string ArtifactName, long BuyerId, string BuyerName,
+    string FromOwner, string ToOwnerName, float Price);
+
 internal sealed record ArtifactDestroyedPayload(
     long ArtifactId, string ArtifactName, string Cause);
 

@@ -181,6 +181,7 @@ public sealed class EventLogPanel : IWorkspacePanel
         EventType.TradePaid                or
         EventType.TradeRouteFormed         or
         EventType.CaravanRaided            or
+        EventType.ArtifactPurchased        or
         EventType.PhysicianHealed          or
         EventType.BeastSlain               => true,
         _                                  => false

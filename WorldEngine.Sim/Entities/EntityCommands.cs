@@ -65,6 +65,19 @@ public sealed record FormTradeRoute(
     TileCoord TileA,
     TileCoord TileB) : ICommand;
 
+// M14 14.3 — goal fulfillment via trade: BuyerId (a Tier1Character with an active CovetArtifact
+// goal) purchases ArtifactId from its current living Character/Settlement owner (not Lost),
+// mirroring GrantAid's two-EntityId shape. Priced via PricingService.ArtifactEffectivePrice
+// (decisions 7/8) and gated by EconomyConfig.PurchaseWillingnessThreshold on top of the price
+// itself. Resolved immediately by ArtifactPurchaseResolver from within
+// GoalManager.UpdateGoals's WorldState overload — the same non-CivTracker/non-ResolveCommand
+// exemption as CompleteMerchantTrade/FormTradeRoute above (see their doc comments): the existing
+// claim-if-Lost path in that same method already mutates WorldState directly with no ICommand at
+// all, so a purchase alternative resolved inline via a plain-data command (for testability/event-
+// payload shape, per CLAUDE.md's command-pattern convention) rather than round-tripping through
+// the Tier1 EMIT/RESOLVE split is consistent with the surrounding code, not a new exemption.
+public sealed record PurchaseArtifact(EntityId BuyerId, ArtifactId ArtifactId) : ICommand;
+
 // Phase 3.0 — city-state territory commands
 public sealed record BuildImprovement(
     EntityId        CharacterId,

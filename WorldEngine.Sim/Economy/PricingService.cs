@@ -1,5 +1,6 @@
 using WorldEngine.Sim.Civilizations;
 using WorldEngine.Sim.Config;
+using WorldEngine.Sim.Entities.Artifacts;
 
 namespace WorldEngine.Sim.Economy;
 
@@ -35,4 +36,19 @@ public static class PricingService
     /// </summary>
     public static float EffectivePrice(SettlementStub settlement, string resourceKey, EconomyConfig cfg, float globalPriceIndex)
         => cfg.GetBaseValue(resourceKey) * LocalScarcityMultiplier(settlement, resourceKey, cfg) * globalPriceIndex;
+
+    /// <summary>
+    /// M14 14.3 — an artifact's base value: EconomyConfig.GetArtifactCategoryBaseValue(Category) ×
+    /// Quality (decision 7). No scarcity multiplier — artifacts are unique 1-of-1 by construction,
+    /// so "scarcity" is trivially 1 and carries no market signal the way a commodity's ledger ratio does.
+    /// </summary>
+    public static float ArtifactBaseValue(Artifact artifact, EconomyConfig cfg)
+        => cfg.GetArtifactCategoryBaseValue(artifact.Category) * artifact.Quality;
+
+    /// <summary>
+    /// Full effective price for an artifact purchase (decision 8): ArtifactBaseValue ×
+    /// ArtifactValueMultiplier × GlobalPriceIndex.
+    /// </summary>
+    public static float ArtifactEffectivePrice(Artifact artifact, EconomyConfig cfg, float globalPriceIndex)
+        => ArtifactBaseValue(artifact, cfg) * cfg.ArtifactValueMultiplier * globalPriceIndex;
 }

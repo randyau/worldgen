@@ -69,6 +69,7 @@ One-line description of every non-trivial source file. Check here before running
 - `WorldRng.cs` — Deterministic RNG: FloatAt(seed, tick, x, y, salt) — use salts from SimRngSalts.
 
 ## WorldEngine.Sim/Economy/
+- `ArtifactPurchaseResolver.cs` — M14 14.3 — resolves WorldEngine.Sim.Entities.PurchaseArtifact: goal fulfillment via trade (Wealth's spend-side MVP). An alternative to GoalManager's existing claim-if-Lost path, evaluated only when the coveted artifact is NOT Lost (owned by a living character or a settlement). See docs/phases/m14_economy_independent_wealth.md decisions 3, 7, 8.
 - `PricingService.cs` — M14 14.0 — seeded, formulaic pricing (decision 7). No order book, no price history, no transaction-volume dependency: every price is computed fresh at the moment of use from EconomyConfig.BaseValuePerUnit and the settlement's existing (already-balanced) M9 SettlementStub.ResourceLedger ratio. See docs/phases/m14_economy_independent_wealth.md.
 - `TradeRoute.cs` — Lifecycle state of a persistent WorldEngine.Sim.Economy.TradeRoute.
 

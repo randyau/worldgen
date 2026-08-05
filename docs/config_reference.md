@@ -46,6 +46,7 @@ Edit values in `sim_config.toml`; all keys live there without recompiling.
 - [artifacts](#artifacts)
 - [economy](#economy)
 - [economy.base_value_per_unit](#economybase-value-per-unit)
+- [economy.artifact_category_base_value](#economyartifact-category-base-value)
 
 ## `[world_gen]` {#world-gen}
 
@@ -883,8 +884,11 @@ _M14 14.0 — Wealth substrate. All values below are first-pass placeholders exp
 | `price_index_ema_alpha` | `0.05` | `SimConfig.Economy.PriceIndexEmaAlpha` | EMA smoothing factor for GlobalPriceIndex, same shape as SpecializationStrength's EMA (resource_pressure.specialization_smoothing_alpha). |
 | `wealth_inheritance_share` | `0.7` | `SimConfig.Economy.WealthInheritanceShare` | Fraction of a dying character's Wealth passed to their heir (decision 5); the remainder — or all of it if no eligible heir exists — becomes an unclaimed WealthDrop pool at the death tile. |
 | `personal_wealth_spoilage_rate` | `0.02` | `SimConfig.Economy.PersonalWealthSpoilageRate` | "Cost of living" annual bleed on personal Wealth and standing WealthDrop pools (decision 10) — must be much larger than resource_pressure.wealth_spoilage_rate (0.0001, "essentially permanent") since personal Wealth has no other sink. Gives per-capita Wealth a finite equilibrium ceiling. |
-| `artifact_value_multiplier` | `3.0` | `SimConfig.Economy.ArtifactValueMultiplier` | Scalar for the 14.3 artifact-pricing formula (ArtifactBaseValue × this × GlobalPriceIndex). Declared here as a pricing constant even though nothing spends it until 14.3. |
+| `artifact_value_multiplier` | `1.5` | `SimConfig.Economy.ArtifactValueMultiplier` | Scalar for the 14.3 artifact-pricing formula (ArtifactBaseValue × this × GlobalPriceIndex). Lowered from the original placeholder 3.0 during 14.3's instrument-first pass: an early-game GlobalPriceIndex pinned near its floor (0.25, decision 8's documented warm-up transient) combined with the still-small Tier1 Wealth pool (a few units — see EconomyConfig.MoneyEquivalentCommodities' doc comment for why Wealth is scarce at all in this era) made even the cheapest artifact category unaffordable at 3.0. 1.5 lets the mechanic clear the affordability gate at a plausible rate without making purchases trivial; full calibration is still 14.5's job. |
 | `merchant_home_cut_fraction` | `0.3` | `SimConfig.Economy.MerchantHomeCutFraction` | Fraction of a 14.1 trade's paid value that routes back to the merchant's home settlement's own ResourceStores (same commodities the destination paid with) instead of the merchant's personal Wealth — keeps precious-commodity gold recirculating between settlements rather than draining one-way into personal Wealth (Opus-review addition; softens decision 10's ratchet risk). |
+| `money_equivalent_commodities` | `["gold", "silver", "gems", "iron", "copper"]` | `SimConfig.Economy.MoneyEquivalentCommodities` | Money-equivalent commodities a destination settlement pays a merchant from, in priority order (draws down the most commonly-available first). Broadened from the original gold/silver/gems-only list (14.3 instrument-first finding: those three essentially never populate any settlement's ResourceStores at real-world-generation scale, making the whole Wealth substrate unreachable in organic play) to include iron/copper, which are far more commonly mined. |
+| `default_artifact_category_base_value` | `10.0` | `SimConfig.Economy.DefaultArtifactCategoryBaseValue` | Fallback per-category artifact base value for any ArtifactCategory not listed in [economy.artifact_category_base_value]. |
+| `purchase_willingness_threshold` | `0.5` | `SimConfig.Economy.PurchaseWillingnessThreshold` | Willingness gate (14.3, decision 3) on top of the price itself: Character owner's Personality .Compassion plus any existing RelationshipEdge.Trust toward the buyer (0 for strangers) must clear this threshold. Deliberately not Trust alone — see EconomyConfig.PurchaseWillingnessThreshold for why (avoids the M13.5-era Estrangement/OathBroken unreachable-threshold failure mode). |
 | `trade_route_formation_threshold` | `3` | `SimConfig.Economy.TradeRouteFormationThreshold` | ── Persistent trade routes / caravans (14.2) ────────────────────────────────── Successful one-shot RunMerchant trades between the same settlement pair before they graduate into a persistent TradeRoute. |
 | `caravan_speed_tiles_per_year` | `6.0` | `SimConfig.Economy.CaravanSpeedTilesPerYear` | Caravan travel speed, tiles/year — comparable to emissary.emissary_travel_speed_tiles_per_year (8.0); a goods-laden caravan travels slightly slower than a lone emissary. |
 | `caravan_interception_chance` | `0.2` | `SimConfig.Economy.CaravanInterceptionChance` | Per-arrival-check chance a caravan is lost in transit (rolled once at arrival, not per-tick). Interception only applies when the route's endpoint civs are at war; disaster/piracy always roll. |
@@ -915,3 +919,17 @@ _Seeded relative-scarcity ranking (decision 7): gems > gold > silver > obsidian 
 | `wild_game` | `2.0` | `SimConfig.Economy.BaseValuePerUnit.WildGame` |  |
 | `food` | `1.0` | `SimConfig.Economy.BaseValuePerUnit.Food` |  |
 | `water` | `0.5` | `SimConfig.Economy.BaseValuePerUnit.Water` |  |
+
+## `[economy.artifact_category_base_value]` {#economyartifact-category-base-value}
+
+_Seeded per-category artifact value ranking (14.3, decision 7): no existing rarity/value table is keyed by ArtifactCategory (CreatedGoodTaxonomy.CategoryWeights is a category-selection probability table, not a value ranking — see EconomyConfig.ArtifactCategoryBaseValue's doc comment), so this is a new static, designer-authored ranking, same pattern as base_value_per_unit above. Relic/Regalia (legendary, rulership-coded) rank highest; ordinary Artwork lowest._
+
+| Key | Value | C# Property | Description |
+|-----|-------|-------------|-------------|
+| `Relic` | `60.0` | `SimConfig.Economy.ArtifactCategoryBaseValue.Relic` |  |
+| `Regalia` | `55.0` | `SimConfig.Economy.ArtifactCategoryBaseValue.Regalia` |  |
+| `Tome` | `45.0` | `SimConfig.Economy.ArtifactCategoryBaseValue.Tome` |  |
+| `Weapon` | `35.0` | `SimConfig.Economy.ArtifactCategoryBaseValue.Weapon` |  |
+| `Jewelry` | `30.0` | `SimConfig.Economy.ArtifactCategoryBaseValue.Jewelry` |  |
+| `Armor` | `25.0` | `SimConfig.Economy.ArtifactCategoryBaseValue.Armor` |  |
+| `Artwork` | `15.0` | `SimConfig.Economy.ArtifactCategoryBaseValue.Artwork` |  |

@@ -64,7 +64,8 @@ The `Type` column stores integer values. Use these constants in WHERE clauses:
 -- Artifacts/Religion (4000–4999)
   3500 = TradePaid            3501 = TradeRouteFormed   
   3502 = TradeRouteSevered    3503 = CaravanRaided      
-  4003 = ReligionFounded      4004 = ReligionExtinct    
+  3504 = ArtifactPurchased    4003 = ReligionFounded    
+  4004 = ReligionExtinct    
 
 -- Artifact (6000–6999)
   6001 = ArtifactCreated        6002 = ArtifactDestroyed    

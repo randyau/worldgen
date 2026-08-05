@@ -1,3 +1,5 @@
+using WorldEngine.Sim.Entities.Artifacts;
+
 namespace WorldEngine.Sim.Config;
 
 /// <summary>
@@ -64,6 +66,59 @@ public sealed class EconomyConfig
     // Scalar reflecting that an exceptional creation is worth more than raw commodity value.
     // Declared here because it's a pricing-formula constant, even though nothing spends it yet.
     public float ArtifactValueMultiplier { get; set; } = 3f;
+
+    // DECISION (14.3): decision 7's text claims "the G-1 taxonomy already weights [artifact
+    // categories] for persistence/rarity — reuse that weighting." Checked directly:
+    // CreatedGoodTaxonomy.CategoryWeights is a CreatedGoodType → (Category, probability) table for
+    // *which category a crafted good becomes*, not a value/rarity ranking keyed by category — and
+    // Artifact itself only stores the resolved Category, not the originating CreatedGoodType, so
+    // there is nothing of that shape to "reuse." No other per-category value/rarity table exists
+    // anywhere in the codebase (grepped for Rarity/CategoryValue — no hits). Simplest reasonable
+    // choice per CLAUDE.md's ambiguity rule: a new seeded per-category base-value table, authored
+    // the same way as BaseValuePerUnit's static relative-scarcity ranking (decision 7) — Relic and
+    // Regalia (legendary/rulership-coded) rank highest, ordinary Artwork lowest.
+    public Dictionary<string, float> ArtifactCategoryBaseValue { get; set; } = new();
+    public float DefaultArtifactCategoryBaseValue { get; set; } = 10f;
+
+    /// <summary>Looks up a category's seeded base value, falling back to
+    /// <see cref="DefaultArtifactCategoryBaseValue"/> for any category not explicitly listed.</summary>
+    public float GetArtifactCategoryBaseValue(ArtifactCategory category) =>
+        ArtifactCategoryBaseValue.TryGetValue(category.ToString(), out float v) ? v : DefaultArtifactCategoryBaseValue;
+
+    // ─── Goal fulfillment via trade (14.3) ─────────────────────────────────────
+    // Willingness gate on top of the price itself (decision 3/14.3): an artifact's Character owner
+    // must be "willing to sell" independent of whether the buyer can afford it. Reuses the existing
+    // Compassion-driven willingness pattern already established for GrantAid/Placate (
+    // UtilityScorer.ActionType.GrantAid scores on Personality.Compassion; CivTracker.ResolveGrantAid
+    // gates on RelationshipEdge.Trust) rather than inventing a new shape — combined here as
+    // Compassion (always populated, no relationship prerequisite) plus any existing Trust bonus
+    // (defaults to 0 for strangers), so the check is structurally reachable even between two
+    // characters with no prior relationship edge — deliberately avoiding the M13.5-era
+    // Estrangement/OathBroken failure mode where a threshold gated on relationship Trust alone
+    // (which realistically never clears ~0.4 between unrelated pairs) made a mechanic
+    // unreachable. Settlement-held artifacts have no personality to gate on, so a
+    // settlement-owned artifact is always willing to sell (a settlement's "collection" is public
+    // civic property, not a personal attachment) — see ArtifactPurchaseResolver.
+    public float PurchaseWillingnessThreshold { get; set; } = 0.5f;
+
+    // DECISION (14.3 instrument-first finding): the money-equivalent commodity list a destination
+    // pays from (Tier2BehaviorPhase.ResolveMerchantTrade) was originally a hardcoded
+    // { "gold", "silver", "gems" } array — a violation of CLAUDE.md's "no hardcoded simulation
+    // constant" rule in its own right, but also the actual root cause of 14.3's purchase mechanic
+    // never firing: a full-worldgen instrument run (5 seeds, 300 years, TestSimConfig.Default())
+    // showed TradePaid fired 0 times in every seed despite MerchantTradeCompleted (the pre-14.1
+    // status-gain marker) firing 17-246 times — gold/silver/gems deposits exist (1-6 tiles/world)
+    // but never land inside any settlement's owned territory at this world size, so no settlement
+    // ever has a nonzero gold/silver/gems store to pay from, and Wealth accordingly never reaches
+    // any Tier2 merchant (livingT2WithWealth was 0 in all 5 seeds) or, by extension, any Tier1
+    // CovetArtifact buyer. iron/copper are far more commonly deposited/mined (MerchantTradeCompleted's
+    // high counts confirm plenty of iron/copper physically trades hands) and already have seeded
+    // BaseValuePerUnit entries, so adding them to the money-equivalent list is what actually makes
+    // the entire M14 Wealth substrate reachable in organic play — same fix category as the M13.5
+    // Estrangement/OathBroken threshold rebalance (an existing gate was structurally unreachable at
+    // realistic population/geography scale, not logically wrong). Order is priority: a payment
+    // draws down the most commonly-available commodity first.
+    public List<string> MoneyEquivalentCommodities { get; set; } = new() { "gold", "silver", "gems", "iron", "copper" };
 
     // ─── Trade payment (14.1, Opus-review addition) ───────────────────────────
     // Paying the merchant 100% of a sale's value strictly drains the destination settlement and

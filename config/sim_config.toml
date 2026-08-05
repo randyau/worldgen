@@ -1285,13 +1285,32 @@ wealth_inheritance_share = 0.7
 # since personal Wealth has no other sink. Gives per-capita Wealth a finite equilibrium ceiling.
 personal_wealth_spoilage_rate = 0.02
 # Scalar for the 14.3 artifact-pricing formula (ArtifactBaseValue × this × GlobalPriceIndex).
-# Declared here as a pricing constant even though nothing spends it until 14.3.
-artifact_value_multiplier = 3.0
+# Lowered from the original placeholder 3.0 during 14.3's instrument-first pass: an early-game
+# GlobalPriceIndex pinned near its floor (0.25, decision 8's documented warm-up transient) combined
+# with the still-small Tier1 Wealth pool (a few units — see EconomyConfig.MoneyEquivalentCommodities'
+# doc comment for why Wealth is scarce at all in this era) made even the cheapest artifact category
+# unaffordable at 3.0. 1.5 lets the mechanic clear the affordability gate at a plausible rate without
+# making purchases trivial; full calibration is still 14.5's job.
+artifact_value_multiplier = 1.5
 # Fraction of a 14.1 trade's paid value that routes back to the merchant's home settlement's own
 # ResourceStores (same commodities the destination paid with) instead of the merchant's personal
 # Wealth — keeps precious-commodity gold recirculating between settlements rather than draining
 # one-way into personal Wealth (Opus-review addition; softens decision 10's ratchet risk).
 merchant_home_cut_fraction = 0.3
+# Money-equivalent commodities a destination settlement pays a merchant from, in priority order
+# (draws down the most commonly-available first). Broadened from the original gold/silver/gems-only
+# list (14.3 instrument-first finding: those three essentially never populate any settlement's
+# ResourceStores at real-world-generation scale, making the whole Wealth substrate unreachable in
+# organic play) to include iron/copper, which are far more commonly mined.
+money_equivalent_commodities = ["gold", "silver", "gems", "iron", "copper"]
+# Fallback per-category artifact base value for any ArtifactCategory not listed in
+# [economy.artifact_category_base_value].
+default_artifact_category_base_value = 10.0
+# Willingness gate (14.3, decision 3) on top of the price itself: Character owner's Personality
+# .Compassion plus any existing RelationshipEdge.Trust toward the buyer (0 for strangers) must
+# clear this threshold. Deliberately not Trust alone — see EconomyConfig.PurchaseWillingnessThreshold
+# for why (avoids the M13.5-era Estrangement/OathBroken unreachable-threshold failure mode).
+purchase_willingness_threshold = 0.5
 
 # ── Persistent trade routes / caravans (14.2) ──────────────────────────────────
 # Successful one-shot RunMerchant trades between the same settlement pair before they graduate
@@ -1332,3 +1351,18 @@ herbs     = 2.0
 wild_game = 2.0
 food      = 1.0
 water     = 0.5
+
+# Seeded per-category artifact value ranking (14.3, decision 7): no existing rarity/value table is
+# keyed by ArtifactCategory (CreatedGoodTaxonomy.CategoryWeights is a category-selection
+# probability table, not a value ranking — see EconomyConfig.ArtifactCategoryBaseValue's doc
+# comment), so this is a new static, designer-authored ranking, same pattern as
+# base_value_per_unit above. Relic/Regalia (legendary, rulership-coded) rank highest; ordinary
+# Artwork lowest.
+[economy.artifact_category_base_value]
+Relic    = 60.0
+Regalia  = 55.0
+Tome     = 45.0
+Weapon   = 35.0
+Jewelry  = 30.0
+Armor    = 25.0
+Artwork  = 15.0

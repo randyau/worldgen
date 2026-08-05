@@ -1,6 +1,7 @@
 using System.Text.Json;
 using WorldEngine.Sim.Config;
 using WorldEngine.Sim.Core;
+using WorldEngine.Sim.Economy;
 using WorldEngine.Sim.Entities;
 using WorldEngine.Sim.Entities.Artifacts;
 using WorldEngine.Sim.Events;
@@ -464,6 +465,37 @@ public static class GoalManager
                 ActorId: c.Id.Value, ActorName: c.Identity.Name));
 
             break; // claim at most one artifact per tick
+        }
+
+        // M14 14.3 — goal fulfillment via trade: an alternative to the claim-if-Lost path above,
+        // additive and evaluated only when the coveted artifact is NOT Lost (owned by a living
+        // character or a settlement). See docs/phases/m14_economy_independent_wealth.md decision 3
+        // and ArtifactPurchaseResolver for the full gate/transfer logic. Deliberately no
+        // co-location requirement (unlike the claim path) — a purchase represents a negotiated
+        // trade, not a physical pickup, and requiring co-location here would reintroduce exactly
+        // the kind of structurally-unreachable conjunction the M13.5 Estrangement/OathBroken fix
+        // diagnosed (see the phase doc's "Risks to actively watch" section).
+        foreach (var covetGoal in c.Goals.Where(g => g.Type == GoalType.CovetArtifact && !g.IsComplete))
+        {
+            if (!world.Artifacts.TryGetValue(covetGoal.CovetedArtifactId, out var artifact)) continue;
+            if (artifact.IsDestroyed) continue;
+            if (artifact.Owner.Kind == ArtifactOwnerKind.Lost) continue;
+
+            var purchaseCmd = new PurchaseArtifact(c.Id, artifact.Id);
+            if (!ArtifactPurchaseResolver.TryResolve(purchaseCmd, world, world.SimConfig.Economy, pending))
+                continue;
+
+            covetGoal.IsComplete = true;
+            covetGoal.Progress   = 1f;
+            var resolvePayload = JsonSerializer.Serialize(new GoalEventPayload(
+                c.Id.Value, c.Identity.Name,
+                covetGoal.Type.ToString(), covetGoal.Object.ToString(),
+                artifact.Id.Value, covetGoal.Intensity, "completed"));
+            pending.Add(new PendingEvent(EventType.GoalResolved, c.Location, null, resolvePayload,
+                new[] { c.Id.Value },
+                ActorId: c.Id.Value, ActorName: c.Identity.Name));
+
+            break; // purchase at most one artifact per tick
         }
     }
 

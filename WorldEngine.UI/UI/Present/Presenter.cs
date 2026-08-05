@@ -146,6 +146,7 @@ public sealed class Presenter
         EventType.TradeRouteFormed         => "trade route formed",
         EventType.TradeRouteSevered        => "trade route severed",
         EventType.CaravanRaided            => "caravan lost in transit",
+        EventType.ArtifactPurchased        => "artifact purchased",
         EventType.PhysicianHealed          => "healed",
         EventType.CharacterCrystallized    => "crystallized",
         EventType.DiseaseOutbreak          => "disease outbreak",
