@@ -12,8 +12,9 @@ public static class CharacterFactory
     private const int SaltAptitude    = 410;
     private const int SaltSkills      = 420;
     private const int SaltAge         = 430;
-    private const int SaltName        = 440;
-    private const int SaltEpithet     = 441;
+    private const int SaltName        = 440;  // NameGenerator.GenerateGivenName uses 440-442 internally
+    private const int SaltEpithet     = 443;
+    private const int SaltSurname     = 444;  // NameGenerator.GenerateSurname uses 444-445 internally
     private const int SaltStartAge    = 450;
 
     /// <summary>
@@ -86,10 +87,10 @@ public static class CharacterFactory
             : config.Character.MaxAgeSeasonsMax;
         int maxAge = ageMin + (int)(WorldRng.FloatAt(worldSeed, 0, seq, 0, SaltAge) * (ageMax - ageMin));
 
-        // Pick from ancestry-specific name pool; fall back to global list
-        var namePool    = ancestry.FirstNames.Length > 0 ? ancestry.FirstNames : config.CharacterNames.FirstNames;
-        var epithetPool = ancestry.Epithets.Length   > 0 ? ancestry.Epithets   : config.CharacterNames.Epithets;
-        string name    = PickName(namePool,    worldSeed, seq, SaltName);
+        // Syllable-generated given name + surname (ancestry-flavored); epithet still from a flat pool
+        var epithetPool = ancestry.Epithets.Length > 0 ? ancestry.Epithets : config.CharacterNames.Epithets;
+        string name    = NameGenerator.GenerateGivenName(ancestry, config.CharacterNames, worldSeed, seq, SaltName);
+        string surname = NameGenerator.GenerateSurname(ancestry, config.CharacterNames, worldSeed, seq, SaltSurname);
         string epithet = PickName(epithetPool, worldSeed, seq, SaltEpithet);
 
         var identity = new IdentityData(
@@ -99,7 +100,8 @@ public static class CharacterFactory
             MotherId:    null,
             FatherId:    null,
             BirthYear:   birthYear,
-            BirthSeason: 0);
+            BirthSeason: 0,
+            Surname:     surname);
 
         var character = new Tier1Character(
             id:           id,
@@ -173,11 +175,15 @@ public static class CharacterFactory
             Acuity:        BlendTrait(ra.Acuity,        ma.Acuity,        fa.Acuity,        w),
             Ingenuity:     BlendTrait(ra.Ingenuity,     ma.Ingenuity,     fa.Ingenuity,     w));
 
+        // DECISION: Surname is inherited from the mother rather than resampled, mirroring the
+        // existing AncestryId-from-mother precedent above — a child keeps the family name rather
+        // than rolling a fresh unrelated house name.
         var identity = rolled.Identity with
         {
             AncestryId = mother.Identity.AncestryId,
             MotherId   = mother.Id,
             FatherId   = father.Id,
+            Surname    = mother.Identity.Surname,
         };
 
         return new Tier1Character(

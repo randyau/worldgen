@@ -84,6 +84,7 @@ public static class DatabaseSchema
         CREATE TABLE IF NOT EXISTS CharacterSummaries (
             CharacterId         INTEGER PRIMARY KEY,
             Name                TEXT NOT NULL,
+            Surname             TEXT,
             Epithet             TEXT,
             NameOrdinal         INTEGER DEFAULT 0,
             AncestryId          TEXT,

@@ -37,6 +37,13 @@ public static class AncestryValidator
             if (a.MinLifespanSeasons > a.MaxLifespanSeasons)
                 errors.Add($"[ancestry.{tag}] min_lifespan_seasons ({a.MinLifespanSeasons}) must be ≤ max_lifespan_seasons ({a.MaxLifespanSeasons})");
 
+            if (a.NameOnsets.Length == 0 || a.NameCodas.Length == 0)
+                errors.Add($"[ancestry.{tag}] name_onsets and name_codas must not be empty");
+            if (a.SurnameOnsets.Length == 0 || a.SurnameCodas.Length == 0)
+                errors.Add($"[ancestry.{tag}] surname_onsets and surname_codas must not be empty");
+            if (a.Epithets.Length == 0)
+                errors.Add($"[ancestry.{tag}] epithets must not be empty");
+
             foreach (var biomeKey in a.SpawnWeights.Keys)
                 if (!ValidBiomeKeys.Contains(biomeKey))
                     errors.Add($"[ancestry.{tag}] spawn_weights references unknown biome '{biomeKey}'");

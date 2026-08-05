@@ -10,6 +10,7 @@ public sealed record CharacterSnapshot(
     EntityId Id,
     EntityKind Kind,
     string Name,
+    string Surname,
     string Epithet,
     string AncestryId,
     TileCoord Location,

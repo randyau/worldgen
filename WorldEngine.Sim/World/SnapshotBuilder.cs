@@ -431,6 +431,7 @@ public sealed class SnapshotBuilder
         return new CharacterWatchSnapshot(
             Id:          c.Id,
             Name:        c.Identity.Name,
+            Surname:     c.Identity.Surname,
             Epithet:     c.Identity.Epithet,
             CivName:     civName,
             Location:    c.Location,

@@ -44,6 +44,7 @@ internal static class SimRngSalts
 
     // PopulationDynamicsPhase — Tier2 crystallisation
     public const int PopCrystallise      = 830;
+    public const int PopCrystalliseName  = 832;
 
     // PopulationDynamicsPhase — ruin weathering decay
     public const int PopRuinDecay        = 831;

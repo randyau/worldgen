@@ -192,8 +192,10 @@ public sealed class PopulationDynamicsPhase
             // Spawn a Tier 2 specialist
             var personality = PersonalityVector6.Default; // stub — future: random personality
             var livelihood  = new LivelihoodData(role, null, tile, 0.5f);
-            string name     = _simCfg.CharacterNames.FirstNames[
-                Math.Abs(tile.GetHashCode() + threshold) % _simCfg.CharacterNames.FirstNames.Length];
+            int nameSeq     = Math.Abs(tile.GetHashCode() + threshold);
+            string name     = NameGenerator.AssembleGivenName(
+                _simCfg.CharacterNames.NameOnsets, _simCfg.CharacterNames.NameMiddles, _simCfg.CharacterNames.NameCodas,
+                world.WorldSeed, nameSeq, S.PopCrystalliseName);
 
             int ageRange = _simCfg.Character.Tier2MaxAgeSeasonsMax - _simCfg.Character.Tier2MaxAgeSeasonsMin;
             int maxAge   = _simCfg.Character.Tier2MaxAgeSeasonsMin

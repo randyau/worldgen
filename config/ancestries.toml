@@ -35,14 +35,29 @@ improvement_descriptors = [
 ]
 artistic_traditions    = ["ballad", "portrait", "weaving"]
 civ_name_suffix        = "Domain"
-first_names = [
-  "Navar", "Lyra", "Gawen", "Hessa", "Ceryn", "Barath", "Elowen", "Farid",
-  "Isolde", "Jorath", "Kira", "Mira", "Oryn", "Petra", "Rolan", "Sabel",
-  "Torin", "Ulric", "Vara", "Wren", "Aldric", "Brynn", "Caela", "Draven",
-  "Eryn", "Fyora", "Gorin", "Idris", "Jolara", "Kavel", "Maren", "Nox",
-  "Pyra", "Rowan", "Selah", "Tavian", "Ursa", "Vael", "Wynne", "Zor",
-  "Arlen", "Bessa", "Corvin", "Darya", "Elian", "Freya", "Gareth", "Hana",
-  "Irwin", "Jana"
+name_onsets = [
+  "Nav", "Lyr", "Gaw", "Hess", "Cer", "Bar", "Elo", "Far", "Isol", "Jor",
+  "Kir", "Mir", "Or", "Petr", "Rol", "Sab", "Tor", "Ulr", "Var", "Wren",
+  "Ald", "Bryn", "Cael", "Drav", "Ery", "Fyor", "Gor", "Idr", "Jol", "Kave",
+  "Mar", "Nox", "Pyr", "Row", "Sel", "Tavi", "Urs", "Vael", "Wynn", "Arl",
+  "Bess", "Corv", "Dary", "Eli", "Frey", "Gare", "Han", "Irw", "Jan", "Kell",
+  "Lund", "Morv", "Ost", "Perr", "Quen", "Rand", "Stel", "Thav", "Vin", "Wold"
+]
+name_middles = ["an", "el", "in", "or", "ath", "en", "ir", "ol", "ara", "eth"]
+name_codas = [
+  "an", "wen", "ric", "dra", "eth", "in", "on", "iel", "ard", "os",
+  "ira", "ana", "eva", "yn", "ith", "ura", "el", "a", "o", "ia"
+]
+surname_onsets = [
+  "Ash", "Stone", "Black", "White", "Iron", "Gold", "Silver", "Oak",
+  "Storm", "Thorn", "Wind", "Frost", "Bright", "Hollow", "Vale", "Wold",
+  "River", "Field", "Hill", "Marsh", "North", "South", "Winter", "Summer",
+  "High", "Low", "Green", "Grey", "Elder", "Fen"
+]
+surname_codas = [
+  "wood", "field", "well", "brook", "haven", "worth", "ford", "moor",
+  "shade", "crest", "hold", "gate", "reach", "mere", "dale", "borne",
+  "stone", "ridge", "vale", "meadow", "hall", "bridge", "cliff", "wick"
 ]
 epithets = [
   "the Bold", "the Wise", "the Swift", "the Iron", "the Just",
@@ -50,7 +65,11 @@ epithets = [
   "the Grim", "the Pale", "the Stormbringer", "the Seeker", "the Undying",
   "the Patient", "the Relentless", "the Scholar", "the Cruel", "the Gentle",
   "the Far-Sighted", "the Wolf", "the Bear", "the Hawk", "the Serpent",
-  "Oakenshield", "the Steadfast", "of the River", "the Wayward", "the Fortunate"
+  "Oakenshield", "the Steadfast", "of the River", "the Wayward", "the Fortunate",
+  "the Elder", "the Younger", "the Tall", "the Quiet", "the Restless",
+  "of the North Road", "the Kindly", "the Stubborn", "the Lucky", "the Wretched",
+  "the Builder", "the Reaver", "of the Long Winter", "the Watchful", "the Merry",
+  "the Broken", "the Devout", "of Two Rivers", "the Tireless", "the Forsaken"
 ]
 
 # =============================================================================
@@ -86,20 +105,36 @@ improvement_descriptors = [
 ]
 artistic_traditions    = ["tapestry", "song", "sculpture"]
 civ_name_suffix        = "Covenant"
-first_names = [
-  "Aelindra", "Sylarel", "Caelwyn", "Elowen", "Vaelith", "Sorel", "Mireille",
-  "Aeryn", "Lioren", "Thessaly", "Caladrel", "Erevyn", "Faelindra", "Galathen",
-  "Haelith", "Ilyarel", "Jaelith", "Kaewyn", "Lirael", "Maewyn", "Naelith",
-  "Orvael", "Phaelen", "Queleth", "Raelith", "Sorvael", "Taelith", "Uvalen",
-  "Waelith", "Aravel", "Brithael", "Caelen", "Daewyn", "Elithar", "Faenith",
-  "Gaelvael", "Haelwyn", "Ilaenith", "Jaelvael", "Kaelith", "Laelith", "Maelwyn",
-  "Naelwin", "Orveth", "Paelith", "Qaelwyn", "Raelvael", "Saelith", "Taelwyn"
+name_onsets = [
+  "Ael", "Syl", "Cael", "Vael", "Sor", "Mire", "Aer", "Lior", "Thess", "Calad",
+  "Erev", "Fael", "Gala", "Hael", "Ilya", "Jael", "Kaew", "Lira", "Maew", "Nael",
+  "Orva", "Phae", "Quel", "Rael", "Sorva", "Tael", "Uval", "Wael", "Arav", "Brith",
+  "Daew", "Elith", "Faen", "Gaelv", "Haelw", "Ilaen", "Jaelv", "Kael", "Lael", "Maelw",
+  "Naelw", "Orve", "Pael", "Qaelw", "Raelv", "Sael", "Taelw", "Aelen", "Vyrel", "Thal"
+]
+name_middles = ["ith", "ael", "wyn", "ien", "or", "eth", "en", "ael", "ir", "ael"]
+name_codas = [
+  "indra", "arel", "wyn", "en", "ith", "eille", "yn", "en", "aly", "rel",
+  "en", "indra", "en", "ith", "arel", "ith", "wyn", "ael", "ith", "en"
+]
+surname_onsets = [
+  "Silver", "Star", "Moon", "Dawn", "Twi", "Wind", "Leaf", "River", "Dream",
+  "Shadow", "Song", "Frost", "Ever", "Gold", "Whisper", "Autumn", "Spring",
+  "Wild", "Deep", "Far"
+]
+surname_codas = [
+  "wood", "vale", "song", "leaf", "wind", "born", "shade", "weaver", "watch",
+  "light", "grove", "fall", "wing", "root", "glen", "bloom", "reach", "hollow"
 ]
 epithets = [
   "Dawnweaver", "the Ancient", "of the Silver Wood", "Starborn", "the Undying",
   "Leafwhisper", "the Far-Sighted", "of the Long Watch", "Moonblade", "the Patient",
   "the Dreamer", "Windwalker", "of the Fallen Court", "the Rememberer", "Twilightborn",
-  "Riversworn", "the Graceful", "of the First Age", "Spellwright", "the Wandering"
+  "Riversworn", "the Graceful", "of the First Age", "Spellwright", "the Wandering",
+  "the Silent Bow", "of the Deep Roots", "Starweaver", "the Quiet", "the Lastborn",
+  "of the Hidden Vale", "the Long-Lived", "Nightglass", "the Composed", "the Unforgetting",
+  "of the Singing Grove", "the Melancholy", "Sunreach", "the Vigilant", "of Autumn's End",
+  "the Woven", "Cloudtread", "the Distant", "of the Elder Bough", "the Serene"
 ]
 
 # =============================================================================
@@ -134,20 +169,38 @@ improvement_descriptors = [
 ]
 artistic_traditions    = ["engraved stonework", "metalwork", "oral chronicle"]
 civ_name_suffix        = "Hold"
-first_names = [
-  "Brom", "Korda", "Tilda", "Garuk", "Merna", "Dolun", "Hessa", "Vrund",
-  "Agna", "Borun", "Kelda", "Griff", "Torva", "Skeld", "Wulfa", "Durgin",
-  "Ferra", "Helda", "Ingri", "Jarvik", "Keldra", "Lodvar", "Magna", "Norda",
-  "Orin", "Petra", "Qilda", "Ragnur", "Sigrid", "Thora", "Ulda", "Vagn",
-  "Walda", "Xorn", "Yrsa", "Zorna", "Aldra", "Brunda", "Corun", "Dorva",
-  "Eldra", "Flori", "Grunda", "Hadvar", "Ildra", "Jorund", "Korna", "Morna",
-  "Norna", "Oldra"
+name_onsets = [
+  "Brom", "Kord", "Tild", "Gar", "Mern", "Dol", "Hess", "Vrund", "Agn",
+  "Bor", "Keld", "Griff", "Torv", "Skeld", "Wulf", "Durg", "Ferr", "Held",
+  "Ingr", "Jarv", "Keldr", "Lodv", "Magn", "Nord", "Or", "Petr", "Qild",
+  "Ragn", "Sigr", "Thor", "Uld", "Vagn", "Wald", "Xorn", "Yrs", "Zorn",
+  "Aldr", "Brund", "Corn", "Dorv", "Eldr", "Flor", "Grund", "Hadv", "Ildr",
+  "Jorund", "Korn", "Morn", "Norn", "Oldr", "Bruk", "Dvarn", "Grim", "Halv"
+]
+name_middles = ["a", "o", "u", "i", "un", "ar", "or", "en"]
+name_codas = [
+  "a", "uk", "na", "run", "ir", "va", "ik", "ra", "dvar", "ur", "in",
+  "ag", "old", "ga", "ka", "ur", "en", "unda", "orn", "orin"
+]
+surname_onsets = [
+  "Iron", "Stone", "Deep", "Gold", "Copper", "Hammer", "Axe", "Forge",
+  "Rock", "Grim", "Bronze", "Anvil", "Cave", "Steel", "Coal", "Granite",
+  "Silver", "Ember", "Rune", "Ore"
+]
+surname_codas = [
+  "hand", "brow", "vein", "delver", "forge", "fall", "foot", "beard",
+  "shield", "hall", "peak", "hearth", "warden", "hewn", "wright", "kin",
+  "grip", "helm", "root", "spire"
 ]
 epithets = [
   "Stonehanded", "Ironbrow", "the Deep", "Coppervein", "the Unyielding",
   "Forgeson", "the Stubborn", "the Scarred", "Goldpick", "the Unbroken",
   "Deepdelver", "Hammerfall", "of the Deep Halls", "the Unmoved", "Ironfoot",
-  "the Tenacious", "Axeborn", "the Grumbly", "Brightforge", "the Enduring"
+  "the Tenacious", "Axeborn", "the Grumbly", "Brightforge", "the Enduring",
+  "Stonebeard", "the Sure-Footed", "of the Sealed Vault", "Coalheart", "the Loud",
+  "Rockjaw", "the Miserly", "of the Long Delve", "Steelbrow", "the Faithful",
+  "Emberkin", "the Blunt", "of the First Hammer", "Graniteshoulder", "the Frugal",
+  "Runecarver", "the Weathered", "of the Broken Pick", "Anvilheart", "the Dour"
 ]
 
 # =============================================================================
@@ -183,20 +236,37 @@ improvement_descriptors = [
 ]
 artistic_traditions    = ["shadow-weaving", "blade-carving", "strategic chronicle"]
 civ_name_suffix        = "Ascendancy"
-first_names = [
-  "Zarveth", "Xilana", "Korriv", "Malvex", "Vythis", "Draxil", "Nyssara",
-  "Ravaxa", "Thrix", "Ulveth", "Vexara", "Wrixal", "Xavri", "Yxara",
-  "Zevrin", "Azrix", "Belvex", "Crixal", "Darveth", "Exril", "Faxira",
-  "Grixal", "Hivex", "Ixara", "Krixal", "Laxira", "Mriveth", "Naxil",
-  "Olvex", "Praveth", "Qrixal", "Raxira", "Sriveth", "Taxil", "Uxara",
-  "Vriveth", "Wraxil", "Xirveth", "Yaxira", "Zrixal", "Arveth", "Brixal",
-  "Caxira", "Driveth", "Erixal", "Farveth", "Gaxira", "Hriveth", "Iraxil"
+name_onsets = [
+  "Zarv", "Xil", "Korr", "Malv", "Vyth", "Drax", "Nyss", "Ravax", "Thr",
+  "Ulv", "Vex", "Wrix", "Xavr", "Yx", "Zevr", "Azr", "Belv", "Crix", "Darv",
+  "Exr", "Fax", "Grix", "Hiv", "Ix", "Krix", "Lax", "Mriv", "Nax", "Olv",
+  "Prav", "Qrix", "Rax", "Sriv", "Tax", "Ux", "Vriv", "Wrax", "Xirv", "Yax",
+  "Zrix", "Arv", "Brix", "Caxr", "Driv", "Erix", "Farv", "Gaxr", "Hriv", "Irax"
+]
+name_middles = ["a", "i", "e", "o", "ix", "ar", "ev", "ax"]
+name_codas = [
+  "eth", "ana", "iv", "ex", "is", "il", "ara", "axa", "ix", "eth",
+  "ara", "al", "ri", "ara", "ira", "il", "ex", "eth", "ira", "il"
+]
+surname_onsets = [
+  "Shadow", "Night", "Ash", "Dark", "Blood", "Bitter", "Void", "Grave",
+  "Black", "Venom", "Iron", "Silent", "Sun", "Web", "Frost", "Cinder",
+  "Obsidian", "Bone", "Thorn", "Ebon"
+]
+surname_codas = [
+  "veil", "blade", "harbor", "shade", "web", "fang", "spire", "reaver",
+  "born", "kiss", "gaze", "coil", "thorn", "grasp", "flame", "husk",
+  "cloak", "hollow", "creep", "bane"
 ]
 epithets = [
   "the Veiled", "Shadowborn", "of the Deep Dark", "the Merciless", "Nightblade",
   "the Ambitious", "of the Broken Web", "the Relentless", "Ashveil", "the Cold",
   "of the Sunless Court", "the Calculating", "Darkharbor", "the Unscrupulous",
-  "the Ruthless", "of Bitter Flame", "the Scheming", "the Patient Knife"
+  "the Ruthless", "of Bitter Flame", "the Scheming", "the Patient Knife",
+  "the Envenomed", "of the Silent House", "Grimspire", "the Faceless", "the Precise",
+  "of the Broken Vow", "Voidtouched", "the Unforgiven", "of the Ashen Court", "the Whispering",
+  "Bonecarver", "the Exiled", "of the Last Betrayal", "Cinderveil", "the Watchful Blade",
+  "the Duplicitous", "of the Hollow Throne", "Ebonclaw", "the Unblinking", "the Severed"
 ]
 
 # =============================================================================
@@ -232,20 +302,38 @@ improvement_descriptors = [
 ]
 artistic_traditions    = ["war-drum", "body-marking", "oral legend"]
 civ_name_suffix        = "Warband"
-first_names = [
-  "Grak", "Urva", "Kargal", "Drusk", "Thugga", "Brul", "Varg", "Morda",
-  "Grasha", "Krug", "Lorga", "Murgal", "Norg", "Proga", "Qurg", "Roga",
-  "Sorga", "Turg", "Uroga", "Vurga", "Wrog", "Xurga", "Yorg", "Zurg",
-  "Agrash", "Brorg", "Crug", "Drog", "Ergash", "Frug", "Grorg", "Hrug",
-  "Irgash", "Jrug", "Krorg", "Lrug", "Morg", "Nrug", "Org", "Prug",
-  "Qrorg", "Rrug", "Srorg", "Trug", "Urorg", "Vrug", "Wrorg", "Xrug",
-  "Yrug", "Zrog"
+name_onsets = [
+  "Grak", "Urv", "Karg", "Drusk", "Thug", "Brul", "Varg", "Mord", "Grash",
+  "Krug", "Lorg", "Murg", "Norg", "Prog", "Qurg", "Rog", "Sorg", "Turg",
+  "Urog", "Vurg", "Wrog", "Xurg", "Yorg", "Zurg", "Agrash", "Brorg", "Crug",
+  "Drog", "Ergash", "Frug", "Grorg", "Hrug", "Irgash", "Jrug", "Krorg",
+  "Lrug", "Morg", "Nrug", "Org", "Prug", "Qrorg", "Rrug", "Srorg", "Trug",
+  "Urorg", "Vrug", "Wrorg", "Xrug", "Yrug", "Zrog", "Bashk", "Grum", "Hakk"
+]
+name_middles = ["ug", "og", "ash", "or", "ur"]
+name_codas = [
+  "al", "a", "ga", "ka", "sh", "ug", "or", "ash", "ga", "og",
+  "ur", "ak", "ol", "ash", "ug", "ka", "or", "og", "al", "ash"
+]
+surname_onsets = [
+  "Blood", "Iron", "Bone", "War", "Skull", "Grim", "Rot", "Fang",
+  "Grave", "Rage", "Fire", "Crush", "Storm", "Death", "Steel", "Doom",
+  "Rust", "Black", "Bald", "Scar"
+]
+surname_codas = [
+  "fist", "hide", "cruncher", "breaker", "hammer", "scar", "tusk", "gore",
+  "fang", "claw", "maw", "skull", "path", "rend", "brand", "gut",
+  "hew", "jaw", "spike", "roar"
 ]
 epithets = [
   "the Crusher", "Warborn", "the Relentless", "Ironhide", "the Raider",
   "Bloodfist", "the Tenacious", "Bonecruncher", "the Fierce", "Shieldbreaker",
   "of the Red Plains", "the Undying", "Warpath", "the Unyielding", "Greathammer",
-  "of the Burning Steppe", "the Conqueror", "Bravescar", "the Fearless"
+  "of the Burning Steppe", "the Conqueror", "Bravescar", "the Fearless",
+  "the Loud", "Skullbreaker", "of the Broken Tusk", "the Savage", "Rustfang",
+  "the Untamed", "of the Ash Camp", "Gutspiller", "the Bellowing", "the Brutal",
+  "of the Iron Warband", "Bonegnaw", "the Reckless", "Deathroar", "the Grim Marcher",
+  "of the Red Dust", "Warhide", "the Merciless Blade", "the Wild-Eyed", "Bloodpath"
 ]
 
 # =============================================================================
@@ -281,18 +369,36 @@ improvement_descriptors = [
 ]
 artistic_traditions    = ["pipe-music", "culinary craft", "illustrated chronicle"]
 civ_name_suffix        = "Shire"
-first_names = [
-  "Tobin", "Merry", "Perla", "Willo", "Rucco", "Delma", "Hamlin", "Rosie",
-  "Pippa", "Cob", "Daisy", "Fergo", "Ginny", "Hobb", "Ivy", "Jory",
-  "Kella", "Lanny", "Mossie", "Nettle", "Olly", "Prilla", "Quince", "Ruby",
-  "Samlo", "Tilda", "Umber", "Vetch", "Wenda", "Xan", "Yonda", "Zebb",
-  "Arno", "Billa", "Cormo", "Dilly", "Elmo", "Fenna", "Gordo", "Hildy",
-  "Imbo", "Jilly", "Kibo", "Lolla", "Minna", "Nobby", "Oswin", "Pella",
-  "Quibby", "Rella"
+name_onsets = [
+  "Tob", "Merr", "Perl", "Will", "Rucc", "Delm", "Haml", "Ros", "Pipp",
+  "Cob", "Dais", "Ferg", "Ginn", "Hobb", "Iv", "Jor", "Kell", "Lann",
+  "Moss", "Nett", "Oll", "Prill", "Quinc", "Rub", "Saml", "Tild", "Umb",
+  "Vetch", "Wend", "Xan", "Yond", "Zebb", "Arn", "Bill", "Corm", "Dill",
+  "Elm", "Fenn", "Gord", "Hild", "Imb", "Jill", "Kib", "Loll", "Minn",
+  "Nobb", "Osw", "Pell", "Quibb", "Rell"
+]
+name_middles = ["o", "a", "e", "i", "ie"]
+name_codas = [
+  "in", "y", "a", "o", "co", "ie", "in", "y", "pa", "gy",
+  "y", "b", "y", "ry", "a", "a", "y", "er", "a", "y"
+]
+surname_onsets = [
+  "Good", "Under", "Fair", "Bramble", "Honey", "Clover", "Bright", "Green",
+  "Meadow", "Rose", "Apple", "Barley", "Berry", "Hazel", "Hollow", "Moss",
+  "Sweet", "Warm", "Bell", "Snug"
+]
+surname_codas = [
+  "barrel", "hill", "foot", "burrow", "bottom", "field", "brook", "leaf",
+  "wick", "pot", "berry", "bramble", "hearth", "vine", "cottage", "meadow",
+  "dale", "well", "nook", "row"
 ]
 epithets = [
   "the Cheerful", "Lightfoot", "of the Green Hill", "the Lucky", "Nimblefingers",
   "the Generous", "Goodbarrel", "the Warmhearted", "of the Merry Band", "the Honest",
   "Halfpenny", "the Reliable", "of Burglar's Roost", "the Steadfast", "Hearthkeeper",
-  "the Affable", "of the Seven Harvests", "the Unassuming", "Cloverfoot"
+  "the Affable", "of the Seven Harvests", "the Unassuming", "Cloverfoot",
+  "the Plump", "Breadwhistle", "of the Sunny Bank", "the Chatty", "Pocketful",
+  "the Tidy", "of the Long Table", "Applecheek", "the Sprightly", "the Curious",
+  "of the Snug Burrow", "Honeycomb", "the Bashful", "Meadowlark", "the Punctual",
+  "of the Autumn Fair", "Butterbur", "the Companionable", "the Softhearted", "Berryfoot"
 ]

@@ -116,7 +116,7 @@ public static class CharacterSpawner
         var payload = JsonSerializer.Serialize(new CharacterBornPayload(
             c.Id.Value, c.Identity.Name, c.Identity.Epithet,
             c.Personality.Ambition, c.Personality.Aggression,
-            AncestryId: c.Identity.AncestryId));
+            AncestryId: c.Identity.AncestryId, Surname: c.Identity.Surname));
         return new PendingEvent(EventType.CharacterBorn, c.Location, null, payload,
             new[] { c.Id.Value },
             ActorId: c.Id.Value, ActorName: c.Identity.Name);

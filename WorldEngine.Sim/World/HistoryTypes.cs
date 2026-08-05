@@ -4,6 +4,7 @@ namespace WorldEngine.Sim.World;
 public sealed record CharacterSummary(
     long    CharacterId,
     string  Name,
+    string? Surname,
     string? Epithet,
     int     NameOrdinal,
     string? AncestryId,

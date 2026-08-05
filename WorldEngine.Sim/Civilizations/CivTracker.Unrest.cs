@@ -172,7 +172,7 @@ public static partial class CivTracker
                 JsonSerializer.Serialize(new CharacterBornPayload(
                     leader.Id.Value, leader.Identity.Name, leader.Identity.Epithet,
                     leader.Personality.Ambition, leader.Personality.Aggression,
-                    Source: "secession", AncestryId: leader.Identity.AncestryId)),
+                    Source: "secession", AncestryId: leader.Identity.AncestryId, Surname: leader.Identity.Surname)),
                 new[] { leader.Id.Value },
                 ActorId: leader.Id.Value, ActorName: leader.Identity.Name));
         }

@@ -47,9 +47,17 @@ public sealed class AncestryConfig
     // drain/tick = CulturalDistance × CulturalDistanceDrainRate (config)
     public Dictionary<string, float> CulturalDistance { get; set; } = new();
 
-    // Names — populated from first_names / epithets arrays in ancestries.toml
-    public string[] FirstNames { get; set; } = [];
-    public string[] Epithets   { get; set; } = [];
+    // Names — syllable pools for WorldEngine.Sim.Entities.Characters.NameGenerator, populated
+    // from ancestries.toml. Given names assemble as onset + optional middle + coda; surnames
+    // assemble as surname_onset + surname_coda. Combinatorial (dozens of syllables per slot)
+    // instead of a flat name list so the effective namespace scales with population and
+    // millennia-long runs without visibly repeating (M15.x namespace expansion).
+    public string[] NameOnsets      { get; set; } = [];
+    public string[] NameMiddles     { get; set; } = [];
+    public string[] NameCodas       { get; set; } = [];
+    public string[] SurnameOnsets   { get; set; } = [];
+    public string[] SurnameCodas    { get; set; } = [];
+    public string[] Epithets        { get; set; } = [];
 
     // Cultural descriptors (M3.5) — used for settlement naming and UI display
     /// <summary>Primary building material / construction vocabulary. E.g. "hewn-stone", "woven-wood".</summary>

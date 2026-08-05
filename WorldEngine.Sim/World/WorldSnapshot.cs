@@ -89,6 +89,7 @@ public sealed record GoalWatchEntry(string Description, float Priority);
 public sealed record CharacterWatchSnapshot(
     EntityId   Id,
     string     Name,
+    string     Surname,
     string     Epithet,
     string     CivName,
     TileCoord  Location,

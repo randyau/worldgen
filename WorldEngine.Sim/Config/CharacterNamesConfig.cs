@@ -1,15 +1,41 @@
 namespace WorldEngine.Sim.Config;
 
-/// <summary>Name pools for procedurally naming characters (first and last names).</summary>
+/// <summary>
+/// Fallback syllable pools and epithets for procedurally naming characters whose ancestry
+/// has no name/surname pools of its own (see <see cref="AncestryConfig"/> for the per-ancestry
+/// equivalents used by <see cref="WorldEngine.Sim.Entities.Characters.NameGenerator"/>).
+/// </summary>
 public sealed class CharacterNamesConfig
 {
-    public string[] FirstNames { get; set; } =
+    public string[] NameOnsets { get; set; } =
     [
-        "Aelindra", "Barath", "Ceryn", "Davan", "Elowen", "Farid", "Gawen", "Hilda",
-        "Isolde", "Jorath", "Kira", "Lareth", "Mira", "Navar", "Oryn", "Petra",
-        "Quinn", "Rolan", "Sabel", "Torin", "Ulric", "Vara", "Wren", "Xander",
-        "Yeva", "Zoran", "Aldric", "Brynn", "Caela", "Draven", "Eryn", "Fyora",
-        "Gorin", "Hessa", "Idris", "Jolara", "Kavel", "Lyra", "Maren", "Nox"
+        "Ael", "Bar", "Cer", "Dav", "Elo", "Far", "Gaw", "Hil",
+        "Iso", "Jor", "Kir", "Lar", "Mir", "Nav", "Ory", "Pet",
+        "Quin", "Rol", "Sab", "Tor", "Ulr", "Var", "Wren", "Xan",
+        "Yev", "Zor", "Ald", "Bryn", "Cael", "Drav"
+    ];
+
+    public string[] NameMiddles { get; set; } =
+    [
+        "an", "el", "in", "or", "ath", "en", "ir", "ol", "ara", "eth"
+    ];
+
+    public string[] NameCodas { get; set; } =
+    [
+        "dra", "ath", "wen", "ric", "ora", "iel", "and", "eth", "ira", "on",
+        "ess", "wyn", "ard", "in", "os", "eva", "an", "ith", "ura", "el"
+    ];
+
+    public string[] SurnameOnsets { get; set; } =
+    [
+        "Ash", "Stone", "Black", "White", "Iron", "Gold", "Silver", "Oak",
+        "Storm", "Thorn", "Wind", "Frost", "Bright", "Hollow", "Vale", "Wold"
+    ];
+
+    public string[] SurnameCodas { get; set; } =
+    [
+        "wood", "field", "well", "brook", "haven", "worth", "ford", "moor",
+        "shade", "crest", "hold", "gate", "reach", "mere", "dale", "borne"
     ];
 
     public string[] Epithets { get; set; } =

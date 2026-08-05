@@ -106,7 +106,8 @@ public sealed class CharacterProfilePanel : IToggleablePanel
 
         // ── Header ──────────────────────────────────────────────────────────
         string nameStr = summary.NameOrdinal > 0 ? $"{summary.Name} {_ctx.Present.ToRoman(summary.NameOrdinal)}" : summary.Name;
-        if (summary.Epithet is not null) nameStr += $" the {summary.Epithet}";
+        if (!string.IsNullOrEmpty(summary.Surname)) nameStr += $" {summary.Surname}";
+        if (!string.IsNullOrEmpty(summary.Epithet)) nameStr += $" {summary.Epithet}";
         _content.Add(SectionHeader.Build(nameStr));
 
         string ancestry = summary.AncestryId ?? "Unknown";

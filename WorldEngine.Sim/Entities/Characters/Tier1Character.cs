@@ -110,7 +110,10 @@ public sealed class Tier1Character : SimEntity
         yield break;
     }
 
-    protected override string  SnapshotName         => $"{Identity.Name} {Identity.Epithet}";
+    protected override string  SnapshotName         =>
+        Identity.Surname.Length > 0
+            ? $"{Identity.Name} {Identity.Surname} {Identity.Epithet}"
+            : $"{Identity.Name} {Identity.Epithet}";
     protected override string  SnapshotSpeciesId    => string.Empty;
     protected override bool    SnapshotIsLegendary  => false;
     protected override float   SnapshotFoodFraction => Needs.Food;
@@ -122,6 +125,7 @@ public sealed class Tier1Character : SimEntity
         Id:             Id,
         Kind:           Kind,
         Name:           Identity.Name,
+        Surname:        Identity.Surname,
         Epithet:        Identity.Epithet,
         AncestryId:     Identity.AncestryId,
         Location:       Location,

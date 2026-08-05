@@ -331,7 +331,7 @@ internal static class WorldStateMapper
     private static IdentityDataDto MapIdentity(IdentityData id) =>
         new(id.Name, id.Epithet, id.AncestryId,
             id.MotherId?.Value, id.FatherId?.Value,
-            id.BirthYear, id.BirthSeason, id.NameOrdinal, id.RulerOrdinal);
+            id.BirthYear, id.BirthSeason, id.NameOrdinal, id.RulerOrdinal, id.Surname);
 
     private static GoalDataDto MapGoal(GoalData g) =>
         new((int)g.Type, (int)g.Object,
@@ -641,7 +641,7 @@ internal static class WorldStateMapper
             id.Name, id.Epithet, id.AncestryId,
             id.MotherId.HasValue ? new EntityId(id.MotherId.Value) : null,
             id.FatherId.HasValue ? new EntityId(id.FatherId.Value) : null,
-            id.BirthYear, id.BirthSeason, id.NameOrdinal, id.RulerOrdinal);
+            id.BirthYear, id.BirthSeason, id.NameOrdinal, id.RulerOrdinal, id.Surname);
 
         var character = new Tier1Character(
             new EntityId(d.Id), new TileCoord(d.LocationX, d.LocationY),

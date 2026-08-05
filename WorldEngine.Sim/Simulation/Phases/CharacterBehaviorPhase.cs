@@ -206,7 +206,7 @@ public sealed class CharacterBehaviorPhase
             var payload = JsonSerializer.Serialize(new CharacterBornPayload(
                 child.Id.Value, child.Identity.Name, child.Identity.Epithet,
                 child.Personality.Ambition, child.Personality.Aggression,
-                Source: "family", AncestryId: child.Identity.AncestryId));
+                Source: "family", AncestryId: child.Identity.AncestryId, Surname: child.Identity.Surname));
             pending.Add(new PendingEvent(EventType.CharacterBorn, child.Location, null, payload,
                 new[] { child.Id.Value }, new[] { mother.Id.Value, father.Id.Value },
                 ActorId: child.Id.Value, ActorName: child.Identity.Name, CivId: civId.Value));
@@ -334,7 +334,7 @@ public sealed class CharacterBehaviorPhase
             var payload = JsonSerializer.Serialize(new CharacterBornPayload(
                 born.Id.Value, born.Identity.Name, born.Identity.Epithet,
                 born.Personality.Ambition, born.Personality.Aggression,
-                AncestryId: born.Identity.AncestryId));
+                AncestryId: born.Identity.AncestryId, Surname: born.Identity.Surname));
             pending.Add(new PendingEvent(EventType.CharacterBorn, born.Location, null, payload,
                 new[] { born.Id.Value },
                 ActorId: born.Id.Value, ActorName: born.Identity.Name, CivId: stub.CivId.Value));
@@ -536,7 +536,7 @@ public sealed class CharacterBehaviorPhase
                     var bornPayload = JsonSerializer.Serialize(new CharacterBornPayload(
                         newRuler.Id.Value, newRuler.Identity.Name, newRuler.Identity.Epithet,
                         newRuler.Personality.Ambition, newRuler.Personality.Aggression,
-                        AncestryId: newRuler.Identity.AncestryId));
+                        AncestryId: newRuler.Identity.AncestryId, Surname: newRuler.Identity.Surname));
                     pending.Add(new PendingEvent(EventType.CharacterBorn, sTile, null, bornPayload,
                         new[] { newRuler.Id.Value },
                         ActorId: newRuler.Id.Value, ActorName: newRuler.Identity.Name, CivId: civ.Id.Value));

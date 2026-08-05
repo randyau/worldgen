@@ -102,12 +102,8 @@ public static class Tier2Spawner
         return Math.Clamp(v, 0.1f, 0.9f);
     }
 
-    private static string PickName(int seed, int seq, CharacterNamesConfig names)
-    {
-        int idx = (int)(WorldRng.FloatAt(seed, 0, seq, 0, SaltName) * names.FirstNames.Length);
-        idx = Math.Clamp(idx, 0, names.FirstNames.Length - 1);
-        return names.FirstNames[idx];
-    }
+    private static string PickName(int seed, int seq, CharacterNamesConfig names) =>
+        NameGenerator.AssembleGivenName(names.NameOnsets, names.NameMiddles, names.NameCodas, seed, seq, SaltName);
 
     private static PendingEvent MakeBornEvent(Tier2Character c, WorldState world)
     {

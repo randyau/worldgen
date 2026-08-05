@@ -16,4 +16,5 @@ public sealed record IdentityData(
     int        BirthYear,
     int        BirthSeason,
     int        NameOrdinal  = 0,   // 0 = first bearer; 1 = II, 2 = III, etc.
-    int        RulerOrdinal = 0);  // Nth ruler of their civ (0 = founder / not yet a ruler)
+    int        RulerOrdinal = 0,   // Nth ruler of their civ (0 = founder / not yet a ruler)
+    string     Surname      = "");// family/house/clan name (M15.x namespace expansion); "" = none generated

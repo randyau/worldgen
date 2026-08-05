@@ -11,6 +11,11 @@ public class AncestryValidatorTests
         DisplayName = "Human",
         MinLifespanSeasons = 60,
         MaxLifespanSeasons = 200,
+        NameOnsets = ["Nav"],
+        NameCodas = ["ar"],
+        SurnameOnsets = ["Ash"],
+        SurnameCodas = ["wood"],
+        Epithets = ["the Bold"],
     };
 
     [Fact]

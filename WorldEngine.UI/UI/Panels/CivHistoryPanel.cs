@@ -143,7 +143,8 @@ public sealed class CivHistoryPanel : IToggleablePanel
             foreach (var ruler in rulers)
             {
                 string nameStr = ruler.NameOrdinal > 0 ? $"{ruler.Name} {_ctx.Present.ToRoman(ruler.NameOrdinal)}" : ruler.Name;
-                if (ruler.Epithet is not null) nameStr += $" the {ruler.Epithet}";
+                if (!string.IsNullOrEmpty(ruler.Surname)) nameStr += $" {ruler.Surname}";
+                if (!string.IsNullOrEmpty(ruler.Epithet)) nameStr += $" {ruler.Epithet}";
                 string lifeStr = ruler.DeathYear > 0
                     ? $"  {nameStr}  ({ruler.BirthYear}–{ruler.DeathYear})"
                     : $"  {nameStr}  (b. {ruler.BirthYear})";

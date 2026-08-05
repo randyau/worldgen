@@ -28,7 +28,7 @@ One-line description of every non-trivial source file. Check here before running
 - `ArtifactConfig.cs` — Artifact generation and ownership constants. Loaded from the [artifacts] section of sim_config.toml.
 - `BeastsSimConfig.cs` — Beast lifecycle constants from the [beasts] section of sim_config.toml. Species-specific values (health, strength, etc.) live in config/beasts.toml.
 - `BiomeThresholdConfig.cs` — Elevation, temperature, and moisture thresholds for biome classification.
-- `CharacterNamesConfig.cs` — Name pools for procedurally naming characters (first and last names).
+- `CharacterNamesConfig.cs` — Fallback syllable pools and epithets for procedurally naming characters whose ancestry has no name/surname pools of its own (see WorldEngine.Sim.Config.AncestryConfig for the per-ancestry equivalents used by WorldEngine.Sim.Entities.Characters.NameGenerator).
 - `CharacterSimConfig.cs` — Character behavior constants: needs decay, skill growth, diplomacy (war knobs in WarConfig).
 - `ClimateConfig.cs` — Temperature/moisture gradients, storm corridors, and climate drift constants.
 - `ConfigRegistry.cs` — Value kinds the generic settings UI knows how to render (M10 10.2, ui_design_framework.md §9.3).
@@ -107,6 +107,7 @@ One-line description of every non-trivial source file. Check here before running
 - `GoalManager.cs` — Goal formation, priority, staleness, and resolution for Tier1 characters (~357 lines).
 - `IdentityData.cs` — Immutable identity record for a character: name, epithet, ancestry, and birth/death metadata. Civ/org affiliation lives on Tier1Character.Memberships (M12 12.2), not here — see docs/phases/m12_organization_model.md.
 - `LivelihoodData.cs` — Describes a Tier 2 character's role, affiliation, and economic position.
+- `NameGenerator.cs` — Deterministic syllable-assembly name generator seeded via WorldRng. Same world seed + same (seq, salt) produce identical names (M15.x namespace expansion — replaces the old flat first-name-list lookup, whose ~50-name pool per ancestry visibly repeated once population climbed into the thousands over millennia-long runs). Given names assemble as onset + [middle, ~40% of rolls] + coda. Surnames assemble as surname_onset + surname_coda. With N onsets, M middles, and K codas this yields roughly N*K + 0.4*N*M*K combinations per ancestry — tens of thousands rather than a few dozen — while staying inside each ancestry's own phonetic pool so the ancestry "feel" (elvish, dwarvish, orcish, ...) is preserved.
 - `NeedsUpdater.cs` — Applies per-tick need decay and environmental boosts to character NeedsVector.
 - `RelationshipEdge.cs` — RelationshipFlags (ally/rival/etc.) and RelationshipEdge record tracking character-to-character bonds.
 - `RelationshipGraph.cs` — Centralized relationship store. NOT on entity objects. Canonical key: (Min(a,b), Max(a,b)) — independent of query direction. Maintains a per-entity adjacency index so GetAll/CountAlliances are O(degree) rather than O(all edges), preventing the O(n²) scan that accumulates as the graph grows over long simulations.

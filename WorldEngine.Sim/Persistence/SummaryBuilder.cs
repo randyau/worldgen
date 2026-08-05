@@ -126,13 +126,16 @@ public static class SummaryBuilder
             if (born.ActorId is null) continue;
             long charId = born.ActorId.Value;
 
-            // Epithet from payload
+            // Epithet/Surname from payload
             string? epithet = null;
+            string? surname = null;
             try
             {
                 using var doc = JsonDocument.Parse(born.PayloadJson ?? "{}");
                 if (doc.RootElement.TryGetProperty("Epithet", out var ep))
                     epithet = ep.GetString();
+                if (doc.RootElement.TryGetProperty("Surname", out var sn))
+                    surname = sn.GetString();
             }
             catch (JsonException) { /* skip */ }
 
@@ -170,17 +173,18 @@ public static class SummaryBuilder
 
             conn.Execute("""
                 INSERT OR REPLACE INTO CharacterSummaries
-                    (CharacterId, Name, Epithet, NameOrdinal, AncestryId, CivId, CivName,
+                    (CharacterId, Name, Surname, Epithet, NameOrdinal, AncestryId, CivId, CivName,
                      RulerOrdinal, BirthYear, DeathYear, DeathCause, AgeSeasons,
                      WarsInitiated, SettlementsFounded, ArtworksCreated, SignificantEvents)
                 VALUES
-                    (@CharacterId, @Name, @Epithet, @NameOrdinal, @AncestryId, @CivId, @CivName,
+                    (@CharacterId, @Name, @Surname, @Epithet, @NameOrdinal, @AncestryId, @CivId, @CivName,
                      @RulerOrdinal, @BirthYear, @DeathYear, @DeathCause, @AgeSeasons,
                      @WarsInitiated, @SettlementsFounded, @ArtworksCreated, @SignificantEvents)
                 """, new
             {
                 CharacterId       = charId,
                 Name              = born.ActorName ?? "Unknown",
+                Surname           = surname,
                 Epithet           = epithet,
                 NameOrdinal       = 0,        // DECISION: NameOrdinal is not emitted in current payloads; defaults to 0
                 AncestryId        = (string?)null, // DECISION: AncestryId not in event payloads; deferred to Phase 3.3

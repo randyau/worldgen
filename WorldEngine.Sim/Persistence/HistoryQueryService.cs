@@ -308,6 +308,7 @@ public sealed class HistoryQueryService : IHistoryQuery
     private static CharacterSummary MapCharSummary(CharacterSummaryRow r) => new(
         CharacterId:        r.CharacterId,
         Name:               r.Name,
+        Surname:            r.Surname,
         Epithet:            r.Epithet,
         NameOrdinal:        r.NameOrdinal,
         AncestryId:         r.AncestryId,
@@ -432,6 +433,7 @@ public sealed class HistoryQueryService : IHistoryQuery
     {
         public long    CharacterId        { get; init; }
         public string  Name               { get; init; } = "";
+        public string? Surname            { get; init; }
         public string? Epithet            { get; init; }
         public int     NameOrdinal        { get; init; }
         public string? AncestryId         { get; init; }

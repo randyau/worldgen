@@ -307,7 +307,8 @@ public sealed record IdentityDataDto(
     int    BirthYear,
     int    BirthSeason,
     int    NameOrdinal,
-    int    RulerOrdinal);
+    int    RulerOrdinal,
+    string Surname = "");
 
 /// <summary>M12 12.2: a character's Organization membership. Mirrors Organizations.Membership but self-contained for the DTO layer.</summary>
 public sealed record CharacterMembershipDto(int OrganizationId, int Role, float Loyalty, int CivId);
