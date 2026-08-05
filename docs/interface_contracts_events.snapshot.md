@@ -186,6 +186,13 @@ public enum EventType
     // and their home settlement, distinct from the pre-existing MerchantTradeCompleted (which is
     // a silent/notable status-gain marker, not a resource transfer).
     TradePaid               = 3500,
+    // M14 14.2 — persistent trade routes / caravan transit (docs/phases/m14_economy_independent_wealth.md).
+    // TradeRouteFormed also fires (with Reopened=true in its payload) when a Severed route
+    // automatically reopens — see decision in Tier2BehaviorPhase.ReopenRoute rather than a
+    // separate event type for that case.
+    TradeRouteFormed        = 3501,  // a settlement pair graduated to (or reopened as) a persistent TradeRoute
+    TradeRouteSevered       = 3502,  // TradeRoute closed: war between endpoints' civs, a lost endpoint, or sustained caravan losses
+    CaravanRaided           = 3503,  // in-transit caravan lost — Cause in payload distinguishes war/disaster/piracy
 
     // M3+ artifacts / religion (6000+/4000+ ranges reserved)
     ArtifactCreated         = 6001,
@@ -213,4 +220,4 @@ public enum EventType
 }
 ```
 
-<!-- content-hash: 74492032e3d1ab5b -->
+<!-- content-hash: b736c965799cb836 -->
