@@ -170,6 +170,14 @@ public enum EventType
     CharacterCrystallized   = 3306,
     ArtisanCrafted          = 3307,  // artisan completed a notable piece; exceptional=true in payload marks a masterwork
 
+    // M14 economy events (3500-range) — a fresh range rather than packing more values into the
+    // 3300s (highest used there: ArtisanCrafted = 3307), per the M14 deep-review finding
+    // (docs/phases/m14_economy_independent_wealth.md). TradePaid (14.1) is the first: a real
+    // Wealth transfer from a destination settlement's precious-commodity reserves to a merchant
+    // and their home settlement, distinct from the pre-existing MerchantTradeCompleted (which is
+    // a silent/notable status-gain marker, not a resource transfer).
+    TradePaid               = 3500,
+
     // M3+ artifacts / religion (6000+/4000+ ranges reserved)
     ArtifactCreated         = 6001,
     ArtifactDestroyed       = 6002,
@@ -252,6 +260,7 @@ public static class VerbClassification
         EventType.AppointedToRole         => VerbClass.Transfer,
         EventType.DismissedFromRole       => VerbClass.Transfer,
         EventType.MerchantTradeCompleted  => VerbClass.Transfer,
+        EventType.TradePaid               => VerbClass.Transfer,
         EventType.ScholarDiscovery        => VerbClass.Creation,
         EventType.PhysicianHealed         => VerbClass.Maintenance,
         EventType.CharacterCrystallized   => VerbClass.Transformation,

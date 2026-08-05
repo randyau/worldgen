@@ -142,6 +142,7 @@ public sealed class Presenter
         EventType.ArtisanCrafted           => "crafted",
         EventType.ScholarDiscovery         => "discovery made",
         EventType.MerchantTradeCompleted   => "trade completed",
+        EventType.TradePaid                => "paid for goods",
         EventType.PhysicianHealed          => "healed",
         EventType.CharacterCrystallized    => "crystallized",
         EventType.DiseaseOutbreak          => "disease outbreak",

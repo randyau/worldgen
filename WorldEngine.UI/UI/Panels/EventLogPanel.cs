@@ -178,6 +178,7 @@ public sealed class EventLogPanel : IWorkspacePanel
         EventType.DismissedFromRole        or
         EventType.ScholarDiscovery         or
         EventType.MerchantTradeCompleted   or
+        EventType.TradePaid                or
         EventType.PhysicianHealed          or
         EventType.BeastSlain               => true,
         _                                  => false

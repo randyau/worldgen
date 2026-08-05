@@ -61,12 +61,13 @@ The `Type` column stores integer values. Use these constants in WHERE clauses:
   3305 = PhysicianHealed           3306 = CharacterCrystallized   
   3307 = ArtisanCrafted          
 
+-- Artifacts/Religion (4000–4999)
+  3500 = TradePaid          4003 = ReligionFounded  
+  4004 = ReligionExtinct  
+
 -- Artifact (6000–6999)
   6001 = ArtifactCreated        6002 = ArtifactDestroyed    
   6003 = ArtifactTransferred  
-
--- Artifacts/Religion (4000–4999)
-  4003 = ReligionFounded    4004 = ReligionExtinct  
 
 -- God Mode (9000+)
   9001 = GodModeDisasterTriggered     9002 = GodModeEntitySpawned       

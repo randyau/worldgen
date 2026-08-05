@@ -5,6 +5,7 @@ using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities;
 using WorldEngine.Sim.Entities.Artifacts;
 using WorldEngine.Sim.Entities.Characters;
+using WorldEngine.Sim.Economy;
 using WorldEngine.Sim.Events;
 using WorldEngine.Sim.World;
 using S = WorldEngine.Sim.Simulation.SimRngSalts;
@@ -355,6 +356,13 @@ public sealed class Tier2BehaviorPhase
 
                 world.Settlements[homeTile]       = home     with { ResourceStores = newHomeStores };
                 world.Settlements[bestDest.Value] = destStub with { ResourceStores = newDestStores };
+
+                // M14 14.1 — price and pay for the goods just physically transferred above. Built
+                // as a plain-data ICommand (CLAUDE.md pattern #1/#5) and resolved immediately by
+                // this phase (see CompleteMerchantTrade's doc comment for why this doesn't route
+                // through CivTracker.Resolve/CharacterBehaviorPhase.ResolveCommand).
+                var tradeCmd = new CompleteMerchantTrade(c.Id, homeTile, bestDest.Value, bestResource, transfer);
+                ResolveMerchantTrade(tradeCmd, world, _simCfg.Economy, pending);
             }
         }
 
@@ -366,6 +374,91 @@ public sealed class Tier2BehaviorPhase
             bestDest.Value.X, bestDest.Value.Y));
         TryEmitNotableWork(c, world, tick, EventType.MerchantTradeCompleted,
             payload, [c.Id.Value], null, pending);
+    }
+
+    // M14 14.1 — precious commodities that act as money-equivalent (decision 4). Debited/credited
+    // in priority order (gold, then silver, then gems) so a payment first draws down the most
+    // common store before touching rarer ones.
+    private static readonly string[] PreciousCommodities = { "gold", "silver", "gems" };
+
+    /// <summary>
+    /// Resolves a CompleteMerchantTrade command: prices the traded good at the destination
+    /// (PricingService.EffectivePrice, decisions 7/8), has the destination pay in precious-
+    /// commodity value out of its own ResourceStores (floored at zero — a settlement genuinely
+    /// short on gold/silver/gems simply pays less, or nothing, a natural no-new-code scarcity
+    /// gate rather than a hard precondition on the trade itself), routes
+    /// EconomyConfig.MerchantHomeCutFraction of the paid value back to the merchant's home
+    /// settlement in the same commodities just debited (Opus-review addition, keeps precious-
+    /// commodity totals exactly conserved), and credits the remainder to the merchant's personal
+    /// Wealth (decision 9: unconditionally personal until 14.4's Guild-member routing exists).
+    /// </summary>
+    private static void ResolveMerchantTrade(
+        CompleteMerchantTrade cmd, WorldState world, EconomyConfig cfg, List<PendingEvent> pending)
+    {
+        if (world.GetEntity(cmd.MerchantId) is not Tier2Character merchant || !merchant.IsAlive) return;
+        if (!world.Settlements.TryGetValue(cmd.DestTile, out var dest)) return;
+        if (!world.Settlements.TryGetValue(cmd.HomeTile, out var home)) return;
+        if (cmd.Quantity <= 0f) return;
+
+        float unitPrice  = PricingService.EffectivePrice(dest, cmd.Resource, cfg, world.GlobalPriceIndex);
+        float totalValue = unitPrice * cmd.Quantity;
+        if (totalValue <= 0f) return;
+
+        var destStores = dest.ResourceStores is null
+            ? new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase)
+            : new Dictionary<string, float>(dest.ResourceStores, StringComparer.OrdinalIgnoreCase);
+
+        // Destination pays what it can, commodity by commodity, never going negative — a
+        // destination with no precious-commodity reserves simply can't pay (natural scarcity
+        // gate; the physical-goods transfer already happened above and is unaffected).
+        float remaining = totalValue;
+        var debited = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);
+        foreach (var commodity in PreciousCommodities)
+        {
+            if (remaining <= 0f) break;
+            float available = destStores.TryGetValue(commodity, out float a) ? a : 0f;
+            if (available <= 0f) continue;
+            float unitValue = cfg.GetBaseValue(commodity);
+            if (unitValue <= 0f) continue;
+
+            float availableValue = available * unitValue;
+            float takeValue = Math.Min(availableValue, remaining);
+            float takeUnits = takeValue / unitValue;
+
+            destStores[commodity] = Math.Max(0f, available - takeUnits);
+            debited[commodity] = takeUnits;
+            remaining -= takeValue;
+        }
+
+        float paidValue = totalValue - remaining;
+        if (paidValue <= 0f) return; // couldn't pay anything — trade completes with no Wealth transfer
+
+        world.Settlements[cmd.DestTile] = dest with { ResourceStores = destStores };
+
+        // Home-settlement recirculation cut (Opus-review addition): return a fraction of the
+        // paid value to the merchant's home settlement, in the exact same commodities just
+        // debited from the destination — keeps every commodity's total exactly conserved.
+        if (cfg.MerchantHomeCutFraction > 0f && debited.Count > 0)
+        {
+            var homeStores = home.ResourceStores is null
+                ? new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase)
+                : new Dictionary<string, float>(home.ResourceStores, StringComparer.OrdinalIgnoreCase);
+            foreach (var (commodity, units) in debited)
+            {
+                float homeCutUnits = units * cfg.MerchantHomeCutFraction;
+                homeStores[commodity] = (homeStores.TryGetValue(commodity, out float h) ? h : 0f) + homeCutUnits;
+            }
+            world.Settlements[cmd.HomeTile] = home with { ResourceStores = homeStores };
+        }
+
+        float merchantShare = paidValue * (1f - cfg.MerchantHomeCutFraction);
+        merchant.AddWealth(merchantShare);
+
+        var payload = JsonSerializer.Serialize(new TradePaidPayload(
+            merchant.Id.Value, merchant.Name, cmd.Resource, cmd.Quantity,
+            paidValue, merchantShare, cmd.DestTile.X, cmd.DestTile.Y));
+        pending.Add(new PendingEvent(EventType.TradePaid, cmd.HomeTile, null, payload,
+            new[] { merchant.Id.Value }, ActorId: merchant.Id.Value, ActorName: merchant.Name));
     }
 
     // Checks if home founder has an ally whose CivId matches the destination settlement's civ.

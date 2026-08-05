@@ -884,6 +884,7 @@ _M14 14.0 — Wealth substrate. All values below are first-pass placeholders exp
 | `wealth_inheritance_share` | `0.7` | `SimConfig.Economy.WealthInheritanceShare` | Fraction of a dying character's Wealth passed to their heir (decision 5); the remainder — or all of it if no eligible heir exists — becomes an unclaimed WealthDrop pool at the death tile. |
 | `personal_wealth_spoilage_rate` | `0.02` | `SimConfig.Economy.PersonalWealthSpoilageRate` | "Cost of living" annual bleed on personal Wealth and standing WealthDrop pools (decision 10) — must be much larger than resource_pressure.wealth_spoilage_rate (0.0001, "essentially permanent") since personal Wealth has no other sink. Gives per-capita Wealth a finite equilibrium ceiling. |
 | `artifact_value_multiplier` | `3.0` | `SimConfig.Economy.ArtifactValueMultiplier` | Scalar for the 14.3 artifact-pricing formula (ArtifactBaseValue × this × GlobalPriceIndex). Declared here as a pricing constant even though nothing spends it until 14.3. |
+| `merchant_home_cut_fraction` | `0.3` | `SimConfig.Economy.MerchantHomeCutFraction` | Fraction of a 14.1 trade's paid value that routes back to the merchant's home settlement's own ResourceStores (same commodities the destination paid with) instead of the merchant's personal Wealth — keeps precious-commodity gold recirculating between settlements rather than draining one-way into personal Wealth (Opus-review addition; softens decision 10's ratchet risk). |
 
 ## `[economy.base_value_per_unit]` {#economybase-value-per-unit}
 

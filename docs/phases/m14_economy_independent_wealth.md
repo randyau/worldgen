@@ -1,7 +1,12 @@
 # M14 — Economy & Independent Wealth
 
 **Status:** IN PROGRESS. Kickoff design pass 2026-08-04. Phase 14.0 (wealth substrate) shipped
-2026-08-05 — see the phase-sequence entry below for what landed. 14.1–14.5 not yet started.
+2026-08-05 — see the phase-sequence entry below for what landed. Phase 14.1 (wire Wealth into
+existing trade) also shipped 2026-08-05 — `Tier2BehaviorPhase.RunMerchant` now prices and pays for
+its existing physical-goods transfer via a new `CompleteMerchantTrade` command resolved in the same
+phase, crediting the merchant's `Wealth` net of the new `EconomyConfig.MerchantHomeCutFraction`
+(0.3) recirculation cut back to their home settlement. New `EventType.TradePaid = 3500` (first use
+of the fresh 3500 range). 14.2–14.5 not yet started.
 
 See `docs/roadmap.md` § "M14" for the one-line scope statement and § the M12-era audit notes
 (lines ~350-361) for why guild/merchant succession must reuse the M12 `SuccessionResolver`

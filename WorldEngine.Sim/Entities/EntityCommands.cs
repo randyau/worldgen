@@ -37,6 +37,22 @@ public sealed record Defect(EntityId CharacterId, EntityId ConfidantId) : IComma
 public sealed record CreateArtwork(EntityId CharacterId) : ICommand;
 public sealed record FleeRegion(EntityId CharacterId, TileCoord Destination) : ICommand;
 
+// M14 14.1 — completes the priced-payment side of Tier2BehaviorPhase.RunMerchant's existing
+// one-shot trade: the destination settlement pays for Quantity units of Resource (priced via
+// PricingService.EffectivePrice at the moment of resolution) out of its own precious-commodity
+// ResourceStores, crediting MerchantId's personal Wealth net of EconomyConfig
+// .MerchantHomeCutFraction, which instead recirculates into HomeTile's ResourceStores. Resolved
+// by Tier2BehaviorPhase itself (not CivTracker.Resolve/CharacterBehaviorPhase.ResolveCommand —
+// Tier2 role behavior is phase-driven every tick, not emitted via the Tier1 utility-scorer/
+// EMIT-RESOLVE split those two switches police, per ArchitectureRuleTests
+// .CivTrackerCommands_AreAllDispatchedFromResolveCommand's scope).
+public sealed record CompleteMerchantTrade(
+    EntityId  MerchantId,
+    TileCoord HomeTile,
+    TileCoord DestTile,
+    string    Resource,
+    float     Quantity) : ICommand;
+
 // Phase 3.0 — city-state territory commands
 public sealed record BuildImprovement(
     EntityId        CharacterId,

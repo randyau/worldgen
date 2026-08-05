@@ -161,6 +161,14 @@ internal sealed record MerchantTradePayload(
     long CharacterId, string CharacterName, string TradedResource,
     int DestX, int DestY);
 
+// M14 14.1 — a real Wealth transfer resulting from a merchant's trade: the destination
+// settlement paid PaidValue (in precious-commodity value) for Quantity units of Resource;
+// MerchantShare of that went to the merchant's personal Wealth, the remainder recirculated back
+// into the merchant's home settlement's own ResourceStores (EconomyConfig.MerchantHomeCutFraction).
+internal sealed record TradePaidPayload(
+    long CharacterId, string CharacterName, string Resource, float Quantity,
+    float PaidValue, float MerchantShare, int DestX, int DestY);
+
 internal sealed record ScholarDiscoveryPayload(
     long CharacterId, string CharacterName, string DiscoveryType,
     string BonusKey, float BonusAmount);

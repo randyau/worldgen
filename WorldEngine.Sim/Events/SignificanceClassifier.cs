@@ -83,6 +83,7 @@ public static class SignificanceClassifier
             EventType.AppointedToRole         => PopulationImpact.None,
             EventType.DismissedFromRole       => PopulationImpact.None,
             EventType.MerchantTradeCompleted  => PopulationImpact.None,
+            EventType.TradePaid               => PopulationImpact.None,
             EventType.ScholarDiscovery        => PopulationImpact.Minor,
             EventType.PhysicianHealed         => PopulationImpact.None,
             EventType.CharacterCrystallized   => PopulationImpact.Minor,

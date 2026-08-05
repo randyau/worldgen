@@ -64,4 +64,19 @@ public sealed class EconomyConfig
     // Scalar reflecting that an exceptional creation is worth more than raw commodity value.
     // Declared here because it's a pricing-formula constant, even though nothing spends it yet.
     public float ArtifactValueMultiplier { get; set; } = 3f;
+
+    // ─── Trade payment (14.1, Opus-review addition) ───────────────────────────
+    // Paying the merchant 100% of a sale's value strictly drains the destination settlement and
+    // gives the merchant's home settlement nothing for having supplied the goods — over a long
+    // run this both self-terminates trade (destination precious-commodity reserves exhaust, so
+    // "can't pay" stops being occasional and becomes permanent) and makes hosting a merchant a
+    // net loss for their home settlement, at odds with the "wealthy merchant dynasties and their
+    // settlements" narrative goal. This fraction of the paid value instead routes back into the
+    // home settlement's own ResourceStores (in the same commodities the destination paid with)
+    // rather than the merchant's personal Wealth, so precious-commodity gold recirculates between
+    // settlements instead of draining one-way into a sink-free personal pool (also directly
+    // softens decision 10's one-way-ratchet risk). Tuned during 14.5 alongside the other transfer
+    // constants; 0.3 is a first-pass placeholder that leaves the merchant with the majority share
+    // while still returning a meaningful cut home.
+    public float MerchantHomeCutFraction { get; set; } = 0.3f;
 }

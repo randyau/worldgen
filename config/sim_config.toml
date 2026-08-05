@@ -1287,6 +1287,11 @@ personal_wealth_spoilage_rate = 0.02
 # Scalar for the 14.3 artifact-pricing formula (ArtifactBaseValue × this × GlobalPriceIndex).
 # Declared here as a pricing constant even though nothing spends it until 14.3.
 artifact_value_multiplier = 3.0
+# Fraction of a 14.1 trade's paid value that routes back to the merchant's home settlement's own
+# ResourceStores (same commodities the destination paid with) instead of the merchant's personal
+# Wealth — keeps precious-commodity gold recirculating between settlements rather than draining
+# one-way into personal Wealth (Opus-review addition; softens decision 10's ratchet risk).
+merchant_home_cut_fraction = 0.3
 
 # Seeded relative-scarcity ranking (decision 7): gems > gold > silver > obsidian > iron/copper >
 # coal > stone/flint/clay > timber > herbs/wild_game > food > water. "silver"/"gems" are not
