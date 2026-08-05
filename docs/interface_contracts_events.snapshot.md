@@ -197,6 +197,28 @@ public enum EventType
     // artifact from its living Character/Settlement owner (an alternative to the claim-if-Lost
     // path already covered by ArtifactTransferred with Reason="claim").
     ArtifactPurchased       = 3504,
+    // M14 14.4 — Guild organizations, treasuries, and civ-level economic ruin
+    // (docs/phases/m14_economy_independent_wealth.md decision 9/10, phase-sequence "14.4" entry).
+    // A first-time-populated Guild organization forming (or a merchant joining an existing one
+    // fires no separate event — see Tier2BehaviorPhase.FormOrJoinGuild's doc comment).
+    GuildFormed             = 3505,
+    // Decision 9's two treasury commands: any member depositing personal Wealth into their
+    // Organization's Treasury (no authority check), and the Leader-only converse.
+    TreasuryContribution    = 3506,
+    TreasuryWithdrawal      = 3507,
+    // Decision 10: a Civilization-kind Organization's Treasury crosses from >=0 into negative.
+    // Edge-triggered (fires once per crossing, not every tick it stays negative) — see
+    // Organization.TreasuryInsolvencyFlagged and CivTracker.CheckTreasuryInsolvency.
+    TreasuryInsolvent       = 3508,
+    // War reparations (deep-review finding folded into 14.4): a one-time Wealth transfer from the
+    // losing civ's Treasury to the winner's on war resolution (CivTracker.EndWarBetween) — allowed
+    // to drive the loser's Treasury negative, which is exactly the TreasuryInsolvent trigger above.
+    WarReparationsPaid      = 3509,
+    // A Guild's Leader seat changes hands via SuccessionResolver.SelectSuccessor (unmodified —
+    // see the M12 audit note this milestone is bound by). Distinct from SuccessionOccurred (civ
+    // ruler succession) because SummaryBuilder/CausalEdgeBuilder parse that event's payload
+    // assuming civ-specific fields (CivId, RulerOrdinal) that don't apply to a Guild.
+    GuildLeadershipTransferred = 3510,
 
     // M3+ artifacts / religion (6000+/4000+ ranges reserved)
     ArtifactCreated         = 6001,
@@ -224,4 +246,4 @@ public enum EventType
 }
 ```
 
-<!-- content-hash: b70985b603a21d73 -->
+<!-- content-hash: 96cc96fc722de31d -->
