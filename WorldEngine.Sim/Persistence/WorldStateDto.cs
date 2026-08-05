@@ -71,7 +71,12 @@ public sealed record WorldStateDto(
     // renamed/retyped directly rather than adding a migration shim for old saves.
     long?                                           WatchedEntityId,
     int?                                            WatchedEntityKind,
-    List<PendingEmissaryDto>                        PendingEmissaries
+    List<PendingEmissaryDto>                        PendingEmissaries,
+    // M14 14.0 — Wealth substrate (see docs/phases/m14_economy_independent_wealth.md).
+    // Appended at the end with defaults: this is a local dev save format with no shipped
+    // compatibility contract (same convention as WatchedEntityId above).
+    float                                            GlobalPriceIndex = 0.5f,
+    List<WealthDropDto>?                             WealthDrops = null
 );
 
 // ─── Environment ──────────────────────────────────────────────────────────────
@@ -140,7 +145,10 @@ public sealed record OrganizationDto(
     Dictionary<string, int> WarsAgainst,      // CivId (or future org id) → year declared
     Dictionary<string, float> BorderTension,
     Dictionary<string, int> PeaceTreaties,
-    List<int>                Allies);
+    List<int>                Allies,
+    // M14 14.0 (decision 10) — real stored treasury balance + founding-time settlement anchor.
+    float                     Treasury = 0f,
+    string?                   HomeSettlementCoord = null);
 
 public sealed record CulturalProfileDto(
     string   AncestryId,
@@ -228,7 +236,9 @@ public sealed record Tier1EntityDto(
     // Local-scale position foundation (M11 11.6) — null until a future milestone populates it.
     string? LocalChunkKey = null,
     int    LastDefectionTick = -1,
-    string? LocalPositionKey = null);
+    string? LocalPositionKey = null,
+    // M14 14.0 — personal Wealth accumulator; see docs/phases/m14_economy_independent_wealth.md.
+    float  Wealth = 0f);
 
 public sealed record Tier2EntityDto(
     long   Id,
@@ -244,7 +254,12 @@ public sealed record Tier2EntityDto(
     float[] Needs4,
     LivelihoodDataDto Livelihood,
     int    LastNotableWorkTick,
-    bool   HasMasterwork);
+    bool   HasMasterwork,
+    // M13.8.2 Notability was never given DTO/mapper coverage and silently reset to 0 on every
+    // load (deep-review finding, fixed alongside M14 14.0's Wealth persistence work — same bug,
+    // same file). M14 14.0 also adds Wealth here.
+    float  Notability = 0f,
+    float  Wealth = 0f);
 
 public sealed record BeastEntityDto(
     long   Id,
@@ -339,3 +354,9 @@ public sealed record PendingEmissaryDto(
     int   DepartedYear,
     int   ArrivalYear,
     float SurvivalChance);
+
+// ─── M14 14.0 — Wealth substrate ─────────────────────────────────────────────
+public sealed record WealthDropDto(
+    string Location,    // "x,y"
+    float  Amount,
+    int    CreatedTick);

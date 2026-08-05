@@ -30,6 +30,7 @@ public class SimConfig
     public DebtConfig            Debt            { get; set; } = new();
     public FearConfig            Fear            { get; set; } = new();
     public DefectionConfig       Defection       { get; set; } = new();
+    public EconomyConfig         Economy         { get; set; } = new();
 
     // Loaded separately by AncestryLoader — not from sim_config.toml
     public AncestryRegistry AncestryRegistry { get; set; } = AncestryRegistry.Empty;

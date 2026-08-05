@@ -68,6 +68,23 @@ public sealed class WorldState : IWorldStateReadOnly
     public int NextOrganizationId { get; set; } = 1;
 
     /// <summary>
+    /// M14 14.0 (decision 5) — unclaimed personal-Wealth pools left at death tiles, claimable by
+    /// any co-located living character. See WealthDrop for the full rationale.
+    /// </summary>
+    public List<WealthDrop> WealthDrops { get; } = new();
+
+    /// <summary>
+    /// M14 14.0 (decision 8) — single world-wide scalar tracking money-supply drift relative to
+    /// EconomyConfig.ReferenceMoneySupplyPerCapita. Every price everywhere in M14 gets one more
+    /// multiplicative term: EffectivePrice = BaseValue × LocalScarcityMultiplier × GlobalPriceIndex.
+    /// Starts below 1.0 (not at 1.0) — year-0 money supply is near zero, so an EMA starting at 1.0
+    /// would drag toward PriceIndexMin for centuries before catching up; seeding low avoids that
+    /// floor-pinned warm-up transient (see decision 8's revision note). Updated annually by
+    /// EconomyPhase, the same isAnnualTick cadence CheckMarriageEstrangement already uses.
+    /// </summary>
+    public float GlobalPriceIndex { get; internal set; } = 0.5f;
+
+    /// <summary>
     /// Tracks how many characters have ever had each given name.
     /// Used to assign ordinal suffixes: first "Caelen" = ordinal 0 (no suffix), second = 1 (II), etc.
     /// </summary>

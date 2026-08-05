@@ -28,6 +28,12 @@ public sealed class Tier2Character : SimEntity
     // alongside Needs.Status — see docs/phases/m13_8_tier2_relationship_exposure.md.
     public float Notability { get; internal set; } = 0f;
 
+    // M14 14.0 — personal wealth accumulator (mirrors Notability's shape: internally-set,
+    // externally readable). Denominated against EconomyConfig.BaseValuePerUnit; see
+    // docs/phases/m14_economy_independent_wealth.md decision 4. Unlike Notability, this field has
+    // real DTO/mapper persistence coverage from day one (WorldStateDto.cs/WorldStateMapper.cs).
+    public float Wealth { get; internal set; } = 0f;
+
     public Tier2Character(
         EntityId id,
         TileCoord location,
@@ -47,6 +53,9 @@ public sealed class Tier2Character : SimEntity
     // M13.8.2: bump Notability when targeted by a Tier1-driven relationship action
     // (Bond/Rivalry/Placate/GrantAid/ForgiveDebt) — called from CivTracker/GoalManager resolution.
     public void GainNotability(float amount) => Notability = Math.Min(1f, Notability + amount);
+
+    // M14 14.0 — floored at 0 so a spend/spoilage step can never drive Wealth negative.
+    public void AddWealth(float amount) => Wealth = Math.Max(0f, Wealth + amount);
 
     protected override string SnapshotName         => Name;
     protected override string SnapshotSpeciesId    => string.Empty;

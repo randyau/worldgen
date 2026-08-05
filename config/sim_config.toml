@@ -1259,3 +1259,54 @@ battle_category_weight_regalia  = 0.15
 heroic_death_category_weight_weapon  = 0.5
 heroic_death_category_weight_relic   = 0.3
 heroic_death_category_weight_regalia = 0.2
+
+# M14 14.0 — Wealth substrate. All values below are first-pass placeholders explicitly flagged
+# for 14.5's calibration pass; see docs/phases/m14_economy_independent_wealth.md decisions 4/7/8/10.
+[economy]
+# Fallback base value for any tradeable resource key not listed in [economy.base_value_per_unit].
+default_base_value_per_unit = 1.0
+# Clamp band for LocalScarcityMultiplier (derived from SettlementStub.ResourceLedger's per-capita
+# supply/demand ratio) — bounds how far a single settlement's local price can drift from base value.
+local_scarcity_multiplier_min = 0.5
+local_scarcity_multiplier_max = 2.0
+# Anchor for GlobalPriceIndex's EMA target: "what a fair per-capita money supply looks like."
+# Tuned during 14.5 from long-run equilibrium data, not derived analytically.
+reference_money_supply_per_capita = 50.0
+price_index_min       = 0.25
+price_index_max        = 4.0
+# EMA smoothing factor for GlobalPriceIndex, same shape as SpecializationStrength's EMA
+# (resource_pressure.specialization_smoothing_alpha).
+price_index_ema_alpha  = 0.05
+# Fraction of a dying character's Wealth passed to their heir (decision 5); the remainder — or all
+# of it if no eligible heir exists — becomes an unclaimed WealthDrop pool at the death tile.
+wealth_inheritance_share = 0.7
+# "Cost of living" annual bleed on personal Wealth and standing WealthDrop pools (decision 10) —
+# must be much larger than resource_pressure.wealth_spoilage_rate (0.0001, "essentially permanent")
+# since personal Wealth has no other sink. Gives per-capita Wealth a finite equilibrium ceiling.
+personal_wealth_spoilage_rate = 0.02
+# Scalar for the 14.3 artifact-pricing formula (ArtifactBaseValue × this × GlobalPriceIndex).
+# Declared here as a pricing constant even though nothing spends it until 14.3.
+artifact_value_multiplier = 3.0
+
+# Seeded relative-scarcity ranking (decision 7): gems > gold > silver > obsidian > iron/copper >
+# coal > stone/flint/clay > timber > herbs/wild_game > food > water. "silver"/"gems" are not
+# currently produced by any WorldGen layer (verified against ResourceLayer.cs and
+# ResourcePressurePhase.cs's ledger keys) but are seeded anyway since ResourcePressurePhase's
+# spoilage switch already special-cases them for forward compatibility.
+[economy.base_value_per_unit]
+gems      = 100.0
+gold      = 40.0
+silver    = 15.0
+obsidian  = 12.0
+iron      = 6.0
+copper    = 5.0
+coal      = 3.0
+sulfur    = 3.0
+stone     = 1.5
+flint     = 1.5
+clay      = 1.0
+timber    = 2.0
+herbs     = 2.0
+wild_game = 2.0
+food      = 1.0
+water     = 0.5

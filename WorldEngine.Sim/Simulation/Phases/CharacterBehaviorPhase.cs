@@ -83,6 +83,12 @@ public sealed class CharacterBehaviorPhase
                 ResolveCommand(cmd, c, world, pending, tick);
         }
 
+        // M14 14.0 (decision 5) — claim mechanic: any living character co-located with a standing
+        // WealthDrop claims it whole, mirroring GoalManager's Lost-artifact co-location claim (M5)
+        // rather than a new ICommand. Runs every tick (not annual-gated) for the same reason the
+        // artifact claim does — no reason to make a co-located character wait a year to notice.
+        ClaimWealthDrops(world);
+
         // Grief: after all deaths are resolved, notify mourners.
         // Build an index of this tick's CharacterDied events so we can retroactively add
         // mourner IDs — the death event then links to everyone it affected, enabling
@@ -433,6 +439,10 @@ public sealed class CharacterBehaviorPhase
         // heir rather than vanishing with them.
         TransferDebtOnDeath(c, world);
 
+        // M14 14.0 — Wealth disposition: WealthInheritanceShare to the heir (100% drops if no
+        // eligible heir exists), the remainder becomes an unclaimed WealthDrop at the death tile.
+        TransferWealthOnDeath(c, world);
+
         var payload = JsonSerializer.Serialize(new CharacterDeathPayload(
             c.Id.Value, c.Identity.Name, cause, c.AgeSeason,
             AncestryId: c.Identity.AncestryId, MaxAgeSeason: c.MaxAgeSeason));
@@ -551,11 +561,18 @@ public sealed class CharacterBehaviorPhase
     /// already carries toward the same counterparty); a debt directly between the deceased and
     /// their own heir is simply extinguished rather than transferred to itself.
     /// </summary>
-    private static void TransferDebtOnDeath(Tier1Character c, WorldState world)
+    /// <summary>
+    /// Shared heir-selection kernel for death disposition: the deceased's spouse (preferred) or,
+    /// absent one, any other living member of their household Family Organization. Reused by both
+    /// TransferDebtOnDeath (M13.2) and TransferWealthOnDeath (M14 14.0) rather than each rolling its
+    /// own — see docs/phases/m14_economy_independent_wealth.md 14.0's instruction to reuse the
+    /// existing heir-selection logic, not invent a second one.
+    /// </summary>
+    private static Tier1Character? FindHeir(Tier1Character c, WorldState world)
     {
         var familyMembership = c.Memberships.FirstOrDefault(m =>
             world.Organizations.TryGetValue(m.OrganizationId, out var o) && o.Kind == OrganizationKind.Family);
-        if (familyMembership == null) return;
+        if (familyMembership == null) return null;
         var familyOrg = world.Organizations[familyMembership.OrganizationId];
 
         Tier1Character? heir = null;
@@ -566,6 +583,54 @@ public sealed class CharacterBehaviorPhase
             if (world.Relationships.Get(c.Id, memberId)?.IsMarried ?? false) { heir = candidate; break; }
             heir ??= candidate;
         }
+        return heir;
+    }
+
+    /// <summary>
+    /// M14 14.0 (decision 5) — WealthInheritanceShare of the deceased's Wealth passes to the heir
+    /// found via <see cref="FindHeir"/>; the remainder becomes an unclaimed WealthDrop at the death
+    /// tile. If no eligible heir exists, 100% drops (decision 5's revision — explicit, not left
+    /// undefined). A character with zero Wealth is a no-op.
+    /// </summary>
+    private static void TransferWealthOnDeath(Tier1Character c, WorldState world)
+    {
+        float wealth = c.Wealth;
+        if (wealth <= 0f) return;
+
+        var econCfg = world.SimConfig.Economy;
+        var heir = FindHeir(c, world);
+
+        float inherited = heir != null ? wealth * econCfg.WealthInheritanceShare : 0f;
+        float dropped = wealth - inherited;
+
+        c.AddWealth(-wealth);
+        if (heir != null && inherited > 0f)
+            heir.AddWealth(inherited);
+        if (dropped > 0f)
+            world.WealthDrops.Add(new WealthDrop(c.Location, dropped, (int)world.CurrentTick));
+    }
+
+    /// <summary>
+    /// M14 14.0 (decision 5) — any living character standing on a WealthDrop's tile claims the
+    /// whole pool. Deterministic within a tick: first match in entity-at-tile iteration order.
+    /// </summary>
+    private static void ClaimWealthDrops(WorldState world)
+    {
+        if (world.WealthDrops.Count == 0) return;
+        for (int i = world.WealthDrops.Count - 1; i >= 0; i--)
+        {
+            var drop = world.WealthDrops[i];
+            var claimant = world.GetEntitiesAt(drop.Location)
+                .OfType<Tier1Character>().FirstOrDefault(ch => ch.IsAlive);
+            if (claimant == null) continue;
+            claimant.AddWealth(drop.Amount);
+            world.WealthDrops.RemoveAt(i);
+        }
+    }
+
+    private static void TransferDebtOnDeath(Tier1Character c, WorldState world)
+    {
+        var heir = FindHeir(c, world);
         if (heir == null) return;
 
         foreach (var edge in world.Relationships.GetAll(c.Id).ToList())

@@ -72,6 +72,15 @@ public sealed class Tier1Character : SimEntity
     // Year when the character last founded a religion (gates re-founding via cooldown)
     public int LastReligionFoundedYear { get; internal set; } = -999;
 
+    // M14 14.0 — personal wealth accumulator (mirrors Tier2Character.Notability's shape). Portable
+    // value denominated against EconomyConfig.BaseValuePerUnit; physically conserved — every
+    // transfer debits some other pool (settlement ResourceStores, another character's Wealth, an
+    // Organization.Treasury). See docs/phases/m14_economy_independent_wealth.md decision 4.
+    public float Wealth { get; internal set; } = 0f;
+
+    /// <summary>Adds (or subtracts) Wealth, floored at 0 so spend/spoilage can never go negative.</summary>
+    public void AddWealth(float amount) => Wealth = Math.Max(0f, Wealth + amount);
+
     // Local-scale position foundation (M11 11.6) — data shape only, never populated by any current
     // sim logic. V2: local-scale character movement/pathfinding.
     public ChunkCoord?     LocalChunk    { get; internal set; }

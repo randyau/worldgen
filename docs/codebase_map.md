@@ -32,12 +32,15 @@ One-line description of every non-trivial source file. Check here before running
 - `ClimateConfig.cs` — Temperature/moisture gradients, storm corridors, and climate drift constants.
 - `ConfigRegistry.cs` — Value kinds the generic settings UI knows how to render (M10 10.2, ui_design_framework.md §9.3).
 - `CulturalTraitsConfig.cs` — Thresholds that govern when a civilization acquires a permanent cultural trait. All constants loaded from [cultural_traits] section in sim_config.toml.
+- `DebtConfig.cs` — M13 13.2 — Debt as an obligation mechanic: gifted aid in a time of need creates an inheritable, forgivable obligation that measurably biases the debtor's behavior.
 - `DefectionConfig.cs` — M13 13.4: non-ruler bonds reaching the wider world — a cross-civ friendship strong enough that a character in personal crisis seeks asylum with their foreign confidant rather than enduring their own civ. Loaded from the [defection] section of sim_config.toml.
 - `DisasterConfig.cs` — Disaster probability and damage constants (wildfire, flood, eruption, earthquake, drought).
+- `EconomyConfig.cs` — M14 14.0 — Wealth substrate: seeded commodity pricing, the global per-capita price index, and the personal-Wealth sink. See docs/phases/m14_economy_independent_wealth.md (decisions 4, 7, 8, 10) for the full design rationale. All values here are first-pass placeholders explicitly flagged for 14.5's calibration pass — nothing here has been balance-tested yet.
 - `ElevationConfig.cs` — FastNoiseLite terrain noise and mountain/tectonic thresholds for world generation.
 - `EmissaryConfig.cs` — All constants governing the civ awareness and emissary system (M4.1). Loaded from the [emissary] section of sim_config.toml.
 - `EventsConfig.cs` — Nested config under [events.gate] in sim_config.toml. Controls which event types are always or never recorded, independent of tier.
 - `FamilyConfig.cs` — M13 13.0 — marriage formation, household Family Organization, and childbirth/inheritance knobs.
+- `FearConfig.cs` — M13 13.1 — Fear as a submission/appeasement axis distinct from Trust: a feared rival gets avoided (War/Raid dampened) or placated, instead of Fear only ever feeding Dominance/war.
 - `ImprovementsConfig.cs` — Tile improvement food/production multipliers and build-cost constants.
 - `LocalGenConfig.cs` — Local-scale (10m-resolution) generation parameters: chunk size and world-tile subdivision (M11).
 - `ResourcePressureConfig.cs` — Food/water/resource pressure constants: shortage threshold, famine onset, and carrying-capacity weights.
@@ -64,6 +67,9 @@ One-line description of every non-trivial source file. Check here before running
 - `ICommand.cs` — Marker interface for simulation commands. All implementations must be sealed records with value-type fields only. No callbacks, delegates, or mutable object references.
 - `WorldConfig.cs` — World generation parameters: seed, tile dimensions, and world size in km.
 - `WorldRng.cs` — Deterministic RNG: FloatAt(seed, tick, x, y, salt) — use salts from SimRngSalts.
+
+## WorldEngine.Sim/Economy/
+- `PricingService.cs` — M14 14.0 — seeded, formulaic pricing (decision 7). No order book, no price history, no transaction-volume dependency: every price is computed fresh at the moment of use from EconomyConfig.BaseValuePerUnit and the settlement's existing (already-balanced) M9 SettlementStub.ResourceLedger ratio. See docs/phases/m14_economy_independent_wealth.md.
 
 ## WorldEngine.Sim/Entities/
 - `EntityCommands.cs` — All entity ICommand records (MoveTo, Rest, etc.) in one file; sealed records with value-type fields only.
@@ -139,6 +145,7 @@ One-line description of every non-trivial source file. Check here before running
 ## WorldEngine.Sim/Simulation/Phases/
 - `ArtifactDecayPhase.cs` — Annual destruction sink for artifacts. Without a sink, the artifact stock is monotonic (created but never destroyed) and grows unbounded over thousand-year histories. Each year every living artifact rolls a small destruction chance — high for Lost (ownerless) items that no one safeguards, very low for owned items. This drives the stock toward an equilibrium of roughly (annual creation rate ÷ decay rate) rather than growing forever. Runs on annual ticks only; emits WorldEngine.Sim.Core.EventType.ArtifactDestroyed per loss.
 - `CharacterBehaviorPhase.cs` — Phase 5 — updates all Tier 1 characters each tick: needs decay, goal management, action selection (utility scoring), lifecycle (aging, death), command resolution (settlement, war, etc.).
+- `EconomyPhase.cs` — M14 14.0 — annual economy sweep (decisions 8 and 10). Runs on the same isAnnualTick cadence CharacterBehaviorPhase.CheckMarriageEstrangement already uses — no new tick-cadence concept. Computes TotalMoneySupply/MoneySupplyPerCapita and EMA-updates WorldState.GlobalPriceIndex toward the clamped target, then applies EconomyConfig.PersonalWealthSpoilageRate as the "cost of living" sink on every living character's Wealth and on standing WealthDrop pools (the sink that makes the price-index clamp meaningful — see decision 10). No new source is introduced: every term summed here is money that already exists in some other form (mining production is the only source, spoilage/raid destruction the only sinks). See docs/phases/m14_economy_independent_wealth.md.
 - `EntityBehaviorPhase.cs` — SimPhase 4 — EntityBehavior. Each season tick: update beast needs/lifecycle, emit commands, resolve them. Beast emergence schedule is checked annually.
 - `EnvironmentalPhase.cs` — Phase 1 — Environmental: seasonal climate, annual drift, disaster system, resource dynamics, sea level changes. Direct mutator — never called from UI thread.
 - `KnowledgePropagationPhase.cs` — Annual phase (Spring) that fills Civilization.KnownCivs via three mechanisms: 1. Proximity rumor — civs with settlements within knowledge_spread_radius gain contact 2. Decay — existing contacts lose confidence each year without a refresh mechanism 3. Rumor chaining — one-hop indirect propagation of non-Rumor contacts Character-encounter seeding (mechanism 4) is wired in CharacterBehaviorPhase via CivTracker.SeedCivContact at the cross-civ encounter point.
@@ -187,6 +194,7 @@ One-line description of every non-trivial source file. Check here before running
 - `TileDisplayData.cs` — Per-tile rendering data in WorldSnapshot.AllTiles (index: y * WorldTileWidth + x). Contains effective (current) values, not genesis base values. Created by the sim thread for the full world grid each tick. HasActiveDisaster is computed from ActiveTileDisasters registry.
 - `TileImprovement.cs` — ImprovementType enum (Farm/Mine/etc.) and TileImprovement record for territory-based improvements (M3.0).
 - `TileInspectorData.cs` — Complete tile data for the inspector panel. Created by sim thread on demand. Contains base values, seasonal profiles, and all registry data for the tile.
+- `WealthDrop.cs` — M14 14.0 (decision 5) — an unclaimed pool of personal Wealth left at a death tile when a character dies with no eligible heir, or when a fraction survives inheritance. Mirrors the Artifact.Owner.Lost + GoalManager co-location-claim pattern from M5, minimally: any living character standing on the same tile can claim the whole pool. Wealth is abstract/personal, not a physical settlement resource, so this deliberately does not touch SettlementStub.ResourceStores. Included in EconomyPhase's TotalMoneySupply sum while unclaimed, and subject to the same EconomyConfig.PersonalWealthSpoilageRate sink as living characters' Wealth (decision 5's revision — a drop pool cannot stand forever, unspoiling and unmeasured).
 - `WorldSnapshot.cs` — Snapshot entry for one territory tile: which city owns it and which civ that city belongs to. Keyed by tile coord in WorldSnapshot.TerritoryMap.
 - `WorldState.cs` — The complete mutable world state. Owned by the sim thread — never accessed from the UI thread. The UI reads WorldSnapshot via StateCache.
 

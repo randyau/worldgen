@@ -108,6 +108,7 @@ public sealed class PhaseRunner
             CivTracker.RunAnnualDiplomacy(world, pending);
             pending.AddRange(_territoryPhase.Execute(world));
             ArtifactDecayPhase.Execute(world, pending, _config.Artifacts);
+            EconomyPhase.RunAnnual(world, _config);
         }
         RunPhaseStub(world, SimPhase.ConflictResolution);
         RunEventGeneration(world, pending);

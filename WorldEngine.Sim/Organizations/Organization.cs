@@ -35,13 +35,33 @@ public sealed class Organization
     /// <summary>Standing alliances, tracked as an independent fact rather than derived from leader trust.</summary>
     public HashSet<OrganizationId> Allies { get; } = new();
 
-    public Organization(OrganizationId id, OrganizationKind kind, string name, EntityId leaderId, int foundedYear)
+    /// <summary>
+    /// M14 14.0 (decision 10) — a real stored balance, not a live-computed claim on shared
+    /// settlement ResourceStores (the original design couldn't represent insolvency or distinguish
+    /// one org's money from another's sharing a settlement — see
+    /// docs/phases/m14_economy_independent_wealth.md decision 10). Nothing credits this except a
+    /// real Wealth transfer in (14.4's ContributeToTreasury); 14.0 only adds the field and its
+    /// persistence coverage — no command moves it yet.
+    /// </summary>
+    public float Treasury { get; internal set; } = 0f;
+
+    /// <summary>
+    /// M14 14.0 (decision 10) — resolved once at founding/HQ designation, never re-derived from
+    /// the current leader's location (that would make the treasury teleport on every succession).
+    /// Null when no settlement context was available at founding (e.g. a Family organization formed
+    /// away from any settlement record) — left unpopulated rather than guessed.
+    /// </summary>
+    public TileCoord? HomeSettlementCoord { get; internal set; }
+
+    public Organization(OrganizationId id, OrganizationKind kind, string name, EntityId leaderId, int foundedYear,
+        TileCoord? homeSettlementCoord = null)
     {
         Id = id;
         Kind = kind;
         Name = name;
         LeaderId = leaderId;
         FoundedYear = foundedYear;
+        HomeSettlementCoord = homeSettlementCoord;
     }
 
     public bool IsAtWarWith(OrganizationId other) => WarsAgainst.ContainsKey(other);

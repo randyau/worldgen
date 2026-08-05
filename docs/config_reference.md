@@ -44,6 +44,8 @@ Edit values in `sim_config.toml`; all keys live there without recompiling.
 - [wildlife_risk](#wildlife-risk)
 - [wildlife_risk.biome_risk](#wildlife-riskbiome-risk)
 - [artifacts](#artifacts)
+- [economy](#economy)
+- [economy.base_value_per_unit](#economybase-value-per-unit)
 
 ## `[world_gen]` {#world-gen}
 
@@ -865,3 +867,43 @@ _─── Wildlife raid risk by biome (D3) ────────────
 | `heroic_death_category_weight_weapon` | `0.5` | `SimConfig.Artifacts.HeroicDeathCategoryWeightWeapon` | M9 G-2: weighted category roll for heroic-death artifacts (must sum to ~1.0). |
 | `heroic_death_category_weight_relic` | `0.3` | `SimConfig.Artifacts.HeroicDeathCategoryWeightRelic` |  |
 | `heroic_death_category_weight_regalia` | `0.2` | `SimConfig.Artifacts.HeroicDeathCategoryWeightRegalia` |  |
+
+## `[economy]` {#economy}
+
+_M14 14.0 — Wealth substrate. All values below are first-pass placeholders explicitly flagged for 14.5's calibration pass; see docs/phases/m14_economy_independent_wealth.md decisions 4/7/8/10._
+
+| Key | Value | C# Property | Description |
+|-----|-------|-------------|-------------|
+| `default_base_value_per_unit` | `1.0` | `SimConfig.Economy.DefaultBaseValuePerUnit` | Fallback base value for any tradeable resource key not listed in [economy.base_value_per_unit]. |
+| `local_scarcity_multiplier_min` | `0.5` | `SimConfig.Economy.LocalScarcityMultiplierMin` | Clamp band for LocalScarcityMultiplier (derived from SettlementStub.ResourceLedger's per-capita supply/demand ratio) — bounds how far a single settlement's local price can drift from base value. |
+| `local_scarcity_multiplier_max` | `2.0` | `SimConfig.Economy.LocalScarcityMultiplierMax` |  |
+| `reference_money_supply_per_capita` | `50.0` | `SimConfig.Economy.ReferenceMoneySupplyPerCapita` | Anchor for GlobalPriceIndex's EMA target: "what a fair per-capita money supply looks like." Tuned during 14.5 from long-run equilibrium data, not derived analytically. |
+| `price_index_min` | `0.25` | `SimConfig.Economy.PriceIndexMin` |  |
+| `price_index_max` | `4.0` | `SimConfig.Economy.PriceIndexMax` |  |
+| `price_index_ema_alpha` | `0.05` | `SimConfig.Economy.PriceIndexEmaAlpha` | EMA smoothing factor for GlobalPriceIndex, same shape as SpecializationStrength's EMA (resource_pressure.specialization_smoothing_alpha). |
+| `wealth_inheritance_share` | `0.7` | `SimConfig.Economy.WealthInheritanceShare` | Fraction of a dying character's Wealth passed to their heir (decision 5); the remainder — or all of it if no eligible heir exists — becomes an unclaimed WealthDrop pool at the death tile. |
+| `personal_wealth_spoilage_rate` | `0.02` | `SimConfig.Economy.PersonalWealthSpoilageRate` | "Cost of living" annual bleed on personal Wealth and standing WealthDrop pools (decision 10) — must be much larger than resource_pressure.wealth_spoilage_rate (0.0001, "essentially permanent") since personal Wealth has no other sink. Gives per-capita Wealth a finite equilibrium ceiling. |
+| `artifact_value_multiplier` | `3.0` | `SimConfig.Economy.ArtifactValueMultiplier` | Scalar for the 14.3 artifact-pricing formula (ArtifactBaseValue × this × GlobalPriceIndex). Declared here as a pricing constant even though nothing spends it until 14.3. |
+
+## `[economy.base_value_per_unit]` {#economybase-value-per-unit}
+
+_Seeded relative-scarcity ranking (decision 7): gems > gold > silver > obsidian > iron/copper > coal > stone/flint/clay > timber > herbs/wild_game > food > water. "silver"/"gems" are not currently produced by any WorldGen layer (verified against ResourceLayer.cs and ResourcePressurePhase.cs's ledger keys) but are seeded anyway since ResourcePressurePhase's spoilage switch already special-cases them for forward compatibility._
+
+| Key | Value | C# Property | Description |
+|-----|-------|-------------|-------------|
+| `gems` | `100.0` | `SimConfig.Economy.BaseValuePerUnit.Gems` |  |
+| `gold` | `40.0` | `SimConfig.Economy.BaseValuePerUnit.Gold` |  |
+| `silver` | `15.0` | `SimConfig.Economy.BaseValuePerUnit.Silver` |  |
+| `obsidian` | `12.0` | `SimConfig.Economy.BaseValuePerUnit.Obsidian` |  |
+| `iron` | `6.0` | `SimConfig.Economy.BaseValuePerUnit.Iron` |  |
+| `copper` | `5.0` | `SimConfig.Economy.BaseValuePerUnit.Copper` |  |
+| `coal` | `3.0` | `SimConfig.Economy.BaseValuePerUnit.Coal` |  |
+| `sulfur` | `3.0` | `SimConfig.Economy.BaseValuePerUnit.Sulfur` |  |
+| `stone` | `1.5` | `SimConfig.Economy.BaseValuePerUnit.Stone` |  |
+| `flint` | `1.5` | `SimConfig.Economy.BaseValuePerUnit.Flint` |  |
+| `clay` | `1.0` | `SimConfig.Economy.BaseValuePerUnit.Clay` |  |
+| `timber` | `2.0` | `SimConfig.Economy.BaseValuePerUnit.Timber` |  |
+| `herbs` | `2.0` | `SimConfig.Economy.BaseValuePerUnit.Herbs` |  |
+| `wild_game` | `2.0` | `SimConfig.Economy.BaseValuePerUnit.WildGame` |  |
+| `food` | `1.0` | `SimConfig.Economy.BaseValuePerUnit.Food` |  |
+| `water` | `0.5` | `SimConfig.Economy.BaseValuePerUnit.Water` |  |

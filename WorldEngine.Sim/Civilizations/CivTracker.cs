@@ -22,10 +22,22 @@ public static partial class CivTracker
     /// from M13-M15). Member registration is the caller's job — for civs, via SetCharacterCiv, which is
     /// what keeps Tier1Character.Memberships and Organization.Members in sync. See docs/phases/m12_organization_model.md.
     /// </summary>
-    internal static OrganizationId CreateOrganization(WorldState world, OrganizationKind kind, string name, EntityId leaderId)
+    /// <param name="world">The world to register the new Organization in.</param>
+    /// <param name="kind">The kind of organization being founded (Civilization/Family/Guild/...).</param>
+    /// <param name="name">Display name for the new Organization.</param>
+    /// <param name="leaderId">The initial leader seat.</param>
+    /// <param name="homeSettlementCoord">
+    /// M14 14.0 (decision 10) — resolved once at founding from whatever settlement context is
+    /// available at the call site (e.g. a civ's founding/capital tile). Null when no settlement
+    /// context exists (e.g. Family orgs, formed from a marriage with no settlement reference in
+    /// scope) — left unpopulated rather than guessed; never re-derived from the leader's current
+    /// location afterward.
+    /// </param>
+    internal static OrganizationId CreateOrganization(WorldState world, OrganizationKind kind, string name,
+        EntityId leaderId, TileCoord? homeSettlementCoord = null)
     {
         var orgId = new OrganizationId(world.NextOrganizationId++);
-        var org = new Organization(orgId, kind, name, leaderId, world.CurrentYear);
+        var org = new Organization(orgId, kind, name, leaderId, world.CurrentYear, homeSettlementCoord);
         world.Organizations[orgId] = org;
         return orgId;
     }
@@ -51,7 +63,7 @@ public static partial class CivTracker
         // Self-heal: production code always creates the backing Organization at civ-founding
         // (CivTracker.cs/CivTracker.Unrest.cs), but pre-M12 test fixtures still construct
         // Civilization directly. Backfill rather than silently dropping the membership.
-        civ.OrgId ??= CreateOrganization(world, OrganizationKind.Civilization, civ.Name, civ.RulerId);
+        civ.OrgId ??= CreateOrganization(world, OrganizationKind.Civilization, civ.Name, civ.RulerId, civ.CapitalTile);
         var orgId = civ.OrgId.Value;
 
         var membership = new Membership(orgId, role, 1.0f, civId);
@@ -132,7 +144,7 @@ public static partial class CivTracker
             var civ = new Civilization(civId, civName, founder.Id, cmd.Tile, world.CurrentYear);
             civ.Members.Add(founder.Id);
             world.Civilizations[civId] = civ;
-            civ.OrgId = CreateOrganization(world, OrganizationKind.Civilization, civName, founder.Id);
+            civ.OrgId = CreateOrganization(world, OrganizationKind.Civilization, civName, founder.Id, cmd.Tile);
             SetCharacterCiv(founder, civId, OrganizationRole.Leader, world);
             founder.Identity = founder.Identity with { RulerOrdinal = 1 };
 

@@ -82,7 +82,11 @@ internal static class WorldStateMapper
                                               (int)e.Purpose, e.DepartedYear, e.ArrivalYear, e.SurvivalChance))
                                           .ToList(),
             Organizations:               MapOrganizations(w),
-            NextOrganizationId:          w.NextOrganizationId);
+            NextOrganizationId:          w.NextOrganizationId,
+            GlobalPriceIndex:            w.GlobalPriceIndex,
+            WealthDrops:                 w.WealthDrops
+                                          .Select(d => new WealthDropDto(TileKey(d.Location), d.Amount, d.CreatedTick))
+                                          .ToList());
     }
 
     private static List<OrganizationDto> MapOrganizations(WorldState w) =>
@@ -99,7 +103,9 @@ internal static class WorldStateMapper
             WarsAgainst:             o.WarsAgainst.ToDictionary(kv => kv.Key.Value.ToString(), kv => kv.Value),
             BorderTension:           o.BorderTension.ToDictionary(kv => kv.Key.Value.ToString(), kv => kv.Value),
             PeaceTreaties:           o.PeaceTreaties.ToDictionary(kv => kv.Key.Value.ToString(), kv => kv.Value),
-            Allies:                  o.Allies.Select(a => a.Value).ToList()))
+            Allies:                  o.Allies.Select(a => a.Value).ToList(),
+            Treasury:                o.Treasury,
+            HomeSettlementCoord:     o.HomeSettlementCoord.HasValue ? TileKey(o.HomeSettlementCoord.Value) : null))
         .ToList();
 
     private static Dictionary<string, List<ResourceDepositDto>> MapResourceRegistry(WorldState w)
@@ -259,7 +265,8 @@ internal static class WorldStateMapper
             LastReligionFoundedYear: c.LastReligionFoundedYear,
             LocalChunkKey: c.LocalChunk.HasValue ? ChunkKey(c.LocalChunk.Value) : null,
             LocalPositionKey: c.LocalPosition.HasValue ? LocalKey(c.LocalPosition.Value) : null,
-            LastDefectionTick: c.LastDefectionTick);
+            LastDefectionTick: c.LastDefectionTick,
+            Wealth: c.Wealth);
     }
 
     private static Tier2EntityDto MapTier2(Tier2Character c)
@@ -275,7 +282,8 @@ internal static class WorldStateMapper
             Personality6: [p.Ambition, p.Loyalty, p.Diligence, p.Sociability, p.Cunning, p.Rationality],
             Needs4:       [n.Food, n.Safety, n.Belonging, n.Status],
             Livelihood:   new LivelihoodDataDto((int)l.Role, l.EmployerId?.Value, TileKey(l.SettlementTile), l.IncomeLevel),
-            LastNotableWorkTick: c.LastNotableWorkTick, HasMasterwork: c.HasMasterwork);
+            LastNotableWorkTick: c.LastNotableWorkTick, HasMasterwork: c.HasMasterwork,
+            Notability: c.Notability, Wealth: c.Wealth);
     }
 
     private static BeastEntityDto MapBeast(LegendaryBeast b) =>
@@ -387,9 +395,11 @@ internal static class WorldStateMapper
         {
             var org = new Organizations.Organization(
                 new OrganizationId(odto.Id), (Organizations.OrganizationKind)odto.Kind, odto.Name,
-                new EntityId(odto.LeaderId), odto.FoundedYear)
+                new EntityId(odto.LeaderId), odto.FoundedYear,
+                odto.HomeSettlementCoord is not null ? ParseTile(odto.HomeSettlementCoord) : null)
             {
-                SuccessionCrisisEndYear = odto.SuccessionCrisisEndYear
+                SuccessionCrisisEndYear = odto.SuccessionCrisisEndYear,
+                Treasury = odto.Treasury
             };
             foreach (var m in odto.Members)
                 org.Members[new EntityId(m.CharacterId)] = new Organizations.Membership(
@@ -490,6 +500,12 @@ internal static class WorldStateMapper
                 new CivId(e.FromCiv), new CivId(e.ToCiv),
                 (Civilizations.EmissaryPurpose)e.Purpose,
                 e.DepartedYear, e.ArrivalYear, e.SurvivalChance));
+
+        // 22. Restore M14 14.0 wealth substrate
+        world.GlobalPriceIndex = dto.GlobalPriceIndex;
+        if (dto.WealthDrops is not null)
+            foreach (var d in dto.WealthDrops)
+                world.WealthDrops.Add(new WealthDrop(ParseTile(d.Location), d.Amount, d.CreatedTick));
 
         return world;
     }
@@ -601,6 +617,7 @@ internal static class WorldStateMapper
         character.LocalChunk                = d.LocalChunkKey    is not null ? ParseChunk(d.LocalChunkKey)    : null;
         character.LocalPosition             = d.LocalPositionKey is not null ? ParseLocal(d.LocalPositionKey) : null;
         character.LastDefectionTick         = d.LastDefectionTick;
+        character.AddWealth(d.Wealth);
 
         foreach (var gd in d.Goals)
             character.Goals.Add(new GoalData
@@ -643,6 +660,8 @@ internal static class WorldStateMapper
         character.Needs               = new NeedsVector4(n[0], n[1], n[2], n[3]);
         character.LastNotableWorkTick = d.LastNotableWorkTick;
         character.HasMasterwork       = d.HasMasterwork;
+        character.GainNotability(d.Notability);
+        character.AddWealth(d.Wealth);
 
         return character;
     }
