@@ -76,7 +76,11 @@ public sealed record WorldStateDto(
     // Appended at the end with defaults: this is a local dev save format with no shipped
     // compatibility contract (same convention as WatchedEntityId above).
     float                                            GlobalPriceIndex = 0.5f,
-    List<WealthDropDto>?                             WealthDrops = null
+    List<WealthDropDto>?                             WealthDrops = null,
+    // M14 14.2 — persistent trade routes / caravan transit (see docs/phases/m14_economy_independent_wealth.md).
+    // Appended at the end with defaults, same local-dev-save convention as WatchedEntityId above.
+    List<TradeRouteDto>?                             TradeRoutes = null,
+    Dictionary<string, int>?                         TradeRouteFormationProgress = null
 );
 
 // ─── Environment ──────────────────────────────────────────────────────────────
@@ -360,3 +364,22 @@ public sealed record WealthDropDto(
     string Location,    // "x,y"
     float  Amount,
     int    CreatedTick);
+
+// ─── Trade routes / caravans (M14 14.2) ────────────────────────────────────────
+public sealed record CaravanDto(
+    long   MerchantId,
+    string HomeTile,    // "x,y"
+    string DestTile,    // "x,y"
+    string Resource,
+    float  Quantity,
+    long   DepartTick,
+    long   ArrivalTick);
+
+public sealed record TradeRouteDto(
+    string TileA,       // "x,y" — canonical pair order, see Economy.TradeRouteKey
+    string TileB,       // "x,y"
+    int    Status,      // (int)Economy.TradeRouteStatus
+    int    FormedYear,
+    int    ConsecutiveCaravanLosses,
+    long   SeveredSinceTick,
+    CaravanDto? InTransit);

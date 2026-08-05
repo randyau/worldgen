@@ -1293,6 +1293,23 @@ artifact_value_multiplier = 3.0
 # one-way into personal Wealth (Opus-review addition; softens decision 10's ratchet risk).
 merchant_home_cut_fraction = 0.3
 
+# ── Persistent trade routes / caravans (14.2) ──────────────────────────────────
+# Successful one-shot RunMerchant trades between the same settlement pair before they graduate
+# into a persistent TradeRoute.
+trade_route_formation_threshold = 3
+# Caravan travel speed, tiles/year — comparable to emissary.emissary_travel_speed_tiles_per_year
+# (8.0); a goods-laden caravan travels slightly slower than a lone emissary.
+caravan_speed_tiles_per_year = 6.0
+# Per-arrival-check chance a caravan is lost in transit (rolled once at arrival, not per-tick).
+# Interception only applies when the route's endpoint civs are at war; disaster/piracy always roll.
+caravan_interception_chance = 0.2
+caravan_disaster_chance     = 0.03
+caravan_piracy_chance       = 0.02
+# Consecutive lost caravans (any cause) before a route severs from sustained losses.
+trade_route_sever_threshold = 3
+# Ticks a Severed route waits, once the severing condition clears, before auto-reopening (~2 years).
+trade_route_reopen_cooldown_ticks = 32
+
 # Seeded relative-scarcity ranking (decision 7): gems > gold > silver > obsidian > iron/copper >
 # coal > stone/flint/clay > timber > herbs/wild_game > food > water. "silver"/"gems" are not
 # currently produced by any WorldGen layer (verified against ResourceLayer.cs and

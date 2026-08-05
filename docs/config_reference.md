@@ -885,6 +885,13 @@ _M14 14.0 — Wealth substrate. All values below are first-pass placeholders exp
 | `personal_wealth_spoilage_rate` | `0.02` | `SimConfig.Economy.PersonalWealthSpoilageRate` | "Cost of living" annual bleed on personal Wealth and standing WealthDrop pools (decision 10) — must be much larger than resource_pressure.wealth_spoilage_rate (0.0001, "essentially permanent") since personal Wealth has no other sink. Gives per-capita Wealth a finite equilibrium ceiling. |
 | `artifact_value_multiplier` | `3.0` | `SimConfig.Economy.ArtifactValueMultiplier` | Scalar for the 14.3 artifact-pricing formula (ArtifactBaseValue × this × GlobalPriceIndex). Declared here as a pricing constant even though nothing spends it until 14.3. |
 | `merchant_home_cut_fraction` | `0.3` | `SimConfig.Economy.MerchantHomeCutFraction` | Fraction of a 14.1 trade's paid value that routes back to the merchant's home settlement's own ResourceStores (same commodities the destination paid with) instead of the merchant's personal Wealth — keeps precious-commodity gold recirculating between settlements rather than draining one-way into personal Wealth (Opus-review addition; softens decision 10's ratchet risk). |
+| `trade_route_formation_threshold` | `3` | `SimConfig.Economy.TradeRouteFormationThreshold` | ── Persistent trade routes / caravans (14.2) ────────────────────────────────── Successful one-shot RunMerchant trades between the same settlement pair before they graduate into a persistent TradeRoute. |
+| `caravan_speed_tiles_per_year` | `6.0` | `SimConfig.Economy.CaravanSpeedTilesPerYear` | Caravan travel speed, tiles/year — comparable to emissary.emissary_travel_speed_tiles_per_year (8.0); a goods-laden caravan travels slightly slower than a lone emissary. |
+| `caravan_interception_chance` | `0.2` | `SimConfig.Economy.CaravanInterceptionChance` | Per-arrival-check chance a caravan is lost in transit (rolled once at arrival, not per-tick). Interception only applies when the route's endpoint civs are at war; disaster/piracy always roll. |
+| `caravan_disaster_chance` | `0.03` | `SimConfig.Economy.CaravanDisasterChance` |  |
+| `caravan_piracy_chance` | `0.02` | `SimConfig.Economy.CaravanPiracyChance` |  |
+| `trade_route_sever_threshold` | `3` | `SimConfig.Economy.TradeRouteSeverThreshold` | Consecutive lost caravans (any cause) before a route severs from sustained losses. |
+| `trade_route_reopen_cooldown_ticks` | `32` | `SimConfig.Economy.TradeRouteReopenCooldownTicks` | Ticks a Severed route waits, once the severing condition clears, before auto-reopening (~2 years). |
 
 ## `[economy.base_value_per_unit]` {#economybase-value-per-unit}
 

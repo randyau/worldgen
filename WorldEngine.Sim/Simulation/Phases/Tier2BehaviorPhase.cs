@@ -42,6 +42,11 @@ public sealed class Tier2BehaviorPhase
             TryCrystallize(c, world, pending, tick);
         }
 
+        // M14 14.2 — per-tick trade-route severance/reopen check + caravan arrival resolution.
+        // Runs once per tick (not per character): a route's state can change with no character
+        // acting this tick (war breaking out, a cooldown elapsing, a caravan's ETA arriving).
+        RunTradeRoutes(world, tick, pending);
+
         // Grief: notify any Tier1 ruler who had a Bond goal targeting a Tier2 that died.
         var deadTier2 = chars.Where(ch => !ch.IsAlive).ToList();
         foreach (var dead in deadTier2)
@@ -333,7 +338,8 @@ public sealed class Tier2BehaviorPhase
         }
         if (bestDest is null) return;
 
-        // Transfer resources (always, silent)
+        // Transfer resources (always, silent) — or, once a persistent TradeRoute exists for this
+        // pair, commit the goods to the route's caravan instead of resolving this same tick.
         if (bestResource is not null && world.Settlements.TryGetValue(bestDest.Value, out var destStub))
         {
             // bonus_trade_income (M9 9.1, Scholar Mathematics discovery): scales the transfer
@@ -344,25 +350,46 @@ public sealed class Tier2BehaviorPhase
             float transfer  = available * _cfg.MerchantTradeTransfer * tradeIncomeMult;
             if (transfer > 0f)
             {
-                var newHomeStores = home.ResourceStores is null
-                    ? new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase)
-                    : new Dictionary<string, float>(home.ResourceStores, StringComparer.OrdinalIgnoreCase);
-                newHomeStores[bestResource] = Math.Max(0f, available - transfer);
+                var routeKey = TradeRouteKey.Of(homeTile, bestDest.Value);
 
-                var newDestStores = destStub.ResourceStores is null
-                    ? new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase)
-                    : new Dictionary<string, float>(destStub.ResourceStores, StringComparer.OrdinalIgnoreCase);
-                newDestStores[bestResource] = destStub.GetStore(bestResource) + transfer;
+                if (world.TradeRoutes.TryGetValue(routeKey, out var route) && route.Status == TradeRouteStatus.Active)
+                {
+                    // M14 14.2 — an active persistent route replaces the one-shot instant path
+                    // below: goods commit to the route's caravan slot and travel real ticks
+                    // instead of resolving this tick (see DispatchCaravanOnRoute and
+                    // RunTradeRoutes's per-tick arrival check). Scope decision: at most one
+                    // caravan in flight per route at a time — if the slot is occupied, this
+                    // merchant simply makes no trade this tick rather than queuing a second one.
+                    if (route.InTransit is not null) return;
+                    DispatchCaravanOnRoute(c, world, home, homeTile, bestDest.Value, bestResource, transfer, tick, route);
+                }
+                else
+                {
+                    var newHomeStores = home.ResourceStores is null
+                        ? new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase)
+                        : new Dictionary<string, float>(home.ResourceStores, StringComparer.OrdinalIgnoreCase);
+                    newHomeStores[bestResource] = Math.Max(0f, available - transfer);
 
-                world.Settlements[homeTile]       = home     with { ResourceStores = newHomeStores };
-                world.Settlements[bestDest.Value] = destStub with { ResourceStores = newDestStores };
+                    var newDestStores = destStub.ResourceStores is null
+                        ? new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase)
+                        : new Dictionary<string, float>(destStub.ResourceStores, StringComparer.OrdinalIgnoreCase);
+                    newDestStores[bestResource] = destStub.GetStore(bestResource) + transfer;
 
-                // M14 14.1 — price and pay for the goods just physically transferred above. Built
-                // as a plain-data ICommand (CLAUDE.md pattern #1/#5) and resolved immediately by
-                // this phase (see CompleteMerchantTrade's doc comment for why this doesn't route
-                // through CivTracker.Resolve/CharacterBehaviorPhase.ResolveCommand).
-                var tradeCmd = new CompleteMerchantTrade(c.Id, homeTile, bestDest.Value, bestResource, transfer);
-                ResolveMerchantTrade(tradeCmd, world, _simCfg.Economy, pending);
+                    world.Settlements[homeTile]       = home     with { ResourceStores = newHomeStores };
+                    world.Settlements[bestDest.Value] = destStub with { ResourceStores = newDestStores };
+
+                    // M14 14.1 — price and pay for the goods just physically transferred above. Built
+                    // as a plain-data ICommand (CLAUDE.md pattern #1/#5) and resolved immediately by
+                    // this phase (see CompleteMerchantTrade's doc comment for why this doesn't route
+                    // through CivTracker.Resolve/CharacterBehaviorPhase.ResolveCommand).
+                    var tradeCmd = new CompleteMerchantTrade(c.Id, homeTile, bestDest.Value, bestResource, transfer);
+                    ResolveMerchantTrade(tradeCmd, world, _simCfg.Economy, pending);
+
+                    // M14 14.2 — this one-shot trade is also the route-formation trigger: no
+                    // TradeRoute exists yet for this pair (checked above), so count it toward
+                    // graduation instead.
+                    MaybeFormTradeRoute(c, world, routeKey, pending);
+                }
             }
         }
 
@@ -374,6 +401,187 @@ public sealed class Tier2BehaviorPhase
             bestDest.Value.X, bestDest.Value.Y));
         TryEmitNotableWork(c, world, tick, EventType.MerchantTradeCompleted,
             payload, [c.Id.Value], null, pending);
+    }
+
+    // ─── M14 14.2 — persistent trade routes / caravan transit ──────────────────────────────────
+
+    /// <summary>
+    /// Commits <paramref name="quantity"/> units of <paramref name="resource"/> to
+    /// <paramref name="route"/>'s caravan slot: the home settlement's ResourceStores are debited
+    /// now (goods physically leave), and delivery + priced payment resolve later, at
+    /// <see cref="Caravan.ArrivalTick"/>, in <see cref="ResolveCaravanArrival"/> — mirrors the
+    /// existing instant path's "debit home now" step but defers the destination credit and
+    /// CompleteMerchantTrade payment until arrival.
+    /// </summary>
+    private void DispatchCaravanOnRoute(
+        Tier2Character c, WorldState world, SettlementStub home, TileCoord homeTile, TileCoord destTile,
+        string resource, float quantity, long tick, TradeRoute route)
+    {
+        var newHomeStores = home.ResourceStores is null
+            ? new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase)
+            : new Dictionary<string, float>(home.ResourceStores, StringComparer.OrdinalIgnoreCase);
+        float available = home.GetStore(resource);
+        newHomeStores[resource] = Math.Max(0f, available - quantity);
+        world.Settlements[homeTile] = home with { ResourceStores = newHomeStores };
+
+        long duration = ComputeCaravanDuration(homeTile, destTile, _simCfg);
+        route.InTransit = new Caravan(c.Id, homeTile, destTile, resource, quantity, tick, tick + duration);
+    }
+
+    /// <summary>
+    /// Distance-derived transit duration (decision: straight-line Euclidean distance over
+    /// EconomyConfig.CaravanSpeedTilesPerYear, converted to ticks via SimLoopConfig.TicksPerYear —
+    /// the same distance/speed→duration shape CivTracker.Diplomacy uses for emissary ArrivalYear,
+    /// the closest existing travel-time precedent). Always at least 1 tick.
+    /// </summary>
+    private static long ComputeCaravanDuration(TileCoord a, TileCoord b, SimConfig simCfg)
+    {
+        int dx = a.X - b.X, dy = a.Y - b.Y;
+        float dist = MathF.Sqrt(dx * dx + dy * dy);
+        float speedTilesPerTick = simCfg.Economy.CaravanSpeedTilesPerYear / Math.Max(1, simCfg.SimLoop.TicksPerYear);
+        return Math.Max(1L, (long)MathF.Ceiling(dist / Math.Max(0.0001f, speedTilesPerTick)));
+    }
+
+    /// <summary>
+    /// Route-formation trigger (decision: RunMerchant's existing one-shot scan graduates a
+    /// settlement pair into a persistent TradeRoute after EconomyConfig.TradeRouteFormationThreshold
+    /// successful trades). Resolved as a FormTradeRoute command immediately by this phase, same
+    /// exemption as CompleteMerchantTrade — see that command's doc comment.
+    /// </summary>
+    private static void MaybeFormTradeRoute(Tier2Character c, WorldState world, TradeRouteKey key, List<PendingEvent> pending)
+    {
+        int count = world.TradeRouteFormationProgress.GetValueOrDefault(key, 0) + 1;
+        world.TradeRouteFormationProgress[key] = count;
+        if (count < world.SimConfig.Economy.TradeRouteFormationThreshold) return;
+
+        world.TradeRouteFormationProgress.Remove(key);
+        var cmd = new FormTradeRoute(c.Id, key.TileA, key.TileB);
+        ResolveFormTradeRoute(cmd, world, pending);
+    }
+
+    private static void ResolveFormTradeRoute(FormTradeRoute cmd, WorldState world, List<PendingEvent> pending)
+    {
+        var key = TradeRouteKey.Of(cmd.TileA, cmd.TileB);
+        if (world.TradeRoutes.ContainsKey(key)) return; // already exists — nothing to do
+
+        world.TradeRoutes[key] = new TradeRoute(key, world.CurrentYear);
+
+        var payload = JsonSerializer.Serialize(new TradeRouteFormedPayload(
+            key.TileA.X, key.TileA.Y, key.TileB.X, key.TileB.Y, Reopened: false));
+        pending.Add(new PendingEvent(EventType.TradeRouteFormed, key.TileA, null, payload,
+            new[] { cmd.MerchantId.Value }, ActorId: cmd.MerchantId.Value));
+    }
+
+    /// <summary>
+    /// Per-tick sweep over every persistent TradeRoute (called once per Tier2BehaviorPhase.Execute,
+    /// not per character): checks war/lost-endpoint severance and reopen-cooldown expiry, and
+    /// resolves any in-transit caravan whose ArrivalTick has been reached.
+    /// </summary>
+    private void RunTradeRoutes(WorldState world, long tick, List<PendingEvent> pending)
+    {
+        var cfg = _simCfg.Economy;
+        foreach (var route in world.TradeRoutes.Values)
+        {
+            bool endpointsGone = !world.Settlements.ContainsKey(route.TileA) || !world.Settlements.ContainsKey(route.TileB);
+            bool atWar = !endpointsGone && AreEndpointCivsAtWar(world, route.TileA, route.TileB);
+
+            if (route.Status == TradeRouteStatus.Active && (endpointsGone || atWar))
+            {
+                SeverRoute(route, tick, endpointsGone ? "settlement-lost" : "war", pending);
+            }
+            else if (route.Status == TradeRouteStatus.Severed && !endpointsGone && !atWar
+                     && route.SeveredSinceTick >= 0
+                     && tick - route.SeveredSinceTick >= cfg.TradeRouteReopenCooldownTicks)
+            {
+                ReopenRoute(route, pending);
+            }
+
+            if (!endpointsGone && route.InTransit is { } caravan && caravan.ArrivalTick <= tick)
+            {
+                ResolveCaravanArrival(world, route, caravan, tick, pending);
+                route.InTransit = null;
+            }
+        }
+    }
+
+    private void ResolveCaravanArrival(WorldState world, TradeRoute route, Caravan caravan, long tick, List<PendingEvent> pending)
+    {
+        var cfg = _simCfg.Economy;
+        bool atWar = AreEndpointCivsAtWar(world, route.TileA, route.TileB);
+
+        // M14 14.2 — each roll is checked once at arrival (see EconomyConfig.CaravanInterceptionChance's
+        // doc comment for why this isn't stacked per-tick during transit). Interception only applies
+        // under war; disaster and piracy are ambient risks independent of war state. All three share
+        // one consequence path (CaravanRaided, Cause distinguishes them) and one severance counter —
+        // a deliberate scope-narrowing: the phase doc allows folding piracy into interception when a
+        // separate naval/bandit infrastructure doesn't exist; here all three collapse to the same
+        // "the caravan didn't arrive" outcome rather than three independently-tracked mechanics.
+        string? lossCause = null;
+        if (atWar && world.GetRandomFloat(caravan.MerchantId, SimRngSalts.CaravanInterception) < cfg.CaravanInterceptionChance)
+            lossCause = "war";
+        else if (world.GetRandomFloat(caravan.MerchantId, SimRngSalts.CaravanDisaster) < cfg.CaravanDisasterChance)
+            lossCause = "disaster";
+        else if (world.GetRandomFloat(caravan.MerchantId, SimRngSalts.CaravanPiracy) < cfg.CaravanPiracyChance)
+            lossCause = "piracy";
+
+        if (lossCause is not null)
+        {
+            route.ConsecutiveCaravanLosses++;
+            var lostPayload = JsonSerializer.Serialize(new CaravanRaidedPayload(
+                caravan.MerchantId.Value, caravan.Resource, caravan.Quantity, lossCause,
+                caravan.HomeTile.X, caravan.HomeTile.Y, caravan.DestTile.X, caravan.DestTile.Y));
+            pending.Add(new PendingEvent(EventType.CaravanRaided, caravan.DestTile, null, lostPayload,
+                new[] { caravan.MerchantId.Value }, ActorId: caravan.MerchantId.Value));
+
+            if (route.Status == TradeRouteStatus.Active && route.ConsecutiveCaravanLosses >= cfg.TradeRouteSeverThreshold)
+                SeverRoute(route, tick, "losses", pending);
+            return;
+        }
+
+        route.ConsecutiveCaravanLosses = 0;
+
+        // Physical delivery first (matches the instant path's ordering: transfer the good, then
+        // price/pay for it), then the same CompleteMerchantTrade pricing/home-cut/Wealth-credit
+        // mechanics 14.1 already built.
+        if (world.Settlements.TryGetValue(caravan.DestTile, out var destStub))
+        {
+            var newDestStores = destStub.ResourceStores is null
+                ? new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase)
+                : new Dictionary<string, float>(destStub.ResourceStores, StringComparer.OrdinalIgnoreCase);
+            newDestStores[caravan.Resource] = destStub.GetStore(caravan.Resource) + caravan.Quantity;
+            world.Settlements[caravan.DestTile] = destStub with { ResourceStores = newDestStores };
+        }
+
+        var tradeCmd = new CompleteMerchantTrade(caravan.MerchantId, caravan.HomeTile, caravan.DestTile, caravan.Resource, caravan.Quantity);
+        ResolveMerchantTrade(tradeCmd, world, cfg, pending);
+    }
+
+    private static void SeverRoute(TradeRoute route, long tick, string cause, List<PendingEvent> pending)
+    {
+        route.Status = TradeRouteStatus.Severed;
+        route.SeveredSinceTick = tick;
+        var payload = JsonSerializer.Serialize(new TradeRouteSeveredPayload(
+            route.TileA.X, route.TileA.Y, route.TileB.X, route.TileB.Y, cause));
+        pending.Add(new PendingEvent(EventType.TradeRouteSevered, route.TileA, null, payload));
+    }
+
+    private static void ReopenRoute(TradeRoute route, List<PendingEvent> pending)
+    {
+        route.Status = TradeRouteStatus.Active;
+        route.ConsecutiveCaravanLosses = 0;
+        route.SeveredSinceTick = -1;
+        var payload = JsonSerializer.Serialize(new TradeRouteFormedPayload(
+            route.TileA.X, route.TileA.Y, route.TileB.X, route.TileB.Y, Reopened: true));
+        pending.Add(new PendingEvent(EventType.TradeRouteFormed, route.TileA, null, payload));
+    }
+
+    private static bool AreEndpointCivsAtWar(WorldState world, TileCoord tileA, TileCoord tileB)
+    {
+        if (!world.Settlements.TryGetValue(tileA, out var a) || !world.Settlements.TryGetValue(tileB, out var b))
+            return false;
+        if (a.CivId == b.CivId) return false;
+        if (!world.Civilizations.TryGetValue(a.CivId, out var civA)) return false;
+        return civA.IsAtWarWith(b.CivId);
     }
 
     // M14 14.1 — precious commodities that act as money-equivalent (decision 4). Debited/credited

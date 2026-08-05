@@ -202,6 +202,8 @@ public sealed class CharacterProfilePanel : IToggleablePanel
         EventType.DismissedFromRole       => "Dismissed from role",
         EventType.MerchantTradeCompleted  => "Completed trade",
         EventType.TradePaid               => "Paid for goods",
+        EventType.TradeRouteFormed        => "Trade route formed",
+        EventType.CaravanRaided           => "Caravan lost in transit",
         EventType.ScholarDiscovery        => "Made discovery",
         EventType.PhysicianHealed         => "Healed someone",
         EventType.BeastSlain              => "Slew a beast",

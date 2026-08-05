@@ -4,6 +4,7 @@ using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities;
 using WorldEngine.Sim.Entities.Beasts;
 using WorldEngine.Sim.Entities.Characters;
+using WorldEngine.Sim.Economy;
 using WorldEngine.Sim.Tiles.LocalScale;
 using WorldEngine.Sim.World;
 using WorldEngine.Sim.WorldGen;
@@ -86,8 +87,33 @@ internal static class WorldStateMapper
             GlobalPriceIndex:            w.GlobalPriceIndex,
             WealthDrops:                 w.WealthDrops
                                           .Select(d => new WealthDropDto(TileKey(d.Location), d.Amount, d.CreatedTick))
-                                          .ToList());
+                                          .ToList(),
+            TradeRoutes:                 MapTradeRoutes(w),
+            TradeRouteFormationProgress: w.TradeRouteFormationProgress
+                                          .ToDictionary(kv => RouteKey(kv.Key), kv => kv.Value));
     }
+
+    private static string RouteKey(TradeRouteKey k) => $"{TileKey(k.TileA)}|{TileKey(k.TileB)}";
+
+    private static TradeRouteKey ParseRouteKey(string s)
+    {
+        int sep = s.IndexOf('|');
+        return new TradeRouteKey(ParseTile(s[..sep]), ParseTile(s[(sep + 1)..]));
+    }
+
+    private static List<TradeRouteDto> MapTradeRoutes(WorldState w) =>
+        w.TradeRoutes.Values.Select(r => new TradeRouteDto(
+            TileA:                    TileKey(r.TileA),
+            TileB:                    TileKey(r.TileB),
+            Status:                   (int)r.Status,
+            FormedYear:               r.FormedYear,
+            ConsecutiveCaravanLosses: r.ConsecutiveCaravanLosses,
+            SeveredSinceTick:         r.SeveredSinceTick,
+            InTransit:                r.InTransit is { } cv
+                ? new CaravanDto(cv.MerchantId.Value, TileKey(cv.HomeTile), TileKey(cv.DestTile),
+                                  cv.Resource, cv.Quantity, cv.DepartTick, cv.ArrivalTick)
+                : null))
+        .ToList();
 
     private static List<OrganizationDto> MapOrganizations(WorldState w) =>
         w.Organizations.Values.Select(o => new OrganizationDto(
@@ -506,6 +532,27 @@ internal static class WorldStateMapper
         if (dto.WealthDrops is not null)
             foreach (var d in dto.WealthDrops)
                 world.WealthDrops.Add(new WealthDrop(ParseTile(d.Location), d.Amount, d.CreatedTick));
+
+        // 23. Restore M14 14.2 persistent trade routes / caravans
+        if (dto.TradeRoutes is not null)
+            foreach (var rdto in dto.TradeRoutes)
+            {
+                var key = TradeRouteKey.Of(ParseTile(rdto.TileA), ParseTile(rdto.TileB));
+                var route = new TradeRoute(key, rdto.FormedYear)
+                {
+                    Status                   = (TradeRouteStatus)rdto.Status,
+                    ConsecutiveCaravanLosses = rdto.ConsecutiveCaravanLosses,
+                    SeveredSinceTick         = rdto.SeveredSinceTick,
+                    InTransit                = rdto.InTransit is { } cv
+                        ? new Caravan(new EntityId(cv.MerchantId), ParseTile(cv.HomeTile), ParseTile(cv.DestTile),
+                                      cv.Resource, cv.Quantity, cv.DepartTick, cv.ArrivalTick)
+                        : null
+                };
+                world.TradeRoutes[key] = route;
+            }
+        if (dto.TradeRouteFormationProgress is not null)
+            foreach (var (k, v) in dto.TradeRouteFormationProgress)
+                world.TradeRouteFormationProgress[ParseRouteKey(k)] = v;
 
         return world;
     }

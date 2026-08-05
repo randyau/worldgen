@@ -70,6 +70,7 @@ One-line description of every non-trivial source file. Check here before running
 
 ## WorldEngine.Sim/Economy/
 - `PricingService.cs` — M14 14.0 — seeded, formulaic pricing (decision 7). No order book, no price history, no transaction-volume dependency: every price is computed fresh at the moment of use from EconomyConfig.BaseValuePerUnit and the settlement's existing (already-balanced) M9 SettlementStub.ResourceLedger ratio. See docs/phases/m14_economy_independent_wealth.md.
+- `TradeRoute.cs` — M14 14.2 — canonical, order-independent key for a settlement-pair trade route. Two merchants trading Home→Dest and Dest→Home refer to the same physical route, so the pair is normalized (lower tile first, by (X, Y)) rather than keyed directionally.
 
 ## WorldEngine.Sim/Entities/
 - `EntityCommands.cs` — All entity ICommand records (MoveTo, Rest, etc.) in one file; sealed records with value-type fields only.

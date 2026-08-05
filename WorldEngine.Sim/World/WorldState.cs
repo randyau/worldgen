@@ -74,6 +74,19 @@ public sealed class WorldState : IWorldStateReadOnly
     public List<WealthDrop> WealthDrops { get; } = new();
 
     /// <summary>
+    /// M14 14.2 — persistent trade routes, keyed by the canonical (order-independent) settlement
+    /// pair. See Economy.TradeRoute and Tier2BehaviorPhase.RunMerchant/RunTradeRoutes.
+    /// </summary>
+    public Dictionary<Economy.TradeRouteKey, Economy.TradeRoute> TradeRoutes { get; } = new();
+
+    /// <summary>
+    /// M14 14.2 — counts successful one-shot RunMerchant trades per settlement pair toward
+    /// EconomyConfig.TradeRouteFormationThreshold, before a TradeRoute exists for that pair.
+    /// Entry removed once the pair graduates (Tier2BehaviorPhase.MaybeFormTradeRoute).
+    /// </summary>
+    public Dictionary<Economy.TradeRouteKey, int> TradeRouteFormationProgress { get; } = new();
+
+    /// <summary>
     /// M14 14.0 (decision 8) — single world-wide scalar tracking money-supply drift relative to
     /// EconomyConfig.ReferenceMoneySupplyPerCapita. Every price everywhere in M14 gets one more
     /// multiplicative term: EffectivePrice = BaseValue × LocalScarcityMultiplier × GlobalPriceIndex.

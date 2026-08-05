@@ -6,7 +6,11 @@ existing trade) also shipped 2026-08-05 — `Tier2BehaviorPhase.RunMerchant` now
 its existing physical-goods transfer via a new `CompleteMerchantTrade` command resolved in the same
 phase, crediting the merchant's `Wealth` net of the new `EconomyConfig.MerchantHomeCutFraction`
 (0.3) recirculation cut back to their home settlement. New `EventType.TradePaid = 3500` (first use
-of the fresh 3500 range). 14.2–14.5 not yet started.
+of the fresh 3500 range). Phase 14.2 (persistent trade routes / caravan transit — the largest phase
+in the milestone) also shipped 2026-08-05 — see its phase-sequence entry below for the full
+`TradeRoute`/`Caravan` data shape, formation/severance/reopening rules, and the interception/
+disaster/piracy roll model. New `EventType`s `TradeRouteFormed = 3501`, `TradeRouteSevered = 3502`,
+`CaravanRaided = 3503`. 14.3–14.5 not yet started.
 
 See `docs/roadmap.md` § "M14" for the one-line scope statement and § the M12-era audit notes
 (lines ~350-361) for why guild/merchant succession must reuse the M12 `SuccessionResolver`
@@ -473,6 +477,64 @@ oversight later):**
   `RunMerchant`'s existing one-shot opportunistic scan becomes the *route-formation* trigger
   (successful repeated trades between a pair graduate into a persistent `TradeRoute`) rather than
   being deleted outright.
+
+  **Shipped 2026-08-05.** `Economy/TradeRoute.cs` adds `TradeRouteKey` (canonical, order-
+  independent settlement-pair key), `TradeRoute` (mutable, mirrors `Organization` rather than a
+  `with`-replaced record since status/loss-streak/in-flight-caravan all change in place every
+  tick — `Status` Active/Severed, `FormedYear`, `ConsecutiveCaravanLosses`, `SeveredSinceTick`,
+  `InTransit`), and `Caravan` (a plain record: `MerchantId`, `HomeTile`, `DestTile`, `Resource`,
+  `Quantity`, `DepartTick`, `ArrivalTick`). **Travel-time precedent note:** M11's `SeaVoyage` turned
+  out to be stepwise per-tile character movement with no separate duration/ETA record to reuse —
+  the actual existing in-transit/ETA shape in this codebase is `Civilizations.PendingEmissary`
+  (`DepartedYear`/`ArrivalYear` precomputed from Euclidean distance ÷ a travel-speed config
+  constant, resolved when reached); `Caravan` mirrors that shape at tick granularity instead.
+  **Scope decision:** at most one caravan in flight per route at a time — a merchant whose route
+  already has a caravan en route simply makes no trade that tick rather than queuing a second one.
+  `WorldState` gets `TradeRoutes` (`Dictionary<TradeRouteKey, TradeRoute>`) and
+  `TradeRouteFormationProgress` (`Dictionary<TradeRouteKey, int>`, the pre-route trade-count
+  tracker, entry removed once a pair graduates). `RunMerchant` now branches: no route yet → the
+  existing 14.1 instant path runs unchanged and also increments the formation counter
+  (`EconomyConfig.TradeRouteFormationThreshold`, default 3); an Active route with an empty slot →
+  `DispatchCaravanOnRoute` debits the home settlement now and computes `ArrivalTick` from
+  `EconomyConfig.CaravanSpeedTilesPerYear` (6.0, chosen as a slightly-slower-than-emissary
+  magnitude next to `EmissaryTravelSpeedTilesPerYear`'s 8.0) via `SimLoopConfig.TicksPerYear`; a
+  new per-tick `Tier2BehaviorPhase.RunTradeRoutes` sweep (called once per `Execute`, not per
+  character) resolves any caravan whose `ArrivalTick` has been reached by delivering the goods and
+  reusing 14.1's `ResolveMerchantTrade` pricing/home-cut/Wealth-credit path unchanged — the arrival
+  *is* the trade completing, so it emits the same `TradePaid` event. **Risk rolls (interception/
+  disaster/piracy):** each rolled once at arrival resolution (not stacked per tick during transit,
+  which keeps the balance math a plain per-caravan Bernoulli trial) via `SimRngSalts
+  .CaravanInterception/CaravanDisaster/CaravanPiracy` (940-942); interception
+  (`CaravanInterceptionChance`, 0.2) only applies when the route's endpoint civs are at war,
+  disaster (`CaravanDisasterChance`, 0.03) and piracy (`CaravanPiracyChance`, 0.02) roll
+  regardless of war state. **Scope-narrowing decision:** all three share one consequence
+  (`EventType.CaravanRaided` with a `Cause` field distinguishing "war"/"disaster"/"piracy") and one
+  severance counter (`ConsecutiveCaravanLosses`) rather than three independently-tracked loss
+  mechanics — narratively they're all "the caravan didn't arrive," and no separate naval/bandit
+  infrastructure exists to hang a distinct piracy mechanic off of, matching the phase doc's
+  allowance to fold piracy into interception when that's the case. **Severance:** `RunTradeRoutes`
+  checks every route every tick (not just when a caravan is in flight) — an Active route severs
+  immediately if its endpoint civs are at war or either endpoint settlement no longer exists
+  (`"settlement-lost"`, a cheap defensive fold-in of the "disaster along the path" coarser check the
+  phase doc allowed, using the existing settlement-destroyed signal rather than new infrastructure),
+  or if `ConsecutiveCaravanLosses` reaches `EconomyConfig.TradeRouteSeverThreshold` (3) from any
+  cause. **Reopening:** unified into a single rule regardless of severance cause — a Severed route
+  reopens once its endpoint civs are no longer at war (vacuously true for a non-war severance) and
+  `EconomyConfig.TradeRouteReopenCooldownTicks` (32, ~2 years) have elapsed since `SeveredSinceTick`;
+  reopening reuses `EventType.TradeRouteFormed` with `Reopened: true` in the payload rather than a
+  separate event type. `FormTradeRoute` is the one new `ICommand` (resolved immediately by
+  `Tier2BehaviorPhase`, same non-`CivTracker`/non-`ResolveCommand` exemption as `CompleteMerchantTrade`
+  — see its doc comment); caravan dispatch/arrival/severance/reopening are phase-driven system logic
+  (no entity emits them), mirroring how `CivTracker.RunAnnualDiplomacy` resolves `PendingEmissary`
+  directly without a command. Full DTO/mapper coverage: `TradeRouteDto`/`CaravanDto`
+  (`WorldStateDto.cs`), `WorldStateMapper.MapTradeRoutes`/restore step 23. `SignificanceClassifier`/
+  `VerbClassification`/UI wiring (`Presenter.cs`, `CharacterProfilePanel.cs`, `EventLogPanel.cs`)
+  updated for all three new event types, following 14.1's `TradePaid` pattern. Tests:
+  `WorldEngine.Tests/Unit/TradeRouteCaravanTests.cs` — formation-threshold gating, transit-duration
+  + arrival-pricing correctness, three distributional roll-rate tests (2000 trials each), war
+  severance + cooldown reopening, a full DTO round-trip, and a tick-budget integration test
+  confirming a route actually forms and a caravan actually completes transit (same
+  "verify the mechanic actually fires" discipline as the M13.8 Estrangement/OathBroken fix).
 - **14.3 — Goal fulfillment via trade (Wealth's spend-side MVP).** Extend `GoalManager`'s
   `CovetArtifact` resolution with a purchase path: if the coveted artifact is owned by a living
   character/settlement (not `Lost`) and the goal-holder has sufficient `Wealth`, attempt a

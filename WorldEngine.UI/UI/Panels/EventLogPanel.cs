@@ -179,6 +179,8 @@ public sealed class EventLogPanel : IWorkspacePanel
         EventType.ScholarDiscovery         or
         EventType.MerchantTradeCompleted   or
         EventType.TradePaid                or
+        EventType.TradeRouteFormed         or
+        EventType.CaravanRaided            or
         EventType.PhysicianHealed          or
         EventType.BeastSlain               => true,
         _                                  => false

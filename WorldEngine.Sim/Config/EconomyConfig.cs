@@ -79,4 +79,32 @@ public sealed class EconomyConfig
     // constants; 0.3 is a first-pass placeholder that leaves the merchant with the majority share
     // while still returning a meaningful cut home.
     public float MerchantHomeCutFraction { get; set; } = 0.3f;
+
+    // ─── Persistent trade routes / caravans (14.2) ────────────────────────────
+    // Number of successful one-shot RunMerchant trades between the same settlement pair before
+    // they graduate into a persistent TradeRoute (Tier2BehaviorPhase.MaybeFormTradeRoute).
+    public int TradeRouteFormationThreshold { get; set; } = 3;
+
+    // Caravan travel speed, tiles/year — comparable magnitude to EmissaryConfig
+    // .EmissaryTravelSpeedTilesPerYear (8.0), since both represent overland travel between
+    // settlements/civs; a caravan hauling goods is modeled slightly slower than a lone emissary.
+    public float CaravanSpeedTilesPerYear { get; set; } = 6f;
+
+    // Per-arrival-check roll (WorldRng, named salts — see SimRngSalts.CaravanInterception/
+    // Disaster/Piracy) that a caravan is lost in transit instead of completing its trade. Rolled
+    // once at arrival resolution (representing the whole transit's cumulative risk), not stacked
+    // per-tick during travel — simpler, and keeps the distributional balance test's math a
+    // straightforward per-caravan Bernoulli trial. Interception only applies when the route's two
+    // endpoint civs are at war; disaster and piracy roll regardless of war state.
+    public float CaravanInterceptionChance { get; set; } = 0.2f;
+    public float CaravanDisasterChance     { get; set; } = 0.03f;
+    public float CaravanPiracyChance       { get; set; } = 0.02f;
+
+    // Consecutive lost caravans (any cause) on the same route before it severs from sustained
+    // losses (independent of the immediate war/lost-settlement severance checks).
+    public int TradeRouteSeverThreshold { get; set; } = 3;
+
+    // Ticks a Severed route must wait, once its severing condition (war / missing endpoint) has
+    // cleared, before automatically reopening. ~2 years at the default 16 ticks/year.
+    public int TradeRouteReopenCooldownTicks { get; set; } = 32;
 }

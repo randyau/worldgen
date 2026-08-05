@@ -22,6 +22,7 @@ namespace WorldEngine.Sim.Simulation;
 ///  4000–4099 ArtifactNameGenerator (name epithets/nouns — see ArtifactNameGenerator.cs)
 ///  5000–5099 Artifact lifecycle — battle forge, heroic-death forge, death inheritance
 ///  6000–6099 CharacterBehaviorPhase (M13 family — childbirth)
+///   940–949  Tier2BehaviorPhase (M14 14.2 — caravan interception/disaster/piracy rolls)
 /// </summary>
 internal static class SimRngSalts
 {
@@ -55,6 +56,12 @@ internal static class SimRngSalts
     public const int T2MerchantExcep = 921; // merchant exceptional roll
     public const int T2Physician    = 930;  // physician notable roll
     public const int T2PhysicianExcep = 931; // physician exceptional roll
+
+    // Tier2BehaviorPhase — M14 14.2 caravan in-transit risk rolls, each rolled once at arrival
+    // resolution (see EconomyConfig.CaravanInterceptionChance/CaravanDisasterChance/CaravanPiracyChance).
+    public const int CaravanInterception = 940;
+    public const int CaravanDisaster     = 941;
+    public const int CaravanPiracy       = 942;
 
     // CharacterBehaviorPhase — civ-born, grief
     public const int CharCivBirth        = 1000;

@@ -96,6 +96,10 @@ public static class SignificanceClassifier
             EventType.EmissaryLost             => PopulationImpact.None,   // Destruction verb → Regional floor
             EventType.ReligiousEmissaryArrived => PopulationImpact.Minor,
             EventType.CivIntelGathered         => PopulationImpact.None,
+            // M14 14.2 — persistent trade routes / caravan transit
+            EventType.TradeRouteFormed         => PopulationImpact.Minor,
+            EventType.TradeRouteSevered        => PopulationImpact.Moderate,
+            EventType.CaravanRaided            => PopulationImpact.Minor,
             _                                 => PopulationImpact.None,
         };
     }

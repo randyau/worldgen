@@ -169,6 +169,23 @@ internal sealed record TradePaidPayload(
     long CharacterId, string CharacterName, string Resource, float Quantity,
     float PaidValue, float MerchantShare, int DestX, int DestY);
 
+// M14 14.2 — persistent trade routes / caravan transit.
+// Reopened distinguishes the two cases TradeRouteFormed covers: a fresh graduation from repeated
+// one-shot trades (false) vs. a previously Severed route automatically reopening (true).
+internal sealed record TradeRouteFormedPayload(
+    int TileAX, int TileAY, int TileBX, int TileBY, bool Reopened);
+
+// Cause is one of "war", "settlement-lost", or "losses" (sustained caravan interception/disaster/
+// piracy losses reaching EconomyConfig.TradeRouteSeverThreshold).
+internal sealed record TradeRouteSeveredPayload(
+    int TileAX, int TileAY, int TileBX, int TileBY, string Cause);
+
+// Cause is one of "war" (interception), "disaster", or "piracy" — see EconomyConfig
+// .CaravanInterceptionChance/CaravanDisasterChance/CaravanPiracyChance.
+internal sealed record CaravanRaidedPayload(
+    long MerchantId, string Resource, float Quantity, string Cause,
+    int HomeX, int HomeY, int DestX, int DestY);
+
 internal sealed record ScholarDiscoveryPayload(
     long CharacterId, string CharacterName, string DiscoveryType,
     string BonusKey, float BonusAmount);

@@ -53,6 +53,18 @@ public sealed record CompleteMerchantTrade(
     string    Resource,
     float     Quantity) : ICommand;
 
+// M14 14.2 — graduates RunMerchant's one-shot trade scan into a persistent Economy.TradeRoute
+// once EconomyConfig.TradeRouteFormationThreshold successful trades have occurred between the
+// same settlement pair (see Tier2BehaviorPhase.MaybeFormTradeRoute). Resolved immediately by
+// Tier2BehaviorPhase itself, same non-CivTracker/non-ResolveCommand exemption as
+// CompleteMerchantTrade above (Tier2 role behavior is phase-driven every tick, not emitted via the
+// Tier1 utility-scorer/EMIT-RESOLVE split ArchitectureRuleTests
+// .CivTrackerCommands_AreAllDispatchedFromResolveCommand polices).
+public sealed record FormTradeRoute(
+    EntityId  MerchantId,
+    TileCoord TileA,
+    TileCoord TileB) : ICommand;
+
 // Phase 3.0 — city-state territory commands
 public sealed record BuildImprovement(
     EntityId        CharacterId,
