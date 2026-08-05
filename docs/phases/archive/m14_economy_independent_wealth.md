@@ -1,6 +1,6 @@
 # M14 — Economy & Independent Wealth
 
-**Status:** IN PROGRESS. Kickoff design pass 2026-08-04. Phase 14.0 (wealth substrate) shipped
+**Status:** COMPLETE — 2026-08-05. All six phases (14.0-14.5) shipped same session. Kickoff design pass 2026-08-04. Phase 14.0 (wealth substrate) shipped
 2026-08-05 — see the phase-sequence entry below for what landed. Phase 14.1 (wire Wealth into
 existing trade) also shipped 2026-08-05 — `Tier2BehaviorPhase.RunMerchant` now prices and pays for
 its existing physical-goods transfer via a new `CompleteMerchantTrade` command resolved in the same
@@ -27,7 +27,15 @@ the promoted Tier1 reused the dead Tier2's exact `EntityId`, so `EntityRegistry`
 the *promoted Tier1* instead — see `SimEntity.Id`'s doc comment and
 `M13RelationshipEventBalanceTests`' updated bands (fixing this let promoted characters actually
 survive, correctly raising several M13-era event-count ceilings). 14.5 (balance pass + economic
-ledger UI) not yet started.
+ledger UI) also shipped 2026-08-05 — a full balance sweep plus a new 3000-year long-run instrument
+(`WorldEngine.Tests/Balance/EconomyBalanceInstrumentationTests.cs`) found and fixed two real
+calibration bugs: `Organization.Treasury` had no matching sink and could sit indefinitely negative
+after war reparations (fixed with the same `PersonalWealthSpoilageRate` decay applied symmetrically),
+and `ReferenceMoneySupplyPerCapita` (50f placeholder) was ~2500-5000x too high for the observed
+long-run per-capita equilibrium (~0.01-0.02), pinning `GlobalPriceIndex` at `PriceIndexMin` for the
+entire run — re-anchored to 0.015, which in turn required re-tuning `ArtifactValueMultiplier`
+(1.5 -> 0.35) to keep 14.3's purchase mechanic reachable at its calibrated rate. Also added the
+economic ledger UI panel (`WorldEngine.UI/UI/Panels/EconomicLedgerPanel.cs`).
 
 See `docs/roadmap.md` § "M14" for the one-line scope statement and § the M12-era audit notes
 (lines ~350-361) for why guild/merchant succession must reuse the M12 `SuccessionResolver`
