@@ -40,7 +40,14 @@ public sealed class EconomyConfig
 
     // ─── Global price index (decision 8) ──────────────────────────────────────
     // Anchor for "what a fair per-capita money supply looks like" — tuned during 14.5, not derived.
-    public float ReferenceMoneySupplyPerCapita { get; set; } = 50f;
+    // 14.5 CALIBRATION: the original placeholder (50f) was ~2500-5000x too high — a 3000-year,
+    // 3-seed long-run instrument (EconomyBalanceInstrumentationTests.LongRun_...) observed
+    // MoneySupplyPerCapita settling in the 0.01-0.02 range post-warm-up (year 300 onward), which
+    // pinned GlobalPriceIndex at PriceIndexMin for the entire run — the exact failure mode decision
+    // 8 warns about ("any finite clamp eventually saturates" if the reference anchor is wrong).
+    // Re-anchored to the observed long-run equilibrium (not year-300 data, per the phase doc) so the
+    // index actually tracks supply instead of sitting pinned at the floor.
+    public float ReferenceMoneySupplyPerCapita { get; set; } = 0.015f;
     public float PriceIndexMin { get; set; } = 0.25f;
     public float PriceIndexMax { get; set; } = 4.0f;
     // EMA smoothing factor, same shape as SettlementStub.SpecializationStrength's EMA
@@ -65,7 +72,13 @@ public sealed class EconomyConfig
     // ─── Artifacts (decision 7, used from 14.3 onward) ────────────────────────
     // Scalar reflecting that an exceptional creation is worth more than raw commodity value.
     // Declared here because it's a pricing-formula constant, even though nothing spends it yet.
-    public float ArtifactValueMultiplier { get; set; } = 3f;
+    // 14.5 CALIBRATION: re-tuned 1.5 -> 0.35. Fixing GlobalPriceIndex's pinned-at-floor bug (see
+    // ReferenceMoneySupplyPerCapita above) moved the index from a constant ~0.25 to floating near
+    // ~1.0 in the short run — a ~4x jump in EffectivePrice for every artifact purchase, which
+    // dropped ArtifactPurchased's observed fire rate from 3/5 to 1/5 seeds. Lowered proportionally
+    // so the purchase mechanic's reachability isn't an accidental casualty of an unrelated pricing
+    // fix.
+    public float ArtifactValueMultiplier { get; set; } = 0.35f;
 
     // DECISION (14.3): decision 7's text claims "the G-1 taxonomy already weights [artifact
     // categories] for persistence/rarity — reuse that weighting." Checked directly:

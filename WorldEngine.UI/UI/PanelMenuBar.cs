@@ -31,6 +31,7 @@ public sealed class PanelMenuBar
         AddToggle(row, "watch",     "Watch");
         AddToggle(row, "character", "Character");
         AddToggle(row, "civ",       "Civ History");
+        AddToggle(row, "ledger",    "Ledger");
         AddToggle(row, "godmode",   "God Mode");
         AddToggle(row, "settings",  "Settings");
         AddToggle(row, "help",      "Help (?)");

@@ -1270,8 +1270,10 @@ default_base_value_per_unit = 1.0
 local_scarcity_multiplier_min = 0.5
 local_scarcity_multiplier_max = 2.0
 # Anchor for GlobalPriceIndex's EMA target: "what a fair per-capita money supply looks like."
-# Tuned during 14.5 from long-run equilibrium data, not derived analytically.
-reference_money_supply_per_capita = 50.0
+# Tuned during 14.5 from long-run equilibrium data (3000-year, 3-seed instrumentation observed
+# MoneySupplyPerCapita settling at 0.01-0.02 post-warm-up) — the original 50.0 placeholder pinned
+# GlobalPriceIndex at price_index_min for the entire run.
+reference_money_supply_per_capita = 0.015
 price_index_min       = 0.25
 price_index_max        = 4.0
 # EMA smoothing factor for GlobalPriceIndex, same shape as SpecializationStrength's EMA
@@ -1285,13 +1287,13 @@ wealth_inheritance_share = 0.7
 # since personal Wealth has no other sink. Gives per-capita Wealth a finite equilibrium ceiling.
 personal_wealth_spoilage_rate = 0.02
 # Scalar for the 14.3 artifact-pricing formula (ArtifactBaseValue × this × GlobalPriceIndex).
-# Lowered from the original placeholder 3.0 during 14.3's instrument-first pass: an early-game
-# GlobalPriceIndex pinned near its floor (0.25, decision 8's documented warm-up transient) combined
-# with the still-small Tier1 Wealth pool (a few units — see EconomyConfig.MoneyEquivalentCommodities'
-# doc comment for why Wealth is scarce at all in this era) made even the cheapest artifact category
-# unaffordable at 3.0. 1.5 lets the mechanic clear the affordability gate at a plausible rate without
-# making purchases trivial; full calibration is still 14.5's job.
-artifact_value_multiplier = 1.5
+# Lowered from the original placeholder 3.0 during 14.3's instrument-first pass to 1.5, then again
+# during 14.5 to 0.35 after fixing GlobalPriceIndex's pinned-at-floor bug (see
+# reference_money_supply_per_capita above): the index moved from a constant ~0.25 to floating near
+# ~1.0 in the short run, a ~4x price jump that dropped ArtifactPurchased's fire rate from 3/5 to 1/5
+# seeds. Re-lowered proportionally so the purchase mechanic's reachability isn't an accidental
+# casualty of an unrelated pricing fix.
+artifact_value_multiplier = 0.35
 # Fraction of a 14.1 trade's paid value that routes back to the merchant's home settlement's own
 # ResourceStores (same commodities the destination paid with) instead of the merchant's personal
 # Wealth — keeps precious-commodity gold recirculating between settlements rather than draining

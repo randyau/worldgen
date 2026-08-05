@@ -63,6 +63,7 @@ public sealed class Game1 : Game
     private CharacterProfilePanel? _charProfile;
     private BeastProfilePanel? _beastProfile;
     private CivHistoryPanel?       _civHistory;
+    private EconomicLedgerPanel?   _economicLedger;
     private TimelineBar?           _timeline;
     private FocusLensState?        _focusLens;
 
@@ -538,6 +539,7 @@ public sealed class Game1 : Game
         _charProfile  = new CharacterProfilePanel(_historyQuery, ancestries);
         _beastProfile = new BeastProfilePanel();
         _civHistory   = new CivHistoryPanel(_historyQuery, ancestries);
+        _economicLedger = new EconomicLedgerPanel();
 
         // Timeline bar — SpriteBatch component + Myra label overlay
         _timeline = new TimelineBar();
@@ -573,6 +575,7 @@ public sealed class Game1 : Game
             _workspace.Register(_beastProfile!);
             _workspace.Register(_charWatch!);
             _workspace.Register(_civHistory!);
+            _workspace.Register(_economicLedger!);
             _workspace.Register(_godModePanel!);
             _workspace.Register(_helpPanel!);
             _workspace.Register(_settingsPanel!);
@@ -675,6 +678,7 @@ public sealed class Game1 : Game
         cmds.Register(new UiCommand("panel.watch",   "Character watch panel", "Panels", () => _workspace?.ToggleSummoned("watch"),   Keys.W));
         cmds.Register(new UiCommand("panel.help",    "This help",             "Panels", () => _workspace?.ToggleSummoned("help"),    Keys.OemQuestion));
         cmds.Register(new UiCommand("panel.godmode", "God Mode panel",        "Panels", () => _workspace?.ToggleSummoned("godmode"), Keys.F2));
+        cmds.Register(new UiCommand("panel.ledger",  "Economic ledger panel", "Panels", () => _workspace?.ToggleSummoned("ledger"),  Keys.L));
         cmds.Register(new UiCommand("panel.settings", "Settings",             "Panels", () => _workspace?.ToggleSummoned("settings"), Keys.OemComma, DefaultCtrl: true));
 
         // World

@@ -33,6 +33,18 @@ public static class EconomyPhase
             t2.AddWealth(-t2.Wealth * cfg.PersonalWealthSpoilageRate);
         }
 
+        // Organization.Treasury gets the same proportional "cost of upkeep" sink as personal Wealth,
+        // decaying toward zero regardless of sign. Without this, a treasury driven negative by war
+        // reparations (14.4) never recovers on its own — it just sits at whatever negative value it
+        // was left at indefinitely — and a treasury that accumulates from guild trade income has no
+        // matching sink either, unlike every other Wealth-holding pool in the conservation formula.
+        // Symmetric decay-toward-zero keeps both cases bounded over a multi-thousand-year run.
+        foreach (var org in world.Organizations.Values)
+        {
+            if (org.Treasury == 0f) continue;
+            org.Treasury -= org.Treasury * cfg.PersonalWealthSpoilageRate;
+        }
+
         // WealthDrop pools spoil at the same rate (decision 5's revision) and are pruned once
         // negligible so the list doesn't grow forever with dust-sized remnants.
         for (int i = world.WealthDrops.Count - 1; i >= 0; i--)

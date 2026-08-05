@@ -4,9 +4,21 @@
 
 ## WorldSnapshot
 **File:** `WorldEngine.Sim/World/WorldSnapshot.cs:104`  
-**Kind:** `sealed record`
+**Kind:** `class`
 
 ```csharp
+public sealed record BasicWatchSnapshot(
+    EntityId   Id,
+    EntityKind Kind,
+    string     Name,
+    string     SpeciesId,   // beasts.toml id for beasts; empty for characters
+    bool       IsLegendary,
+    TileCoord  Location,
+    string     BiomeName,
+    int        AgeSeasons,
+    float      HealthFraction,
+    float      FoodFraction);
+
 public sealed record WorldSnapshot(
     // Time
     int CurrentYear,
@@ -64,8 +76,16 @@ public sealed record WorldSnapshot(
 
     // Spotlight (M7+) — set when the player is controlling a character
     EntityId?  SpotlightCharacterId = null,
-    TileCoord? SpotlightMoveTarget  = null
+    TileCoord? SpotlightMoveTarget  = null,
+
+    // Economy (M14 14.5) — world-level per-capita price index (decision 8) and every Guild/Civ
+    // Organization's treasury for the read-only economic ledger panel. Personal Wealth and
+    // settlement-level precious-commodity data are already carried on EntitySnapshot/
+    // SettlementSnapshot above — this is just the two things with no other home in the snapshot.
+    float GlobalPriceIndex = 1f,
+    IReadOnlyList<GuildSnapshot>? Guilds = null
 );
+}
 ```
 
 ## SettlementStub
@@ -116,7 +136,12 @@ public sealed record SettlementSnapshot(
     IReadOnlyDictionary<string, float>? ResourceLedger = null,
     int       ConqueredYear      = 0,
     int       ConqueredFromCivId = 0,
-    IReadOnlyDictionary<string, float>? ResourceStores = null);
+    IReadOnlyDictionary<string, float>? ResourceStores = null,
+    // M14 14.5 — economic ledger UI: per-money-equivalent-commodity LocalScarcityMultiplier
+    // (PricingService.LocalScarcityMultiplier), keyed by EconomyConfig.MoneyEquivalentCommodities.
+    // Precious-commodity *reserves* themselves are already derivable from ResourceStores above —
+    // no separate field needed for that half.
+    IReadOnlyDictionary<string, float>? LocalScarcityMultipliers = null);
 ```
 
 ## Civilization
@@ -178,7 +203,8 @@ public sealed record EntitySnapshot(
     bool IsAlive,
     string? CivName    = null,  // non-null for characters that belong to a civilization
     string AncestryId  = "",    // ancestry id from ancestries.toml; empty for non-character entities
-    float  Wellbeing   = 0f    // -1 spiraling … +1 flourishing; 0 for non-character entities
+    float  Wellbeing   = 0f,    // -1 spiraling … +1 flourishing; 0 for non-character entities
+    float  Wealth      = 0f     // M14 14.5 — personal Wealth; 0 for non-character entities
 );
 ```
 
@@ -250,9 +276,20 @@ public sealed record ImprovementSnapshot(
 
 ## CharacterWatchSnapshot
 **File:** `WorldEngine.Sim/World/WorldSnapshot.cs:69`  
-**Kind:** `sealed record`
+**Kind:** `class`
 
 ```csharp
+public sealed record GuildSnapshot(
+    long      Id,
+    string    Name,
+    string    Kind,
+    float     Treasury,
+    TileCoord? HomeSettlementCoord,
+    int       MemberCount,
+    int       RecentTradeEventCount);
+
+public sealed record GoalWatchEntry(string Description, float Priority);
+
 public sealed record CharacterWatchSnapshot(
     EntityId   Id,
     string     Name,
@@ -265,6 +302,86 @@ public sealed record CharacterWatchSnapshot(
     NeedsVector   Needs,
     PersonalityVector Personality,
     IReadOnlyList<GoalWatchEntry> Goals);
+
+public sealed record BasicWatchSnapshot(
+    EntityId   Id,
+    EntityKind Kind,
+    string     Name,
+    string     SpeciesId,   // beasts.toml id for beasts; empty for characters
+    bool       IsLegendary,
+    TileCoord  Location,
+    string     BiomeName,
+    int        AgeSeasons,
+    float      HealthFraction,
+    float      FoodFraction);
+
+public sealed record WorldSnapshot(
+    // Time
+    int CurrentYear,
+    Season CurrentSeason,
+    SimSpeed CurrentSpeed,
+    bool IsPaused,
+    long TicksPerSecond,
+
+    // Map — flat array indexed by (y * WorldTileWidth + x); X wraps, Y clamps
+    TileDisplayData[] AllTiles,
+    OverlayType ActiveOverlay,
+    int WorldTileWidth,
+    int WorldTileHeight,
+
+    // Event log
+    IReadOnlyList<SimEvent> RecentEvents,
+
+    // Tile inspector (null if no tile selected)
+    TileInspectorData? InspectedTile,
+
+    // Entities — flat lookup by EntityId; used by inspector and map renderer
+    IReadOnlyDictionary<EntityId, EntitySnapshot> EntitySnapshots,
+
+    // Settlements — keyed by tile coord; used by inspector and map renderer
+    IReadOnlyDictionary<TileCoord, SettlementSnapshot> Settlements,
+
+    // Ruins — keyed by tile coord; displayed in inspector and map renderer
+    IReadOnlyDictionary<TileCoord, RuinRecord> Ruins,
+
+    // Territory and improvements (M3 Phase 3.0)
+    // TerritoryMap: tile → (owning city tile, civ id). Absent = unclaimed.
+    IReadOnlyDictionary<TileCoord, TerritorySnapshot> TerritoryMap,
+    // ImprovementMap: tile → improvement snapshot. Absent = no improvement.
+    IReadOnlyDictionary<TileCoord, ImprovementSnapshot> ImprovementMap,
+
+    // World-level drift parameters for UI status display
+    float GlobalTemperatureAnomaly,
+    float GlobalPrecipitationMultiplier,
+    float StormCorridorNormalizedLat,
+
+    // Watch panel (M3 Phase 3.4) — exactly one of these is non-null at a time (or neither, if
+    // nothing is watched), depending on the watched entity's kind. Tier1Character gets the rich
+    // needs/goals/personality card; everything else (Tier2Character, LegendaryBeast, ...) gets
+    // the thinner vitals-only card.
+    CharacterWatchSnapshot? WatchedCharacter = null,
+    BasicWatchSnapshot?     WatchedBasic     = null,
+
+    // Save state (M3 Phase 3.6) — used by UI to show "Saving..." overlay
+    bool IsSaving     = false,
+    long LastSaveTick = -1,
+
+    // Artifact system (M5) — all artifacts known to the world at snapshot time
+    // Includes destroyed artifacts so the UI can display historical context if needed.
+    IReadOnlyList<ArtifactSnapshot>? Artifacts = null,
+
+    // Spotlight (M7+) — set when the player is controlling a character
+    EntityId?  SpotlightCharacterId = null,
+    TileCoord? SpotlightMoveTarget  = null,
+
+    // Economy (M14 14.5) — world-level per-capita price index (decision 8) and every Guild/Civ
+    // Organization's treasury for the read-only economic ledger panel. Personal Wealth and
+    // settlement-level precious-commodity data are already carried on EntitySnapshot/
+    // SettlementSnapshot above — this is just the two things with no other home in the snapshot.
+    float GlobalPriceIndex = 1f,
+    IReadOnlyList<GuildSnapshot>? Guilds = null
+);
+}
 ```
 
-<!-- content-hash: 2713736a5be37920 -->
+<!-- content-hash: 46890b37a769e023 -->
