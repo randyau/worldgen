@@ -44,6 +44,37 @@ public static class EconomyPhase
         }
 
         // ─── 2. TotalMoneySupply (decision 8's full formula, including decision 10's fixes) ────
+        var (totalMoneySupply, totalPopulation) = ComputeTotalMoneySupply(world, cfg);
+
+        float moneySupplyPerCapita = totalMoneySupply / Math.Max(1, totalPopulation);
+
+        // ─── 3. EMA-update GlobalPriceIndex toward the clamped target ──────────────────────────
+        float target = Math.Clamp(moneySupplyPerCapita / Math.Max(0.0001f, cfg.ReferenceMoneySupplyPerCapita),
+            cfg.PriceIndexMin, cfg.PriceIndexMax);
+        world.GlobalPriceIndex = Math.Clamp(
+            world.GlobalPriceIndex + cfg.PriceIndexEmaAlpha * (target - world.GlobalPriceIndex),
+            cfg.PriceIndexMin, cfg.PriceIndexMax);
+    }
+
+    /// <summary>
+    /// Decision 8's full TotalMoneySupply formula, extracted as a public helper so tests (the
+    /// 14.5 conservation invariant suite) and the economic ledger UI snapshot can share the exact
+    /// same computation RunAnnual uses for GlobalPriceIndex — rather than a second, divergent copy.
+    /// <br/><br/>
+    /// <b>14.5 conservation-invariant fix:</b> the settlement-side term originally summed only the
+    /// hardcoded <c>{"gold", "silver", "gems"}</c> triplet, but <see cref="EconomyConfig.
+    /// MoneyEquivalentCommodities"/> (the actual set a trade can be paid in/out of, since the 14.3
+    /// instrument-first fix broadened it to include iron/copper) is a superset of that triplet.
+    /// A trade paid in iron/copper physically debits a settlement's iron/copper ResourceStores and
+    /// credits the merchant's Wealth — a real, conserved transfer — but the old formula only ever
+    /// measured the Wealth side of that transfer, never the settlement-side debit, so every such
+    /// trade silently inflated the *measured* TotalMoneySupply with no matching decrease anywhere
+    /// in the sum: a genuine leak in the conservation invariant, not just in the physical model
+    /// (which was already correct — see ResolveMerchantTrade). Fixed by iterating
+    /// MoneyEquivalentCommodities instead of a hardcoded subset of it.
+    /// </summary>
+    public static (float TotalMoneySupply, int TotalPopulation) ComputeTotalMoneySupply(WorldState world, EconomyConfig cfg)
+    {
         float totalMoneySupply = 0f;
         int totalPopulation = 0;
 
@@ -64,19 +95,11 @@ public static class EconomyPhase
             totalMoneySupply += drop.Amount;
         foreach (var stub in world.Settlements.Values)
         {
-            totalMoneySupply += stub.GetStore("gold")   * cfg.GetBaseValue("gold");
-            totalMoneySupply += stub.GetStore("silver") * cfg.GetBaseValue("silver");
-            totalMoneySupply += stub.GetStore("gems")   * cfg.GetBaseValue("gems");
-            totalPopulation  += stub.Population;
+            foreach (var commodity in cfg.MoneyEquivalentCommodities)
+                totalMoneySupply += stub.GetStore(commodity) * cfg.GetBaseValue(commodity);
+            totalPopulation += stub.Population;
         }
 
-        float moneySupplyPerCapita = totalMoneySupply / Math.Max(1, totalPopulation);
-
-        // ─── 3. EMA-update GlobalPriceIndex toward the clamped target ──────────────────────────
-        float target = Math.Clamp(moneySupplyPerCapita / Math.Max(0.0001f, cfg.ReferenceMoneySupplyPerCapita),
-            cfg.PriceIndexMin, cfg.PriceIndexMax);
-        world.GlobalPriceIndex = Math.Clamp(
-            world.GlobalPriceIndex + cfg.PriceIndexEmaAlpha * (target - world.GlobalPriceIndex),
-            cfg.PriceIndexMin, cfg.PriceIndexMax);
+        return (totalMoneySupply, totalPopulation);
     }
 }

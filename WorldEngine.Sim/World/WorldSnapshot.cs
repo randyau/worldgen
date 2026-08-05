@@ -54,7 +54,27 @@ public sealed record SettlementSnapshot(
     IReadOnlyDictionary<string, float>? ResourceLedger = null,
     int       ConqueredYear      = 0,
     int       ConqueredFromCivId = 0,
-    IReadOnlyDictionary<string, float>? ResourceStores = null);
+    IReadOnlyDictionary<string, float>? ResourceStores = null,
+    // M14 14.5 — economic ledger UI: per-money-equivalent-commodity LocalScarcityMultiplier
+    // (PricingService.LocalScarcityMultiplier), keyed by EconomyConfig.MoneyEquivalentCommodities.
+    // Precious-commodity *reserves* themselves are already derivable from ResourceStores above —
+    // no separate field needed for that half.
+    IReadOnlyDictionary<string, float>? LocalScarcityMultipliers = null);
+
+/// <summary>
+/// M14 14.5 — economic ledger UI: a snapshot of one Organization's treasury/membership for display.
+/// Not limited to Guilds despite the name's origin — Kind lets the ledger panel also list civ
+/// treasuries (relevant to TreasuryInsolvent/economic-ruin), reusing one snapshot shape for both
+/// rather than inventing a parallel CivTreasurySnapshot.
+/// </summary>
+public sealed record GuildSnapshot(
+    long      Id,
+    string    Name,
+    string    Kind,
+    float     Treasury,
+    TileCoord? HomeSettlementCoord,
+    int       MemberCount,
+    int       RecentTradeEventCount);
 
 /// <summary>
 /// Immutable snapshot of a single active goal for the watch panel.
@@ -158,5 +178,12 @@ public sealed record WorldSnapshot(
 
     // Spotlight (M7+) — set when the player is controlling a character
     EntityId?  SpotlightCharacterId = null,
-    TileCoord? SpotlightMoveTarget  = null
+    TileCoord? SpotlightMoveTarget  = null,
+
+    // Economy (M14 14.5) — world-level per-capita price index (decision 8) and every Guild/Civ
+    // Organization's treasury for the read-only economic ledger panel. Personal Wealth and
+    // settlement-level precious-commodity data are already carried on EntitySnapshot/
+    // SettlementSnapshot above — this is just the two things with no other home in the snapshot.
+    float GlobalPriceIndex = 1f,
+    IReadOnlyList<GuildSnapshot>? Guilds = null
 );

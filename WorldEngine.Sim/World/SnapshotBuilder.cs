@@ -1,8 +1,10 @@
 using WorldEngine.Sim.Civilizations;
 using WorldEngine.Sim.Core;
+using WorldEngine.Sim.Economy;
 using WorldEngine.Sim.Entities;
 using WorldEngine.Sim.Entities.Artifacts;
 using WorldEngine.Sim.Entities.Characters;
+using WorldEngine.Sim.Organizations;
 using WorldEngine.Sim.Tiles;
 
 namespace WorldEngine.Sim.World;
@@ -32,6 +34,7 @@ public sealed class SnapshotBuilder
         var watchedChar      = BuildCharacterWatchSnapshot(world);
         var watchedBasic     = watchedChar is null ? BuildBasicWatchSnapshot(world) : null;
         var artifacts        = BuildArtifactSnapshots(world);
+        var guilds           = BuildGuildSnapshots(world, recentEvents);
 
         return new WorldSnapshot(
             CurrentYear:                 world.CurrentYear,
@@ -59,7 +62,9 @@ public sealed class SnapshotBuilder
             LastSaveTick:                world.LastSaveTick,
             Artifacts:                   artifacts,
             SpotlightCharacterId:        world.SpotlightCharacterId,
-            SpotlightMoveTarget:         world.SpotlightIntent?.MoveTarget
+            SpotlightMoveTarget:         world.SpotlightIntent?.MoveTarget,
+            GlobalPriceIndex:            world.GlobalPriceIndex,
+            Guilds:                      guilds
         );
     }
 
@@ -94,11 +99,20 @@ public sealed class SnapshotBuilder
     private static IReadOnlyDictionary<TileCoord, SettlementSnapshot> BuildSettlementSnapshots(
         WorldState world)
     {
+        var econCfg = world.SimConfig.Economy;
         var dict = new Dictionary<TileCoord, SettlementSnapshot>(world.Settlements.Count);
         foreach (var (coord, stub) in world.Settlements)
         {
             string civName = world.Civilizations.TryGetValue(stub.CivId, out var civ)
                 ? civ.Name : "Unknown";
+
+            // M14 14.5 — one LocalScarcityMultiplier per money-equivalent commodity, so the
+            // economic ledger panel can show why a settlement's effective price differs from the
+            // seeded BaseValuePerUnit without re-deriving PricingService math on the UI side.
+            var scarcity = new Dictionary<string, float>(econCfg.MoneyEquivalentCommodities.Count);
+            foreach (var commodity in econCfg.MoneyEquivalentCommodities)
+                scarcity[commodity] = PricingService.LocalScarcityMultiplier(stub, commodity, econCfg);
+
             dict[coord] = new SettlementSnapshot(
                 Coord:              coord,
                 Name:               stub.Name,
@@ -109,9 +123,46 @@ public sealed class SnapshotBuilder
                 ResourceLedger:     stub.ResourceLedger,
                 ConqueredYear:      stub.ConqueredYear,
                 ConqueredFromCivId: stub.ConqueredFromCivId,
-                ResourceStores:     stub.ResourceStores);
+                ResourceStores:     stub.ResourceStores,
+                LocalScarcityMultipliers: scarcity);
         }
         return dict;
+    }
+
+    /// <summary>
+    /// M14 14.5 — projects every Organization with a nonzero economic footprint (any Guild, plus
+    /// any Organization that has ever held a Treasury balance) into a <see cref="GuildSnapshot"/>
+    /// for the read-only economic ledger panel. RecentTradeEventCount counts TradePaid events in
+    /// this tick's <paramref name="recentEvents"/> window whose actor is a member of the
+    /// Organization — a cheap proxy for "recent trade activity" that needs no new bookkeeping.
+    /// </summary>
+    private static IReadOnlyList<GuildSnapshot> BuildGuildSnapshots(
+        WorldState world, IReadOnlyList<SimEvent> recentEvents)
+    {
+        if (world.Organizations.Count == 0) return Array.Empty<GuildSnapshot>();
+
+        var result = new List<GuildSnapshot>();
+        foreach (var org in world.Organizations.Values)
+        {
+            if (org.Kind != OrganizationKind.Guild && org.Treasury == 0f) continue;
+
+            int tradeCount = 0;
+            foreach (var e in recentEvents)
+            {
+                if (e.Type != EventType.TradePaid) continue;
+                if (org.Members.ContainsKey(new EntityId(e.ActorId))) tradeCount++;
+            }
+
+            result.Add(new GuildSnapshot(
+                Id:                     org.Id.Value,
+                Name:                   org.Name,
+                Kind:                   org.Kind.ToString(),
+                Treasury:               org.Treasury,
+                HomeSettlementCoord:    org.HomeSettlementCoord,
+                MemberCount:            org.Members.Count,
+                RecentTradeEventCount:  tradeCount));
+        }
+        return result;
     }
 
     private static IReadOnlyDictionary<EntityId, EntitySnapshot> BuildEntitySnapshots(WorldState world)

@@ -61,6 +61,7 @@ public sealed class Tier2Character : SimEntity
     protected override string SnapshotSpeciesId    => string.Empty;
     protected override bool   SnapshotIsLegendary  => false;
     protected override float  SnapshotFoodFraction => Needs.Food;
+    protected override float  SnapshotWealth       => Wealth;
 
     // IEntity.EmitCommands — behavior handled by Tier2BehaviorPhase, not here
     public override IEnumerable<ICommand> EmitCommands(IWorldStateReadOnly world, SimPhase phase)

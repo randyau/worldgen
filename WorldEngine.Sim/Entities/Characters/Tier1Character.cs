@@ -116,6 +116,7 @@ public sealed class Tier1Character : SimEntity
     protected override float   SnapshotFoodFraction => Needs.Food;
     protected override string  SnapshotAncestryId   => Identity.AncestryId;
     protected override float   SnapshotWellbeing    => Wellbeing;
+    protected override float   SnapshotWealth       => Wealth;
 
     public CharacterSnapshot ToCharacterSnapshot() => new(
         Id:             Id,

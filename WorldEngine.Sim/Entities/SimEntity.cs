@@ -50,6 +50,8 @@ public abstract class SimEntity : IEntity
     protected virtual  string SnapshotAncestryId  => string.Empty;
     protected virtual  float  SnapshotWellbeing   => 0f;
     protected virtual  string? SnapshotCivName    => null;
+    // M14 14.5 — economic ledger UI plumbing: 0 for non-character entities (beasts have no Wealth).
+    protected virtual  float  SnapshotWealth      => 0f;
 
     public EntitySnapshot ToSnapshot() => new(
         Id:             Id,
@@ -64,5 +66,6 @@ public abstract class SimEntity : IEntity
         IsAlive:        IsAlive,
         CivName:        SnapshotCivName,
         AncestryId:     SnapshotAncestryId,
-        Wellbeing:      SnapshotWellbeing);
+        Wellbeing:      SnapshotWellbeing,
+        Wealth:         SnapshotWealth);
 }

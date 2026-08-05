@@ -19,5 +19,6 @@ public sealed record EntitySnapshot(
     bool IsAlive,
     string? CivName    = null,  // non-null for characters that belong to a civilization
     string AncestryId  = "",    // ancestry id from ancestries.toml; empty for non-character entities
-    float  Wellbeing   = 0f    // -1 spiraling … +1 flourishing; 0 for non-character entities
+    float  Wellbeing   = 0f,    // -1 spiraling … +1 flourishing; 0 for non-character entities
+    float  Wealth      = 0f     // M14 14.5 — personal Wealth; 0 for non-character entities
 );
