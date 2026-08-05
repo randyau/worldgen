@@ -183,7 +183,11 @@ public sealed class EventLogPanel : IWorkspacePanel
         EventType.CaravanRaided            or
         EventType.ArtifactPurchased        or
         EventType.PhysicianHealed          or
-        EventType.BeastSlain               => true,
+        EventType.BeastSlain               or
+        EventType.GuildFormed              or
+        EventType.TreasuryInsolvent        or
+        EventType.WarReparationsPaid       or
+        EventType.GuildLeadershipTransferred => true,
         _                                  => false
     };
 }

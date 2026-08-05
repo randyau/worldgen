@@ -110,41 +110,61 @@ public class M13RelationshipEventBalanceTests
         // Re-calibrated 2026-08-03 after M13.8.1's marriage-to-Tier2 crystallization: population
         // grows faster now (more marriages → more crystallizations), so more deaths to mourn.
         // Observed 114 in one seed (was 23-50 pre-13.8.1); ceiling raised with margin.
-        [EventType.CharacterGrieved] = new Band(5, 150),
+        //
+        // Re-calibrated again 2026-08-05 (M14 14.4): fixed a pre-existing latent bug in
+        // Tier2BehaviorPhase.PromoteToTier1 (shared by crystallization and marriage-promotion) —
+        // the promoted Tier1 reused the dead Tier2's exact EntityId, so EntityRegistry's shared
+        // Dictionary<EntityId, IEntity> aliased the two and the same-or-next-tick dead-Tier2 sweep
+        // deleted the *promoted Tier1* instead, silently destroying every promotion almost
+        // immediately. Every band below that depends on living Tier1 population/history (promoted
+        // characters now actually survive and accumulate relationship history instead of vanishing)
+        // shifted upward as a direct, correct consequence — re-observed across seeds 42/777/9999,
+        // 300 years each: CharacterGrieved 84-223, CharacterMarried 46-109, DebtIncurred
+        // 1136-3530, DebtForgiven 333-1101, CharacterDefected 30-158, RivalryFormed 48-194,
+        // RivalryPlacated 162-460, RivalryEscalatedToFeud 31-115, RivalsReconciled 21-55. Ceilings
+        // widened ~30-40% above observed max, same margin philosophy as every prior recalibration
+        // in this file; CharacterEstranged/OathBroken/CharacterBorn stayed within their existing
+        // bands and are unchanged.
+        [EventType.CharacterGrieved] = new Band(5, 320),
 
         // Re-calibrated 2026-08-03: M13.8.1 let a Bond goal target a Tier2 (Tier1's scarcity
         // bottleneck lifted — Tier2 is the bulk background population), and marrying one
         // auto-crystallizes them. Observed 32-67 (was 0-10 pre-13.8.1); floor now safely nonzero.
-        [EventType.CharacterMarried] = new Band(20, 95),
+        // Ceiling raised 2026-08-05 (M14 14.4 PromoteToTier1 fix, see CharacterGrieved above).
+        [EventType.CharacterMarried] = new Band(20, 155),
 
         // M13 13.5 dispatch-bug fix (GrantAid/ForgiveDebt were never wired into
         // CharacterBehaviorPhase.ResolveCommand's switch — silently no-op'd every time the utility
         // scorer picked them). Now fires constantly via the Tier2 community-aid shortcut since
         // Tier2 needs sit near their decay floor most of the time. High-side band reflects that;
-        // narrowing this is exactly the "fine details" tuning the project has deferred.
-        [EventType.DebtIncurred]  = new Band(400, 3200),
-        [EventType.DebtForgiven]  = new Band(120, 1100),
+        // narrowing this is exactly the "fine details" tuning the project has deferred. Ceilings
+        // raised 2026-08-05 (M14 14.4 PromoteToTier1 fix, see CharacterGrieved above).
+        [EventType.DebtIncurred]  = new Band(400, 4600),
+        [EventType.DebtForgiven]  = new Band(120, 1450),
 
         // Re-calibrated 2026-08-02: the lifespan fix let a chronic-Wellbeing-crisis character
         // re-select Defect every tick a foreign confidant was available (640 defections in one
         // seed pre-DefectionCooldownTicks). With the cooldown, observed 1-51 — still occasionally
         // high for a single seed with a persistently miserable character, so ceiling stays generous.
-        [EventType.CharacterDefected] = new Band(0, 80),
+        // Ceiling raised 2026-08-05 (M14 14.4 PromoteToTier1 fix, see CharacterGrieved above).
+        [EventType.CharacterDefected] = new Band(0, 230),
 
         // Re-calibrated 2026-08-03: floors nudged down slightly (was 10) after the GrantAid/
         // Estrangement rebalance shifted RNG-stream timing — observed 9-41 / 6-31, ordinary drift
-        // from an unrelated change, not a regression in either mechanic (see class doc).
-        [EventType.RivalryFormed]          = new Band(8, 60),
+        // from an unrelated change, not a regression in either mechanic (see class doc). Ceilings
+        // raised 2026-08-05 (M14 14.4 PromoteToTier1 fix, see CharacterGrieved above).
+        [EventType.RivalryFormed]          = new Band(8, 280),
         // Re-calibrated 2026-08-03 with the Fear/Placate rebalance (see class doc): Placate is now
         // reachable for any formed rivalry instead of only steep power-mismatches, so it fires far
-        // more — observed 51-154 (was 0-3).
-        [EventType.RivalryPlacated]        = new Band(20, 220),
-        [EventType.RivalryEscalatedToFeud] = new Band(5, 55),
+        // more — observed 51-154 (was 0-3). Ceiling raised 2026-08-05 (M14 14.4 PromoteToTier1 fix).
+        [EventType.RivalryPlacated]        = new Band(20, 600),
+        [EventType.RivalryEscalatedToFeud] = new Band(5, 165),
 
         // Re-calibrated 2026-08-03: the Fear/Placate rebalance above closed the gap that kept this
         // at 0 in every prior run (see class doc) — observed 7-18, now a real floor+ceiling instead
-        // of a ceiling-only "no evidence this fires" band.
-        [EventType.RivalsReconciled]       = new Band(3, 30),
+        // of a ceiling-only "no evidence this fires" band. Ceiling raised 2026-08-05 (M14 14.4
+        // PromoteToTier1 fix, see CharacterGrieved above).
+        [EventType.RivalsReconciled]       = new Band(3, 80),
         // Re-calibrated 2026-08-03: the Estrangement rebalance (see class doc) fixed the
         // unreachable-Trust-swing problem — observed 2-4, now a real floor+ceiling.
         [EventType.CharacterEstranged]     = new Band(1, 20),

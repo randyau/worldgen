@@ -5,6 +5,7 @@ One-line description of every non-trivial source file. Check here before running
 
 ## WorldEngine.Sim/Civilizations/
 - `CivTracker.Diplomacy.cs` — Resolves character commands that affect civilizations, settlements, and relationships. Split across: CivTracker.War.cs, CivTracker.Diplomacy.cs, CivTracker.Naming.cs
+- `CivTracker.Economy.cs` — Resolves character commands that affect civilizations, settlements, and relationships. Split across: CivTracker.War.cs, CivTracker.Diplomacy.cs, CivTracker.Naming.cs
 - `CivTracker.Naming.cs` — Resolves character commands that affect civilizations, settlements, and relationships. Split across: CivTracker.War.cs, CivTracker.Diplomacy.cs, CivTracker.Naming.cs
 - `CivTracker.Unrest.cs` — Resolves character commands that affect civilizations, settlements, and relationships. Split across: CivTracker.War.cs, CivTracker.Diplomacy.cs, CivTracker.Naming.cs
 - `CivTracker.War.cs` — Resolves character commands that affect civilizations, settlements, and relationships. Split across: CivTracker.War.cs, CivTracker.Diplomacy.cs, CivTracker.Naming.cs

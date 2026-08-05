@@ -10,7 +10,24 @@ of the fresh 3500 range). Phase 14.2 (persistent trade routes / caravan transit 
 in the milestone) also shipped 2026-08-05 — see its phase-sequence entry below for the full
 `TradeRoute`/`Caravan` data shape, formation/severance/reopening rules, and the interception/
 disaster/piracy roll model. New `EventType`s `TradeRouteFormed = 3501`, `TradeRouteSevered = 3502`,
-`CaravanRaided = 3503`. 14.3–14.5 not yet started.
+`CaravanRaided = 3503`. Phase 14.3 (goal fulfillment via trade) also shipped 2026-08-05 — see its
+phase-sequence entry below (`PurchaseArtifact`/`ArtifactPurchaseResolver`, `EventType.ArtifactPurchased
+= 3504`). Phase 14.4 (Guild organizations, real stored treasuries, civ-level economic ruin, war
+reparations) shipped 2026-08-05 — `OrganizationKind.Guild` populated for the first time
+(Wealth-threshold formation/join in `Tier2BehaviorPhase.FormOrJoinGuild`, reusing
+`SuccessionResolver.SelectSuccessor` unmodified for leader succession), `ContributeToTreasury`/
+`WithdrawFromTreasury` commands, Guild-member trade routing to `Organization.Treasury`, civ-level
+`TreasuryInsolvent` (edge-triggered) folded into the existing `CivSplintered`/instability scoring,
+and one-time war reparations on war resolution. New `EventType`s `GuildFormed = 3505`,
+`TreasuryContribution = 3506`, `TreasuryWithdrawal = 3507`, `TreasuryInsolvent = 3508`,
+`WarReparationsPaid = 3509`, `GuildLeadershipTransferred = 3510`. Also fixed a latent
+`Tier2BehaviorPhase.PromoteToTier1` bug (shared by crystallization/marriage-promotion since M13.8):
+the promoted Tier1 reused the dead Tier2's exact `EntityId`, so `EntityRegistry`'s shared
+`Dictionary<EntityId, IEntity>` aliased the two and the same-or-next-tick dead-Tier2 sweep deleted
+the *promoted Tier1* instead — see `SimEntity.Id`'s doc comment and
+`M13RelationshipEventBalanceTests`' updated bands (fixing this let promoted characters actually
+survive, correctly raising several M13-era event-count ceilings). 14.5 (balance pass + economic
+ledger UI) not yet started.
 
 See `docs/roadmap.md` § "M14" for the one-line scope statement and § the M12-era audit notes
 (lines ~350-361) for why guild/merchant succession must reuse the M12 `SuccessionResolver`

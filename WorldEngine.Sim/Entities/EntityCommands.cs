@@ -78,6 +78,18 @@ public sealed record FormTradeRoute(
 // the Tier1 EMIT/RESOLVE split is consistent with the surrounding code, not a new exemption.
 public sealed record PurchaseArtifact(EntityId BuyerId, ArtifactId ArtifactId) : ICommand;
 
+// M14 14.4 — decision 9's two treasury commands, mirroring GrantAid's two-EntityId shape (the
+// transferred amount is config-driven at resolution, same as GrantAid's AidDebtIncrement, rather
+// than a command field). ContributeToTreasury: any member of OrganizationId, no authority check —
+// moves personal Wealth into Organization.Treasury. Resolved by CivTracker.ResolveContributeToTreasury.
+public sealed record ContributeToTreasury(EntityId CharacterId, OrganizationId OrganizationId) : ICommand;
+// WithdrawFromTreasury: gated on LeaderId == Organization.LeaderId (the only authority check in
+// the whole model, per decision 9) — moves Organization.Treasury into RecipientId's personal
+// Wealth. RecipientId may be LeaderId themself or any other living member. Resolved by
+// CivTracker.ResolveWithdrawFromTreasury.
+public sealed record WithdrawFromTreasury(
+    EntityId LeaderId, OrganizationId OrganizationId, EntityId RecipientId) : ICommand;
+
 // Phase 3.0 — city-state territory commands
 public sealed record BuildImprovement(
     EntityId        CharacterId,

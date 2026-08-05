@@ -53,6 +53,15 @@ public sealed class Organization
     /// </summary>
     public TileCoord? HomeSettlementCoord { get; internal set; }
 
+    /// <summary>
+    /// M14 14.4 — edge-trigger latch for <see cref="Core.EventType.TreasuryInsolvent"/>: true while
+    /// <see cref="Treasury"/> has been negative since the last time it was seen at or above zero.
+    /// Lets CivTracker.CheckTreasuryInsolvency fire the event once per crossing rather than once
+    /// per tick the Treasury happens to stay negative — same "fire on crossing, not on every tick
+    /// past it" shape as the M13.5 Estrangement/OathBroken cooldown fix.
+    /// </summary>
+    public bool TreasuryInsolvencyFlagged { get; internal set; } = false;
+
     public Organization(OrganizationId id, OrganizationKind kind, string name, EntityId leaderId, int foundedYear,
         TileCoord? homeSettlementCoord = null)
     {

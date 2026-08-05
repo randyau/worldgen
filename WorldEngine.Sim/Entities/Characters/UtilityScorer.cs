@@ -242,6 +242,33 @@ public sealed class UtilityScorer
         if (bestDebtCmd != null)
             actions.Add(new(bestDebtCmd, bestDebtScore));
 
+        // M14 14.4 (decision 9) — treasury commands: ContributeToTreasury (any member, no
+        // authority check, scored by that membership's Loyalty) and WithdrawFromTreasury
+        // (Leader-only, self-directed here — a needy leader draws on their own Organization's
+        // Treasury, mirroring GrantAid's self-need shortcut rather than scanning for a needy
+        // co-located member, which would duplicate the GrantAid/ForgiveDebt scan above for a
+        // command whose recipient can already be reached in two ordinary steps via a subsequent
+        // GrantAid, per the phase doc's decision 9 note on multi-step spending).
+        var econCfg = world.SimConfig.Economy;
+        foreach (var m in c.Memberships)
+        {
+            var org = world.GetOrganization(m.OrganizationId);
+            if (org == null) continue;
+
+            if (c.Wealth >= econCfg.ContributeToTreasuryWealthThreshold)
+            {
+                float score = Score(c, ActionType.ContributeToTreasury, m.Loyalty, world, cfg);
+                actions.Add(new(new ContributeToTreasury(c.Id, m.OrganizationId), score));
+            }
+
+            if (org.LeaderId == c.Id && org.Treasury >= econCfg.WithdrawFromTreasuryAmount
+                && (c.Needs.Food < debtCfg.Tier1AidNeedThreshold || c.Needs.Safety < debtCfg.Tier1AidNeedThreshold))
+            {
+                float score = Score(c, ActionType.WithdrawFromTreasury, c.Personality.Ambition, world, cfg);
+                actions.Add(new(new WithdrawFromTreasury(c.Id, org.Id, c.Id), score));
+            }
+        }
+
         // Placate — M13 13.1: Fear as a submission/appeasement axis. A low-Aggression character
         // facing a feared existing rival prefers appeasement over further escalation. M13.8.1: a
         // Tier2 rival can be placated too (the Tier1 side is always the one initiating regardless).
@@ -535,7 +562,14 @@ public sealed class UtilityScorer
     // DECISION: ActionType is a private enum keeping the same integer indices as before.
     // UtilityAffinityTables.TryParseAction maps TOML names to these integer indices directly,
     // so adding a new ActionType requires updating both here and in TryParseAction.
-    private enum ActionType { Rest, Travel, Establish, Ally, Negotiate, Rivalry, War, Raid, Create, Flee, BuildImprovement, FoundCity, HuntBeast, SeaVoyage, Marry, GrantAid, ForgiveDebt, Placate, Defect }
+    private enum ActionType
+    {
+        Rest, Travel, Establish, Ally, Negotiate, Rivalry, War, Raid, Create, Flee,
+        BuildImprovement, FoundCity, HuntBeast, SeaVoyage, Marry, GrantAid, ForgiveDebt, Placate, Defect,
+        // M14 14.4 — decision 9's two treasury commands (appended at the end so existing
+        // UtilityAffinityTables indices/TOML entries are unaffected).
+        ContributeToTreasury, WithdrawFromTreasury
+    }
 
     // covet→conflict seam: GoalAdvancement already boosts War/Raid actions when a character has
     // a CovetArtifact goal, because GoalAffinity[CovetArtifact, War] and [CovetArtifact, Raid]
@@ -654,6 +688,8 @@ public sealed class UtilityScorer
         ActionType.ForgiveDebt      => c.Personality.Compassion * 0.7f + c.Personality.Honesty * 0.3f,
         ActionType.Placate          => (1f - c.Personality.Aggression) * 0.6f + c.Personality.Compassion * 0.4f,
         ActionType.Defect           => (1f - c.Personality.Loyalty) * 0.7f + c.Personality.Curiosity * 0.3f,
+        ActionType.ContributeToTreasury => c.Personality.Loyalty * 0.7f + c.Personality.Compassion * 0.3f,
+        ActionType.WithdrawFromTreasury => c.Personality.Ambition,
         _                           => 0.2f
     };
 

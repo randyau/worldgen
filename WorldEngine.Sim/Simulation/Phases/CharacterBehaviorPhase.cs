@@ -551,6 +551,35 @@ public sealed class CharacterBehaviorPhase
                 }
             }
         }
+
+        // M14 14.4 — Guild leader succession: reuses SuccessionResolver.SelectSuccessor unmodified
+        // (no new succession mechanism, per the M12 audit note this milestone is bound by),
+        // mirroring the civ ruler succession block above generalized only as far as Guild needs
+        // it (Family/Religion leader succession stays out of scope for 14.4). Dead members are
+        // never removed from Organization.Members (same convention Family already follows — see
+        // FindHeir/SelectSuccessor's IsAlive filters below), so no cleanup is needed here beyond
+        // reassigning LeaderId, mirroring how the civ block above only reassigns civ.RulerId/
+        // succOrg.LeaderId without touching Members' Role entries.
+        foreach (var membership in c.Memberships)
+        {
+            if (!world.Organizations.TryGetValue(membership.OrganizationId, out var guildOrg)) continue;
+            if (guildOrg.Kind != OrganizationKind.Guild || guildOrg.LeaderId != c.Id) continue;
+
+            var successorId = SuccessionResolver.SelectSuccessor(guildOrg, world, _cfg.MinRulerAgeSeasons,
+                member => (member.Personality.Ambition + member.Skills.Leadership) * 0.5f);
+            if (!successorId.HasValue) continue; // no eligible member — seat simply stays vacant
+
+            guildOrg.LeaderId = successorId.Value;
+            var successor = (Tier1Character)world.GetEntity(successorId.Value)!;
+
+            var succPayload = JsonSerializer.Serialize(new GuildSuccessionPayload(
+                guildOrg.Id.Value, guildOrg.Name,
+                c.Id.Value, c.Identity.Name,
+                successorId.Value.Value, successor.Identity.Name));
+            pending.Add(new PendingEvent(EventType.GuildLeadershipTransferred, c.Location, null,
+                succPayload, new[] { c.Id.Value, successorId.Value.Value },
+                ActorId: successorId.Value.Value, ActorName: successor.Identity.Name));
+        }
     }
 
     /// <summary>
@@ -913,6 +942,8 @@ public sealed class CharacterBehaviorPhase
             case Placate:
             case Defect:
             case BuildImprovement:
+            case ContributeToTreasury:
+            case WithdrawFromTreasury:
                 CivTracker.Resolve(cmd, world, pending, _simCfg.SettlementNames);
                 break;
         }

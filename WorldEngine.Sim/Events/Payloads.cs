@@ -317,6 +317,46 @@ internal sealed record ArtifactPurchasedPayload(
 internal sealed record ArtifactDestroyedPayload(
     long ArtifactId, string ArtifactName, string Cause);
 
+// ─── M14 14.4 — Guild organizations, treasuries, civ-level economic ruin ────
+
+/// <summary>A new Guild-kind Organization forms (a merchant joining an already-existing Guild
+/// fires no separate event — see Tier2BehaviorPhase.FormOrJoinGuild).</summary>
+internal sealed record GuildFormedPayload(
+    long OrganizationId, string GuildName,
+    long FounderId, string FounderName, int TileX, int TileY);
+
+/// <summary>Decision 9: any member deposits personal Wealth into their Organization's Treasury,
+/// no authority check.</summary>
+internal sealed record TreasuryContributionPayload(
+    long CharacterId, string CharacterName,
+    long OrganizationId, string OrganizationName, float Amount);
+
+/// <summary>Decision 9: the Leader-only converse of TreasuryContribution — Organization.Treasury
+/// to a leader-designated member's personal Wealth.</summary>
+internal sealed record TreasuryWithdrawalPayload(
+    long LeaderId, string LeaderName,
+    long OrganizationId, string OrganizationName,
+    long RecipientId, string RecipientName, float Amount);
+
+/// <summary>Decision 10: a Civilization-kind Organization's Treasury first crosses negative
+/// (edge-triggered — see Organization.TreasuryInsolvencyFlagged).</summary>
+internal sealed record TreasuryInsolventPayload(
+    long CivId, string CivName, float Treasury);
+
+/// <summary>War reparations (deep-review finding folded into 14.4): a one-time Wealth transfer
+/// from the losing civ's Treasury to the winner's on war resolution — allowed to drive the
+/// loser's Treasury negative (the TreasuryInsolvent trigger above).</summary>
+internal sealed record WarReparationsPaidPayload(
+    long WinnerCivId, string WinnerCivName,
+    long LoserCivId, string LoserCivName, float Amount);
+
+/// <summary>A Guild's Leader seat changes hands via SuccessionResolver.SelectSuccessor
+/// (unmodified — no new succession mechanism, per the M12 audit note).</summary>
+internal sealed record GuildSuccessionPayload(
+    long OrganizationId, string GuildName,
+    long PredecessorId, string PredecessorName,
+    long SuccessorId, string SuccessorName);
+
 // ─── GodMode authored events (9000-range) ────────────────────────────────────
 
 internal sealed record GodModeArtifactPayload(

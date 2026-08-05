@@ -162,4 +162,38 @@ public sealed class EconomyConfig
     // Ticks a Severed route must wait, once its severing condition (war / missing endpoint) has
     // cleared, before automatically reopening. ~2 years at the default 16 ticks/year.
     public int TradeRouteReopenCooldownTicks { get; set; } = 32;
+
+    // ─── Guild organizations, treasuries, civ-level economic ruin (14.4) ─────
+    // See docs/phases/m14_economy_independent_wealth.md decision 9/10, phase-sequence "14.4" entry.
+
+    // Personal Wealth threshold at which a Tier2 Merchant forms (or joins, if one already exists
+    // at their home settlement) a Guild organization — the "sustained trade volume" proxy: Wealth
+    // already accumulates only from completed, paid trades (Tier2BehaviorPhase.ResolveMerchantTrade),
+    // so a Wealth threshold is a direct measure of sustained trading rather than a second counter.
+    // First-pass placeholder; 14.5 calibrates against observed merchant Wealth distributions.
+    public float GuildFormationWealthThreshold { get; set; } = 40f;
+
+    // Personal Wealth threshold above which a Tier1 Organization member is willing to voluntarily
+    // deposit into their Organization's Treasury (ContributeToTreasury) — mirrors GrantAid's
+    // need-threshold shape but on the giving side. No authority check (decision 9): any member.
+    public float ContributeToTreasuryWealthThreshold { get; set; } = 20f;
+
+    // Flat amount moved per ContributeToTreasury/WithdrawFromTreasury action (capped at the
+    // available balance on both sides — contribution can't exceed the contributor's Wealth,
+    // withdrawal can't exceed the Organization's Treasury). First-pass placeholder.
+    public float ContributeToTreasuryAmount { get; set; } = 10f;
+    public float WithdrawFromTreasuryAmount { get; set; } = 10f;
+
+    // Annual unrest accrual bonus (RunUnrestAndSecession Driver 4) applied to every settlement of
+    // a civ whose Organization.Treasury is negative — extends the *existing* CivSplintered/
+    // instability scoring rather than a parallel collapse pathway (decision: reuse the pathway).
+    public float TreasuryInsolvencyUnrestBonus { get; set; } = 0.05f;
+
+    // War reparations (deep-review finding folded into 14.4): amount transferred from the losing
+    // civ's Treasury to the winner's on war resolution, scaled by the same battle-win advantage
+    // CivTracker.EndWarBetween already computes for territory transfer (TilesPerBattleWin) — a
+    // flat per-battle-win-advantage amount rather than a fraction of the loser's Treasury, since a
+    // fraction of an already-near-zero or negative Treasury couldn't meaningfully drive it further
+    // negative, which the design explicitly wants reparations to be able to do.
+    public float WarReparationsPerBattleWinAdvantage { get; set; } = 15f;
 }

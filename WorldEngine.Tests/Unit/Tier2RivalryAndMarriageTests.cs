@@ -1,3 +1,4 @@
+using System.Linq;
 using FluentAssertions;
 using WorldEngine.Sim.Civilizations;
 using WorldEngine.Sim.Core;
@@ -133,10 +134,13 @@ public class Tier2RivalryAndMarriageTests
 
         // PromoteToTier1 (like the organic crystallization path it's shared with) rolls the promoted
         // character an entirely new name — CharacterCrystallizedPayload logs the old and new names
-        // as distinct fields deliberately, this isn't preserved. The promoted Tier1's EntityId reuses
-        // the dying Tier2's numeric id (CharacterFactory.Spawn derives it from entitySeq), so look it
-        // up directly rather than searching by name.
-        var promoted = world.GetEntity(t2.Id) as Tier1Character;
+        // as distinct fields deliberately, this isn't preserved. The promoted Tier1's EntityId is
+        // deliberately distinct from the dying Tier2's own id (M14 14.4 fix — see PromoteToTier1's
+        // doc comment: reusing the dead Tier2's exact EntityId let EntityRegistry's shared
+        // Dictionary<EntityId, IEntity> alias the two, so the same-or-next-tick dead-Tier2 sweep
+        // deleted the *promoted Tier1* instead of the intended dead Tier2), so find it by identity
+        // (the only other living Tier1 besides the proposer) rather than by id or name.
+        var promoted = world.Entities.Characters.SingleOrDefault(ch => ch.IsAlive && ch.Id != c.Id);
         promoted.Should().NotBeNull("promotion must spawn a new Tier1 in place of the Tier2");
         promoted!.AgeSeason.Should().BeGreaterThanOrEqualTo(famCfg.MarriageMinAgeSeasons,
             "PromoteForMarriage must floor the newly-rolled age so the marriage isn't rejected the same tick it promotes");

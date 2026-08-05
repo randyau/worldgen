@@ -131,7 +131,8 @@ internal static class WorldStateMapper
             PeaceTreaties:           o.PeaceTreaties.ToDictionary(kv => kv.Key.Value.ToString(), kv => kv.Value),
             Allies:                  o.Allies.Select(a => a.Value).ToList(),
             Treasury:                o.Treasury,
-            HomeSettlementCoord:     o.HomeSettlementCoord.HasValue ? TileKey(o.HomeSettlementCoord.Value) : null))
+            HomeSettlementCoord:     o.HomeSettlementCoord.HasValue ? TileKey(o.HomeSettlementCoord.Value) : null,
+            TreasuryInsolvencyFlagged: o.TreasuryInsolvencyFlagged))
         .ToList();
 
     private static Dictionary<string, List<ResourceDepositDto>> MapResourceRegistry(WorldState w)
@@ -425,7 +426,8 @@ internal static class WorldStateMapper
                 odto.HomeSettlementCoord is not null ? ParseTile(odto.HomeSettlementCoord) : null)
             {
                 SuccessionCrisisEndYear = odto.SuccessionCrisisEndYear,
-                Treasury = odto.Treasury
+                Treasury = odto.Treasury,
+                TreasuryInsolvencyFlagged = odto.TreasuryInsolvencyFlagged
             };
             foreach (var m in odto.Members)
                 org.Members[new EntityId(m.CharacterId)] = new Organizations.Membership(

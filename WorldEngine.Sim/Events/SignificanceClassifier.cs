@@ -101,6 +101,13 @@ public static class SignificanceClassifier
             EventType.TradeRouteSevered        => PopulationImpact.Moderate,
             EventType.CaravanRaided            => PopulationImpact.Minor,
             EventType.ArtifactPurchased        => PopulationImpact.None,
+            // M14 14.4 — Guild organizations, treasuries, civ-level economic ruin
+            EventType.GuildFormed              => PopulationImpact.Minor,
+            EventType.TreasuryContribution     => PopulationImpact.None,
+            EventType.TreasuryWithdrawal       => PopulationImpact.None,
+            EventType.TreasuryInsolvent        => PopulationImpact.Moderate, // Destruction verb → Regional floor
+            EventType.WarReparationsPaid       => PopulationImpact.Minor,
+            EventType.GuildLeadershipTransferred => PopulationImpact.Minor,
             _                                 => PopulationImpact.None,
         };
     }

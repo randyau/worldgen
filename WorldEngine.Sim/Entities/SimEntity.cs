@@ -11,7 +11,17 @@ namespace WorldEngine.Sim.Entities;
 /// </summary>
 public abstract class SimEntity : IEntity
 {
-    public EntityId  Id       { get; }
+    // M14 14.4: internal set (not just get) so Tier2BehaviorPhase.PromoteToTier1 can assign the
+    // promoted Tier1 a distinct EntityId from the dead Tier2's own — see that method's doc comment
+    // for why reusing the same numeric id is unsafe (EntityRegistry's shared dictionary aliasing).
+    // Kept internal set, not a constructor-only value, precisely so the *rest* of Spawn's
+    // deterministic entitySeq-derived rolls (name, personality, ancestry) can stay unchanged —
+    // reassigning only the identity after construction, not the whole derivation seed, avoids
+    // rippling into every other RNG-derived outcome downstream of a promotion (confirmed via the
+    // M13 relationship-event balance test: changing entitySeq itself shifted CharacterGrieved/
+    // RivalryFormed/DebtIncurred far outside their calibrated bands, a real but unintended
+    // consequence of a different fix approach).
+    public EntityId  Id       { get; internal set; }
     public abstract EntityKind Kind { get; }
     public TileCoord Location    { get; internal set; }
     public bool      IsAlive     { get; internal set; } = true;

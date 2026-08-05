@@ -50,6 +50,11 @@ public class MerchantTradeWealthTests
         var world = WorldTestHelper.CreateSmallWorld(seed: 42);
         world.SimConfig.Character.MerchantTradeChance = 1f;
         if (globalPriceIndex is { } gpi) world.GlobalPriceIndex = gpi;
+        // M14 14.4 — this suite tests the 14.1 payment path in isolation; keep the orthogonal
+        // Guild-formation mechanic (RunGuildFormation) from promoting the merchant away mid-test
+        // (a single trade at this test's deliberately large ResourceStores scale easily clears the
+        // production default). See GuildTreasuryTests for Guild-formation's own coverage.
+        world.SimConfig.Economy.GuildFormationWealthThreshold = float.MaxValue;
 
         var home = FindLandTile(world);
         var dest = FindLandTile(world, exclude: home, minDist: 3);

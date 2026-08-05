@@ -104,6 +104,10 @@ public static partial class CivTracker
                 ResolveDefect(df, world, pending); break;
             case BuildImprovement bi:
                 ResolveBuildImprovement(bi, world, pending); break;
+            case ContributeToTreasury ct:
+                ResolveContributeToTreasury(ct, world, pending); break;
+            case WithdrawFromTreasury wt:
+                ResolveWithdrawFromTreasury(wt, world, pending); break;
         }
     }
 

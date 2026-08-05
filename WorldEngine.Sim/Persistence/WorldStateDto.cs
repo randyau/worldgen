@@ -152,7 +152,9 @@ public sealed record OrganizationDto(
     List<int>                Allies,
     // M14 14.0 (decision 10) — real stored treasury balance + founding-time settlement anchor.
     float                     Treasury = 0f,
-    string?                   HomeSettlementCoord = null);
+    string?                   HomeSettlementCoord = null,
+    // M14 14.4 — TreasuryInsolvent edge-trigger latch (see Organization.TreasuryInsolvencyFlagged).
+    bool                      TreasuryInsolvencyFlagged = false);
 
 public sealed record CulturalProfileDto(
     string   AncestryId,

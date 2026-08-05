@@ -423,6 +423,12 @@ public static partial class CivTracker
             int tilesToTransfer = Math.Min(Math.Abs(advantage) * wCfg.TilesPerBattleWin,
                                            wCfg.MaxTilesTransferredPerWar);
             TransferBorderTiles(winner, loser, tilesToTransfer, world, pending);
+
+            // M14 14.4 (deep-review finding) — war reparations: a one-time Wealth transfer from
+            // the loser's Treasury to the winner's, scaled by the same battle-win advantage just
+            // used for territory. See CivTracker.ApplyWarReparations's doc comment for the
+            // same-tick sequencing analysis relative to RunUnrestAndSecession/CheckTreasuryInsolvency.
+            ApplyWarReparations(winner, loser, Math.Abs(advantage), world, pending);
         }
 
         // Reset per-war battle win counters

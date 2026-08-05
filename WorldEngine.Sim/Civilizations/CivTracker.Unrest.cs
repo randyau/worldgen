@@ -29,6 +29,10 @@ public static partial class CivTracker
     {
         var cfg = world.SimConfig.Unrest;
 
+        // M14 14.4 (decision 10) — edge-triggers TreasuryInsolvent once per crossing into negative
+        // Treasury, ahead of this pass's Driver 4 reading the same Treasury value for unrest.
+        CheckTreasuryInsolvency(world, pending);
+
         // Pass 1: update unrest for every settlement (record rewrite; sim thread only).
         // Snapshot keys first — we mutate the dictionary values as we go.
         var tiles = world.Settlements.Keys.ToList();
@@ -56,6 +60,14 @@ public static partial class CivTracker
             // Driver 3: active famine / food crisis
             if (stub.FoodPressureRatio < world.SimConfig.ResourcePressure.CrisisThreshold)
                 accrual += cfg.UnrestFamineBonus;
+
+            // Driver 4 (M14 14.4, decision 10): civ-level economic ruin extends this *existing*
+            // instability scoring rather than a parallel collapse pathway — a civ whose
+            // Organization.Treasury is negative (now genuinely reachable, decision 10's real
+            // stored balance) adds an unrest contribution across all its settlements, alongside
+            // the distance/overstretch/famine drivers above.
+            if (GetOrg(world, civ) is { Treasury: < 0f })
+                accrual += world.SimConfig.Economy.TreasuryInsolvencyUnrestBonus;
 
             // Succession crisis multiplier on all sources
             bool inCrisis = civ.SuccessionCrisisEndYear != int.MinValue

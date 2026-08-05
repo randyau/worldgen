@@ -62,10 +62,13 @@ The `Type` column stores integer values. Use these constants in WHERE clauses:
   3307 = ArtisanCrafted          
 
 -- Artifacts/Religion (4000–4999)
-  3500 = TradePaid            3501 = TradeRouteFormed   
-  3502 = TradeRouteSevered    3503 = CaravanRaided      
-  3504 = ArtifactPurchased    4003 = ReligionFounded    
-  4004 = ReligionExtinct    
+  3500 = TradePaid                     3501 = TradeRouteFormed            
+  3502 = TradeRouteSevered             3503 = CaravanRaided               
+  3504 = ArtifactPurchased             3505 = GuildFormed                 
+  3506 = TreasuryContribution          3507 = TreasuryWithdrawal          
+  3508 = TreasuryInsolvent             3509 = WarReparationsPaid          
+  3510 = GuildLeadershipTransferred    4003 = ReligionFounded             
+  4004 = ReligionExtinct             
 
 -- Artifact (6000–6999)
   6001 = ArtifactCreated        6002 = ArtifactDestroyed    

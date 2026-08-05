@@ -7,6 +7,7 @@ using WorldEngine.Sim.Entities.Artifacts;
 using WorldEngine.Sim.Entities.Characters;
 using WorldEngine.Sim.Economy;
 using WorldEngine.Sim.Events;
+using WorldEngine.Sim.Organizations;
 using WorldEngine.Sim.World;
 using S = WorldEngine.Sim.Simulation.SimRngSalts;
 
@@ -46,6 +47,13 @@ public sealed class Tier2BehaviorPhase
         // Runs once per tick (not per character): a route's state can change with no character
         // acting this tick (war breaking out, a cooldown elapsing, a caravan's ETA arriving).
         RunTradeRoutes(world, tick, pending);
+
+        // M14 14.4 — per-tick Guild-formation check: populates OrganizationKind.Guild for the
+        // first time, mirroring how Family orgs form in M13.0 (ResolveMarriage). Runs once per
+        // tick over all living merchants rather than only on a trade tick, since Wealth (the
+        // formation trigger) can cross the threshold between trade ticks via other means (e.g. a
+        // WithdrawFromTreasury payout) and shouldn't have to wait for the next trade attempt.
+        RunGuildFormation(chars, world, pending, tick);
 
         // Grief: notify any Tier1 ruler who had a Bond goal targeting a Tier2 that died.
         var deadTier2 = chars.Where(ch => !ch.IsAlive).ToList();
@@ -425,6 +433,85 @@ public sealed class Tier2BehaviorPhase
             payload, [c.Id.Value], null, pending);
     }
 
+    // ─── M14 14.4 — Guild organizations ────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Populates <see cref="OrganizationKind.Guild"/> for the first time: a Tier2 Merchant whose
+    /// Wealth has crossed <see cref="EconomyConfig.GuildFormationWealthThreshold"/> forms (or
+    /// joins, if one already exists at their home settlement) a Guild — mirroring how a Family
+    /// organization forms at marriage (CivTracker.ResolveMarriage), gated on a threshold rather
+    /// than a discrete life event since a merchant's "sustained trade volume" has no equivalent
+    /// one-shot moment. Runs once per tick over every living merchant.
+    /// </summary>
+    private void RunGuildFormation(
+        List<Tier2Character> chars, WorldState world, List<PendingEvent> pending, long tick)
+    {
+        var cfg = _simCfg.Economy;
+        foreach (var c in chars)
+        {
+            if (!c.IsAlive || c.Livelihood.Role != Tier2Role.Merchant) continue;
+            if (c.Wealth < cfg.GuildFormationWealthThreshold) continue;
+            if (FindGuildMembership(world, c.Id) != null) continue; // already a guild member
+
+            FormOrJoinGuild(c, world, pending, tick);
+        }
+    }
+
+    /// <summary>
+    /// Finds the Guild-kind Organization <paramref name="characterId"/> belongs to, if any.
+    /// Tier2Character has no Memberships mirror list (that's a Tier1-only convenience — see
+    /// Tier1Character.Memberships), so this scans Organization.Members directly; the number of
+    /// Guilds in a run is small, so an O(guilds) scan per lookup is cheap.
+    /// </summary>
+    private static Organization? FindGuildMembership(WorldState world, EntityId characterId)
+    {
+        foreach (var org in world.Organizations.Values)
+            if (org.Kind == OrganizationKind.Guild && org.Members.ContainsKey(characterId))
+                return org;
+        return null;
+    }
+
+    /// <summary>
+    /// Joins an existing Guild at <paramref name="merchant"/>'s home settlement if one exists
+    /// (ordinary Tier2 Member — no promotion needed, since only Guild leadership requires a
+    /// Tier1Character for SuccessionResolver.SelectSuccessor to consider them, per the M12 audit
+    /// note this milestone is bound by), otherwise founds a new one with the merchant promoted to
+    /// Tier1 as Leader (mirrors CivTracker.ResolveMarriage's PromoteForMarriage path — Guild
+    /// leadership, like Family/Civilization leadership, is a Tier1-only concern). Joining an
+    /// existing Guild fires no separate event (routine, not narratively significant); founding a
+    /// new one fires GuildFormed.
+    /// </summary>
+    private void FormOrJoinGuild(Tier2Character merchant, WorldState world, List<PendingEvent> pending, long tick)
+    {
+        var homeTile = merchant.Livelihood.SettlementTile;
+        var existing = world.Organizations.Values.FirstOrDefault(o =>
+            o.Kind == OrganizationKind.Guild && o.HomeSettlementCoord == homeTile);
+
+        if (existing != null)
+        {
+            existing.Members[merchant.Id] = new Membership(existing.Id, OrganizationRole.Member, 1.0f);
+            return;
+        }
+
+        var promoted = PromoteToTier1(merchant, world, _simCfg, pending);
+
+        string guildName = world.Settlements.TryGetValue(homeTile, out var home)
+            ? $"{home.Name} Merchant Guild"
+            : $"{promoted.Identity.Name}'s Merchant Guild";
+
+        var orgId = CivTracker.CreateOrganization(world, OrganizationKind.Guild, guildName, promoted.Id, homeTile);
+        var org = world.Organizations[orgId];
+        var membership = new Membership(orgId, OrganizationRole.Leader, 1.0f);
+        org.Members[promoted.Id] = membership;
+        promoted.Memberships.Add(membership);
+
+        var payload = JsonSerializer.Serialize(new GuildFormedPayload(
+            orgId.Value, guildName, promoted.Id.Value, promoted.Identity.Name, homeTile.X, homeTile.Y));
+        pending.Add(new PendingEvent(EventType.GuildFormed, homeTile, null, payload,
+            new[] { promoted.Id.Value },
+            ActorId: promoted.Id.Value, ActorName: promoted.Identity.Name));
+    }
+
     // ─── M14 14.2 — persistent trade routes / caravan transit ──────────────────────────────────
 
     /// <summary>
@@ -615,7 +702,9 @@ public sealed class Tier2BehaviorPhase
     /// EconomyConfig.MerchantHomeCutFraction of the paid value back to the merchant's home
     /// settlement in the same commodities just debited (Opus-review addition, keeps precious-
     /// commodity totals exactly conserved), and credits the remainder to the merchant's personal
-    /// Wealth (decision 9: unconditionally personal until 14.4's Guild-member routing exists).
+    /// Wealth — or, once the merchant has joined a Guild (M14 14.4, decision 9), to that Guild's
+    /// Organization.Treasury instead: trading is the guild's business once a member has joined
+    /// one, no command-shape change needed, just a Membership lookup at payment time.
     /// </summary>
     private static void ResolveMerchantTrade(
         CompleteMerchantTrade cmd, WorldState world, EconomyConfig cfg, List<PendingEvent> pending)
@@ -686,7 +775,13 @@ public sealed class Tier2BehaviorPhase
         }
 
         float merchantShare = paidValue * (1f - cfg.MerchantHomeCutFraction);
-        merchant.AddWealth(merchantShare);
+
+        // M14 14.4, decision 9: once the merchant has joined a Guild, trade income routes to that
+        // Guild's Treasury instead of the merchant's personal Wealth — the only branch point this
+        // phase adds to the 14.1 payment path.
+        var guild = FindGuildMembership(world, merchant.Id);
+        if (guild != null) guild.Treasury += merchantShare;
+        else               merchant.AddWealth(merchantShare);
 
         var payload = JsonSerializer.Serialize(new TradePaidPayload(
             merchant.Id.Value, merchant.Name, cmd.Resource, cmd.Quantity,
@@ -855,7 +950,10 @@ public sealed class Tier2BehaviorPhase
         // newborn; without it the promoted Tier1 spawns at AgeSeason 0, which broke M13.8.1's
         // marriage-to-Tier2 path (ResolveMarriage's MarriageMinAgeSeasons check would immediately
         // fail right after promotion). Same reasoning CharacterFactory.Spawn's own doc comment gives
-        // for civ-founding/succession-backfill spawns.
+        // for civ-founding/succession-backfill spawns. entitySeq is unchanged from the dead Tier2's
+        // own id (as before this fix) — it seeds name/personality/ancestry generation and changing
+        // it would ripple into every downstream RNG-derived outcome for the rest of the run (see the
+        // Id reassignment below for why that's a real, measured risk, not a theoretical one).
         var promoted = CharacterFactory.Spawn(
             location:   c.Location,
             biome:      (BiomeType)world.TileGrid.GetTile(c.Location).BiomeType,
@@ -864,6 +962,25 @@ public sealed class Tier2BehaviorPhase
             config:     simCfg,
             birthYear:  world.CurrentYear,
             startAsAdult: true);
+
+        // M14 14.4 fix: reassign the promoted Tier1's EntityId away from the dead Tier2's own —
+        // EntityRegistry (checked directly) keys entities in a single Dictionary<EntityId, IEntity>
+        // shared across Tier1/Tier2, so if the promoted Tier1 kept CharacterFactory.Spawn's default
+        // (entitySeq-derived) id, which equals the dead Tier2's own id, world.Entities.Add(promoted)
+        // below would overwrite that dictionary slot to point at the new Tier1 — and the still-
+        // pending same-or-next-tick dead-Tier2 sweep (Tier2BehaviorPhase.Execute's `deadTier2` loop,
+        // or CivTracker.ResolveMarriage's caller path) would then call world.Entities.Remove(dead.Id),
+        // which resolves via that same dictionary and would delete the *newly promoted Tier1*
+        // instead of the intended dead Tier2, silently destroying every promotion the very tick (or
+        // the tick after) it happened. Caught by 14.4's Guild-formation tests, which are the first to
+        // assert a promoted founder is still queryable after Execute — latent since M13.8's
+        // crystallization/marriage-promotion paths share this same routine. Done as a post-
+        // construction reassignment (not a different entitySeq passed into Spawn) specifically so
+        // name/personality/ancestry generation stay byte-for-byte identical to before this fix —
+        // changing entitySeq itself was tried first and shifted M13RelationshipEventBalanceTests'
+        // CharacterGrieved/RivalryFormed/DebtIncurred far outside their calibrated bands, a real
+        // downstream consequence of perturbing the shared trait-roll seed, not the actual bug.
+        promoted.Id = new EntityId((c.Id.Value ^ 0x4000_0000L) & 0x7FFFFFFF);
 
         int promotedOrdinal = world.ClaimNameOrdinal(promoted.Identity.Name);
         if (promotedOrdinal > 0)
@@ -875,6 +992,21 @@ public sealed class Tier2BehaviorPhase
         // this, promotion silently resets every relationship the Tier2 had built up back to a blank
         // edge (see docs/phases/m13_8_tier2_relationship_exposure.md).
         world.Relationships.RekeyEntity(c.Id, promoted.Id);
+
+        // M14 14.4 fix: carry over accumulated personal Wealth too — without this, a wealthy
+        // merchant promoted to found a Guild (or via marriage) would silently lose their entire
+        // Wealth balance on promotion, both a conservation-invariant leak and directly wrong for
+        // Guild founding (the founder's Wealth is what crossed GuildFormationWealthThreshold in
+        // the first place). Latent gap since M13.8.1's marriage-promotion path; fixed here since
+        // both callers share this one promotion routine. Zero the old Tier2's balance after moving
+        // it (real transfer, not a copy) — Tier2BehaviorPhase.Execute's same-tick dead-sweep would
+        // otherwise see the (never-zeroed) old balance and mint a *second* WealthDrop for the exact
+        // amount already carried onto the promoted Tier1, double-creating Wealth out of nothing.
+        if (c.Wealth > 0f)
+        {
+            promoted.AddWealth(c.Wealth);
+            c.AddWealth(-c.Wealth);
+        }
 
         pending.Add(new PendingEvent(EventType.CharacterCrystallized, c.Location, null,
             JsonSerializer.Serialize(new CharacterCrystallizedPayload(

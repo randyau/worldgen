@@ -59,6 +59,11 @@ public class TradeRouteCaravanTests : IDisposable
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 4242);
         world.SimConfig.Character.MerchantTradeChance = 1f;
+        // M14 14.4 — this suite tests 14.2's route-formation/caravan mechanics in isolation over
+        // many repeated trades against the same merchant identity; keep the orthogonal
+        // Guild-formation mechanic from promoting the merchant away mid-run (see GuildTreasuryTests
+        // for Guild-formation's own coverage).
+        world.SimConfig.Economy.GuildFormationWealthThreshold = float.MaxValue;
 
         var home = FindLandTile(world);
         var dest = FindLandTile(world, exclude: home, minDist: 3);

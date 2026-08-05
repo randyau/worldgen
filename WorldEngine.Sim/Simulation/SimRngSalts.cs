@@ -22,7 +22,8 @@ namespace WorldEngine.Sim.Simulation;
 ///  4000–4099 ArtifactNameGenerator (name epithets/nouns — see ArtifactNameGenerator.cs)
 ///  5000–5099 Artifact lifecycle — battle forge, heroic-death forge, death inheritance
 ///  6000–6099 CharacterBehaviorPhase (M13 family — childbirth)
-///   940–949  Tier2BehaviorPhase (M14 14.2 — caravan interception/disaster/piracy rolls)
+///   940–949  Tier2BehaviorPhase (M14 14.2 — caravan interception/disaster/piracy rolls;
+///            943 reserved for M14 14.4 guild formation)
 /// </summary>
 internal static class SimRngSalts
 {
@@ -85,4 +86,9 @@ internal static class SimRngSalts
 
     // CharacterBehaviorPhase — M13 family: annual childbirth roll for married couples
     public const int CharFamilyBirth          = 6000;
+
+    // Tier2BehaviorPhase — M14 14.4 guild formation (currently deterministic Wealth-threshold
+    // trigger, not RNG-gated, but a salt is reserved here per CLAUDE.md's named-salt convention in
+    // case a probabilistic component is added during 14.5 calibration).
+    public const int T2GuildFormation    = 943;
 }

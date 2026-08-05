@@ -896,6 +896,12 @@ _M14 14.0 — Wealth substrate. All values below are first-pass placeholders exp
 | `caravan_piracy_chance` | `0.02` | `SimConfig.Economy.CaravanPiracyChance` |  |
 | `trade_route_sever_threshold` | `3` | `SimConfig.Economy.TradeRouteSeverThreshold` | Consecutive lost caravans (any cause) before a route severs from sustained losses. |
 | `trade_route_reopen_cooldown_ticks` | `32` | `SimConfig.Economy.TradeRouteReopenCooldownTicks` | Ticks a Severed route waits, once the severing condition clears, before auto-reopening (~2 years). |
+| `guild_formation_wealth_threshold` | `40.0` | `SimConfig.Economy.GuildFormationWealthThreshold` | ── Guild organizations, treasuries, civ-level economic ruin (14.4) ──────────── Personal Wealth threshold at which a Tier2 Merchant forms (or joins an existing) Guild — a direct proxy for "sustained trade volume" since Wealth only accumulates from completed paid trades. First-pass placeholder; 14.5 calibrates against observed merchant Wealth distributions. |
+| `contribute_to_treasury_wealth_threshold` | `20.0` | `SimConfig.Economy.ContributeToTreasuryWealthThreshold` | Wealth threshold above which an Organization member voluntarily contributes to its Treasury. |
+| `contribute_to_treasury_amount` | `10.0` | `SimConfig.Economy.ContributeToTreasuryAmount` | Flat amount moved per contribution/withdrawal action (capped at the available balance). |
+| `withdraw_from_treasury_amount` | `10.0` | `SimConfig.Economy.WithdrawFromTreasuryAmount` |  |
+| `treasury_insolvency_unrest_bonus` | `0.05` | `SimConfig.Economy.TreasuryInsolvencyUnrestBonus` | Annual unrest accrual bonus for every settlement of a civ whose Organization.Treasury is negative — extends the existing CivSplintered/instability scoring rather than a parallel pathway. |
+| `war_reparations_per_battle_win_advantage` | `15.0` | `SimConfig.Economy.WarReparationsPerBattleWinAdvantage` | War reparations: amount transferred from the loser's Treasury to the winner's per battle-win advantage on war resolution (CivTracker.EndWarBetween) — allowed to drive the loser negative. |
 
 ## `[economy.base_value_per_unit]` {#economybase-value-per-unit}
 
