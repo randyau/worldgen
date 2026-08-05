@@ -193,6 +193,10 @@ public enum EventType
     TradeRouteFormed        = 3501,  // a settlement pair graduated to (or reopened as) a persistent TradeRoute
     TradeRouteSevered       = 3502,  // TradeRoute closed: war between endpoints' civs, a lost endpoint, or sustained caravan losses
     CaravanRaided           = 3503,  // in-transit caravan lost — Cause in payload distinguishes war/disaster/piracy
+    // M14 14.3 — goal fulfillment via trade: a CovetArtifact goal-holder bought the coveted
+    // artifact from its living Character/Settlement owner (an alternative to the claim-if-Lost
+    // path already covered by ArtifactTransferred with Reason="claim").
+    ArtifactPurchased       = 3504,
 
     // M3+ artifacts / religion (6000+/4000+ ranges reserved)
     ArtifactCreated         = 6001,
@@ -220,4 +224,4 @@ public enum EventType
 }
 ```
 
-<!-- content-hash: b736c965799cb836 -->
+<!-- content-hash: b70985b603a21d73 -->
