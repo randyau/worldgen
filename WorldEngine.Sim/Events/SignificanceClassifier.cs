@@ -112,6 +112,7 @@ public static class SignificanceClassifier
             EventType.ReligiousLeadershipTransferred => PopulationImpact.Minor,
             EventType.CharacterConvertedReligion => PopulationImpact.None,
             EventType.ReligionSchism          => PopulationImpact.Minor,
+            EventType.PersecutionOccurred     => PopulationImpact.None,
             _                                 => PopulationImpact.None,
         };
     }

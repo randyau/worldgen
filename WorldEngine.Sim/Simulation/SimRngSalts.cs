@@ -103,4 +103,8 @@ internal static class SimRngSalts
 
     // CharacterBehaviorPhase — M15 15.2 religion schism: per-org-per-year roll
     public const int ReligionSchismRoll = 7003;
+
+    // CharacterBehaviorPhase — M15 15.3 heresy/persecution: per-heretic-per-year rolls
+    public const int PersecutionHitRoll    = 7004;
+    public const int PersecutionOutcomeRoll = 7005;
 }

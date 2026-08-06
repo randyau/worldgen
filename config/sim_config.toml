@@ -996,6 +996,15 @@ schism_min_members            = 6     # minimum living membership before schism 
 schism_avg_loyalty_threshold  = 0.5   # avg member Loyalty (excl. leader) must be below this
 schism_base_chance            = 0.04  # annual schism probability when eligible, scaled by (1 - avgLoyalty)
 
+# M15 15.3 — heresy & persecution (soft consequences only: civ Loyalty penalty or forced conversion)
+heresy_state_religion_min_share    = 0.5   # plurality religion's share of religious pop needed to count as state religion
+persecution_min_zealotry           = 0.15  # state religion Zealotry must exceed this for persecution to occur at all
+persecution_base_chance            = 0.1   # annual per-heretic persecution roll probability, scaled by Zealotry
+persecution_forced_conversion_chance = 0.4 # chance a persecution hit forces conversion vs. just penalizing
+persecution_civ_loyalty_penalty    = 0.15  # civ-membership Loyalty penalty on a resisted persecution hit
+persecution_needs_penalty          = 0.1   # Needs.Safety/Status penalty on a resisted persecution hit
+forced_convert_loyalty             = 0.1   # initial Membership.Loyalty for a forced (coerced) conversion
+
 # =============================================================================
 # FAMILY (M13 13.0 — marriage, household Organization, childbirth/inheritance)
 # =============================================================================

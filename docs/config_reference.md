@@ -709,6 +709,13 @@ _Natural shelter recovery per tick when NOT on a settlement tile, by biome. Dens
 | `schism_min_members` | `6` | `SimConfig.Religion.SchismMinMembers` | minimum living membership before schism is eligible |
 | `schism_avg_loyalty_threshold` | `0.5` | `SimConfig.Religion.SchismAvgLoyaltyThreshold` | avg member Loyalty (excl. leader) must be below this |
 | `schism_base_chance` | `0.04` | `SimConfig.Religion.SchismBaseChance` | annual schism probability when eligible, scaled by (1 - avgLoyalty) |
+| `heresy_state_religion_min_share` | `0.5` | `SimConfig.Religion.HeresyStateReligionMinShare` | plurality religion's share of religious pop needed to count as state religion |
+| `persecution_min_zealotry` | `0.15` | `SimConfig.Religion.PersecutionMinZealotry` | state religion Zealotry must exceed this for persecution to occur at all |
+| `persecution_base_chance` | `0.1` | `SimConfig.Religion.PersecutionBaseChance` | annual per-heretic persecution roll probability, scaled by Zealotry |
+| `persecution_forced_conversion_chance` | `0.4` | `SimConfig.Religion.PersecutionForcedConversionChance` | chance a persecution hit forces conversion vs. just penalizing |
+| `persecution_civ_loyalty_penalty` | `0.15` | `SimConfig.Religion.PersecutionCivLoyaltyPenalty` | civ-membership Loyalty penalty on a resisted persecution hit |
+| `persecution_needs_penalty` | `0.1` | `SimConfig.Religion.PersecutionNeedsPenalty` | Needs.Safety/Status penalty on a resisted persecution hit |
+| `forced_convert_loyalty` | `0.1` | `SimConfig.Religion.ForcedConvertLoyalty` | initial Membership.Loyalty for a forced (coerced) conversion |
 
 ## `[family]` {#family}
 

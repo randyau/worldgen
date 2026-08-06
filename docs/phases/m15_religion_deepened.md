@@ -5,7 +5,9 @@
 (conversion via exposure — personal-receptivity gate, Zealotry-weighted pull, existing-Loyalty
 resistance) shipped 2026-08-06. 15.2 (schism — low-average-Loyalty membership splits off under a
 dissenting leader into a newly-founded sect, reusing the founding identity-roll so schismatic
-sects can genuinely doctrinally drift to a different archetype) shipped 2026-08-06.
+sects can genuinely doctrinally drift to a different archetype) shipped 2026-08-06. 15.3
+(heresy & persecution — civ state-religion plurality determination, Zealotry-gated soft
+consequences only: civ-Loyalty penalty or forced conversion, never violence) shipped 2026-08-06.
 
 See `docs/roadmap.md` § "M15" for the one-line scope statement: schism/heresy/pilgrimage;
 religious leaders as a third power track alongside rulers/merchants.

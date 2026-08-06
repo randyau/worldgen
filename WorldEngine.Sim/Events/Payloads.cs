@@ -308,6 +308,14 @@ internal sealed record ReligionSchismPayload(
     int    MembersSeceded,
     string NewArchetypeId);
 
+/// <summary>M15 15.3 — Outcome is "forced_conversion" or "resisted"; soft consequences only.</summary>
+internal sealed record PersecutionOccurredPayload(
+    long   HereticId, string HereticName,
+    long   CivId,
+    long   StateReligionOrganizationId, string StateReligionName,
+    long   HereticReligionOrganizationId, string HereticReligionName,
+    string Outcome);
+
 // ─── M11 — sea voyages ─────────────────────────────────────────────────────
 
 internal sealed record SeaVoyagePayload(

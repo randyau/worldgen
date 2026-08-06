@@ -50,4 +50,27 @@ public class ReligionConfig
     public float SchismAvgLoyaltyThreshold   { get; set; } = 0.5f;
     /// <summary>Annual schism probability when eligible, scaled by (1 - avgLoyalty).</summary>
     public float SchismBaseChance            { get; set; } = 0.04f;
+
+    // ─── M15 15.3 — heresy & persecution (soft consequences only, per roadmap) ─────────────
+    // A civ's "state religion" is whichever Religion its religious (non-agnostic) population
+    // follows in plurality, if that plurality is decisive enough. Persecution only exists at all
+    // when the state religion's Zealotry is positive — a tolerant/syncretic religion (Zealotry <=
+    // threshold) never persecutes minority faiths, per the Zealotry axis's design intent (see
+    // docs/phases/m15_religion_deepened.md point 4). Effects are political/social pressure only:
+    // civ Loyalty penalty or forced conversion — never violence, never civil war.
+
+    /// <summary>The plurality religion's share of a civ's religious population must exceed this to count as an enforced state religion.</summary>
+    public float HeresyStateReligionMinShare { get; set; } = 0.5f;
+    /// <summary>State religion Zealotry must exceed this for persecution to occur at all.</summary>
+    public float PersecutionMinZealotry      { get; set; } = 0.15f;
+    /// <summary>Annual per-heretic persecution roll probability, scaled by the state religion's Zealotry.</summary>
+    public float PersecutionBaseChance       { get; set; } = 0.1f;
+    /// <summary>Chance a persecution hit forces conversion to the state religion rather than just penalizing.</summary>
+    public float PersecutionForcedConversionChance { get; set; } = 0.4f;
+    /// <summary>Civ-membership Loyalty penalty applied to a heretic who resists a persecution hit.</summary>
+    public float PersecutionCivLoyaltyPenalty { get; set; } = 0.15f;
+    /// <summary>Needs.Safety/Status penalty applied to a heretic who resists a persecution hit.</summary>
+    public float PersecutionNeedsPenalty     { get; set; } = 0.1f;
+    /// <summary>Initial Membership.Loyalty for a forced (coerced, not genuine) conversion.</summary>
+    public float ForcedConvertLoyalty        { get; set; } = 0.1f;
 }

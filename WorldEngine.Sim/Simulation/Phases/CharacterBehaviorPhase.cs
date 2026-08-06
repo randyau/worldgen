@@ -47,6 +47,7 @@ public sealed class CharacterBehaviorPhase
         {
             ProcessAnnualReligionConversion(characters, world, pending);
             ProcessAnnualReligionSchism(world, pending);
+            ProcessAnnualReligionPersecution(characters, world, pending);
         }
 
         foreach (var c in characters)
@@ -909,10 +910,14 @@ public sealed class CharacterBehaviorPhase
     /// later years as presence/receptivity shift. See docs/phases/m15_religion_deepened.md
     /// "Long-run balance constraints" for the sink/source reasoning behind every term here.
     /// </summary>
-    private void ProcessAnnualReligionConversion(List<Tier1Character> characters, WorldState world, List<PendingEvent> pending)
+    /// <summary>
+    /// Shared per-civ tally: named population count, and living-membership count per Religion
+    /// Organization. Built once per annual tick and reused by conversion (15.1), and the
+    /// state-religion/heresy determination (15.3) needs exactly this same civ-scoped shape.
+    /// </summary>
+    private static (Dictionary<CivId, int> CivPopulation, Dictionary<CivId, Dictionary<OrganizationId, int>> ReligionTally)
+        BuildReligionTally(List<Tier1Character> characters, WorldState world)
     {
-        var cfg = world.SimConfig.Religion;
-
         var civPopulation = new Dictionary<CivId, int>();
         var religionTally  = new Dictionary<CivId, Dictionary<OrganizationId, int>>();
         foreach (var ch in characters)
@@ -929,6 +934,13 @@ public sealed class CharacterBehaviorPhase
                 byOrg[m.OrganizationId] = byOrg.GetValueOrDefault(m.OrganizationId) + 1;
             }
         }
+        return (civPopulation, religionTally);
+    }
+
+    private void ProcessAnnualReligionConversion(List<Tier1Character> characters, WorldState world, List<PendingEvent> pending)
+    {
+        var cfg = world.SimConfig.Religion;
+        var (civPopulation, religionTally) = BuildReligionTally(characters, world);
 
         foreach (var ch in characters)
         {
@@ -991,6 +1003,96 @@ public sealed class CharacterBehaviorPhase
             pending.Add(new PendingEvent(EventType.CharacterConvertedReligion, ch.Location, null,
                 payload, new[] { ch.Id.Value },
                 ActorId: ch.Id.Value, ActorName: ch.Identity.Name, CivId: ch.CivId.Value));
+        }
+    }
+
+    // ─── Heresy & persecution (M15 15.3) ───────────────────────────────────────
+
+    /// <summary>
+    /// A civ's "state religion" is whichever Religion its religious (non-agnostic) population
+    /// follows in plurality, when that plurality is decisive enough (HeresyStateReligionMinShare).
+    /// Persecution only exists when the state religion's Zealotry is positive enough — a
+    /// tolerant/syncretic religion never persecutes, per the Zealotry axis's design intent (see
+    /// docs/phases/m15_religion_deepened.md point 4). Effects are soft (political/social pressure
+    /// only, per roadmap): a resisted hit penalizes the heretic's civ Loyalty and Needs; a
+    /// forced-conversion hit moves them into the state religion outright, at low (coerced) Loyalty.
+    /// </summary>
+    private void ProcessAnnualReligionPersecution(List<Tier1Character> characters, WorldState world, List<PendingEvent> pending)
+    {
+        var cfg = world.SimConfig.Religion;
+        var (_, religionTally) = BuildReligionTally(characters, world);
+
+        foreach (var (civId, byOrg) in religionTally)
+        {
+            int totalReligious = byOrg.Values.Sum();
+            if (totalReligious == 0) continue;
+
+            var (stateOrgId, stateCount) = byOrg.OrderByDescending(kv => kv.Value).First();
+            if ((float)stateCount / totalReligious < cfg.HeresyStateReligionMinShare) continue;
+
+            var stateOrg = world.Organizations[stateOrgId];
+            var stateArchetype = world.SimConfig.ReligionArchetypes.Get(stateOrg.ReligionArchetypeId);
+            float zealotry = stateArchetype?.Zealotry ?? 0f;
+            if (zealotry <= cfg.PersecutionMinZealotry) continue;
+
+            float hitChance = cfg.PersecutionBaseChance * zealotry;
+
+            foreach (var ch in characters)
+            {
+                if (!ch.IsAlive || ch.CivId != civId) continue;
+                var religionMembership = ch.Memberships.FirstOrDefault(m =>
+                    world.Organizations.TryGetValue(m.OrganizationId, out var o) && o.Kind == OrganizationKind.Religion);
+                if (religionMembership == null || religionMembership.OrganizationId == stateOrgId) continue; // not a heretic
+
+                float hitRoll = WorldRng.FloatAt(world.WorldSeed, world.CurrentYear,
+                    (int)(ch.Id.Value & 0x7FFFFFFF), 0, S.PersecutionHitRoll);
+                if (hitRoll >= hitChance) continue;
+
+                var heresyOrg = world.Organizations[religionMembership.OrganizationId];
+                float outcomeRoll = WorldRng.FloatAt(world.WorldSeed, world.CurrentYear,
+                    (int)(ch.Id.Value & 0x7FFFFFFF), 1, S.PersecutionOutcomeRoll);
+                string outcome;
+
+                if (outcomeRoll < cfg.PersecutionForcedConversionChance)
+                {
+                    outcome = "forced_conversion";
+                    heresyOrg.Members.Remove(ch.Id);
+                    ch.Memberships.Remove(religionMembership);
+                    var newMembership = new Membership(stateOrgId, OrganizationRole.Member, cfg.ForcedConvertLoyalty);
+                    ch.Memberships.Add(newMembership);
+                    stateOrg.Members[ch.Id] = newMembership;
+                }
+                else
+                {
+                    outcome = "resisted";
+                    var civMembership = ch.Memberships.FirstOrDefault(m => m.CivId.IsValid);
+                    if (civMembership != null)
+                    {
+                        var updated = civMembership with
+                        {
+                            Loyalty = Math.Max(0f, civMembership.Loyalty - cfg.PersecutionCivLoyaltyPenalty)
+                        };
+                        ch.Memberships.Remove(civMembership);
+                        ch.Memberships.Add(updated);
+                        if (world.Organizations.TryGetValue(civMembership.OrganizationId, out var civOrg))
+                            civOrg.Members[ch.Id] = updated;
+                    }
+                    ch.Needs = ch.Needs with
+                    {
+                        Safety = Math.Max(0f, ch.Needs.Safety - cfg.PersecutionNeedsPenalty),
+                        Status = Math.Max(0f, ch.Needs.Status - cfg.PersecutionNeedsPenalty),
+                    };
+                }
+
+                var payload = JsonSerializer.Serialize(new PersecutionOccurredPayload(
+                    ch.Id.Value, ch.Identity.Name, civId.Value,
+                    stateOrgId.Value, stateOrg.Name,
+                    heresyOrg.Id.Value, heresyOrg.Name,
+                    outcome));
+                pending.Add(new PendingEvent(EventType.PersecutionOccurred, ch.Location, null, payload,
+                    new[] { ch.Id.Value },
+                    ActorId: ch.Id.Value, ActorName: ch.Identity.Name, CivId: civId.Value));
+            }
         }
     }
 
