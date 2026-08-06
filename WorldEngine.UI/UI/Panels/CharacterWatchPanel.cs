@@ -99,6 +99,9 @@ public sealed class CharacterWatchPanel : IToggleablePanel
         _content.Add(SectionHeader.Build($"{w.Name}{surname}{epithet}"));
         _content.Add(new WeText($"Civ: {w.CivName}  |  Age: {w.AgeSeasons}s  ({w.AgeSeasons / 16} yrs)", color: UiTheme.ColorRole.TextSecondary));
         _content.Add(new WeText($"Location: ({w.Location.X}, {w.Location.Y}) — {w.BiomeName}", color: UiTheme.ColorRole.TextSecondary));
+        if (w.ReligionName.Length > 0)
+            _content.Add(new WeText($"Religion: {w.ReligionName} ({w.ReligionRole})",
+                color: w.ReligionRole == "Leader" ? UiTheme.ColorRole.AccentInteractive : UiTheme.ColorRole.TextSecondary));
 
         // ── Wellbeing ────────────────────────────────────────────────────────
         var wbColor = w.Wellbeing >= 0.3f ? UiTheme.ColorRole.StatePositive

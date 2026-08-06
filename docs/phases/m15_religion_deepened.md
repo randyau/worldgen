@@ -9,7 +9,10 @@ sects can genuinely doctrinally drift to a different archetype) shipped 2026-08-
 (heresy & persecution — civ state-religion plurality determination, Zealotry-gated soft
 consequences only: civ-Loyalty penalty or forced conversion, never violence) shipped 2026-08-06.
 15.4 (pilgrimage — new GoalType.Pilgrimage built like M11's SeaVoyage; devout members travel to
-their religion's HomeSettlementCoord for a Spiritual/Loyalty boost) shipped 2026-08-06.
+their religion's HomeSettlementCoord for a Spiritual/Loyalty boost) shipped 2026-08-06. 15.5
+(religious leader UI/event-log parity — live "Religion: X (Leader/Member)" line in the Watch
+panel mirroring the existing CivName line, plus event labels for all M15 events across
+CharacterProfilePanel/EventLogPanel/Presenter) shipped 2026-08-06.
 
 See `docs/roadmap.md` § "M15" for the one-line scope statement: schism/heresy/pilgrimage;
 religious leaders as a third power track alongside rulers/merchants.

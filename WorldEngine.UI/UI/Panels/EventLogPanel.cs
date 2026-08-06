@@ -188,7 +188,14 @@ public sealed class EventLogPanel : IWorkspacePanel
         EventType.TreasuryInsolvent        or
         EventType.WarReparationsPaid       or
         EventType.GuildLeadershipTransferred or
-        EventType.ReligiousLeadershipTransferred => true,
+        EventType.ReligiousLeadershipTransferred or
+        EventType.ReligionFounded          or
+        EventType.ReligionExtinct          or
+        EventType.ReligionSchism           or
+        EventType.PersecutionOccurred      or
+        EventType.CharacterConvertedReligion or
+        EventType.PilgrimageEmbarked       or
+        EventType.PilgrimageCompleted      => true,
         _                                  => false
     };
 }

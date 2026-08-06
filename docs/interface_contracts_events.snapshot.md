@@ -240,6 +240,10 @@ public enum EventType
     // is targeted by persecution: either forced to convert or penalized. Soft consequences only —
     // never violence, never civil war, per roadmap.
     PersecutionOccurred            = 4008,
+    // M15 15.4 — pilgrimage: a devout member travels to their religion's HomeSettlementCoord,
+    // mirroring SeaVoyageEmbarked/Completed (5101/5102).
+    PilgrimageEmbarked             = 4009,
+    PilgrimageCompleted            = 4010,
     GodModeDisasterTriggered    = 9001,
     GodModeEntitySpawned        = 9002,
     GodModeCharacterCreated     = 9003,
@@ -260,4 +264,4 @@ public enum EventType
 }
 ```
 
-<!-- content-hash: fecb9e5b5d0f067b -->
+<!-- content-hash: 2ca711d4bfac89da -->

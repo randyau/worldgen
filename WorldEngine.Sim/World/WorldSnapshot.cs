@@ -92,6 +92,8 @@ public sealed record CharacterWatchSnapshot(
     string     Surname,
     string     Epithet,
     string     CivName,
+    string     ReligionName,
+    string     ReligionRole,
     TileCoord  Location,
     string     BiomeName,
     int        AgeSeasons,

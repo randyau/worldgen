@@ -161,4 +161,49 @@ public class ReligionOrganizationTests
         pending.Should().Contain(e => e.Type == EventType.ReligionExtinct);
         pending.Should().NotContain(e => e.Type == EventType.ReligiousLeadershipTransferred);
     }
+
+    // ─── 15.5 — live religion visibility in the watch snapshot ──────────────
+
+    [Fact]
+    public void WatchSnapshot_ForReligionLeader_ShowsLeaderRole()
+    {
+        var world = WorldTestHelper.CreateSmallWorld(seed: 107);
+        var tile = FindLandTile(world);
+        var leader = SpawnAt(world, tile, 1L);
+        var orgId = CivTracker.CreateOrganization(world, OrganizationKind.Religion, "Watched Faith", leader.Id, tile);
+        var membership = new Membership(orgId, OrganizationRole.Leader, 1f);
+        world.Organizations[orgId].Members[leader.Id] = membership;
+        leader.Memberships.Add(membership);
+
+        world.WatchedEntityId   = leader.Id;
+        world.WatchedEntityKind = EntityKind.Tier1Character;
+
+        var builder = new WorldEngine.Sim.World.SnapshotBuilder();
+        var snap = builder.Build(world, WorldEngine.Sim.Core.OverlayType.Biome,
+            WorldEngine.Sim.Core.SimSpeed.Normal, paused: false, ticksPerSecond: 4,
+            recentEvents: Array.Empty<WorldEngine.Sim.World.SimEvent>());
+
+        snap.WatchedCharacter.Should().NotBeNull();
+        snap.WatchedCharacter!.ReligionName.Should().Be("Watched Faith");
+        snap.WatchedCharacter!.ReligionRole.Should().Be("Leader");
+    }
+
+    [Fact]
+    public void WatchSnapshot_ForUnaffiliatedCharacter_ShowsNoReligion()
+    {
+        var world = WorldTestHelper.CreateSmallWorld(seed: 108);
+        var tile = FindLandTile(world);
+        var agnostic = SpawnAt(world, tile, 1L);
+
+        world.WatchedEntityId   = agnostic.Id;
+        world.WatchedEntityKind = EntityKind.Tier1Character;
+
+        var builder = new WorldEngine.Sim.World.SnapshotBuilder();
+        var snap = builder.Build(world, WorldEngine.Sim.Core.OverlayType.Biome,
+            WorldEngine.Sim.Core.SimSpeed.Normal, paused: false, ticksPerSecond: 4,
+            recentEvents: Array.Empty<WorldEngine.Sim.World.SimEvent>());
+
+        snap.WatchedCharacter.Should().NotBeNull();
+        snap.WatchedCharacter!.ReligionName.Should().BeEmpty();
+    }
 }

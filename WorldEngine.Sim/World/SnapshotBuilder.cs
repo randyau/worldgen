@@ -419,6 +419,20 @@ public sealed class SnapshotBuilder
             && world.Civilizations.TryGetValue(c.CivId, out var civ)
             ? civ.Name : "Unknown";
 
+        // M15 15.5 — live religion affiliation for the watch panel, the same "power track" visibility
+        // civ rulership already gets via CivName above. Historical (DB-backed) CharacterProfilePanel
+        // stays event-log-only for religion, per the 15.0 kickoff decision to keep religious
+        // political weight narrative/event-only this milestone rather than a second persistence pass.
+        string religionName = "";
+        string religionRole = "";
+        var religionMembership = c.Memberships.FirstOrDefault(m =>
+            world.Organizations.TryGetValue(m.OrganizationId, out var o) && o.Kind == OrganizationKind.Religion);
+        if (religionMembership != null)
+        {
+            religionName = world.Organizations[religionMembership.OrganizationId].Name;
+            religionRole = religionMembership.Role == OrganizationRole.Leader ? "Leader" : "Member";
+        }
+
         var biome = (BiomeType)world.TileGrid.GetTile(c.Location).BiomeType;
 
         var goals = c.Goals
@@ -434,6 +448,8 @@ public sealed class SnapshotBuilder
             Surname:     c.Identity.Surname,
             Epithet:     c.Identity.Epithet,
             CivName:     civName,
+            ReligionName: religionName,
+            ReligionRole: religionRole,
             Location:    c.Location,
             BiomeName:   biome.ToString(),
             AgeSeasons:  c.AgeSeason,
