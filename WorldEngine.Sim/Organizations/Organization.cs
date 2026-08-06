@@ -71,6 +71,14 @@ public sealed class Organization
     /// </summary>
     public bool IsExtinct { get; internal set; } = false;
 
+    /// <summary>
+    /// M15 — the ReligionArchetypeConfig.Id this Organization was founded from (Religion kind
+    /// only, "" otherwise). Denormalized here rather than re-derived, same precedent as
+    /// Membership.CivId being carried for Civilization-kind orgs — conversion/persecution logic
+    /// (M15 15.1/15.3) needs a religion's Zealotry/appeal without a config round-trip per roll.
+    /// </summary>
+    public string ReligionArchetypeId { get; internal set; } = "";
+
     public Organization(OrganizationId id, OrganizationKind kind, string name, EntityId leaderId, int foundedYear,
         TileCoord? homeSettlementCoord = null)
     {

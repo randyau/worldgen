@@ -40,6 +40,11 @@ public sealed class CharacterBehaviorPhase
         var characters = world.Entities.Characters.ToList();
         var deathsThisTick = new List<(EntityId Id, string Name)>();
 
+        // M15 15.1 — religion conversion via exposure, run once per annual tick against the
+        // tick-start snapshot (a religion founded later this same tick isn't yet a conversion
+        // target — same "yesterday's state" tolerance the disease-spread mechanic accepts).
+        if (isAnnualTick) ProcessAnnualReligionConversion(characters, world, pending);
+
         foreach (var c in characters)
         {
             if (!c.IsAlive) continue;
@@ -886,6 +891,105 @@ public sealed class CharacterBehaviorPhase
         }
     }
 
+    // ─── Religion conversion (M15 15.1) ────────────────────────────────────────
+
+    /// <summary>
+    /// Exposure/personal-receptivity conversion: characters weigh each Religion present in their
+    /// own civ (civ-scoped exposure, not settlement-scoped — DECISION: simplest reasonable choice
+    /// that still satisfies "multiple religions can coexist in a civ"; also happens to be exactly
+    /// the scope 15.3's state-religion/heresy determination needs) by presence fraction × personal
+    /// receptivity × archetype pull, resisted by their current religion's Loyalty if they have one.
+    /// The highest-pull candidate gets one roll per character per year — DECISION: picking the
+    /// single best candidate rather than a full weighted-random draw across all candidates is a
+    /// simplification; a candidate that loses this year's comparison still gets its own turn in
+    /// later years as presence/receptivity shift. See docs/phases/m15_religion_deepened.md
+    /// "Long-run balance constraints" for the sink/source reasoning behind every term here.
+    /// </summary>
+    private void ProcessAnnualReligionConversion(List<Tier1Character> characters, WorldState world, List<PendingEvent> pending)
+    {
+        var cfg = world.SimConfig.Religion;
+
+        var civPopulation = new Dictionary<CivId, int>();
+        var religionTally  = new Dictionary<CivId, Dictionary<OrganizationId, int>>();
+        foreach (var ch in characters)
+        {
+            if (!ch.IsAlive || !ch.CivId.IsValid) continue;
+            civPopulation[ch.CivId] = civPopulation.GetValueOrDefault(ch.CivId) + 1;
+
+            foreach (var m in ch.Memberships)
+            {
+                if (!world.Organizations.TryGetValue(m.OrganizationId, out var o)) continue;
+                if (o.Kind != OrganizationKind.Religion || o.IsExtinct) continue;
+                if (!religionTally.TryGetValue(ch.CivId, out var byOrg))
+                    religionTally[ch.CivId] = byOrg = new Dictionary<OrganizationId, int>();
+                byOrg[m.OrganizationId] = byOrg.GetValueOrDefault(m.OrganizationId) + 1;
+            }
+        }
+
+        foreach (var ch in characters)
+        {
+            if (!ch.IsAlive || !ch.CivId.IsValid) continue;
+            if (!religionTally.TryGetValue(ch.CivId, out var byOrg) || byOrg.Count == 0) continue;
+            int civPop = civPopulation[ch.CivId];
+            if (civPop <= 0) continue;
+
+            var p  = ch.Personality;
+            float receptivity = Math.Clamp(
+                cfg.ConversionWeightPiety      * ch.Skills.Piety
+              + cfg.ConversionWeightWonder     * p.Wonder
+              + cfg.ConversionWeightCuriosity  * p.Curiosity
+              - cfg.ConversionWeightRationality * p.Rationality
+              - cfg.ConversionBaselineSkepticism,
+                0f, 1f);
+            if (receptivity <= 0f) continue; // hard gate — agnosticism is a stable end-state, not a slow transient
+
+            var currentMembership = ch.Memberships.FirstOrDefault(m =>
+                world.Organizations.TryGetValue(m.OrganizationId, out var o) && o.Kind == OrganizationKind.Religion);
+
+            float bestPull = 0f;
+            OrganizationId? bestOrgId = null;
+            foreach (var (orgId, count) in byOrg)
+            {
+                if (currentMembership != null && orgId == currentMembership.OrganizationId) continue;
+
+                var org = world.Organizations[orgId];
+                float presence = (float)count / civPop;
+                var archetype  = world.SimConfig.ReligionArchetypes.Get(org.ReligionArchetypeId);
+                float zealBonus = archetype is { Zealotry: > 0f }
+                    ? 1f + archetype.Zealotry * cfg.ZealotryConversionBonus
+                    : 1f;
+
+                float pull = presence * receptivity * zealBonus * cfg.ConversionBasePullScale;
+                if (currentMembership != null)
+                    pull *= Math.Max(0f, 1f - currentMembership.Loyalty * cfg.ExistingLoyaltyResistance);
+
+                if (pull > bestPull) { bestPull = pull; bestOrgId = orgId; }
+            }
+            if (bestOrgId is not { } targetOrgId || bestPull <= 0f) continue;
+
+            float roll = WorldRng.FloatAt(world.WorldSeed, world.CurrentYear,
+                (int)(ch.Id.Value & 0x7FFFFFFF), 0, S.ReligionConversionRoll);
+            if (roll >= bestPull) continue;
+
+            long fromOrgId = currentMembership?.OrganizationId.Value ?? 0;
+            if (currentMembership != null)
+            {
+                world.Organizations[currentMembership.OrganizationId].Members.Remove(ch.Id);
+                ch.Memberships.Remove(currentMembership);
+            }
+            var targetOrg = world.Organizations[targetOrgId];
+            var newMembership = new Membership(targetOrgId, OrganizationRole.Member, cfg.InitialConvertLoyalty);
+            ch.Memberships.Add(newMembership);
+            targetOrg.Members[ch.Id] = newMembership;
+
+            var payload = JsonSerializer.Serialize(new CharacterConvertedPayload(
+                ch.Id.Value, ch.Identity.Name, targetOrgId.Value, targetOrg.Name, fromOrgId));
+            pending.Add(new PendingEvent(EventType.CharacterConvertedReligion, ch.Location, null,
+                payload, new[] { ch.Id.Value },
+                ActorId: ch.Id.Value, ActorName: ch.Identity.Name, CivId: ch.CivId.Value));
+        }
+    }
+
     // ─── Religion founding ────────────────────────────────────────────────────
 
     private void TryFormFoundReligionGoal(Tier1Character c, WorldState world, long tick)
@@ -961,6 +1065,7 @@ public sealed class CharacterBehaviorPhase
 
         var orgId = CivTracker.CreateOrganization(world, OrganizationKind.Religion, religionName, c.Id, c.Location);
         var org   = world.Organizations[orgId];
+        org.ReligionArchetypeId = archetypeId;
         var membership = new Membership(orgId, OrganizationRole.Leader, 1.0f);
         c.Memberships.Add(membership);
         org.Members[c.Id] = membership;

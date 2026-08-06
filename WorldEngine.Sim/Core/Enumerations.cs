@@ -220,6 +220,9 @@ public enum EventType
     // M15 — a Religion's Leader seat changes hands via SuccessionResolver.SelectSuccessor
     // (unmodified), mirroring GuildLeadershipTransferred.
     ReligiousLeadershipTransferred = 4005,
+    // M15 15.1 — a character joins a religion different from (or in addition to their prior lack
+    // of) religious affiliation, via the exposure/personal-receptivity conversion roll.
+    CharacterConvertedReligion     = 4006,
     GodModeDisasterTriggered    = 9001,
     GodModeEntitySpawned        = 9002,
     GodModeCharacterCreated     = 9003,
@@ -307,6 +310,7 @@ public static class VerbClassification
         EventType.ReligionFounded         => VerbClass.Creation,
         EventType.ReligionExtinct         => VerbClass.Destruction,
         EventType.ReligiousLeadershipTransferred => VerbClass.Transformation,
+        EventType.CharacterConvertedReligion => VerbClass.Transformation,
         EventType.GodModeDisasterTriggered    => VerbClass.Destruction,
         EventType.GodModeEntitySpawned        => VerbClass.Creation,
         EventType.GodModeCharacterCreated     => VerbClass.Creation,

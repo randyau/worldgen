@@ -1,3 +1,5 @@
+using System.Linq;
+
 namespace WorldEngine.Sim.Config;
 
 /// <summary>
@@ -7,12 +9,19 @@ namespace WorldEngine.Sim.Config;
 public sealed class ReligionArchetypeRegistry
 {
     private readonly IReadOnlyList<ReligionArchetypeConfig> _all;
+    private readonly Dictionary<string, ReligionArchetypeConfig> _byId;
 
     public static readonly ReligionArchetypeRegistry Empty = new(Array.Empty<ReligionArchetypeConfig>());
 
-    public ReligionArchetypeRegistry(IReadOnlyList<ReligionArchetypeConfig> all) => _all = all;
+    public ReligionArchetypeRegistry(IReadOnlyList<ReligionArchetypeConfig> all)
+    {
+        _all = all;
+        _byId = all.ToDictionary(a => a.Id);
+    }
 
     public IReadOnlyList<ReligionArchetypeConfig> All => _all;
+
+    public ReligionArchetypeConfig? Get(string id) => _byId.TryGetValue(id, out var a) ? a : null;
 
     /// <summary>
     /// Picks the archetype whose affinity biases best match the founder's PersonalityVector

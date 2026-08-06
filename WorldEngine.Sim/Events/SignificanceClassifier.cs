@@ -110,6 +110,7 @@ public static class SignificanceClassifier
             EventType.GuildLeadershipTransferred => PopulationImpact.Minor,
             // M15 — Religion Organization events
             EventType.ReligiousLeadershipTransferred => PopulationImpact.Minor,
+            EventType.CharacterConvertedReligion => PopulationImpact.None,
             _                                 => PopulationImpact.None,
         };
     }

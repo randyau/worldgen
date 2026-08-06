@@ -213,6 +213,7 @@ public sealed class CharacterProfilePanel : IToggleablePanel
         EventType.WarReparationsPaid      => "War reparations paid",
         EventType.GuildLeadershipTransferred => "Guild leadership passed",
         EventType.ReligiousLeadershipTransferred => "Religious leadership passed",
+        EventType.CharacterConvertedReligion => "Converted religion",
         EventType.ScholarDiscovery        => "Made discovery",
         EventType.PhysicianHealed         => "Healed someone",
         EventType.BeastSlain              => "Slew a beast",

@@ -154,6 +154,7 @@ public sealed class Presenter
         EventType.WarReparationsPaid       => "war reparations paid",
         EventType.GuildLeadershipTransferred => "guild leadership transferred",
         EventType.ReligiousLeadershipTransferred => "religious leadership transferred",
+        EventType.CharacterConvertedReligion => "converted religion",
         EventType.PhysicianHealed          => "healed",
         EventType.CharacterCrystallized    => "crystallized",
         EventType.DiseaseOutbreak          => "disease outbreak",

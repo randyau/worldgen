@@ -697,6 +697,15 @@ _Natural shelter recovery per tick when NOT on a settlement tile, by biome. Dens
 | `wonder_founding_threshold` | `0.60` | `SimConfig.Religion.WonderFoundingThreshold` | Wonder personality trait floor |
 | `religion_founding_progress_per_year` | `0.35` | `SimConfig.Religion.ReligionFoundingProgressPerYear` | progress per year; ~3 years to complete |
 | `religion_founding_cooldown_years` | `50` | `SimConfig.Religion.ReligionFoundingCooldownYears` | per character: min years between foundings |
+| `conversion_weight_piety` | `0.5` | `SimConfig.Religion.ConversionWeightPiety` | personal-receptivity gate weight: Piety |
+| `conversion_weight_wonder` | `0.3` | `SimConfig.Religion.ConversionWeightWonder` | personal-receptivity gate weight: Wonder |
+| `conversion_weight_curiosity` | `0.2` | `SimConfig.Religion.ConversionWeightCuriosity` | personal-receptivity gate weight: Curiosity |
+| `conversion_weight_rationality` | `0.4` | `SimConfig.Religion.ConversionWeightRationality` | personal-receptivity gate weight: -Rationality (skepticism) |
+| `conversion_baseline_skepticism` | `0.25` | `SimConfig.Religion.ConversionBaselineSkepticism` | flat subtraction before clamping to [0,1] — keeps receptivity 0 common |
+| `conversion_base_pull_scale` | `0.05` | `SimConfig.Religion.ConversionBasePullScale` | overall per-year conversion-roll rate scale (centuries, not years) |
+| `zealotry_conversion_bonus` | `0.5` | `SimConfig.Religion.ZealotryConversionBonus` | per positive Zealotry point: multiplier on a religion's conversion pull |
+| `existing_loyalty_resistance` | `0.6` | `SimConfig.Religion.ExistingLoyaltyResistance` | how strongly current-religion Loyalty resists conversion pressure |
+| `initial_convert_loyalty` | `0.3` | `SimConfig.Religion.InitialConvertLoyalty` | Membership.Loyalty granted on a fresh conversion |
 
 ## `[family]` {#family}
 

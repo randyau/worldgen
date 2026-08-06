@@ -97,4 +97,7 @@ internal static class SimRngSalts
     // CharacterBehaviorPhase — M15 religion founding: archetype deity-name + name-template roll
     public const int ReligionDeityName     = 7000;
     public const int ReligionNameTemplate  = 7001;
+
+    // CharacterBehaviorPhase — M15 15.1 religion conversion: per-character-per-year roll
+    public const int ReligionConversionRoll = 7002;
 }

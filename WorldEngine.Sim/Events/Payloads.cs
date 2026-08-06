@@ -293,6 +293,13 @@ internal sealed record ReligiousLeadershipTransferredPayload(
 internal sealed record ReligionExtinctPayload(
     long OrganizationId, string ReligionName, int Year);
 
+/// <summary>M15 15.1 — exposure/personal-receptivity conversion roll. FromOrganizationId is 0 when
+/// the character was previously unaffiliated (agnostic).</summary>
+internal sealed record CharacterConvertedPayload(
+    long CharacterId, string CharacterName,
+    long ToOrganizationId, string ToReligionName,
+    long FromOrganizationId);
+
 // ─── M11 — sea voyages ─────────────────────────────────────────────────────
 
 internal sealed record SeaVoyagePayload(

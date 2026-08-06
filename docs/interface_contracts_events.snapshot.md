@@ -226,6 +226,9 @@ public enum EventType
     ArtifactTransferred     = 6003,  // ownership changed: inheritance, conquest, or claim
     ReligionFounded         = 4003,
     ReligionExtinct         = 4004,
+    // M15 — a Religion's Leader seat changes hands via SuccessionResolver.SelectSuccessor
+    // (unmodified), mirroring GuildLeadershipTransferred.
+    ReligiousLeadershipTransferred = 4005,
     GodModeDisasterTriggered    = 9001,
     GodModeEntitySpawned        = 9002,
     GodModeCharacterCreated     = 9003,
@@ -246,4 +249,4 @@ public enum EventType
 }
 ```
 
-<!-- content-hash: 96cc96fc722de31d -->
+<!-- content-hash: f7ee5ea01f5a9afe -->
