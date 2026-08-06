@@ -693,7 +693,7 @@ _Natural shelter recovery per tick when NOT on a settlement tile, by biome. Dens
 | Key | Value | C# Property | Description |
 |-----|-------|-------------|-------------|
 | `spiritual_founding_threshold` | `0.75` | `SimConfig.Religion.SpiritualFoundingThreshold` | Spiritual need level to trigger FoundReligion goal |
-| `piety_founding_threshold` | `0.50` | `SimConfig.Religion.PietyFoundingThreshold` | Piety skill floor to qualify as a founder |
+| `piety_founding_threshold` | `0.15` | `SimConfig.Religion.PietyFoundingThreshold` | Piety skill floor to qualify as a founder (Skills.Piety is a LowSkill, rolled uniformly in [0.01, 0.2] and never grows — see ReligionConfig.PietyFoundingThreshold DECISION comment) |
 | `wonder_founding_threshold` | `0.60` | `SimConfig.Religion.WonderFoundingThreshold` | Wonder personality trait floor |
 | `religion_founding_progress_per_year` | `0.35` | `SimConfig.Religion.ReligionFoundingProgressPerYear` | progress per year; ~3 years to complete |
 | `religion_founding_cooldown_years` | `50` | `SimConfig.Religion.ReligionFoundingCooldownYears` | per character: min years between foundings |
@@ -716,7 +716,7 @@ _Natural shelter recovery per tick when NOT on a settlement tile, by biome. Dens
 | `persecution_civ_loyalty_penalty` | `0.15` | `SimConfig.Religion.PersecutionCivLoyaltyPenalty` | civ-membership Loyalty penalty on a resisted persecution hit |
 | `persecution_needs_penalty` | `0.1` | `SimConfig.Religion.PersecutionNeedsPenalty` | Needs.Safety/Status penalty on a resisted persecution hit |
 | `forced_convert_loyalty` | `0.1` | `SimConfig.Religion.ForcedConvertLoyalty` | initial Membership.Loyalty for a forced (coerced) conversion |
-| `pilgrimage_piety_threshold` | `0.55` | `SimConfig.Religion.PilgrimagePietyThreshold` | Piety skill floor to form a Pilgrimage goal |
+| `pilgrimage_piety_threshold` | `0.12` | `SimConfig.Religion.PilgrimagePietyThreshold` | Piety skill floor to form a Pilgrimage goal (LowSkill range, see ReligionConfig DECISION comment) |
 | `pilgrimage_cooldown_years` | `30` | `SimConfig.Religion.PilgrimageCooldownYears` | per character: min years between pilgrimages |
 | `pilgrimage_needs_boost` | `0.2` | `SimConfig.Religion.PilgrimageNeedsBoost` | Needs.Spiritual/Purpose gain on completing a pilgrimage |
 | `pilgrimage_loyalty_boost` | `0.15` | `SimConfig.Religion.PilgrimageLoyaltyBoost` | religion Membership.Loyalty gain on completing a pilgrimage |

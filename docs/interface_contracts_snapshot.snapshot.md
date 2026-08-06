@@ -3,7 +3,7 @@
 # Interface Contracts Snapshot — snapshot
 
 ## WorldSnapshot
-**File:** `WorldEngine.Sim/World/WorldSnapshot.cs:125`  
+**File:** `WorldEngine.Sim/World/WorldSnapshot.cs:127`  
 **Kind:** `sealed record`
 
 ```csharp
@@ -276,6 +276,8 @@ public sealed record CharacterWatchSnapshot(
     string     Surname,
     string     Epithet,
     string     CivName,
+    string     ReligionName,
+    string     ReligionRole,
     TileCoord  Location,
     string     BiomeName,
     int        AgeSeasons,
@@ -285,4 +287,4 @@ public sealed record CharacterWatchSnapshot(
     IReadOnlyList<GoalWatchEntry> Goals);
 ```
 
-<!-- content-hash: 218711cc7e652725 -->
+<!-- content-hash: 136444ca859e5093 -->

@@ -1,6 +1,6 @@
 # M15 — Religion, Deepened
 
-**Status:** IN PROGRESS — started 2026-08-06. 15.0 (Religion becomes a real Organization,
+**Status:** COMPLETE — 2026-08-06. All six phases (15.0-15.6) shipped same session. 15.0 (Religion becomes a real Organization,
 `config/religions.toml` archetypes, leader succession, extinction sink) shipped 2026-08-06. 15.1
 (conversion via exposure — personal-receptivity gate, Zealotry-weighted pull, existing-Loyalty
 resistance) shipped 2026-08-06. 15.2 (schism — low-average-Loyalty membership splits off under a
@@ -12,7 +12,19 @@ consequences only: civ-Loyalty penalty or forced conversion, never violence) shi
 their religion's HomeSettlementCoord for a Spiritual/Loyalty boost) shipped 2026-08-06. 15.5
 (religious leader UI/event-log parity — live "Religion: X (Leader/Member)" line in the Watch
 panel mirroring the existing CivName line, plus event labels for all M15 events across
-CharacterProfilePanel/EventLogPanel/Presenter) shipped 2026-08-06.
+CharacterProfilePanel/EventLogPanel/Presenter) shipped 2026-08-06. 15.6 (balance pass + a new
+`WorldEngine.Tests/Balance/ReligionBalanceInstrumentationTests.cs`, same 300-year-sweep +
+3000-year-checkpointed-long-run shape as M14 14.5) shipped 2026-08-06 — **found and fixed a real
+calibration bug**: `Skills.Piety` is a "LowSkill" (`CharacterFactory.LowSkill`, uniformly rolled
+in `[0.01, 0.2]` at spawn with no growth mechanic afterward for Tier1 characters), but
+`PietyFoundingThreshold` (0.50) and `PilgrimagePietyThreshold` (0.55) were both above that entire
+range — `FoundReligion` and `Pilgrimage` could never fire organically at all, confirmed by a
+3000-year instrumented run showing zero religions ever founded. Recalibrated both thresholds
+into the actual reachable range (0.15 / 0.12) rather than redesigning skill growth, which is out
+of scope. Re-run after the fix: religions form, and by year 3000 the population showed 2
+coexisting religions in one civ at a 50/50 split with 97% of the population still agnostic —
+satisfying all three of the "Long-run balance constraints" below at the scale this test harness's
+world supports. No other constant needed retuning.
 
 See `docs/roadmap.md` § "M15" for the one-line scope statement: schism/heresy/pilgrimage;
 religious leaders as a third power track alongside rulers/merchants.

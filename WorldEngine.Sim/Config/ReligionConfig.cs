@@ -4,8 +4,14 @@ public class ReligionConfig
 {
     /// <summary>Spiritual need level required to trigger a FoundReligion goal.</summary>
     public float SpiritualFoundingThreshold     { get; set; } = 0.75f;
+    // DECISION (M15 15.6 balance pass): Skills.Piety is a "LowSkill" — CharacterFactory rolls it
+    // uniformly in [0.01, 0.2] at spawn and nothing currently grows it afterward (verified: no
+    // Tier1 skill-progression mechanic touches Piety) — so a 0.50 threshold was literally
+    // unreachable and FoundReligion never fired organically in a 3000-year instrumented run
+    // (WorldEngine.Tests/Balance/ReligionBalanceInstrumentationTests.cs). Recalibrated to the top
+    // quartile of the actual roll range instead of overhauling skill growth, which is out of scope.
     /// <summary>Piety skill floor; characters below this can't found religions.</summary>
-    public float PietyFoundingThreshold         { get; set; } = 0.50f;
+    public float PietyFoundingThreshold         { get; set; } = 0.15f;
     /// <summary>Wonder personality trait floor for religion founding.</summary>
     public float WonderFoundingThreshold        { get; set; } = 0.60f;
     /// <summary>Progress added to FoundReligion goal per year while Spiritual stays high (~3 years to complete).</summary>
@@ -78,8 +84,10 @@ public class ReligionConfig
     // Mirrors the FoundReligion founding-goal pattern (see TryFormFoundReligionGoal), built like
     // M11's SeaVoyage goal for the actual travel (UtilityScorer steps toward TargetTile).
 
+    // DECISION (M15 15.6): same LowSkill-range recalibration as PietyFoundingThreshold above —
+    // set below the founding threshold since pilgrimage is a lesser commitment than founding.
     /// <summary>Piety skill floor to form a Pilgrimage goal.</summary>
-    public float PilgrimagePietyThreshold    { get; set; } = 0.55f;
+    public float PilgrimagePietyThreshold    { get; set; } = 0.12f;
     /// <summary>Minimum years between pilgrimages for the same character.</summary>
     public int   PilgrimageCooldownYears     { get; set; } = 30;
     /// <summary>Needs.Spiritual/Purpose gain on completing a pilgrimage.</summary>
