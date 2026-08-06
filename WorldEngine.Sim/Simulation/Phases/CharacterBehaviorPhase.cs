@@ -580,6 +580,46 @@ public sealed class CharacterBehaviorPhase
                 succPayload, new[] { c.Id.Value, successorId.Value.Value },
                 ActorId: successorId.Value.Value, ActorName: successor.Identity.Name));
         }
+
+        // M15 15.0 — Religion leader succession: same SuccessionResolver reuse as the Guild block
+        // above. Unlike Guild (seat simply stays vacant when no eligible successor exists), a
+        // religion with zero remaining living members is genuinely extinct — the sink half of
+        // M15's population balance (docs/phases/m15_religion_deepened.md "Long-run balance
+        // constraints"). "Eligible" (age-gated) successor absence doesn't necessarily mean extinct
+        // (a young-only congregation still has living followers), so extinction is checked
+        // separately against IsAlive alone, not SelectSuccessor's age-gated result.
+        foreach (var membership in c.Memberships)
+        {
+            if (!world.Organizations.TryGetValue(membership.OrganizationId, out var religionOrg)) continue;
+            if (religionOrg.Kind != OrganizationKind.Religion || religionOrg.LeaderId != c.Id) continue;
+
+            var successorId = SuccessionResolver.SelectSuccessor(religionOrg, world, _cfg.MinRulerAgeSeasons,
+                member => (member.Personality.Wonder + member.Skills.Piety) * 0.5f);
+            if (successorId.HasValue)
+            {
+                religionOrg.LeaderId = successorId.Value;
+                var successor = (Tier1Character)world.GetEntity(successorId.Value)!;
+
+                var succPayload = JsonSerializer.Serialize(new ReligiousLeadershipTransferredPayload(
+                    religionOrg.Id.Value, religionOrg.Name,
+                    c.Id.Value, c.Identity.Name,
+                    successorId.Value.Value, successor.Identity.Name));
+                pending.Add(new PendingEvent(EventType.ReligiousLeadershipTransferred, c.Location, null,
+                    succPayload, new[] { c.Id.Value, successorId.Value.Value },
+                    ActorId: successorId.Value.Value, ActorName: successor.Identity.Name));
+                continue;
+            }
+
+            bool anyLivingFollower = religionOrg.Members.Keys.Any(id =>
+                id != c.Id && world.GetEntity(id) is Tier1Character t && t.IsAlive);
+            if (anyLivingFollower) continue; // seat vacant, congregation survives — mirrors Guild
+
+            religionOrg.IsExtinct = true;
+            var extinctPayload = JsonSerializer.Serialize(new ReligionExtinctPayload(
+                religionOrg.Id.Value, religionOrg.Name, world.CurrentYear));
+            pending.Add(new PendingEvent(EventType.ReligionExtinct, c.Location, null,
+                extinctPayload, new[] { c.Id.Value }));
+        }
     }
 
     /// <summary>
@@ -898,9 +938,37 @@ public sealed class CharacterBehaviorPhase
             Status    = Math.Min(1f, c.Needs.Status    + 0.20f),
         };
 
+        // M15 15.0 — Religion becomes a real Organization (previously a bare flavor event;
+        // OrganizationKind.Religion existed since M12 but nothing ever instantiated it). The
+        // archetype whose affinity biases best match the founder's PersonalityVector is selected
+        // (see ReligionArchetypeRegistry.SelectForFounder); a deity name and name template are
+        // then rolled deterministically from that archetype's pools.
+        var p = c.Personality;
+        var archetype = world.SimConfig.ReligionArchetypes.SelectForFounder(
+            p.Compassion, p.Aggression, p.Curiosity, p.Wonder, p.Ambition, p.Stability);
+
+        string religionName = $"Faith of {c.Identity.Name}"; // fallback if no archetypes configured
+        string archetypeId  = "";
+        if (archetype != null)
+        {
+            archetypeId = archetype.Id;
+            string deity = archetype.DeityNames[
+                (int)(WorldRng.FloatAt(world.WorldSeed, 0, (int)c.Id.Value, 0, S.ReligionDeityName) * archetype.DeityNames.Length)];
+            string template = archetype.NameTemplates[
+                (int)(WorldRng.FloatAt(world.WorldSeed, 0, (int)c.Id.Value, 1, S.ReligionNameTemplate) * archetype.NameTemplates.Length)];
+            religionName = template.Replace("{deity}", deity);
+        }
+
+        var orgId = CivTracker.CreateOrganization(world, OrganizationKind.Religion, religionName, c.Id, c.Location);
+        var org   = world.Organizations[orgId];
+        var membership = new Membership(orgId, OrganizationRole.Leader, 1.0f);
+        c.Memberships.Add(membership);
+        org.Members[c.Id] = membership;
+
         var payload = JsonSerializer.Serialize(new ReligionFoundedPayload(
             c.Id.Value, c.Identity.Name, world.CurrentYear,
-            c.Location.X, c.Location.Y));
+            c.Location.X, c.Location.Y,
+            OrganizationId: orgId.Value, ReligionName: religionName, ArchetypeId: archetypeId));
         pending.Add(new PendingEvent(EventType.ReligionFounded, c.Location, null, payload,
             new[] { c.Id.Value },
             ActorId: c.Id.Value, ActorName: c.Identity.Name,

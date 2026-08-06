@@ -187,7 +187,8 @@ public sealed class EventLogPanel : IWorkspacePanel
         EventType.GuildFormed              or
         EventType.TreasuryInsolvent        or
         EventType.WarReparationsPaid       or
-        EventType.GuildLeadershipTransferred => true,
+        EventType.GuildLeadershipTransferred or
+        EventType.ReligiousLeadershipTransferred => true,
         _                                  => false
     };
 }

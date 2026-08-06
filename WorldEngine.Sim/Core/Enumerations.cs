@@ -217,6 +217,9 @@ public enum EventType
     ArtifactTransferred     = 6003,  // ownership changed: inheritance, conquest, or claim
     ReligionFounded         = 4003,
     ReligionExtinct         = 4004,
+    // M15 — a Religion's Leader seat changes hands via SuccessionResolver.SelectSuccessor
+    // (unmodified), mirroring GuildLeadershipTransferred.
+    ReligiousLeadershipTransferred = 4005,
     GodModeDisasterTriggered    = 9001,
     GodModeEntitySpawned        = 9002,
     GodModeCharacterCreated     = 9003,
@@ -303,6 +306,7 @@ public static class VerbClassification
         EventType.ArtifactTransferred     => VerbClass.Transfer,
         EventType.ReligionFounded         => VerbClass.Creation,
         EventType.ReligionExtinct         => VerbClass.Destruction,
+        EventType.ReligiousLeadershipTransferred => VerbClass.Transformation,
         EventType.GodModeDisasterTriggered    => VerbClass.Destruction,
         EventType.GodModeEntitySpawned        => VerbClass.Creation,
         EventType.GodModeCharacterCreated     => VerbClass.Creation,

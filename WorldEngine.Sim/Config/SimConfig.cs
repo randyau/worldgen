@@ -35,5 +35,8 @@ public class SimConfig
     // Loaded separately by AncestryLoader — not from sim_config.toml
     public AncestryRegistry AncestryRegistry { get; set; } = AncestryRegistry.Empty;
 
+    // Loaded separately by ReligionArchetypeLoader — not from sim_config.toml
+    public ReligionArchetypeRegistry ReligionArchetypes { get; set; } = ReligionArchetypeRegistry.Empty;
+
     public static SimConfig Default() => new();
 }

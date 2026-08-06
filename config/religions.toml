@@ -1,0 +1,164 @@
+# World Engine — Religion Archetype Definitions
+# Each [[religion]] block defines one archetype a founding character can produce.
+# When a character founds a religion (M15 15.0), the archetype whose affinity_* biases best match
+# the founder's PersonalityVector (weighted dot product) is selected; a deity name and name
+# template are then rolled from its pools to produce the religion's display name.
+
+# =============================================================================
+# COMPASSION — mercy, protection of the weak, communal care
+# =============================================================================
+[[religion]]
+id            = "compassion_cult"
+zealotry      = -0.6
+display_name  = "Cult of Compassion"
+affinity_compassion = 0.6
+affinity_aggression  = -0.3
+deity_names = [
+  "Aelanthe", "Serenya", "Mirelis", "Thendra", "Calenna", "Veshara",
+  "Ondrel", "Isolwen", "Farenna", "Brindolis"
+]
+tenets = [
+  "mercy over conquest",
+  "the weak and the wounded are sacred",
+  "no debt of suffering goes unanswered",
+  "a shared table is a holy table",
+]
+name_templates = [
+  "The Circle of {deity}",
+  "Faith of {deity}",
+  "The {deity}an Communion",
+  "The Mercy of {deity}",
+]
+
+# =============================================================================
+# WAR — strength, conquest, trial by battle
+# =============================================================================
+[[religion]]
+id            = "war_cult"
+zealotry      = 0.8
+display_name  = "Cult of the Warband God"
+affinity_aggression = 0.6
+affinity_ambition    = 0.3
+affinity_compassion  = -0.2
+deity_names = [
+  "Vorgath", "Krennok", "Dravash", "Hurgun", "Zalgrim", "Orkanath",
+  "Baldrek", "Skarnu", "Throkka", "Malgorn"
+]
+tenets = [
+  "strength is the only honest judge",
+  "the fallen in battle feast forever",
+  "peace unearned is peace unworthy",
+  "the strong shelter the strong",
+]
+name_templates = [
+  "The Warhost of {deity}",
+  "The Blood Oath of {deity}",
+  "{deity}'s Legion",
+  "The Trial of {deity}",
+]
+
+# =============================================================================
+# WISDOM — knowledge, patience, the long view
+# =============================================================================
+[[religion]]
+id            = "wisdom_order"
+zealotry      = -0.3
+display_name  = "Order of Wisdom"
+affinity_curiosity = 0.5
+affinity_stability  = 0.3
+deity_names = [
+  "Quorathel", "Ithravel", "Solmenar", "Vaethiron", "Naelurin", "Corvethas",
+  "Lythanor", "Pravendel", "Ostirael", "Wynthalor"
+]
+tenets = [
+  "every question is a door, not a wall",
+  "the archive outlives the empire",
+  "patience is the highest discipline",
+  "what is written cannot be unlearned",
+]
+name_templates = [
+  "The Order of {deity}",
+  "The Archive of {deity}",
+  "The Silent School of {deity}",
+  "{deity}'s Accord",
+]
+
+# =============================================================================
+# WONDER — nature, awe, the numinous and untamed
+# =============================================================================
+[[religion]]
+id            = "wonder_path"
+zealotry      = -0.2
+display_name  = "The Wondering Path"
+affinity_wonder = 0.6
+affinity_curiosity = 0.2
+deity_names = [
+  "Faelurenn", "Skyavel", "Thornowyn", "Merithal", "Auroneth", "Wyldrasa",
+  "Embervael", "Glimmerith", "Duskorien", "Starholme"
+]
+tenets = [
+  "the world is stranger than the map admits",
+  "awe is owed before it is understood",
+  "the untamed places are not empty",
+  "every dawn is a small miracle repeating",
+]
+name_templates = [
+  "The Wondering Path of {deity}",
+  "The Vigil of {deity}",
+  "{deity}'s Pilgrims",
+  "The Awakening of {deity}",
+]
+
+# =============================================================================
+# ANCESTORS — death, memory, continuity across generations
+# =============================================================================
+[[religion]]
+id            = "ancestor_rite"
+zealotry      = 0.3
+display_name  = "Rite of the Ancestors"
+affinity_stability = 0.4
+affinity_compassion = 0.2
+affinity_aggression = 0.1
+deity_names = [
+  "Morvethiel", "Kaldrenor", "Ushanet", "Dornavel", "Grethalis", "Yvorenn",
+  "Belnoric", "Sarethum", "Corivael", "Halduren"
+]
+tenets = [
+  "the dead advise the living who listen",
+  "a name unspoken is a soul unmoored",
+  "duty to the ancestor is duty to the unborn",
+  "grief honored is grief transformed",
+]
+name_templates = [
+  "The Rite of {deity}",
+  "The Vigil Hall of {deity}",
+  "The Unbroken Line of {deity}",
+  "{deity}'s Remembrance",
+]
+
+# =============================================================================
+# FORTUNE — wealth, luck, ambition rewarded
+# =============================================================================
+[[religion]]
+id            = "fortune_creed"
+zealotry      = 0.1
+display_name  = "Creed of Fortune"
+affinity_ambition = 0.5
+affinity_curiosity = 0.1
+affinity_stability = -0.1
+deity_names = [
+  "Golrathis", "Vennacor", "Ithmerra", "Duskavel", "Ravencoin", "Aurellin",
+  "Marketh", "Coventhal", "Ledgerian", "Vaultheris"
+]
+tenets = [
+  "fortune favors the bold ledger",
+  "a debt repaid is a bond made sacred",
+  "risk is the toll on every blessing",
+  "the market is a temple that never closes",
+]
+name_templates = [
+  "The Creed of {deity}",
+  "The Fortunate House of {deity}",
+  "{deity}'s Ledger",
+  "The Gilded Path of {deity}",
+]

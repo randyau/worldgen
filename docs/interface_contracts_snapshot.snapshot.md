@@ -3,7 +3,7 @@
 # Interface Contracts Snapshot — snapshot
 
 ## WorldSnapshot
-**File:** `WorldEngine.Sim/World/WorldSnapshot.cs:124`  
+**File:** `WorldEngine.Sim/World/WorldSnapshot.cs:125`  
 **Kind:** `sealed record`
 
 ```csharp
@@ -227,8 +227,12 @@ public sealed class AncestryConfig
     public Dictionary<string, float> SpawnWeights { get; set; } = new();
     public Dictionary<string, float> FirstMeetingTrust { get; set; } = new();
     public Dictionary<string, float> CulturalDistance { get; set; } = new();
-    public string[] FirstNames { get; set; } = [];
-    public string[] Epithets   { get; set; } = [];
+    public string[] NameOnsets      { get; set; } = [];
+    public string[] NameMiddles     { get; set; } = [];
+    public string[] NameCodas       { get; set; } = [];
+    public string[] SurnameOnsets   { get; set; } = [];
+    public string[] SurnameCodas    { get; set; } = [];
+    public string[] Epithets        { get; set; } = [];
     public string   ArchitecturalStyle      { get; set; } = "";
     public string   SettlementDescriptor    { get; set; } = "";
     public string[] BiomeAdaptations        { get; set; } = [];
@@ -269,6 +273,7 @@ public sealed record ImprovementSnapshot(
 public sealed record CharacterWatchSnapshot(
     EntityId   Id,
     string     Name,
+    string     Surname,
     string     Epithet,
     string     CivName,
     TileCoord  Location,
@@ -280,4 +285,4 @@ public sealed record CharacterWatchSnapshot(
     IReadOnlyList<GoalWatchEntry> Goals);
 ```
 
-<!-- content-hash: 4b69405d1bdee765 -->
+<!-- content-hash: 218711cc7e652725 -->

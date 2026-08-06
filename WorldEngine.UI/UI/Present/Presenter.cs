@@ -153,6 +153,7 @@ public sealed class Presenter
         EventType.TreasuryInsolvent        => "treasury insolvent",
         EventType.WarReparationsPaid       => "war reparations paid",
         EventType.GuildLeadershipTransferred => "guild leadership transferred",
+        EventType.ReligiousLeadershipTransferred => "religious leadership transferred",
         EventType.PhysicianHealed          => "healed",
         EventType.CharacterCrystallized    => "crystallized",
         EventType.DiseaseOutbreak          => "disease outbreak",

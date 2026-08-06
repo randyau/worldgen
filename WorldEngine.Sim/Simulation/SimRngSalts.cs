@@ -24,6 +24,7 @@ namespace WorldEngine.Sim.Simulation;
 ///  6000–6099 CharacterBehaviorPhase (M13 family — childbirth)
 ///   940–949  Tier2BehaviorPhase (M14 14.2 — caravan interception/disaster/piracy rolls;
 ///            943 reserved for M14 14.4 guild formation)
+///  7000–7099 CharacterBehaviorPhase (M15 religion — founding naming, conversion, schism)
 /// </summary>
 internal static class SimRngSalts
 {
@@ -92,4 +93,8 @@ internal static class SimRngSalts
     // trigger, not RNG-gated, but a salt is reserved here per CLAUDE.md's named-salt convention in
     // case a probabilistic component is added during 14.5 calibration).
     public const int T2GuildFormation    = 943;
+
+    // CharacterBehaviorPhase — M15 religion founding: archetype deity-name + name-template roll
+    public const int ReligionDeityName     = 7000;
+    public const int ReligionNameTemplate  = 7001;
 }

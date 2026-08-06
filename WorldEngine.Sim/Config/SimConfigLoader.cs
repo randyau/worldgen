@@ -112,7 +112,8 @@ public static class SimConfigLoader
 
         // 3. Deserialize to typed config
         var config = Toml.ToModel<SimConfig>(toml, null, options);
-        config.AncestryRegistry = AncestryLoader.LoadOrDefault(ancestryBasePath);
+        config.AncestryRegistry   = AncestryLoader.LoadOrDefault(ancestryBasePath);
+        config.ReligionArchetypes = ReligionArchetypeLoader.LoadOrDefault(ancestryBasePath);
 
         // 4. Validate ranges, ordering invariants, and cross-field constraints
         SimConfigValidator.Validate(config);

@@ -62,6 +62,15 @@ public sealed class Organization
     /// </summary>
     public bool TreasuryInsolvencyFlagged { get; internal set; } = false;
 
+    /// <summary>
+    /// M15 — true once this Organization's last living member has died (currently only set for
+    /// Religion, the sink half of M15's population balance — see
+    /// docs/phases/m15_religion_deepened.md "Long-run balance constraints"). Members/relationship
+    /// state are left in place for history queries, same convention as a dead leader never being
+    /// removed from Members; conversion/exposure logic (M15 15.1+) must skip extinct religions.
+    /// </summary>
+    public bool IsExtinct { get; internal set; } = false;
+
     public Organization(OrganizationId id, OrganizationKind kind, string name, EntityId leaderId, int foundedYear,
         TileCoord? homeSettlementCoord = null)
     {

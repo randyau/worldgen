@@ -272,12 +272,26 @@ internal sealed record CivIntelGatheredPayload(
     long ToCivId,   string ToCivName,
     float NewConfidence);
 
-// ─── M4 Phase 3 — Religion ────────────────────────────────────────────────────
+// ─── M4 Phase 3 / M15 — Religion ────────────────────────────────────────────
 
 internal sealed record ReligionFoundedPayload(
     long   FounderId, string FounderName,
     int    Year,
-    int    TileX, int TileY);
+    int    TileX, int TileY,
+    long   OrganizationId = 0, string ReligionName = "", string ArchetypeId = "");
+
+/// <summary>A Religion's Leader seat changes hands via SuccessionResolver.SelectSuccessor
+/// (unmodified — mirrors GuildLeadershipTransferred/GuildSuccessionPayload).</summary>
+internal sealed record ReligiousLeadershipTransferredPayload(
+    long OrganizationId, string ReligionName,
+    long PredecessorId, string PredecessorName,
+    long SuccessorId, string SuccessorName);
+
+/// <summary>A Religion Organization loses its last living member — fires instead of leaving a
+/// zero-member Organization sitting in undead limbo (the sink half of M15's population balance;
+/// see docs/phases/m15_religion_deepened.md "Long-run balance constraints").</summary>
+internal sealed record ReligionExtinctPayload(
+    long OrganizationId, string ReligionName, int Year);
 
 // ─── M11 — sea voyages ─────────────────────────────────────────────────────
 

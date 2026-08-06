@@ -44,6 +44,9 @@ One-line description of every non-trivial source file. Check here before running
 - `FearConfig.cs` — M13 13.1 — Fear as a submission/appeasement axis distinct from Trust: a feared rival gets avoided (War/Raid dampened) or placated, instead of Fear only ever feeding Dominance/war.
 - `ImprovementsConfig.cs` — Tile improvement food/production multipliers and build-cost constants.
 - `LocalGenConfig.cs` — Local-scale (10m-resolution) generation parameters: chunk size and world-tile subdivision (M11).
+- `ReligionArchetypeConfig.cs` — One authored religion archetype, loaded from config/religions.toml. When a character founds a religion (M15 15.0), the archetype whose personality affinity best matches the founder's PersonalityVector is selected; a deity name and name template are then rolled from its pools to produce the religion's display name.
+- `ReligionArchetypeRegistry.cs` — Loaded set of all religion archetype configs. Accessible via world.SimConfig.ReligionArchetypes. Provides personality-affinity-weighted archetype selection for religion founding (M15 15.0).
+- `ReligionArchetypeValidator.cs` — Validates religions.toml after deserialization. Called automatically by <see cref="ReligionArchetypeLoader.LoadOrDefault"/>. Throws <see cref="ReligionArchetypeValidationException"/> listing every violation found — fail fast, same gate style as <see cref="AncestryValidator"/>.
 - `ResourcePressureConfig.cs` — Food/water/resource pressure constants: shortage threshold, famine onset, and carrying-capacity weights.
 - `ResourcesConfig.cs` — Per-resource deposit density fractions used during world generation (iron, copper, tin, precious metals).
 - `RiversConfig.cs` — River flow accumulation threshold and lake detection constants for world generation.

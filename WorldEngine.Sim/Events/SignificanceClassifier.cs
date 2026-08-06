@@ -108,6 +108,8 @@ public static class SignificanceClassifier
             EventType.TreasuryInsolvent        => PopulationImpact.Moderate, // Destruction verb → Regional floor
             EventType.WarReparationsPaid       => PopulationImpact.Minor,
             EventType.GuildLeadershipTransferred => PopulationImpact.Minor,
+            // M15 — Religion Organization events
+            EventType.ReligiousLeadershipTransferred => PopulationImpact.Minor,
             _                                 => PopulationImpact.None,
         };
     }
