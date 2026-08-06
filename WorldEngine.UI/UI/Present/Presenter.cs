@@ -157,6 +157,8 @@ public sealed class Presenter
         EventType.CharacterConvertedReligion => "converted religion",
         EventType.ReligionSchism          => "religion schism",
         EventType.PersecutionOccurred     => "persecuted for heresy",
+        EventType.PilgrimageEmbarked      => "embarked on pilgrimage",
+        EventType.PilgrimageCompleted     => "completed pilgrimage",
         EventType.PhysicianHealed          => "healed",
         EventType.CharacterCrystallized    => "crystallized",
         EventType.DiseaseOutbreak          => "disease outbreak",

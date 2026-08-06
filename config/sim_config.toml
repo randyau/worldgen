@@ -1005,6 +1005,12 @@ persecution_civ_loyalty_penalty    = 0.15  # civ-membership Loyalty penalty on a
 persecution_needs_penalty          = 0.1   # Needs.Safety/Status penalty on a resisted persecution hit
 forced_convert_loyalty             = 0.1   # initial Membership.Loyalty for a forced (coerced) conversion
 
+# M15 15.4 — pilgrimage
+pilgrimage_piety_threshold    = 0.55  # Piety skill floor to form a Pilgrimage goal
+pilgrimage_cooldown_years     = 30    # per character: min years between pilgrimages
+pilgrimage_needs_boost        = 0.2   # Needs.Spiritual/Purpose gain on completing a pilgrimage
+pilgrimage_loyalty_boost      = 0.15  # religion Membership.Loyalty gain on completing a pilgrimage
+
 # =============================================================================
 # FAMILY (M13 13.0 — marriage, household Organization, childbirth/inheritance)
 # =============================================================================
@@ -1175,6 +1181,9 @@ slay_beast      = { hunt_beast = 1.0, travel = 0.3 }
 # SeaVoyage goal (M11): sea_voyage is the direct move-across-water action; ordinary travel is a
 # weaker fallback for the (rare) case where the voyage step happens to also be a land move.
 sea_voyage      = { sea_voyage = 1.0, travel = 0.3 }
+# Pilgrimage goal (M15 15.4): same shape as SeaVoyage — direct travel action toward the goal's
+# TargetTile is the dominant affinity, ordinary travel a weaker fallback.
+pilgrimage      = { pilgrimage = 1.0, travel = 0.3 }
 # Goals with no affinity entries (security, unify, found_religion) default to 0.0 for all actions.
 
 [utility_affinity.action_needs]
@@ -1203,6 +1212,8 @@ found_city       = { shelter = 0.50, status = 0.50, _default = 0.0 }
 hunt_beast       = { purpose = 0.40, status = 0.30, _default = 0.1 }
 # SeaVoyage: purpose + status, same flavor as FoundCity (a civ-level expansion act)
 sea_voyage       = { purpose = 0.50, status = 0.50, _default = 0.0 }
+# Pilgrimage (M15 15.4): spiritual + purpose driven — a devotional journey, not a status act.
+pilgrimage       = { spiritual = 0.50, purpose = 0.30, _default = 0.0 }
 # create, flee: no need-based score — rely on goal advancement and personality only
 # _default = 0.1 matches the original _ => 0.1f fallback for all unlisted actions
 create           = { _default = 0.1 }

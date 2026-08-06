@@ -244,7 +244,9 @@ public sealed record Tier1EntityDto(
     int    LastDefectionTick = -1,
     string? LocalPositionKey = null,
     // M14 14.0 — personal Wealth accumulator; see docs/phases/m14_economy_independent_wealth.md.
-    float  Wealth = 0f);
+    float  Wealth = 0f,
+    // M15 15.4 — see docs/phases/m15_religion_deepened.md.
+    int    LastPilgrimageYear = -999);
 
 public sealed record Tier2EntityDto(
     long   Id,

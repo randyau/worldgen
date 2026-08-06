@@ -73,4 +73,17 @@ public class ReligionConfig
     public float PersecutionNeedsPenalty     { get; set; } = 0.1f;
     /// <summary>Initial Membership.Loyalty for a forced (coerced, not genuine) conversion.</summary>
     public float ForcedConvertLoyalty        { get; set; } = 0.1f;
+
+    // ─── M15 15.4 — pilgrimage ──────────────────────────────────────────────
+    // Mirrors the FoundReligion founding-goal pattern (see TryFormFoundReligionGoal), built like
+    // M11's SeaVoyage goal for the actual travel (UtilityScorer steps toward TargetTile).
+
+    /// <summary>Piety skill floor to form a Pilgrimage goal.</summary>
+    public float PilgrimagePietyThreshold    { get; set; } = 0.55f;
+    /// <summary>Minimum years between pilgrimages for the same character.</summary>
+    public int   PilgrimageCooldownYears     { get; set; } = 30;
+    /// <summary>Needs.Spiritual/Purpose gain on completing a pilgrimage.</summary>
+    public float PilgrimageNeedsBoost        { get; set; } = 0.2f;
+    /// <summary>Religion Membership.Loyalty gain on completing a pilgrimage.</summary>
+    public float PilgrimageLoyaltyBoost      { get; set; } = 0.15f;
 }

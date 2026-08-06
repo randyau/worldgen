@@ -70,7 +70,8 @@ The `Type` column stores integer values. Use these constants in WHERE clauses:
   3510 = GuildLeadershipTransferred        4003 = ReligionFounded                 
   4004 = ReligionExtinct                   4005 = ReligiousLeadershipTransferred  
   4006 = CharacterConvertedReligion        4007 = ReligionSchism                  
-  4008 = PersecutionOccurred             
+  4008 = PersecutionOccurred               4009 = PilgrimageEmbarked              
+  4010 = PilgrimageCompleted             
 
 -- Artifact (6000–6999)
   6001 = ArtifactCreated        6002 = ArtifactDestroyed    

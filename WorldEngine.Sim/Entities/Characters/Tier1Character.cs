@@ -72,6 +72,9 @@ public sealed class Tier1Character : SimEntity
     // Year when the character last founded a religion (gates re-founding via cooldown)
     public int LastReligionFoundedYear { get; internal set; } = -999;
 
+    // M15 15.4 — year when the character last completed a pilgrimage (gates re-pilgrimage via cooldown)
+    public int LastPilgrimageYear { get; internal set; } = -999;
+
     // M14 14.0 — personal wealth accumulator (mirrors Tier2Character.Notability's shape). Portable
     // value denominated against EconomyConfig.BaseValuePerUnit; physically conserved — every
     // transfer debits some other pool (settlement ResourceStores, another character's Wealth, an

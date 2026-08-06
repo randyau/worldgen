@@ -293,7 +293,8 @@ internal static class WorldStateMapper
             LocalChunkKey: c.LocalChunk.HasValue ? ChunkKey(c.LocalChunk.Value) : null,
             LocalPositionKey: c.LocalPosition.HasValue ? LocalKey(c.LocalPosition.Value) : null,
             LastDefectionTick: c.LastDefectionTick,
-            Wealth: c.Wealth);
+            Wealth: c.Wealth,
+            LastPilgrimageYear: c.LastPilgrimageYear);
     }
 
     private static Tier2EntityDto MapTier2(Tier2Character c)
@@ -667,6 +668,7 @@ internal static class WorldStateMapper
         character.LocalPosition             = d.LocalPositionKey is not null ? ParseLocal(d.LocalPositionKey) : null;
         character.LastDefectionTick         = d.LastDefectionTick;
         character.AddWealth(d.Wealth);
+        character.LastPilgrimageYear        = d.LastPilgrimageYear;
 
         foreach (var gd in d.Goals)
             character.Goals.Add(new GoalData

@@ -65,6 +65,7 @@ public sealed class CharacterBehaviorPhase
             {
                 AdvanceFoundReligionGoal(c, world, pending, tick);
                 TryFormFoundReligionGoal(c, world, tick);
+                TryFormPilgrimageGoal(c, world, tick, pending);
             }
 
             c.TicksInCurrentTile++;
@@ -1169,6 +1170,82 @@ public sealed class CharacterBehaviorPhase
             CivId: c.CivId.Value));
     }
 
+    // ─── Pilgrimage (M15 15.4) ──────────────────────────────────────────────────
+
+    /// <summary>
+    /// Mirrors TryFormFoundReligionGoal's shape: a devout member of a Religion (Piety above
+    /// threshold, past cooldown) forms a Pilgrimage goal targeting their religion's
+    /// HomeSettlementCoord. Travel itself is handled by UtilityScorer (like SeaVoyage); arrival is
+    /// detected in ResolveMoveWithVoyageTracking.
+    /// </summary>
+    private void TryFormPilgrimageGoal(Tier1Character c, WorldState world, long tick, List<PendingEvent> pending)
+    {
+        var cfg = world.SimConfig.Religion;
+        if (c.Skills.Piety < cfg.PilgrimagePietyThreshold) return;
+        if (c.LastPilgrimageYear > -999
+            && world.CurrentYear - c.LastPilgrimageYear < cfg.PilgrimageCooldownYears)
+            return;
+        if (c.Goals.Any(g => g.Type == GoalType.Pilgrimage && !g.IsComplete)) return;
+
+        var religionMembership = c.Memberships.FirstOrDefault(m =>
+            world.Organizations.TryGetValue(m.OrganizationId, out var o) && o.Kind == OrganizationKind.Religion);
+        if (religionMembership == null) return;
+
+        var org = world.Organizations[religionMembership.OrganizationId];
+        if (!org.HomeSettlementCoord.HasValue || org.HomeSettlementCoord.Value == c.Location) return;
+
+        c.Goals.Add(new GoalData
+        {
+            Type       = GoalType.Pilgrimage,
+            Priority   = 0.6f,
+            Intensity  = 0.7f,
+            TargetTile = org.HomeSettlementCoord,
+            FormedTick = (int)tick,
+            StaleSince = (int)tick,
+        });
+
+        var payload = JsonSerializer.Serialize(new PilgrimagePayload(
+            c.Id.Value, c.Identity.Name, org.Id.Value, org.Name,
+            org.HomeSettlementCoord.Value.X, org.HomeSettlementCoord.Value.Y));
+        pending.Add(new PendingEvent(EventType.PilgrimageEmbarked, c.Location, null, payload,
+            new[] { c.Id.Value },
+            ActorId: c.Id.Value, ActorName: c.Identity.Name, CivId: c.CivId.Value));
+    }
+
+    /// <summary>Arrival at the pilgrimage site: completes the goal, grants the Needs/Loyalty boost, and starts the cooldown.</summary>
+    private static void CompletePilgrimage(Tier1Character c, GoalData goal, WorldState world, List<PendingEvent> pending)
+    {
+        var cfg = world.SimConfig.Religion;
+        goal.IsComplete = true;
+        c.LastPilgrimageYear = world.CurrentYear;
+        c.Needs = c.Needs with
+        {
+            Spiritual = Math.Min(1f, c.Needs.Spiritual + cfg.PilgrimageNeedsBoost),
+            Purpose   = Math.Min(1f, c.Needs.Purpose   + cfg.PilgrimageNeedsBoost),
+        };
+
+        var religionMembership = c.Memberships.FirstOrDefault(m =>
+            world.Organizations.TryGetValue(m.OrganizationId, out var o) && o.Kind == OrganizationKind.Religion);
+        string religionName = "";
+        long orgIdValue = 0;
+        if (religionMembership != null)
+        {
+            var org = world.Organizations[religionMembership.OrganizationId];
+            religionName = org.Name;
+            orgIdValue = org.Id.Value;
+            var updated = religionMembership with { Loyalty = Math.Min(1f, religionMembership.Loyalty + cfg.PilgrimageLoyaltyBoost) };
+            c.Memberships.Remove(religionMembership);
+            c.Memberships.Add(updated);
+            org.Members[c.Id] = updated;
+        }
+
+        var payload = JsonSerializer.Serialize(new PilgrimagePayload(
+            c.Id.Value, c.Identity.Name, orgIdValue, religionName, c.Location.X, c.Location.Y));
+        pending.Add(new PendingEvent(EventType.PilgrimageCompleted, c.Location, null, payload,
+            new[] { c.Id.Value },
+            ActorId: c.Id.Value, ActorName: c.Identity.Name, CivId: c.CivId.Value));
+    }
+
     /// <summary>
     /// Selects the archetype whose affinity biases best match <paramref name="founder"/>'s
     /// PersonalityVector (see ReligionArchetypeRegistry.SelectForFounder) and rolls a deity name +
@@ -1314,13 +1391,18 @@ public sealed class CharacterBehaviorPhase
     // emit SeaVoyageEmbarked/Completed. No new ICommand: MoveToTile already carries everything
     // resolution needs, and "did this move cross water" is fully determined by comparing
     // old/new tile land status, not something the emitting (EMIT-step) code needs to flag.
+    // M15 15.4 — also detects a Pilgrimage goal's arrival at its TargetTile the same way.
     private static void ResolveMoveWithVoyageTracking(
         Tier1Character c, TileCoord dest, WorldState world, List<PendingEvent> pending, long tick)
     {
         var voyageGoal = c.Goals.FirstOrDefault(g => g.Type == GoalType.SeaVoyage && !g.IsComplete);
+        var pilgrimageGoal = c.Goals.FirstOrDefault(g => g.Type == GoalType.Pilgrimage && !g.IsComplete && g.TargetTile.HasValue);
         bool oldWasLand = world.IsLand(c.Location);
 
         ResolveMove(c, dest, world);
+
+        if (pilgrimageGoal != null && dest == pilgrimageGoal.TargetTile!.Value)
+            CompletePilgrimage(c, pilgrimageGoal, world, pending);
 
         if (voyageGoal == null) return;
         bool newIsLand = world.IsLand(dest);

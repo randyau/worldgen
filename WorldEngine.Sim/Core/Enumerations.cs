@@ -231,6 +231,10 @@ public enum EventType
     // is targeted by persecution: either forced to convert or penalized. Soft consequences only —
     // never violence, never civil war, per roadmap.
     PersecutionOccurred            = 4008,
+    // M15 15.4 — pilgrimage: a devout member travels to their religion's HomeSettlementCoord,
+    // mirroring SeaVoyageEmbarked/Completed (5101/5102).
+    PilgrimageEmbarked             = 4009,
+    PilgrimageCompleted            = 4010,
     GodModeDisasterTriggered    = 9001,
     GodModeEntitySpawned        = 9002,
     GodModeCharacterCreated     = 9003,
@@ -321,6 +325,8 @@ public static class VerbClassification
         EventType.CharacterConvertedReligion => VerbClass.Transformation,
         EventType.ReligionSchism          => VerbClass.Creation,
         EventType.PersecutionOccurred     => VerbClass.Transformation,
+        EventType.PilgrimageEmbarked      => VerbClass.Transformation,
+        EventType.PilgrimageCompleted     => VerbClass.Transformation,
         EventType.GodModeDisasterTriggered    => VerbClass.Destruction,
         EventType.GodModeEntitySpawned        => VerbClass.Creation,
         EventType.GodModeCharacterCreated     => VerbClass.Creation,

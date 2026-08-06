@@ -42,6 +42,9 @@ public enum GoalType
 
     // M11 — character water crossings
     SeaVoyage,         // ruler-delegated: cross open water via a Port to a far-shore TargetTile
+
+    // M15 15.4 — pilgrimage
+    Pilgrimage,        // devout member travels to their religion's HomeSettlementCoord
 }
 
 public enum GoalObject

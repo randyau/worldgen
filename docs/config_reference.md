@@ -716,6 +716,10 @@ _Natural shelter recovery per tick when NOT on a settlement tile, by biome. Dens
 | `persecution_civ_loyalty_penalty` | `0.15` | `SimConfig.Religion.PersecutionCivLoyaltyPenalty` | civ-membership Loyalty penalty on a resisted persecution hit |
 | `persecution_needs_penalty` | `0.1` | `SimConfig.Religion.PersecutionNeedsPenalty` | Needs.Safety/Status penalty on a resisted persecution hit |
 | `forced_convert_loyalty` | `0.1` | `SimConfig.Religion.ForcedConvertLoyalty` | initial Membership.Loyalty for a forced (coerced) conversion |
+| `pilgrimage_piety_threshold` | `0.55` | `SimConfig.Religion.PilgrimagePietyThreshold` | Piety skill floor to form a Pilgrimage goal |
+| `pilgrimage_cooldown_years` | `30` | `SimConfig.Religion.PilgrimageCooldownYears` | per character: min years between pilgrimages |
+| `pilgrimage_needs_boost` | `0.2` | `SimConfig.Religion.PilgrimageNeedsBoost` | Needs.Spiritual/Purpose gain on completing a pilgrimage |
+| `pilgrimage_loyalty_boost` | `0.15` | `SimConfig.Religion.PilgrimageLoyaltyBoost` | religion Membership.Loyalty gain on completing a pilgrimage |
 
 ## `[family]` {#family}
 
@@ -816,6 +820,7 @@ _Natural shelter recovery per tick when NOT on a settlement tile, by biome. Dens
 | `found_city` | `{ found_city = 1.0, travel = 0.8 }` | `SimConfig.UtilityAffinity.GoalAffinity.FoundCity` | FoundCity goal: founding directly; travel to find a good site |
 | `slay_beast` | `{ hunt_beast = 1.0, travel = 0.3 }` | `SimConfig.UtilityAffinity.GoalAffinity.SlayBeast` |  |
 | `sea_voyage` | `{ sea_voyage = 1.0, travel = 0.3 }` | `SimConfig.UtilityAffinity.GoalAffinity.SeaVoyage` | SeaVoyage goal (M11): sea_voyage is the direct move-across-water action; ordinary travel is a weaker fallback for the (rare) case where the voyage step happens to also be a land move. |
+| `pilgrimage` | `{ pilgrimage = 1.0, travel = 0.3 }` | `SimConfig.UtilityAffinity.GoalAffinity.Pilgrimage` | Pilgrimage goal (M15 15.4): same shape as SeaVoyage — direct travel action toward the goal's TargetTile is the dominant affinity, ordinary travel a weaker fallback. |
 
 ## `[utility_affinity.action_needs]` {#utility-affinityaction-needs}
 
@@ -833,6 +838,7 @@ _Natural shelter recovery per tick when NOT on a settlement tile, by biome. Dens
 | `found_city` | `{ shelter = 0.50, status = 0.50, _default = 0.0 }` | `SimConfig.UtilityAffinity.ActionNeeds.FoundCity` | FoundCity: shelter + status (city-founding is the ultimate expression of both) |
 | `hunt_beast` | `{ purpose = 0.40, status = 0.30, _default = 0.1 }` | `SimConfig.UtilityAffinity.ActionNeeds.HuntBeast` |  |
 | `sea_voyage` | `{ purpose = 0.50, status = 0.50, _default = 0.0 }` | `SimConfig.UtilityAffinity.ActionNeeds.SeaVoyage` | SeaVoyage: purpose + status, same flavor as FoundCity (a civ-level expansion act) |
+| `pilgrimage` | `{ spiritual = 0.50, purpose = 0.30, _default = 0.0 }` | `SimConfig.UtilityAffinity.ActionNeeds.Pilgrimage` | Pilgrimage (M15 15.4): spiritual + purpose driven — a devotional journey, not a status act. |
 | `create` | `{ _default = 0.1 }` | `SimConfig.UtilityAffinity.ActionNeeds.Create` | create, flee: no need-based score — rely on goal advancement and personality only _default = 0.1 matches the original _ => 0.1f fallback for all unlisted actions |
 | `flee` | `{ _default = 0.1 }` | `SimConfig.UtilityAffinity.ActionNeeds.Flee` |  |
 | `marry` | `{ belonging = 0.60, _default = 0.0 }` | `SimConfig.UtilityAffinity.ActionNeeds.Marry` | Marry: belonging-driven, same flavor as Ally |

@@ -236,6 +236,10 @@ public enum EventType
     // proxy) break off under a new leader into a newly-founded sect, mirroring CivSplintered
     // (3212) at the Organization-membership level rather than geography.
     ReligionSchism                 = 4007,
+    // M15 15.3 — a heretic (member of a religion other than their civ's enforced state religion)
+    // is targeted by persecution: either forced to convert or penalized. Soft consequences only —
+    // never violence, never civil war, per roadmap.
+    PersecutionOccurred            = 4008,
     GodModeDisasterTriggered    = 9001,
     GodModeEntitySpawned        = 9002,
     GodModeCharacterCreated     = 9003,
@@ -256,4 +260,4 @@ public enum EventType
 }
 ```
 
-<!-- content-hash: 30d6b5fe0841554c -->
+<!-- content-hash: fecb9e5b5d0f067b -->

@@ -113,6 +113,8 @@ public static class SignificanceClassifier
             EventType.CharacterConvertedReligion => PopulationImpact.None,
             EventType.ReligionSchism          => PopulationImpact.Minor,
             EventType.PersecutionOccurred     => PopulationImpact.None,
+            EventType.PilgrimageEmbarked      => PopulationImpact.None,
+            EventType.PilgrimageCompleted     => PopulationImpact.None,
             _                                 => PopulationImpact.None,
         };
     }

@@ -316,6 +316,12 @@ internal sealed record PersecutionOccurredPayload(
     long   HereticReligionOrganizationId, string HereticReligionName,
     string Outcome);
 
+/// <summary>M15 15.4 — mirrors SeaVoyagePayload's shape.</summary>
+internal sealed record PilgrimagePayload(
+    long CharacterId, string CharacterName,
+    long OrganizationId, string ReligionName,
+    int TileX, int TileY);
+
 // ─── M11 — sea voyages ─────────────────────────────────────────────────────
 
 internal sealed record SeaVoyagePayload(

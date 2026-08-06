@@ -546,6 +546,18 @@ public sealed class UtilityScorer
             }
         }
 
+        // Pilgrimage (M15 15.4) — step toward the goal's TargetTile (the character's religion's
+        // HomeSettlementCoord, set when the religion was founded/schismed). Ordinary land travel,
+        // no ocean-crossing allowance — mirrors SeaVoyage's shape without its shallow-ocean rule.
+        var pilgrimageGoal = c.Goals.FirstOrDefault(g => g.Type == GoalType.Pilgrimage && !g.IsComplete && g.TargetTile.HasValue);
+        if (pilgrimageGoal != null && c.Location != pilgrimageGoal.TargetTile!.Value)
+        {
+            var step = StepToward(c.Location, pilgrimageGoal.TargetTile.Value, world);
+            if (step.HasValue)
+                actions.Add(new(new MoveToTile(c.Id, step.Value),
+                    Score(c, ActionType.Pilgrimage, c.Skills.Piety, world, cfg)));
+        }
+
         // FleeRegion — available when character has a Flee goal and Wellbeing < 0
         var fleeGoal = c.Goals.FirstOrDefault(g => g.Type == GoalType.Flee);
         if (fleeGoal != null && c.Wellbeing < 0f)
@@ -568,7 +580,9 @@ public sealed class UtilityScorer
         BuildImprovement, FoundCity, HuntBeast, SeaVoyage, Marry, GrantAid, ForgiveDebt, Placate, Defect,
         // M14 14.4 — decision 9's two treasury commands (appended at the end so existing
         // UtilityAffinityTables indices/TOML entries are unaffected).
-        ContributeToTreasury, WithdrawFromTreasury
+        ContributeToTreasury, WithdrawFromTreasury,
+        // M15 15.4 — pilgrimage (appended at the end, same reason)
+        Pilgrimage
     }
 
     // covet→conflict seam: GoalAdvancement already boosts War/Raid actions when a character has
@@ -690,6 +704,7 @@ public sealed class UtilityScorer
         ActionType.Defect           => (1f - c.Personality.Loyalty) * 0.7f + c.Personality.Curiosity * 0.3f,
         ActionType.ContributeToTreasury => c.Personality.Loyalty * 0.7f + c.Personality.Compassion * 0.3f,
         ActionType.WithdrawFromTreasury => c.Personality.Ambition,
+        ActionType.Pilgrimage       => c.Skills.Piety * 0.6f + c.Personality.Wonder * 0.4f,
         _                           => 0.2f
     };
 
@@ -1162,6 +1177,7 @@ public sealed class UtilityScorer
                     GoalType.BuildImprovement => ca.Command is BuildImprovement,
                     GoalType.SlayBeast   => ca.Command is MoveToTile,
                     GoalType.SeaVoyage   => ca.Command is MoveToTile,
+                    GoalType.Pilgrimage  => ca.Command is MoveToTile,
                     _                    => false
                 };
                 if (matchesGoal) bias = SpotlightIntentBias;
