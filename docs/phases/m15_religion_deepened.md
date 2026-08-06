@@ -1,6 +1,11 @@
 # M15 — Religion, Deepened
 
-**Status:** IN PROGRESS — started 2026-08-06.
+**Status:** IN PROGRESS — started 2026-08-06. 15.0 (Religion becomes a real Organization,
+`config/religions.toml` archetypes, leader succession, extinction sink) shipped 2026-08-06. 15.1
+(conversion via exposure — personal-receptivity gate, Zealotry-weighted pull, existing-Loyalty
+resistance) shipped 2026-08-06. 15.2 (schism — low-average-Loyalty membership splits off under a
+dissenting leader into a newly-founded sect, reusing the founding identity-roll so schismatic
+sects can genuinely doctrinally drift to a different archetype) shipped 2026-08-06.
 
 See `docs/roadmap.md` § "M15" for the one-line scope statement: schism/heresy/pilgrimage;
 religious leaders as a third power track alongside rulers/merchants.

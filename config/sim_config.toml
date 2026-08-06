@@ -991,6 +991,11 @@ zealotry_conversion_bonus     = 0.5   # per positive Zealotry point: multiplier 
 existing_loyalty_resistance   = 0.6   # how strongly current-religion Loyalty resists conversion pressure
 initial_convert_loyalty       = 0.3   # Membership.Loyalty granted on a fresh conversion
 
+# M15 15.2 — schism (doctrinal tension proxy: large membership + low average Loyalty)
+schism_min_members            = 6     # minimum living membership before schism is eligible
+schism_avg_loyalty_threshold  = 0.5   # avg member Loyalty (excl. leader) must be below this
+schism_base_chance            = 0.04  # annual schism probability when eligible, scaled by (1 - avgLoyalty)
+
 # =============================================================================
 # FAMILY (M13 13.0 — marriage, household Organization, childbirth/inheritance)
 # =============================================================================

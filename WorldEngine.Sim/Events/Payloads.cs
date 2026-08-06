@@ -300,6 +300,14 @@ internal sealed record CharacterConvertedPayload(
     long ToOrganizationId, string ToReligionName,
     long FromOrganizationId);
 
+/// <summary>M15 15.2 — mirrors CivSplinteredPayload at the Organization-membership level.</summary>
+internal sealed record ReligionSchismPayload(
+    long   ParentOrganizationId, string ParentReligionName,
+    long   NewOrganizationId,    string NewReligionName,
+    long   NewLeaderId,          string NewLeaderName,
+    int    MembersSeceded,
+    string NewArchetypeId);
+
 // ─── M11 — sea voyages ─────────────────────────────────────────────────────
 
 internal sealed record SeaVoyagePayload(

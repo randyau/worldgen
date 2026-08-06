@@ -40,10 +40,14 @@ public sealed class CharacterBehaviorPhase
         var characters = world.Entities.Characters.ToList();
         var deathsThisTick = new List<(EntityId Id, string Name)>();
 
-        // M15 15.1 — religion conversion via exposure, run once per annual tick against the
+        // M15 15.1/15.2 — religion conversion + schism, run once per annual tick against the
         // tick-start snapshot (a religion founded later this same tick isn't yet a conversion
         // target — same "yesterday's state" tolerance the disease-spread mechanic accepts).
-        if (isAnnualTick) ProcessAnnualReligionConversion(characters, world, pending);
+        if (isAnnualTick)
+        {
+            ProcessAnnualReligionConversion(characters, world, pending);
+            ProcessAnnualReligionSchism(world, pending);
+        }
 
         foreach (var c in characters)
         {
@@ -1043,25 +1047,8 @@ public sealed class CharacterBehaviorPhase
         };
 
         // M15 15.0 — Religion becomes a real Organization (previously a bare flavor event;
-        // OrganizationKind.Religion existed since M12 but nothing ever instantiated it). The
-        // archetype whose affinity biases best match the founder's PersonalityVector is selected
-        // (see ReligionArchetypeRegistry.SelectForFounder); a deity name and name template are
-        // then rolled deterministically from that archetype's pools.
-        var p = c.Personality;
-        var archetype = world.SimConfig.ReligionArchetypes.SelectForFounder(
-            p.Compassion, p.Aggression, p.Curiosity, p.Wonder, p.Ambition, p.Stability);
-
-        string religionName = $"Faith of {c.Identity.Name}"; // fallback if no archetypes configured
-        string archetypeId  = "";
-        if (archetype != null)
-        {
-            archetypeId = archetype.Id;
-            string deity = archetype.DeityNames[
-                (int)(WorldRng.FloatAt(world.WorldSeed, 0, (int)c.Id.Value, 0, S.ReligionDeityName) * archetype.DeityNames.Length)];
-            string template = archetype.NameTemplates[
-                (int)(WorldRng.FloatAt(world.WorldSeed, 0, (int)c.Id.Value, 1, S.ReligionNameTemplate) * archetype.NameTemplates.Length)];
-            religionName = template.Replace("{deity}", deity);
-        }
+        // OrganizationKind.Religion existed since M12 but nothing ever instantiated it).
+        var (religionName, archetypeId) = RollReligionIdentity(c, world);
 
         var orgId = CivTracker.CreateOrganization(world, OrganizationKind.Religion, religionName, c.Id, c.Location);
         var org   = world.Organizations[orgId];
@@ -1078,6 +1065,98 @@ public sealed class CharacterBehaviorPhase
             new[] { c.Id.Value },
             ActorId: c.Id.Value, ActorName: c.Identity.Name,
             CivId: c.CivId.Value));
+    }
+
+    /// <summary>
+    /// Selects the archetype whose affinity biases best match <paramref name="founder"/>'s
+    /// PersonalityVector (see ReligionArchetypeRegistry.SelectForFounder) and rolls a deity name +
+    /// name template deterministically from its pools. Shared by religion founding (15.0) and
+    /// schism (15.2) — a schismatic sect re-rolls its identity the same way a founder does, which
+    /// is also how genuine doctrinal drift happens: the dissenting leader's own personality picks
+    /// the new archetype, not necessarily the parent religion's.
+    /// </summary>
+    private static (string Name, string ArchetypeId) RollReligionIdentity(Tier1Character founder, WorldState world)
+    {
+        var p = founder.Personality;
+        var archetype = world.SimConfig.ReligionArchetypes.SelectForFounder(
+            p.Compassion, p.Aggression, p.Curiosity, p.Wonder, p.Ambition, p.Stability);
+
+        if (archetype == null)
+            return ($"Faith of {founder.Identity.Name}", ""); // fallback if no archetypes configured
+
+        string deity = archetype.DeityNames[
+            (int)(WorldRng.FloatAt(world.WorldSeed, 0, (int)founder.Id.Value, 0, S.ReligionDeityName) * archetype.DeityNames.Length)];
+        string template = archetype.NameTemplates[
+            (int)(WorldRng.FloatAt(world.WorldSeed, 0, (int)founder.Id.Value, 1, S.ReligionNameTemplate) * archetype.NameTemplates.Length)];
+        return (template.Replace("{deity}", deity), archetype.Id);
+    }
+
+    // ─── Religion schism (M15 15.2) ────────────────────────────────────────────
+
+    /// <summary>
+    /// Reuses CivSplintered's shape (gather a subset, promote a leader, transfer members, fire an
+    /// event) at the Organization-membership level instead of geography. Doctrinal tension is
+    /// approximated by low average non-leader Loyalty — a large religion with many
+    /// exposure-converted (rather than devout) members is ripe for schism. The seceding faction is
+    /// every living non-leader member at or below the org's average Loyalty, led by whichever of
+    /// them has the single lowest Loyalty (the "dissenter"). See
+    /// docs/phases/m15_religion_deepened.md "Long-run balance constraints" point 3.
+    /// </summary>
+    private void ProcessAnnualReligionSchism(WorldState world, List<PendingEvent> pending)
+    {
+        var cfg = world.SimConfig.Religion;
+
+        foreach (var org in world.Organizations.Values.ToList())
+        {
+            if (org.Kind != OrganizationKind.Religion || org.IsExtinct) continue;
+
+            var livingMembers = org.Members
+                .Where(kv => world.GetEntity(kv.Key) is Tier1Character t && t.IsAlive)
+                .ToList();
+            if (livingMembers.Count < cfg.SchismMinMembers) continue;
+
+            var nonLeader = livingMembers.Where(kv => kv.Key != org.LeaderId).ToList();
+            if (nonLeader.Count == 0) continue;
+
+            float avgLoyalty = nonLeader.Average(kv => kv.Value.Loyalty);
+            if (avgLoyalty >= cfg.SchismAvgLoyaltyThreshold) continue;
+
+            float chance = cfg.SchismBaseChance * (1f - avgLoyalty);
+            float roll = WorldRng.FloatAt(world.WorldSeed, world.CurrentYear, org.Id.Value, 0, S.ReligionSchismRoll);
+            if (roll >= chance) continue;
+
+            var seceding = nonLeader.Where(kv => kv.Value.Loyalty <= avgLoyalty).ToList();
+            if (seceding.Count == 0) continue;
+
+            var dissenterEntry = seceding.OrderBy(kv => kv.Value.Loyalty).ThenBy(kv => kv.Key.Value).First();
+            var dissenter = (Tier1Character)world.GetEntity(dissenterEntry.Key)!;
+
+            var (newName, newArchetypeId) = RollReligionIdentity(dissenter, world);
+            var newOrgId = CivTracker.CreateOrganization(world, OrganizationKind.Religion, newName, dissenter.Id, dissenter.Location);
+            var newOrg = world.Organizations[newOrgId];
+            newOrg.ReligionArchetypeId = newArchetypeId;
+
+            foreach (var (memberId, oldMembership) in seceding)
+            {
+                if (world.GetEntity(memberId) is not Tier1Character member) continue;
+                org.Members.Remove(memberId);
+                member.Memberships.Remove(oldMembership);
+
+                var role = memberId == dissenter.Id ? OrganizationRole.Leader : OrganizationRole.Member;
+                var newMembership = new Membership(newOrgId, role, oldMembership.Loyalty);
+                member.Memberships.Add(newMembership);
+                newOrg.Members[memberId] = newMembership;
+            }
+
+            var payload = JsonSerializer.Serialize(new ReligionSchismPayload(
+                org.Id.Value, org.Name,
+                newOrgId.Value, newName,
+                dissenter.Id.Value, dissenter.Identity.Name,
+                seceding.Count, newArchetypeId));
+            pending.Add(new PendingEvent(EventType.ReligionSchism, dissenter.Location, null, payload,
+                new[] { dissenter.Id.Value },
+                ActorId: dissenter.Id.Value, ActorName: dissenter.Identity.Name));
+        }
     }
 
     // ─── Command resolution ────────────────────────────────────────────────────

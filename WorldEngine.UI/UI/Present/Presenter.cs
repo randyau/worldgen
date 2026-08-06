@@ -155,6 +155,7 @@ public sealed class Presenter
         EventType.GuildLeadershipTransferred => "guild leadership transferred",
         EventType.ReligiousLeadershipTransferred => "religious leadership transferred",
         EventType.CharacterConvertedReligion => "converted religion",
+        EventType.ReligionSchism          => "religion schism",
         EventType.PhysicianHealed          => "healed",
         EventType.CharacterCrystallized    => "crystallized",
         EventType.DiseaseOutbreak          => "disease outbreak",

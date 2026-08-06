@@ -706,6 +706,9 @@ _Natural shelter recovery per tick when NOT on a settlement tile, by biome. Dens
 | `zealotry_conversion_bonus` | `0.5` | `SimConfig.Religion.ZealotryConversionBonus` | per positive Zealotry point: multiplier on a religion's conversion pull |
 | `existing_loyalty_resistance` | `0.6` | `SimConfig.Religion.ExistingLoyaltyResistance` | how strongly current-religion Loyalty resists conversion pressure |
 | `initial_convert_loyalty` | `0.3` | `SimConfig.Religion.InitialConvertLoyalty` | Membership.Loyalty granted on a fresh conversion |
+| `schism_min_members` | `6` | `SimConfig.Religion.SchismMinMembers` | minimum living membership before schism is eligible |
+| `schism_avg_loyalty_threshold` | `0.5` | `SimConfig.Religion.SchismAvgLoyaltyThreshold` | avg member Loyalty (excl. leader) must be below this |
+| `schism_base_chance` | `0.04` | `SimConfig.Religion.SchismBaseChance` | annual schism probability when eligible, scaled by (1 - avgLoyalty) |
 
 ## `[family]` {#family}
 

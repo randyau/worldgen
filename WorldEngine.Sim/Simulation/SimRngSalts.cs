@@ -100,4 +100,7 @@ internal static class SimRngSalts
 
     // CharacterBehaviorPhase — M15 15.1 religion conversion: per-character-per-year roll
     public const int ReligionConversionRoll = 7002;
+
+    // CharacterBehaviorPhase — M15 15.2 religion schism: per-org-per-year roll
+    public const int ReligionSchismRoll = 7003;
 }

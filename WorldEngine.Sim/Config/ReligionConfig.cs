@@ -38,4 +38,16 @@ public class ReligionConfig
     public float ExistingLoyaltyResistance  { get; set; } = 0.6f;
     /// <summary>Initial Membership.Loyalty granted on a fresh conversion.</summary>
     public float InitialConvertLoyalty      { get; set; } = 0.3f;
+
+    // ─── M15 15.2 — schism ──────────────────────────────────────────────────
+    // Doctrinal tension proxy: a large membership with low average Loyalty (many
+    // exposure-converted members rather than devout founders) is treated as ripe for schism —
+    // see docs/phases/m15_religion_deepened.md "Long-run balance constraints" point 3.
+
+    /// <summary>Minimum living membership before a religion is even eligible for schism.</summary>
+    public int   SchismMinMembers            { get; set; } = 6;
+    /// <summary>Average member Loyalty (excluding the leader) must be below this for schism eligibility.</summary>
+    public float SchismAvgLoyaltyThreshold   { get; set; } = 0.5f;
+    /// <summary>Annual schism probability when eligible, scaled by (1 - avgLoyalty).</summary>
+    public float SchismBaseChance            { get; set; } = 0.04f;
 }

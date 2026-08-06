@@ -223,6 +223,10 @@ public enum EventType
     // M15 15.1 — a character joins a religion different from (or in addition to their prior lack
     // of) religious affiliation, via the exposure/personal-receptivity conversion roll.
     CharacterConvertedReligion     = 4006,
+    // M15 15.2 — a Religion Organization splits: its lowest-Loyalty members (doctrinal-tension
+    // proxy) break off under a new leader into a newly-founded sect, mirroring CivSplintered
+    // (3212) at the Organization-membership level rather than geography.
+    ReligionSchism                 = 4007,
     GodModeDisasterTriggered    = 9001,
     GodModeEntitySpawned        = 9002,
     GodModeCharacterCreated     = 9003,
@@ -311,6 +315,7 @@ public static class VerbClassification
         EventType.ReligionExtinct         => VerbClass.Destruction,
         EventType.ReligiousLeadershipTransferred => VerbClass.Transformation,
         EventType.CharacterConvertedReligion => VerbClass.Transformation,
+        EventType.ReligionSchism          => VerbClass.Creation,
         EventType.GodModeDisasterTriggered    => VerbClass.Destruction,
         EventType.GodModeEntitySpawned        => VerbClass.Creation,
         EventType.GodModeCharacterCreated     => VerbClass.Creation,
