@@ -62,7 +62,8 @@ where the codebase now is.
 | M13 | Generational & Domestic Drama | ✅ COMPLETE 2026-08-02 | Family bonds, mentorship, non-war rivalry, betrayal within a civ. See archive. |
 | M14 | Economy & Independent Wealth | ✅ COMPLETE 2026-08-05 | Persistent trade routes; merchant wealth as a power track separate from rulership. See `docs/phases/archive/m14_economy_independent_wealth.md`. |
 | M15 | Religion, Deepened | ✅ COMPLETE 2026-08-06 | Schism, heresy, pilgrimage; religious leaders as a third power track alongside rulers/merchants. See `docs/phases/archive/m15_religion_deepened.md`. |
-| M15.9 | Sim Tech Debt *(new — inserted 2026-09-17)* | not started | Config-ify pervasive M2/M4-era hardcoded constants; review the entity-ID base-offset allocation scheme for collision risk. Scheduled ahead of M16 per a 2026-09-17 code-review/docs-audit pass. |
+| M15.9 | Sim Tech Debt *(new — inserted 2026-09-17)* | not started | Config-ify pervasive M2/M4-era hardcoded constants; review the entity-ID base-offset allocation scheme for collision risk; refactor debt from a 2026-09-17 review (membership-invariant consolidation, dead command-dispatch duplication, GoalManager goal-type tables, org succession dedup, cooldown-field conventions, dampening composition, test scaffolding). |
+| M15.95 | Civilization/Organization Unification *(new — inserted 2026-09-17)* | not started | Finish the M12 migration: `Civilization` and `Organization` still carry parallel, one-directionally-mirrored copies of members/succession-timer/tension state. Either make `Civilization`'s copies computed views over the `Organization` side, or formally retire `Organization`'s civ-membership fields as unused. Large, atomic (cannot be half-migrated), touches the save format and war/unrest/diplomacy hot paths — deliberately scheduled as its own milestone rather than folded into M15.9. |
 | M16 | Disasters, Reworked | summary | Give eruptions/disasters real consequences; expand variety beyond wildfire/beasts; multi-year recovery arcs. |
 | M17 | Exploration & the Unknown | summary | Land expeditions; first contact; discovering ruins/artifacts from prior collapsed civs. |
 | M18 | Intrigue & Espionage | summary | Failed assassinations, coups, corrupt Tier-2 role-holders, spies. |
@@ -469,6 +470,26 @@ M12–M18 extends them instead of duplicating them.
   reproduction, fixed in the same review pass) — worth a design review of the whole scheme rather
   than patching each collision site as it's found. Do this before M16 so disaster-driven mass
   entity spawns (settlement destruction, displacement waves) don't inherit the same collision risk.
+  Also carries the refactor debt from a 2026-09-17 review pass covering M9–M15 accretion:
+  consolidate the nine ad-hoc `Membership` join/leave/loyalty-update sites into one shared helper
+  (and fix a reorder side-effect in loyalty updates that lets `Tier1Character.CivId` resolution
+  drift — re-run the balance suite after); dedupe the civ-vs-org command dispatch double-switch in
+  `CivTracker.Resolve`/`CharacterBehaviorPhase.ResolveCommand`; collapse `GoalManager`'s four
+  hand-maintained goal-type membership lists into one `GoalTypeTraits` table; merge the
+  near-identical Guild/Religion succession blocks in `CharacterBehaviorPhase.KillCharacter`; unify
+  the three cooldown-field sentinel/boundary conventions; and compose the `*Dampening` call-site
+  duplication. See the 2026-09-17 review findings for file:line detail. Deliberately excludes the
+  `Civilization`/`Organization` dual-state migration — see M15.95.
+- **M15.95 — Civilization/Organization Unification.** Not started. `Civilization` and
+  `Organization` still carry parallel, one-directionally-mirrored copies of the same state
+  (`Members`, `SuccessionCrisisEndYear`, `BorderTension`, war/peace state) — a migration M12 started
+  and never finished. Every sim read still goes through the `Civilization` copy; for
+  Civilization-kind orgs, `Organization`'s copies are effectively write-only (persisted, never
+  read), and the two also drift on `CivId` across a save/load round-trip on the `Membership` DTO
+  side. Flagged in the 2026-09-17 review as real dual-source-of-truth but explicitly *not*
+  attempted in M15.9: it can't be done incrementally (touches the save format plus the
+  war/unrest/diplomacy hot paths at once) and needs its own scoped pass rather than riding
+  alongside M15.9's smaller items.
 - **M16 — Disasters, Reworked.** Eruptions currently fire (`DisasterConfig`/`[disasters]`) but have no gameplay consequence — wire real effects (destroyed settlements/improvements, ash-driven famine, displacement). Expand disaster variety beyond wildfire/beasts: flood, drought, earthquake, blight/crop disease, harsh winter. Model disasters as multi-year recovery arcs rather than single-tick events, so they leave a visible scar in a settlement's history instead of resolving instantly.
 - **M17 — Exploration & the Unknown.** Land expeditions mirroring the M11 water-crossing pattern (`Port`/`SeaVoyage` delegation) — lost expeditions, first contact with an unknown ancestry or beast species. Ruins/artifacts from a *previously collapsed* civ (`CivilizationCollapsed`, `3202`, is already logged) discoverable by a later civ, resurfacing dead history as new story material.
 - **M18 — Intrigue & Espionage.** Failed/attempted assassinations (today only resolved outcomes are logged). Coups — a civ's power changing hands without full `CivilizationCollapsed`. Corruption or abuse by an appointed Tier-2 role-holder (`AppointedToRole`, `3301`, exists; nothing currently exploits the role) — first consumer of the Tier2-role behavior variability described above. Spies/informants as a character role, feeding `CivIntelGathered` (`5004`) into deliberate sabotage rather than passive intel.
