@@ -62,7 +62,7 @@ where the codebase now is.
 | M13 | Generational & Domestic Drama | ✅ COMPLETE 2026-08-02 | Family bonds, mentorship, non-war rivalry, betrayal within a civ. See archive. |
 | M14 | Economy & Independent Wealth | ✅ COMPLETE 2026-08-05 | Persistent trade routes; merchant wealth as a power track separate from rulership. See `docs/phases/archive/m14_economy_independent_wealth.md`. |
 | M15 | Religion, Deepened | ✅ COMPLETE 2026-08-06 | Schism, heresy, pilgrimage; religious leaders as a third power track alongside rulers/merchants. See `docs/phases/archive/m15_religion_deepened.md`. |
-| M15.9 | Sim Tech Debt *(new — inserted 2026-09-17)* | partially complete | Shipped 2026-09-17: membership-invariant consolidation, command-dispatch dedup, GoalManager goal-type tables, org succession dedup, cooldown-field conventions, dampening composition. Remaining: config-ify pervasive M2/M4-era hardcoded constants; review the entity-ID base-offset allocation scheme; test-scaffolding dedup (`FindLandTile`/`SpawnAt`/reflection call sites); reset `IdGenerator._counter` between test runs. |
+| M15.9 | Sim Tech Debt *(new — inserted 2026-09-17)* | partially complete | Shipped 2026-09-17: membership-invariant consolidation, command-dispatch dedup, GoalManager goal-type tables, org succession dedup, cooldown-field conventions, dampening composition, test-scaffolding dedup (`FindLandTile`/`SpawnAt`/reflection call sites → `internal` + direct calls). Remaining: config-ify pervasive M2/M4-era hardcoded constants; review the entity-ID base-offset allocation scheme; reset `IdGenerator._counter` between test runs. |
 | M15.95 | Civilization/Organization Unification *(new — inserted 2026-09-17)* | not started | Finish the M12 migration: `Civilization` and `Organization` still carry parallel, one-directionally-mirrored copies of members/succession-timer/tension state. Either make `Civilization`'s copies computed views over the `Organization` side, or formally retire `Organization`'s civ-membership fields as unused. Large, atomic (cannot be half-migrated), touches the save format and war/unrest/diplomacy hot paths — deliberately scheduled as its own milestone rather than folded into M15.9. |
 | M16 | Disasters, Reworked | summary | Give eruptions/disasters real consequences; expand variety beyond wildfire/beasts; multi-year recovery arcs. |
 | M17 | Exploration & the Unknown | summary | Land expeditions; first contact; discovering ruins/artifacts from prior collapsed civs. |
@@ -468,8 +468,11 @@ M12–M18 extends them instead of duplicating them.
   collapsed `GoalManager`'s five hand-maintained goal-type lists into one `GoalTypeTraits` table;
   merged the near-identical Guild/Religion succession blocks in
   `CharacterBehaviorPhase.KillCharacter`; unified the cooldown-field conventions via a `Cooldown`
-  helper; and composed the `*Dampening` call-site duplication into `HostilityDampening`. Fast
-  suite: 851/851 passing, doc-check green. **Still not started:** (1) hardcoded sim-affecting
+  helper; composed the `*Dampening` call-site duplication into `HostilityDampening`; and
+  consolidated the test-scaffolding duplication (31 `FindLandTile` / 17 `SpawnAt`-shaped copies
+  into `WorldEngine.Tests/Helpers/WorldGenTestHelpers.cs`; 22 sim members reflected into via
+  `GetMethod`/`BindingFlags` across ~19 test files widened to `internal` and called directly).
+  Fast suite: 851/851 passing, doc-check green, zero warnings. **Still not started:** (1) hardcoded sim-affecting
   constants in older M2/M4-era code (e.g. `AdvanceFoundReligionGoal`'s need-boosts,
   `ResolveRest`'s increments) that predate the SimConfig-everywhere convention M9+ code follows —
   bring them into `SimConfig`/`sim_config.toml`. (2) The entity-ID allocation scheme
