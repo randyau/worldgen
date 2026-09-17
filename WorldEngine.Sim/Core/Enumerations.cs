@@ -172,12 +172,12 @@ public enum EventType
 
     // M14 economy events (3500-range) — a fresh range rather than packing more values into the
     // 3300s (highest used there: ArtisanCrafted = 3307), per the M14 deep-review finding
-    // (docs/phases/m14_economy_independent_wealth.md). TradePaid (14.1) is the first: a real
+    // (docs/phases/archive/m14_economy_independent_wealth.md). TradePaid (14.1) is the first: a real
     // Wealth transfer from a destination settlement's precious-commodity reserves to a merchant
     // and their home settlement, distinct from the pre-existing MerchantTradeCompleted (which is
     // a silent/notable status-gain marker, not a resource transfer).
     TradePaid               = 3500,
-    // M14 14.2 — persistent trade routes / caravan transit (docs/phases/m14_economy_independent_wealth.md).
+    // M14 14.2 — persistent trade routes / caravan transit (docs/phases/archive/m14_economy_independent_wealth.md).
     // TradeRouteFormed also fires (with Reopened=true in its payload) when a Severed route
     // automatically reopens — see decision in Tier2BehaviorPhase.ReopenRoute rather than a
     // separate event type for that case.
@@ -189,7 +189,7 @@ public enum EventType
     // path already covered by ArtifactTransferred with Reason="claim").
     ArtifactPurchased       = 3504,
     // M14 14.4 — Guild organizations, treasuries, and civ-level economic ruin
-    // (docs/phases/m14_economy_independent_wealth.md decision 9/10, phase-sequence "14.4" entry).
+    // (docs/phases/archive/m14_economy_independent_wealth.md decision 9/10, phase-sequence "14.4" entry).
     // A first-time-populated Guild organization forming (or a merchant joining an existing one
     // fires no separate event — see Tier2BehaviorPhase.FormOrJoinGuild's doc comment).
     GuildFormed             = 3505,

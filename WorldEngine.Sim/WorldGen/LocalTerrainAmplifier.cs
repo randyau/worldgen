@@ -8,7 +8,7 @@ namespace WorldEngine.Sim.WorldGen;
 /// <summary>
 /// Deterministic local-chunk terrain generator: a pure function of (worldSeed, ChunkCoord, parent
 /// TileData, parent BorderManifest, LocalGenConfig) — same inputs always produce the same chunk, so
-/// nothing here is persisted (see docs/phases/m11_local_scale_generation.md). Elevation blends from
+/// nothing here is persisted (see docs/phases/archive/m11_local_scale_generation.md). Elevation blends from
 /// the parent tile's own byte value toward the shared BorderManifest edge sample within
 /// EdgeBlendBandTiles of each world-tile edge, then adds FastNoiseLite detail sampled in absolute
 /// local-tile coordinates so the detail layer is automatically continuous across chunk/tile

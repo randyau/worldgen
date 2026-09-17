@@ -4,7 +4,7 @@ namespace WorldEngine.Sim.Config;
 
 /// <summary>
 /// M14 14.0 — Wealth substrate: seeded commodity pricing, the global per-capita price index, and
-/// the personal-Wealth sink. See docs/phases/m14_economy_independent_wealth.md (decisions 4, 7, 8,
+/// the personal-Wealth sink. See docs/phases/archive/m14_economy_independent_wealth.md (decisions 4, 7, 8,
 /// 10) for the full design rationale. All values here are first-pass placeholders explicitly
 /// flagged for 14.5's calibration pass — nothing here has been balance-tested yet.
 /// </summary>
@@ -177,7 +177,7 @@ public sealed class EconomyConfig
     public int TradeRouteReopenCooldownTicks { get; set; } = 32;
 
     // ─── Guild organizations, treasuries, civ-level economic ruin (14.4) ─────
-    // See docs/phases/m14_economy_independent_wealth.md decision 9/10, phase-sequence "14.4" entry.
+    // See docs/phases/archive/m14_economy_independent_wealth.md decision 9/10, phase-sequence "14.4" entry.
 
     // Personal Wealth threshold at which a Tier2 Merchant forms (or joins, if one already exists
     // at their home settlement) a Guild organization — the "sustained trade volume" proxy: Wealth

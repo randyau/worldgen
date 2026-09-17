@@ -3,7 +3,7 @@ namespace WorldEngine.Sim.Tiles.LocalScale;
 /// <summary>
 /// A Size×Size grid of local terrain. Always derivable from (WorldSeed, ChunkCoord, parent
 /// TileData, border manifests) — never itself persisted; see
-/// docs/phases/m11_local_scale_generation.md "regenerate base terrain on demand".
+/// docs/phases/archive/m11_local_scale_generation.md "regenerate base terrain on demand".
 /// </summary>
 public sealed class LocalChunk
 {

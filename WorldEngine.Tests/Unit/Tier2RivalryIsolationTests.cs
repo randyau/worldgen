@@ -22,7 +22,7 @@ namespace WorldEngine.Tests.Unit;
 /// territory today — but only as an accident of each loop's type filter, never as a deliberate,
 /// protected invariant. These tests turn that accident into an explicit, tested guarantee before
 /// M13.8.1 makes Tier2 a valid rivalry target at all.
-/// See docs/phases/m13_8_tier2_relationship_exposure.md for the full design discussion.
+/// See docs/phases/archive/m13_8_tier2_relationship_exposure.md for the full design discussion.
 /// </summary>
 public class Tier2RivalryIsolationTests
 {

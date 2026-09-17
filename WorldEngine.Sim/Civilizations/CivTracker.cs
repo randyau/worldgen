@@ -20,7 +20,7 @@ public static partial class CivTracker
     /// <summary>
     /// Creates the M12 Organization backing a newly founded org (Civilization now; Guild/Religion/Family
     /// from M13-M15). Member registration is the caller's job — for civs, via SetCharacterCiv, which is
-    /// what keeps Tier1Character.Memberships and Organization.Members in sync. See docs/phases/m12_organization_model.md.
+    /// what keeps Tier1Character.Memberships and Organization.Members in sync. See docs/phases/archive/m12_organization_model.md.
     /// </summary>
     /// <param name="world">The world to register the new Organization in.</param>
     /// <param name="kind">The kind of organization being founded (Civilization/Family/Guild/...).</param>
@@ -301,7 +301,7 @@ public static partial class CivTracker
         // TryCrystallize's promotion path, triggered here rather than rolled) — the marriage then
         // resolves as an ordinary Tier1-Tier1 marriage below. Keeps Family Organization membership
         // and succession eligibility Tier1-only long-term rather than building a parallel
-        // Tier2-compatible path. See docs/phases/m13_8_tier2_relationship_exposure.md.
+        // Tier2-compatible path. See docs/phases/archive/m13_8_tier2_relationship_exposure.md.
         Tier1Character? target = world.GetEntity(cmd.TargetId) switch
         {
             Tier1Character t1 => t1,
@@ -527,7 +527,7 @@ public static partial class CivTracker
     {
         if (world.GetEntity(cmd.CharacterId) is not Tier1Character c) return;
         // M13.8.1: a Tier2 is a valid rivalry target too (Tier1-initiated only — see
-        // docs/phases/m13_8_tier2_relationship_exposure.md). DisplayName/TargetPower generalize the
+        // docs/phases/archive/m13_8_tier2_relationship_exposure.md). DisplayName/TargetPower generalize the
         // fields Tier2 doesn't have (Identity.Name, Skills/Aggression).
         if (world.GetEntity(cmd.TargetId) is not IEntity target || target is not (Tier1Character or Tier2Character)) return;
 

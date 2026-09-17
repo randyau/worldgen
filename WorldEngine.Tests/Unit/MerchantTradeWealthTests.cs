@@ -11,7 +11,7 @@ namespace WorldEngine.Tests.Unit;
 
 /// <summary>
 /// M14 14.1 — wires Wealth into Tier2BehaviorPhase.RunMerchant's existing one-shot trade as a
-/// real, priced source/sink (see docs/phases/m14_economy_independent_wealth.md, decisions 4, 7,
+/// real, priced source/sink (see docs/phases/archive/m14_economy_independent_wealth.md, decisions 4, 7,
 /// 8, 9, and the Opus-review MerchantHomeCutFraction addition). Covers: priced debit of the
 /// destination's precious-commodity ResourceStores, credit of the merchant's personal Wealth net
 /// of the home-settlement recirculation cut, GlobalPriceIndex/LocalScarcityMultiplier sensitivity,

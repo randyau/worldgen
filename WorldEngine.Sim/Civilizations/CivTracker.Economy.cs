@@ -12,7 +12,7 @@ namespace WorldEngine.Sim.Civilizations;
 /// M14 14.4 — decision 9's two treasury commands, and decision 10's civ-level economic-ruin
 /// scoring (extends the *existing* CivSplintered/instability pathway rather than a parallel one —
 /// see RunUnrestAndSecession's Driver 4 in CivTracker.Unrest.cs and CheckTreasuryInsolvency below).
-/// See docs/phases/m14_economy_independent_wealth.md decisions 9/10, phase-sequence "14.4" entry.
+/// See docs/phases/archive/m14_economy_independent_wealth.md decisions 9/10, phase-sequence "14.4" entry.
 /// </summary>
 public static partial class CivTracker
 {

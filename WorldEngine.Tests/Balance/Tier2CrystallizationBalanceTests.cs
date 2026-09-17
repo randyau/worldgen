@@ -15,7 +15,7 @@ namespace WorldEngine.Tests.Balance;
 /// <summary>
 /// M13.8.3 — balance and performance validation for M13.8.2's Notability-driven crystallization
 /// path (and, transitively, all of 13.8's Tier2-as-relationship-target work). See
-/// docs/phases/m13_8_tier2_relationship_exposure.md. Confirms three things the scale constraint
+/// docs/phases/archive/m13_8_tier2_relationship_exposure.md. Confirms three things the scale constraint
 /// running throughout M13.8 depends on:
 ///   (a) CharacterCrystallized rises moderately with Notability's alternate gate, not into a
 ///       runaway "everyone gets promoted" regime that would balloon Tier1 back toward Tier2 scale;

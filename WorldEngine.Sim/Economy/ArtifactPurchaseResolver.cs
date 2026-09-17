@@ -13,7 +13,7 @@ namespace WorldEngine.Sim.Economy;
 /// M14 14.3 — resolves <see cref="PurchaseArtifact"/>: goal fulfillment via trade (Wealth's
 /// spend-side MVP). An alternative to GoalManager's existing claim-if-Lost path, evaluated only
 /// when the coveted artifact is NOT Lost (owned by a living character or a settlement). See
-/// docs/phases/m14_economy_independent_wealth.md decisions 3, 7, 8.
+/// docs/phases/archive/m14_economy_independent_wealth.md decisions 3, 7, 8.
 /// </summary>
 public static class ArtifactPurchaseResolver
 {

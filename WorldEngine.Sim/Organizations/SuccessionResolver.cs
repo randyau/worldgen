@@ -9,7 +9,7 @@ namespace WorldEngine.Sim.Organizations;
 /// heirs, a scoring function — generalized off Civilization onto Organization.Members/LeaderId so
 /// it can back civ rulers (today, via CharacterBehaviorPhase.KillCharacter), and from M13-M15
 /// family heads, guild/merchant-house heads, and religious leaders, without three more bespoke
-/// succession-crisis implementations. See docs/phases/m12_organization_model.md.
+/// succession-crisis implementations. See docs/phases/archive/m12_organization_model.md.
 /// </summary>
 public static class SuccessionResolver
 {

@@ -468,7 +468,7 @@ public static class GoalManager
 
         // M14 14.3 — goal fulfillment via trade: an alternative to the claim-if-Lost path above,
         // additive and evaluated only when the coveted artifact is NOT Lost (owned by a living
-        // character or a settlement). See docs/phases/m14_economy_independent_wealth.md decision 3
+        // character or a settlement). See docs/phases/archive/m14_economy_independent_wealth.md decision 3
         // and ArtifactPurchaseResolver for the full gate/transfer logic. Deliberately no
         // co-location requirement (unlike the claim path) — a purchase represents a negotiated
         // trade, not a physical pickup, and requiring co-location here would reintroduce exactly
@@ -628,7 +628,7 @@ public static class GoalManager
         }
     }
 
-    // Tier1-only by design — see docs/phases/m13_8_tier2_relationship_exposure.md (M13.8.0). A
+    // Tier1-only by design — see docs/phases/archive/m13_8_tier2_relationship_exposure.md (M13.8.0). A
     // Tier2 rival must never be offered as a Dominance-goal target. Do not widen this to Tier2Character.
     private static EntityId? FindNearbyRival(Tier1Character c, IWorldStateReadOnly world, int radius)
     {
@@ -643,7 +643,7 @@ public static class GoalManager
         return null;
     }
 
-    // Tier1-only by design — see docs/phases/m13_8_tier2_relationship_exposure.md (M13.8.0). A
+    // Tier1-only by design — see docs/phases/archive/m13_8_tier2_relationship_exposure.md (M13.8.0). A
     // Tier2 must never be offered as an Alliance-goal target. Do not widen this to Tier2Character.
     private static EntityId? FindNearbyNeutral(Tier1Character c, IWorldStateReadOnly world, int radius)
     {

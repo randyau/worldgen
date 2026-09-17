@@ -9,7 +9,7 @@ public enum ConfigValueKind { Int, Float, Byte, Bool, String }
 /// Builds <see cref="Entry"/> descriptors by reflecting over a live <see cref="SimConfig"/>
 /// instance, generically — no per-key UI code (ui_design_framework.md §9.3). Defaults are read from
 /// a second, independently-loaded <see cref="SimConfig"/> snapshot, per
-/// docs/phases/m10_worldgen_preview_modding.md DECISION (10.2): "default" means the shipped,
+/// docs/phases/archive/m10_worldgen_preview_modding.md DECISION (10.2): "default" means the shipped,
 /// post-profile-merge sim_config.toml as loaded at session start, not bare C# property initializers.
 /// </summary>
 // MOD SEAM: this registry is exactly the seam a future mod-config schema would populate — see

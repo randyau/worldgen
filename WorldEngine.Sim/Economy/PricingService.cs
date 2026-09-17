@@ -8,7 +8,7 @@ namespace WorldEngine.Sim.Economy;
 /// M14 14.0 — seeded, formulaic pricing (decision 7). No order book, no price history, no
 /// transaction-volume dependency: every price is computed fresh at the moment of use from
 /// EconomyConfig.BaseValuePerUnit and the settlement's existing (already-balanced) M9
-/// SettlementStub.ResourceLedger ratio. See docs/phases/m14_economy_independent_wealth.md.
+/// SettlementStub.ResourceLedger ratio. See docs/phases/archive/m14_economy_independent_wealth.md.
 /// </summary>
 public static class PricingService
 {

@@ -21,7 +21,7 @@ namespace WorldEngine.Tests.Unit;
 /// TradeRoute/Caravan DTO round-trip, and an integration check that a route actually forms and a
 /// caravan actually completes transit within a reasonable tick budget (the same "verify the
 /// mechanic actually fires" discipline used for M13.8's Estrangement/OathBroken fix and M14 14.0/
-/// 14.1). See docs/phases/m14_economy_independent_wealth.md.
+/// 14.1). See docs/phases/archive/m14_economy_independent_wealth.md.
 /// </summary>
 public class TradeRouteCaravanTests : IDisposable
 {

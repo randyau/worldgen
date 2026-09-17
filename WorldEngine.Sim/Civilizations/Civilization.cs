@@ -14,7 +14,7 @@ public sealed class Civilization
     public EntityId   FounderId   { get; }
     /// <summary>Current ruling character. Starts as FounderId; updated by succession when the ruler dies.</summary>
     public EntityId   RulerId     { get; set; }
-    /// <summary>Backing M12 Organization (Kind: Civilization). Null only for pre-M12 test fixtures that construct Civilization directly instead of through CivTracker. See docs/phases/m12_organization_model.md.</summary>
+    /// <summary>Backing M12 Organization (Kind: Civilization). Null only for pre-M12 test fixtures that construct Civilization directly instead of through CivTracker. See docs/phases/archive/m12_organization_model.md.</summary>
     public OrganizationId? OrgId  { get; set; }
     public TileCoord  CapitalTile { get; set; }
     public int        FoundedYear { get; }

@@ -12,7 +12,7 @@ using Xunit;
 
 namespace WorldEngine.Tests.Unit;
 
-/// <summary>M15 15.2 — religion schism. See docs/phases/m15_religion_deepened.md.</summary>
+/// <summary>M15 15.2 — religion schism. See docs/phases/archive/m15_religion_deepened.md.</summary>
 public class ReligionSchismTests
 {
     private static TileCoord FindLandTile(WorldState world)

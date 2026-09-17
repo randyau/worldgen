@@ -63,7 +63,7 @@ public sealed class WorldState : IWorldStateReadOnly
     public RelationshipGraph                       Relationships   { get; } = new();
     public int NextCivId { get; set; } = 1;
 
-    /// <summary>M12 shared Organization layer (backs Civilization; Guild/Religion/Family land M13-M15). See docs/phases/m12_organization_model.md.</summary>
+    /// <summary>M12 shared Organization layer (backs Civilization; Guild/Religion/Family land M13-M15). See docs/phases/archive/m12_organization_model.md.</summary>
     public Dictionary<OrganizationId, Organization> Organizations  { get; } = new();
     public int NextOrganizationId { get; set; } = 1;
 

@@ -4,11 +4,13 @@ namespace WorldEngine.Sim.WorldGen.Layers;
 /// Generates magic intensity using Simplex noise with a volcanic zone weighting.
 /// Volcanic tiles get ×2 multiplier. High-magic tiles near volcanic zones are
 /// flagged as IsPOICandidate.
-/// M1: generates and stores data only — no behavioral effects until M2+.
+/// Generates and stores data only — no behavioral effects. Magic as a physical substrate is a
+/// deliberately deferred V2 feature (see CLAUDE.md "What NOT to Build"); MagicIntensity remains
+/// a stored, behavior-free layer through at least M15.
 /// </summary>
 public sealed class MagicLayer : IWorldGenLayer<MagicResult>
 {
-    // V2: magic physical substrate — behaviors driven by magic intensity not implemented until M2+
+    // V2: magic physical substrate — behaviors driven by magic intensity are out of scope pre-release
 
     public MagicResult Generate(
         WorldGenContext ctx,

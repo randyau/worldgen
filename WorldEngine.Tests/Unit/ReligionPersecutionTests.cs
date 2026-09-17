@@ -13,7 +13,7 @@ using Xunit;
 namespace WorldEngine.Tests.Unit;
 
 /// <summary>M15 15.3 — heresy & persecution (soft consequences only). See
-/// docs/phases/m15_religion_deepened.md.</summary>
+/// docs/phases/archive/m15_religion_deepened.md.</summary>
 public class ReligionPersecutionTests
 {
     private static TileCoord FindLandTile(WorldState world)

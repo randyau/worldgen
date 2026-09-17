@@ -15,7 +15,7 @@ namespace WorldEngine.Tests.Unit;
 /// M13.8.2 — Notability: a Tier2 targeted by Tier1-driven relationship actions (Bond/Rivalry/
 /// Placate/GrantAid/ForgiveDebt) accumulates a decaying counter that feeds TryCrystallize's gate
 /// alongside Ambition/Status, kept deliberately distinct from Needs.Status.
-/// See docs/phases/m13_8_tier2_relationship_exposure.md.
+/// See docs/phases/archive/m13_8_tier2_relationship_exposure.md.
 /// </summary>
 public class Tier2NotabilityTests
 {

@@ -241,7 +241,7 @@ For full rationale and detail, see `docs/implementation_decisions_v0.3.md`.
 
 **Rejected:** `CivId?` nullable struct (forces null checks at every callsite, awkward in records/snapshots that can't have null struct fields without boxing).
 
-**Rationale:** Characters start without a civ and may gain one later. Using `CivId(0)` as sentinel avoids nullable complexity while staying explicit — `if (c.Identity.CivId.IsValid)` reads cleanly. Same pattern used by `EntityId` and `EventId` in the codebase.
+**Rationale:** Characters start without a civ and may gain one later. Using `CivId(0)` as sentinel avoids nullable complexity while staying explicit — `if (civId.IsValid)` reads cleanly. Same pattern used by `EntityId` and `EventId` in the codebase. *(Note: as of M12 12.2, a character's civ/org affiliation itself moved off `IdentityData` onto `Tier1Character.Memberships`; `CivId` the value type and its `IsValid` sentinel pattern are unaffected and still used throughout, e.g. `Civilization.Id`.)*
 
 ---
 
@@ -255,13 +255,15 @@ For full rationale and detail, see `docs/implementation_decisions_v0.3.md`.
 
 ---
 
-## ADR-027: CharacterNamesConfig as Config-Driven Name Pool
+## ADR-027: Config-Driven Syllable Name Generation (superseded by M15.x namespace expansion)
 
-**Decision:** Character names are drawn from `CharacterNamesConfig.FirstNames` (40 entries) and `Epithets` (25 entries), loaded from `sim_config.toml`.
+**Original M2 decision:** Character names were drawn from `CharacterNamesConfig.FirstNames` (40 entries) and `Epithets` (25 entries), loaded from `sim_config.toml`.
 
-**Rejected:** Hardcoded name list (not tunable), procedural phoneme assembly (complex, inconsistent quality), external file separate from sim_config (extra dependency).
+**Current (M15.x, "character naming namespace expansion"):** `NameGenerator` composes names procedurally from syllable pools — per-ancestry `AncestryConfig.NameOnsets`/`NameMiddles`/`NameCodas` (and `SurnameOnsets`/`SurnameCodas` for an inherited family surname, taken from the mother) when the character's ancestry defines them, falling back to the equivalent pools on `CharacterNamesConfig` otherwise. `CharacterNamesConfig.FirstNames` no longer exists — it was replaced by the same onset/middle/coda syllable scheme as the ancestry pools, so there is one composition algorithm with two possible pool sources rather than a flat name list.
 
-**Rationale:** Keeps names in the same config system as all other sim constants. Short lists are sufficient for M2 scale (20 initial + civ-born over centuries). Easy to expand or replace for different cultural settings. Epithet system ("the Bold", "the Wise") adds character texture without prose generation (a V2 feature).
+**Rejected (still holds):** Hardcoded name list (not tunable), external file separate from sim_config (extra dependency).
+
+**Rationale:** A flat ~50-name pool per ancestry produced obvious repetition at civ scale over centuries; syllable composition gives combinatorially more distinct names while staying config-tunable per ancestry. Epithet system ("the Bold", "the Wise") is unchanged and still adds character texture without prose generation (a V2 feature).
 
 ---
 
@@ -275,13 +277,15 @@ For full rationale and detail, see `docs/implementation_decisions_v0.3.md`.
 
 ---
 
-## ADR-029: Civ-Born Character Generation (No Discrete Reproduction)
+## ADR-029: Civ-Born Character Generation (superseded — explicit parentage added M13)
 
-**Decision:** New Tier 1 characters ("heroes") emerge from stable settlements at a configurable probability per season, proportional to population size above a minimum threshold. No explicit parentage, lineage, or reproductive modeling.
+**Original M2 decision:** New Tier 1 characters ("heroes") emerge from stable settlements at a configurable probability per season, proportional to population size above a minimum threshold. No explicit parentage, lineage, or reproductive modeling.
 
-**Rejected:** Explicit reproduction (two parents → offspring, genealogy tree) for Tier 1 heroes — this is a worldbuilder tool, not a dynasty simulator; explicit genealogy is M3+ scope. Periodically spawning from a fixed global pool — doesn't tie hero emergence to civilization health.
+**Current (M13, Generational & Domestic Drama):** Civ-born emergence is still the primary spawn path, but `IdentityData.MotherId`/`FatherId` now populate real parent-child relationships (`CharacterFactory`, wired in `CharacterBehaviorPhase`) with inherited traits/grudges/goals, mentorship, and family-head succession — the "M3+ scope" deferral below no longer holds. See `docs/phases/archive/m13_generational_domestic_drama.md`.
 
-**Rationale:** The sim needs character turnover over centuries without the complexity of genealogy. The "heroes emerge from thriving civilizations" model is thematically correct for the product (worldbuilders want notable figures, not population demographics). Probability scaling with population ensures depopulated civs don't keep generating heroes.
+**Rejected (still holds for the base spawn mechanism):** Periodically spawning from a fixed global pool — doesn't tie hero emergence to civilization health.
+
+**Rationale:** The sim needs character turnover over centuries; "heroes emerge from thriving civilizations" remains the base spawn model. Genealogy was added on top of it (not instead of it) once M13 needed real family bonds to hang domestic-drama mechanics on — probability scaling with population still ensures depopulated civs don't keep generating heroes.
 
 ---
 
@@ -320,5 +324,5 @@ For full rationale and detail, see `docs/implementation_decisions_v0.3.md`.
 
 ---
 
-*Document Version: 0.3*  
-*Last Updated: July 19, 2026 (verified current through M4 completion)*
+*Document Version: 0.4*  
+*Last Updated: 2026-09-16 (ADR-025/027/029 updated for M12/M15.x/M13 supersessions; other ADRs verified current through M15)*

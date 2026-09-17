@@ -63,7 +63,7 @@ public sealed record WorldStateDto(
     Dictionary<string, int>                         NameOrdinals,
     List<long>                                      ActiveFounders,
     List<BeastEmergenceEntryDto>                    BeastEmergenceSchedule,
-    // M12 Organization layer (see docs/phases/m12_organization_model.md)
+    // M12 Organization layer (see docs/phases/archive/m12_organization_model.md)
     List<OrganizationDto>                           Organizations,
     int                                              NextOrganizationId,
     // DECISION: renamed from WatchedCharacterId now that Watch is polymorphic (Character/Beast/...).
@@ -72,12 +72,12 @@ public sealed record WorldStateDto(
     long?                                           WatchedEntityId,
     int?                                            WatchedEntityKind,
     List<PendingEmissaryDto>                        PendingEmissaries,
-    // M14 14.0 — Wealth substrate (see docs/phases/m14_economy_independent_wealth.md).
+    // M14 14.0 — Wealth substrate (see docs/phases/archive/m14_economy_independent_wealth.md).
     // Appended at the end with defaults: this is a local dev save format with no shipped
     // compatibility contract (same convention as WatchedEntityId above).
     float                                            GlobalPriceIndex = 0.5f,
     List<WealthDropDto>?                             WealthDrops = null,
-    // M14 14.2 — persistent trade routes / caravan transit (see docs/phases/m14_economy_independent_wealth.md).
+    // M14 14.2 — persistent trade routes / caravan transit (see docs/phases/archive/m14_economy_independent_wealth.md).
     // Appended at the end with defaults, same local-dev-save convention as WatchedEntityId above.
     List<TradeRouteDto>?                             TradeRoutes = null,
     Dictionary<string, int>?                         TradeRouteFormationProgress = null
@@ -105,7 +105,7 @@ public sealed record CivilizationDto(
     string Name,
     long   FounderId,
     long   RulerId,
-    int?   OrgId,            // M12: links to Organizations[i].Id, see docs/phases/m12_organization_model.md
+    int?   OrgId,            // M12: links to Organizations[i].Id, see docs/phases/archive/m12_organization_model.md
     string CapitalTile,     // "x,y"
     int    FoundedYear,
     bool   IsCollapsed,
@@ -248,9 +248,9 @@ public sealed record Tier1EntityDto(
     string? LocalChunkKey = null,
     int    LastDefectionTick = -1,
     string? LocalPositionKey = null,
-    // M14 14.0 — personal Wealth accumulator; see docs/phases/m14_economy_independent_wealth.md.
+    // M14 14.0 — personal Wealth accumulator; see docs/phases/archive/m14_economy_independent_wealth.md.
     float  Wealth = 0f,
-    // M15 15.4 — see docs/phases/m15_religion_deepened.md.
+    // M15 15.4 — see docs/phases/archive/m15_religion_deepened.md.
     int    LastPilgrimageYear = -999);
 
 public sealed record Tier2EntityDto(

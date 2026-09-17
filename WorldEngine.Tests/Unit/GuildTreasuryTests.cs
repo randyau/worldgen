@@ -20,7 +20,7 @@ namespace WorldEngine.Tests.Unit;
 
 /// <summary>
 /// M14 14.4 — Guild organizations, real stored treasuries, civ-level economic ruin, and war
-/// reparations. See docs/phases/m14_economy_independent_wealth.md decisions 9/10 and the
+/// reparations. See docs/phases/archive/m14_economy_independent_wealth.md decisions 9/10 and the
 /// phase-sequence "14.4" entry.
 /// </summary>
 public class GuildTreasuryTests
@@ -423,7 +423,7 @@ public class GuildTreasuryTests
     }
 
     // ─── Sequencing hazard: reparations resolve before the next tick's collapse/insolvency check ─
-    // consumes the losing civ's org/treasury state (docs/phases/m14_economy_independent_wealth.md
+    // consumes the losing civ's org/treasury state (docs/phases/archive/m14_economy_independent_wealth.md
     // 14.4's explicit sequencing warning). CivTracker.RunAnnualDiplomacy calls RunUnrestAndSecession
     // (which runs CheckTreasuryInsolvency) at step 5b2, *before* EndWarBetween's war resolution at
     // step 6 — so a war that ends and pays reparations this tick is picked up by

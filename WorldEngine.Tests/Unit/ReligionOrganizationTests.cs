@@ -16,7 +16,7 @@ namespace WorldEngine.Tests.Unit;
 
 /// <summary>
 /// M15 15.0 — Religion becomes a real Organization instead of a bare flavor event.
-/// See docs/phases/m15_religion_deepened.md.
+/// See docs/phases/archive/m15_religion_deepened.md.
 /// </summary>
 public class ReligionOrganizationTests
 {

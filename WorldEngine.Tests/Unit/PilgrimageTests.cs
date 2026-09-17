@@ -13,7 +13,7 @@ using Xunit;
 
 namespace WorldEngine.Tests.Unit;
 
-/// <summary>M15 15.4 — pilgrimage goal. See docs/phases/m15_religion_deepened.md.</summary>
+/// <summary>M15 15.4 — pilgrimage goal. See docs/phases/archive/m15_religion_deepened.md.</summary>
 public class PilgrimageTests
 {
     private static TileCoord FindLandTile(WorldState world)

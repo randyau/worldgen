@@ -17,7 +17,7 @@ namespace WorldEngine.Tests.Unit;
 /// M13 13.0: marriage, household Family Organization, and real childbirth with trait
 /// inheritance — the first mechanic to actually populate IdentityData.MotherId/FatherId
 /// and RelationshipFlags.IsMarried, both previously-dead schema fields (see
-/// docs/phases/m13_generational_domestic_drama.md kickoff scope note).
+/// docs/phases/archive/m13_generational_domestic_drama.md kickoff scope note).
 /// </summary>
 public class FamilyFormationTests
 {

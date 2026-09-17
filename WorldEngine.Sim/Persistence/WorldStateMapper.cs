@@ -419,7 +419,7 @@ internal static class WorldStateMapper
             world.Civilizations[civ.Id] = civ;
         }
 
-        // 10b. Restore M12 Organizations (see docs/phases/m12_organization_model.md)
+        // 10b. Restore M12 Organizations (see docs/phases/archive/m12_organization_model.md)
         world.NextOrganizationId = dto.NextOrganizationId;
         foreach (var odto in dto.Organizations)
         {

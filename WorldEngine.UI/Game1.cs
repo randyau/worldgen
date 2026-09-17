@@ -86,7 +86,7 @@ public sealed class Game1 : Game
 
     // M10 10.2 — sim-config settings tab: live config the running sim reads, plus an
     // independently-loaded snapshot for reset-to-default/diff (DECISION: "default" = the loaded
-    // sim_config.toml, not bare C# initializers — see docs/phases/m10_worldgen_preview_modding.md).
+    // sim_config.toml, not bare C# initializers — see docs/phases/archive/m10_worldgen_preview_modding.md).
     private SimConfig? _simConfig;
     private SimConfig? _simConfigDefaults;
 

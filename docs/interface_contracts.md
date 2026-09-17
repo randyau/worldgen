@@ -1,5 +1,5 @@
 # World Engine — Interface Contracts (Index)
-**Version:** 0.9 | **Status:** M3 complete (M4 Phase 1 emissary system included)
+**Version:** 0.9 | **Status:** living document, kept current via SCIP-verified snapshots
 
 **Rule:** Do not add methods to these interfaces without updating the relevant split file first. Interface changes are breaking changes.
 

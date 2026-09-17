@@ -20,7 +20,7 @@ public class ReligionConfig
     public int   ReligionFoundingCooldownYears  { get; set; } = 50;
 
     // ─── M15 15.1 — conversion via exposure ────────────────────────────────
-    // See docs/phases/m15_religion_deepened.md "Long-run balance constraints". Receptivity is a
+    // See docs/phases/archive/m15_religion_deepened.md "Long-run balance constraints". Receptivity is a
     // hard [0,1] gate, not just a small-but-nonzero pull — a character whose weighted stats land
     // at/below 0 has zero conversion chance every year, so agnosticism is a stable end-state for
     // low-Piety/high-Rationality characters, not merely a slow-converging transient.
@@ -48,7 +48,7 @@ public class ReligionConfig
     // ─── M15 15.2 — schism ──────────────────────────────────────────────────
     // Doctrinal tension proxy: a large membership with low average Loyalty (many
     // exposure-converted members rather than devout founders) is treated as ripe for schism —
-    // see docs/phases/m15_religion_deepened.md "Long-run balance constraints" point 3.
+    // see docs/phases/archive/m15_religion_deepened.md "Long-run balance constraints" point 3.
 
     /// <summary>Minimum living membership before a religion is even eligible for schism.</summary>
     public int   SchismMinMembers            { get; set; } = 6;
@@ -62,7 +62,7 @@ public class ReligionConfig
     // follows in plurality, if that plurality is decisive enough. Persecution only exists at all
     // when the state religion's Zealotry is positive — a tolerant/syncretic religion (Zealotry <=
     // threshold) never persecutes minority faiths, per the Zealotry axis's design intent (see
-    // docs/phases/m15_religion_deepened.md point 4). Effects are political/social pressure only:
+    // docs/phases/archive/m15_religion_deepened.md point 4). Effects are political/social pressure only:
     // civ Loyalty penalty or forced conversion — never violence, never civil war.
 
     /// <summary>The plurality religion's share of a civ's religious population must exceed this to count as an enforced state religion.</summary>

@@ -486,7 +486,7 @@ public sealed class CharacterBehaviorPhase
                 if (successorId.HasValue)
                 {
                     civ.RulerId = successorId.Value;
-                    // Keep the Organization's leader seat mirrored — see docs/phases/m12_organization_model.md.
+                    // Keep the Organization's leader seat mirrored — see docs/phases/archive/m12_organization_model.md.
                     succOrg!.LeaderId = successorId.Value;
                     civ.RulerCount++;
                     civ.TotalSuccessions++;
@@ -594,7 +594,7 @@ public sealed class CharacterBehaviorPhase
         // M15 15.0 — Religion leader succession: same SuccessionResolver reuse as the Guild block
         // above. Unlike Guild (seat simply stays vacant when no eligible successor exists), a
         // religion with zero remaining living members is genuinely extinct — the sink half of
-        // M15's population balance (docs/phases/m15_religion_deepened.md "Long-run balance
+        // M15's population balance (docs/phases/archive/m15_religion_deepened.md "Long-run balance
         // constraints"). "Eligible" (age-gated) successor absence doesn't necessarily mean extinct
         // (a young-only congregation still has living followers), so extinction is checked
         // separately against IsAlive alone, not SelectSuccessor's age-gated result.
@@ -644,7 +644,7 @@ public sealed class CharacterBehaviorPhase
     /// Shared heir-selection kernel for death disposition: the deceased's spouse (preferred) or,
     /// absent one, any other living member of their household Family Organization. Reused by both
     /// TransferDebtOnDeath (M13.2) and TransferWealthOnDeath (M14 14.0) rather than each rolling its
-    /// own — see docs/phases/m14_economy_independent_wealth.md 14.0's instruction to reuse the
+    /// own — see docs/phases/archive/m14_economy_independent_wealth.md 14.0's instruction to reuse the
     /// existing heir-selection logic, not invent a second one.
     /// </summary>
     private static Tier1Character? FindHeir(Tier1Character c, WorldState world)
@@ -934,7 +934,7 @@ public sealed class CharacterBehaviorPhase
     /// The highest-pull candidate gets one roll per character per year — DECISION: picking the
     /// single best candidate rather than a full weighted-random draw across all candidates is a
     /// simplification; a candidate that loses this year's comparison still gets its own turn in
-    /// later years as presence/receptivity shift. See docs/phases/m15_religion_deepened.md
+    /// later years as presence/receptivity shift. See docs/phases/archive/m15_religion_deepened.md
     /// "Long-run balance constraints" for the sink/source reasoning behind every term here.
     /// </summary>
     private void ProcessAnnualReligionConversion(List<Tier1Character> characters, WorldState world, List<PendingEvent> pending)
@@ -1013,7 +1013,7 @@ public sealed class CharacterBehaviorPhase
     /// follows in plurality, when that plurality is decisive enough (HeresyStateReligionMinShare).
     /// Persecution only exists when the state religion's Zealotry is positive enough — a
     /// tolerant/syncretic religion never persecutes, per the Zealotry axis's design intent (see
-    /// docs/phases/m15_religion_deepened.md point 4). Effects are soft (political/social pressure
+    /// docs/phases/archive/m15_religion_deepened.md point 4). Effects are soft (political/social pressure
     /// only, per roadmap): a resisted hit penalizes the heretic's civ Loyalty and Needs; a
     /// forced-conversion hit moves them into the state religion outright, at low (coerced) Loyalty.
     /// </summary>
@@ -1278,7 +1278,7 @@ public sealed class CharacterBehaviorPhase
     /// exposure-converted (rather than devout) members is ripe for schism. The seceding faction is
     /// every living non-leader member at or below the org's average Loyalty, led by whichever of
     /// them has the single lowest Loyalty (the "dissenter"). See
-    /// docs/phases/m15_religion_deepened.md "Long-run balance constraints" point 3.
+    /// docs/phases/archive/m15_religion_deepened.md "Long-run balance constraints" point 3.
     /// </summary>
     private void ProcessAnnualReligionSchism(WorldState world, List<PendingEvent> pending)
     {
@@ -1469,7 +1469,7 @@ public sealed class CharacterBehaviorPhase
 
         foreach (var e in world.GetEntitiesAt(c.Location))
         {
-            // Tier1-only by design — see docs/phases/m13_8_tier2_relationship_exposure.md (M13.8.0).
+            // Tier1-only by design — see docs/phases/archive/m13_8_tier2_relationship_exposure.md (M13.8.0).
             // A co-located Tier2 must never accrue territorial-pressure drain. Do not widen this to
             // Tier2Character (which has no CivId to compare against anyway).
             if (e is not Tier1Character other || other.Id == c.Id || !other.IsAlive) continue;

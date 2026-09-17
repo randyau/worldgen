@@ -1,6 +1,6 @@
 # World Engine — Design Session Decisions
-**Date:** June 2026 (last updated July 19, 2026 — verified current through M4 completion)  
-**Status:** Five design sessions complete. Sessions A–D are M1 pre-implementation decisions. Session E covers post-M2 character behavior and ancestry (June 2026).  
+**Date:** June 2026 (last updated July 20, 2026 — Session G added for M5)  
+**Status:** Seven design sessions complete. Sessions A–D are M1 pre-implementation decisions. Session E covers post-M2 character behavior and ancestry (June 2026). Session F covers M2 settlement economics (2026-06-23). Session G covers M5 created-objects/artifacts (2026-07-20).  
 **Companion:** `implementation_decisions_v0.3.md` (architecture), `interface_contracts.md` (updated contracts)
 
 Read this document before implementing any character-related story. Every decision here has downstream implications.

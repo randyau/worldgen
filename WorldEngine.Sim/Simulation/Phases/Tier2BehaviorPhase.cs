@@ -990,7 +990,7 @@ public sealed class Tier2BehaviorPhase
 
         // Carry over accumulated Trust/Fear/rivalry/Bond history onto the new EntityId — without
         // this, promotion silently resets every relationship the Tier2 had built up back to a blank
-        // edge (see docs/phases/m13_8_tier2_relationship_exposure.md).
+        // edge (see docs/phases/archive/m13_8_tier2_relationship_exposure.md).
         world.Relationships.RekeyEntity(c.Id, promoted.Id);
 
         // M14 14.4 fix: carry over accumulated personal Wealth too — without this, a wealthy

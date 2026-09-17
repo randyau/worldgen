@@ -47,7 +47,7 @@ namespace WorldEngine.Tests.Balance;
 /// run to hit yet, not a re-confirmed structural block.
 ///
 /// **M13.8.1 update (2026-08-03):** Tier2 became a valid Bond/Marry target (mirroring
-/// GrantAid/ForgiveDebt's Tier2 shortcut — see docs/phases/m13_8_tier2_relationship_exposure.md), and
+/// GrantAid/ForgiveDebt's Tier2 shortcut — see docs/phases/archive/m13_8_tier2_relationship_exposure.md), and
 /// proposing marriage to a Tier2 auto-crystallizes them to Tier1 as part of resolving the command.
 /// This massively widened CharacterMarried's Tier1-scarcity bottleneck (Tier2 is the bulk background
 /// population): re-observed 32-67 (was 0-10). CharacterGrieved rose too (114 in one seed, was 23-50)

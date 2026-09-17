@@ -19,7 +19,7 @@ namespace WorldEngine.Tests.Balance;
 
 /// <summary>
 /// M15 15.6 — balance pass for the four long-run constraints recorded in
-/// docs/phases/m15_religion_deepened.md "Long-run balance constraints": agnosticism as a stable
+/// docs/phases/archive/m15_religion_deepened.md "Long-run balance constraints": agnosticism as a stable
 /// end-state, multi-religion coexistence within a civ, no world-wide monoculture, and Zealotry
 /// giving persecution/schism real teeth. Same "instrument-first, print real observed numbers"
 /// discipline as EconomyBalanceInstrumentationTests (M14 14.5) — sanity bounds, not fine-tuned

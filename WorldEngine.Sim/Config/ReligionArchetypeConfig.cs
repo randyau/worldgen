@@ -32,7 +32,7 @@ public sealed class ReligionArchetypeConfig
     /// -1 (tolerant/syncretic — spreads gently, never suppresses rivals) .. +1 (militant/exclusive
     /// — pressures/persecutes rivals within its home civ more, but has weaker cross-civ appeal).
     /// Consumed starting M15 15.1 (conversion behavior) and 15.3 (persecution intensity) — see
-    /// docs/phases/m15_religion_deepened.md "Long-run balance constraints" for the sink/source
+    /// docs/phases/archive/m15_religion_deepened.md "Long-run balance constraints" for the sink/source
     /// reasoning this axis exists to serve.
     /// </summary>
     public float Zealotry { get; set; } = 0f;

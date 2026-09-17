@@ -321,7 +321,7 @@ public sealed class UtilityScorer
         // Cap scales with Aggression: aggressive characters sustain more rivalries; peaceful ones almost none.
         // M13.8.1: a Tier2 is a valid rivalry target too — Tier1-initiated only, since Tier2 has no
         // scorer to reciprocate, escalate to Feud, or seek Reconciliation on its own (see
-        // docs/phases/m13_8_tier2_relationship_exposure.md for the isolation this deliberately keeps:
+        // docs/phases/archive/m13_8_tier2_relationship_exposure.md for the isolation this deliberately keeps:
         // civ-level consumers of IsRival — war, alliance, territory — stay Tier1Character-only).
         int rivalMax = cfg.RivalryMaxBase + (int)(c.Personality.Aggression * cfg.RivalryMaxPerAggression);
         if (world.CountRivals(c.Id) < rivalMax)
@@ -369,7 +369,7 @@ public sealed class UtilityScorer
                     bool hostileEnough = false;
                     foreach (var e2 in world.GetEntitiesInRadius(c.Location, cfg.PerceptionRadius))
                     {
-                        // Tier1-only by design — see docs/phases/m13_8_tier2_relationship_exposure.md
+                        // Tier1-only by design — see docs/phases/archive/m13_8_tier2_relationship_exposure.md
                         // (M13.8.0). A Tier2 rival must never justify a war; only a Tier1 with real
                         // civ standing can. Do not widen this to include Tier2Character.
                         if (e2 is not Tier1Character enemy || !enemy.IsAlive || enemy.Id == c.Id) continue;
@@ -903,7 +903,7 @@ public sealed class UtilityScorer
         {
             if (!edge.IsRival || edge.Fear <= 0f) continue;
             var otherId = edge.From == c.Id ? edge.To : edge.From;
-            // Tier1-only by design — see docs/phases/m13_8_tier2_relationship_exposure.md (M13.8.0).
+            // Tier1-only by design — see docs/phases/archive/m13_8_tier2_relationship_exposure.md (M13.8.0).
             // A Tier2 rival must never dampen War/Raid desirability. Do not widen this to Tier2Character.
             if (world.GetEntity(otherId) is Tier1Character rival
                 && rival.IsAlive && rival.CivId == targetCivId)
