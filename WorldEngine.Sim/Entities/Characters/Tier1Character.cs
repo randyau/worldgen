@@ -58,21 +58,21 @@ public sealed class Tier1Character : SimEntity
     public int TicksInCurrentTile { get; internal set; }
 
     // Tick when the most recent Create goal completed (used to gate re-formation)
-    public int LastCreateCompletedTick { get; internal set; } = -1;
+    public int LastCreateCompletedTick { get; internal set; } = Cooldown.UnsetTick;
 
     // Tick when the character last defected to another civ (used to gate re-defection —
     // without this a character stuck in a chronic Wellbeing crisis with an available foreign
     // confidant re-selects Defect every tick, once for each civ swap, indefinitely)
-    public int LastDefectionTick { get; internal set; } = -1;
+    public int LastDefectionTick { get; internal set; } = Cooldown.UnsetTick;
 
     // Year when the character last created artwork (gates ArtworkCreated events per cooldown period)
-    public int LastArtworkYear { get; internal set; } = -999;
+    public int LastArtworkYear { get; internal set; } = Cooldown.UnsetYear;
 
     // Year when the character last founded a religion (gates re-founding via cooldown)
-    public int LastReligionFoundedYear { get; internal set; } = -999;
+    public int LastReligionFoundedYear { get; internal set; } = Cooldown.UnsetYear;
 
     // M15 15.4 — year when the character last completed a pilgrimage (gates re-pilgrimage via cooldown)
-    public int LastPilgrimageYear { get; internal set; } = -999;
+    public int LastPilgrimageYear { get; internal set; } = Cooldown.UnsetYear;
 
     // M14 14.0 — personal wealth accumulator (mirrors Tier2Character.Notability's shape). Portable
     // value denominated against EconomyConfig.BaseValuePerUnit; physically conserved — every

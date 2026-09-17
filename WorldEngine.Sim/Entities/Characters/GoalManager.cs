@@ -231,7 +231,7 @@ public static class GoalManager
 
         // Create goal: high-Ingenuity characters want to make things.
         // Cooldown prevents immediate re-formation after completing a project.
-        bool createCooldownClear = currentTick - c.LastCreateCompletedTick > cfg.CreateGoalCooldownTicks;
+        bool createCooldownClear = Cooldown.TicksElapsed(currentTick, c.LastCreateCompletedTick) > cfg.CreateGoalCooldownTicks;
         if (hasGoalRoom() && !hasCreate && createCooldownClear && c.Aptitude.Ingenuity > cfg.GoalIngenuityThreshold
             && !c.Goals.Any(g => g.Type == GoalType.Grieve))
         {

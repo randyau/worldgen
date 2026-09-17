@@ -1104,8 +1104,8 @@ public sealed class CharacterBehaviorPhase
         if (c.Needs.Spiritual    < cfg.SpiritualFoundingThreshold) return;
         if (c.Skills.Piety       < cfg.PietyFoundingThreshold)     return;
         if (c.Personality.Wonder < cfg.WonderFoundingThreshold)    return;
-        if (c.LastReligionFoundedYear > -999
-            && world.CurrentYear - c.LastReligionFoundedYear < cfg.ReligionFoundingCooldownYears)
+        if (Cooldown.HasFired(c.LastReligionFoundedYear)
+            && Cooldown.YearsElapsed(world.CurrentYear, c.LastReligionFoundedYear) < cfg.ReligionFoundingCooldownYears)
             return;
         if (c.Goals.Any(g => g.Type == GoalType.FoundReligion && !g.IsComplete)) return;
 
@@ -1181,8 +1181,8 @@ public sealed class CharacterBehaviorPhase
     {
         var cfg = world.SimConfig.Religion;
         if (c.Skills.Piety < cfg.PilgrimagePietyThreshold) return;
-        if (c.LastPilgrimageYear > -999
-            && world.CurrentYear - c.LastPilgrimageYear < cfg.PilgrimageCooldownYears)
+        if (Cooldown.HasFired(c.LastPilgrimageYear)
+            && Cooldown.YearsElapsed(world.CurrentYear, c.LastPilgrimageYear) < cfg.PilgrimageCooldownYears)
             return;
         if (c.Goals.Any(g => g.Type == GoalType.Pilgrimage && !g.IsComplete)) return;
 
@@ -1603,7 +1603,9 @@ public sealed class CharacterBehaviorPhase
 
         // Gate ArtworkCreated events to at most one per cooldown period to prevent
         // 200k+ event explosion when a character with an active Create goal spams per-tick.
-        if (world.CurrentYear - c.LastArtworkYear < _cfg.ArtworkCooldownYears) return;
+        // No sentinel guard by design: an unset LastArtworkYear (Cooldown.UnsetYear) makes the
+        // elapsed value huge, so a character's first artwork is never gated.
+        if (Cooldown.YearsElapsed(world.CurrentYear, c.LastArtworkYear) < _cfg.ArtworkCooldownYears) return;
         c.LastArtworkYear = world.CurrentYear;
 
         // Art type weighted toward character personality:
