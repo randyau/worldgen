@@ -38,20 +38,6 @@ public class AuthoringTests
         return TileGridAssembler.Assemble(ctx);
     }
 
-    private static TileCoord FindLandTile(WorldState world, bool nonVolcanic = true)
-    {
-        int w = world.TileGrid.TileWidth, h = world.TileGrid.TileHeight;
-        for (int y = 0; y < h; y++)
-            for (int x = 0; x < w; x++)
-            {
-                var c = new TileCoord(x, y);
-                if (!world.IsLand(c)) continue;
-                if (nonVolcanic && world.TileGrid.GetTile(c).StaticFlags.HasFlag(TileStaticFlags.IsVolcanic)) continue;
-                return c;
-            }
-        throw new InvalidOperationException("No matching land tile found in test world — widen the search or change seed.");
-    }
-
     private static TileCoord FindOceanTile(WorldState world)
     {
         int w = world.TileGrid.TileWidth, h = world.TileGrid.TileHeight;
@@ -108,7 +94,7 @@ public class AuthoringTests
     public void ValidateLandTile_LandTile_Accepted()
     {
         var world = BuildWorld();
-        var land = FindLandTile(world, nonVolcanic: false);
+        var land = WorldGenTestHelpers.FindLandTile(world, nonVolcanic: false, fullRange: true);
         var (valid, _) = AuthoringValidator.ValidateLandTile(land, world);
         valid.Should().BeTrue();
     }
@@ -117,7 +103,7 @@ public class AuthoringTests
     public void ValidateCharacterAlive_DeadCharacter_Rejected()
     {
         var world = BuildWorld();
-        var loc = FindLandTile(world, nonVolcanic: false);
+        var loc = WorldGenTestHelpers.FindLandTile(world, nonVolcanic: false, fullRange: true);
         var character = MakeTier1(loc, new EntityId(700));
         character.IsAlive = false;
         world.Entities.Add(character);
@@ -142,7 +128,7 @@ public class AuthoringTests
     public void ValidateCharacterAlive_LivingCharacter_Accepted()
     {
         var world = BuildWorld();
-        var loc = FindLandTile(world, nonVolcanic: false);
+        var loc = WorldGenTestHelpers.FindLandTile(world, nonVolcanic: false, fullRange: true);
         var character = MakeTier1(loc, new EntityId(701));
         world.Entities.Add(character);
 
@@ -154,7 +140,7 @@ public class AuthoringTests
     public void ValidateDisasterApplicable_VolcanicAshOnNonVolcanicTile_Rejected()
     {
         var world = BuildWorld();
-        var land = FindLandTile(world, nonVolcanic: true);
+        var land = WorldGenTestHelpers.FindLandTile(world, nonVolcanic: true, fullRange: true);
 
         var (valid, reason) = AuthoringValidator.ValidateDisasterApplicable(land, DisasterType.VolcanicAsh, world);
 
@@ -166,7 +152,7 @@ public class AuthoringTests
     public void ValidateDisasterApplicable_WildfireOnAnyTile_Accepted()
     {
         var world = BuildWorld();
-        var land = FindLandTile(world, nonVolcanic: true);
+        var land = WorldGenTestHelpers.FindLandTile(world, nonVolcanic: true, fullRange: true);
         var (valid, _) = AuthoringValidator.ValidateDisasterApplicable(land, DisasterType.Wildfire, world);
         valid.Should().BeTrue();
     }
@@ -199,7 +185,7 @@ public class AuthoringTests
     public void ResolveArtifact_Valid_AddsArtifactAndInjectsStampedEvent()
     {
         var world = BuildWorld();
-        var land = FindLandTile(world, nonVolcanic: false);
+        var land = WorldGenTestHelpers.FindLandTile(world, nonVolcanic: false, fullRange: true);
         int before = world.Artifacts.Count;
 
         var ev = ResolveThenFindEvent(world,
@@ -230,7 +216,7 @@ public class AuthoringTests
     public void ResolveDisaster_Valid_AddsActiveDisasterAndInjectsStampedEvent()
     {
         var world = BuildWorld();
-        var land = FindLandTile(world, nonVolcanic: true);
+        var land = WorldGenTestHelpers.FindLandTile(world, nonVolcanic: true, fullRange: true);
 
         var ev = ResolveThenFindEvent(world,
             new AuthorTriggerDisaster(land, DisasterType.Wildfire),
@@ -249,7 +235,7 @@ public class AuthoringTests
     public void ResolveDisaster_VolcanicAshOnNonVolcanicTile_NoOpsSilently()
     {
         var world = BuildWorld();
-        var land = FindLandTile(world, nonVolcanic: true);
+        var land = WorldGenTestHelpers.FindLandTile(world, nonVolcanic: true, fullRange: true);
 
         var ev = ResolveThenFindEvent(world,
             new AuthorTriggerDisaster(land, DisasterType.VolcanicAsh),
@@ -263,7 +249,7 @@ public class AuthoringTests
     public void ResolveSpawn_Valid_AddsEntityAndInjectsStampedEvent()
     {
         var world = BuildWorld();
-        var land = FindLandTile(world, nonVolcanic: false);
+        var land = WorldGenTestHelpers.FindLandTile(world, nonVolcanic: false, fullRange: true);
         int before = world.Entities.Count;
 
         var ev = ResolveThenFindEvent(world,
@@ -294,7 +280,7 @@ public class AuthoringTests
     public void ResolveNudge_RaiseMorale_IncreasesWellbeingAndInjectsStampedEvent()
     {
         var world = BuildWorld();
-        var loc = FindLandTile(world, nonVolcanic: false);
+        var loc = WorldGenTestHelpers.FindLandTile(world, nonVolcanic: false, fullRange: true);
         var character = MakeTier1(loc, new EntityId(702));
         character.Wellbeing = 0f;
         world.Entities.Add(character);
@@ -312,7 +298,7 @@ public class AuthoringTests
     public void ResolveNudge_SetSettle_AddsFoundCityGoal()
     {
         var world = BuildWorld();
-        var loc = FindLandTile(world, nonVolcanic: false);
+        var loc = WorldGenTestHelpers.FindLandTile(world, nonVolcanic: false, fullRange: true);
         var character = MakeTier1(loc, new EntityId(703));
         world.Entities.Add(character);
 
@@ -326,7 +312,7 @@ public class AuthoringTests
     public void ResolveNudge_DeadCharacter_NoOpsSilently()
     {
         var world = BuildWorld();
-        var loc = FindLandTile(world, nonVolcanic: false);
+        var loc = WorldGenTestHelpers.FindLandTile(world, nonVolcanic: false, fullRange: true);
         var character = MakeTier1(loc, new EntityId(704));
         character.IsAlive = false;
         character.Wellbeing = 0f;

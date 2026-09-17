@@ -1,4 +1,3 @@
-using System.Reflection;
 using FluentAssertions;
 using WorldEngine.Sim.Civilizations;
 using WorldEngine.Sim.Core;
@@ -16,38 +15,17 @@ namespace WorldEngine.Tests.Unit;
 /// docs/phases/archive/m15_religion_deepened.md.</summary>
 public class ReligionPersecutionTests
 {
-    private static TileCoord FindLandTile(WorldState world)
-    {
-        for (int y = 1; y < world.TileGrid.TileHeight - 1; y++)
-        for (int x = 0; x < world.TileGrid.TileWidth; x++)
-        {
-            var c = new TileCoord(x, y);
-            if (world.IsLand(c)) return c;
-        }
-        throw new InvalidOperationException("No suitable land tile found");
-    }
-
-    private static Tier1Character SpawnAt(WorldState world, TileCoord tile, long seedOffset)
-    {
-        var biome = (BiomeType)world.TileGrid.GetTile(tile).BiomeType;
-        var c = CharacterFactory.Spawn(tile, biome, world.WorldSeed, seedOffset, world.SimConfig, world.CurrentYear, startAsAdult: true);
-        world.Entities.Add(c);
-        return c;
-    }
-
     private static List<PendingEvent> RunPersecution(CharacterBehaviorPhase phase, List<Tier1Character> chars, WorldState world)
     {
         var pending = new List<PendingEvent>();
-        typeof(CharacterBehaviorPhase)
-            .GetMethod("ProcessAnnualReligionPersecution", BindingFlags.NonPublic | BindingFlags.Instance)!
-            .Invoke(phase, new object[] { chars, world, pending });
+        phase.ProcessAnnualReligionPersecution(chars, world, pending);
         return pending;
     }
 
     private static (WorldState world, TileCoord tile, CivId civ) SetupCiv(int seed)
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: seed);
-        var tile  = FindLandTile(world);
+        var tile  = WorldGenTestHelpers.FindLandTile(world);
         var civ   = new CivId(1);
         world.Civilizations[civ] = new Civilization(civ, "TestCiv", new EntityId(1), tile, 1);
         return (world, tile, civ);
@@ -55,7 +33,7 @@ public class ReligionPersecutionTests
 
     private static Organization MakeReligion(WorldState world, TileCoord tile, string archetypeId, long leaderId)
     {
-        var leader = SpawnAt(world, tile, leaderId);
+        var leader = WorldGenTestHelpers.SpawnAt(world, tile, leaderId);
         var orgId = CivTracker.CreateOrganization(world, OrganizationKind.Religion, $"Faith {archetypeId}", leader.Id, tile);
         var org = world.Organizations[orgId];
         org.ReligionArchetypeId = archetypeId;
@@ -77,7 +55,7 @@ public class ReligionPersecutionTests
         var stateLeader = (Tier1Character)world.GetEntity(stateOrg.LeaderId)!;
         stateLeader.WithCiv(civ);
 
-        var heretic = SpawnAt(world, tile, 10L);
+        var heretic = WorldGenTestHelpers.SpawnAt(world, tile, 10L);
         heretic.WithCiv(civ);
         var heresyOrgId = CivTracker.CreateOrganization(world, OrganizationKind.Religion, "Minority Faith", heretic.Id, tile);
         var heresyOrg = world.Organizations[heresyOrgId];
@@ -105,7 +83,7 @@ public class ReligionPersecutionTests
         var stateLeader = (Tier1Character)world.GetEntity(stateOrg.LeaderId)!;
         stateLeader.WithCiv(civ);
 
-        var heretic = SpawnAt(world, tile, 10L);
+        var heretic = WorldGenTestHelpers.SpawnAt(world, tile, 10L);
         heretic.WithCiv(civ);
         var heresyOrgId = CivTracker.CreateOrganization(world, OrganizationKind.Religion, "Minority Faith", heretic.Id, tile);
         var heresyOrg = world.Organizations[heresyOrgId];
@@ -141,7 +119,7 @@ public class ReligionPersecutionTests
         leaderA.WithCiv(civ);
 
         var orgBId = CivTracker.CreateOrganization(world, OrganizationKind.Religion, "Rival Faith", new EntityId(20), tile);
-        var leaderB = SpawnAt(world, tile, 20L);
+        var leaderB = WorldGenTestHelpers.SpawnAt(world, tile, 20L);
         var orgB = world.Organizations[orgBId];
         orgB.ReligionArchetypeId = "war_cult";
         var mB = new Membership(orgBId, OrganizationRole.Leader, 1f);

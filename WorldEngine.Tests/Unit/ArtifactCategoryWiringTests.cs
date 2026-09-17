@@ -1,4 +1,3 @@
-using System.Reflection;
 using WorldEngine.Sim.Civilizations;
 using WorldEngine.Sim.Config;
 using WorldEngine.Sim.Core;
@@ -19,9 +18,10 @@ namespace WorldEngine.Tests.Unit;
 /// is exhaustively tested (CreatedGoodTaxonomyTests) and the config validator confirms the
 /// weights sum to 1.0 (ArtifactFoundationTests), but nothing proved the *wiring* — that these two
 /// call sites actually pass the configured weights through rather than still being hardcoded to
-/// Weapon. Both call sites are private (TryForgeBattleArtifact: private static on CivTracker;
-/// TryHeroicDeathForge: private instance method on CharacterBehaviorPhase), so these tests use
-/// reflection to invoke them directly with a zero-weight-for-Weapon config — if the wiring were
+/// Weapon. Both call sites are `internal` (TryForgeBattleArtifact: internal static on CivTracker;
+/// TryHeroicDeathForge: internal instance method on CharacterBehaviorPhase, both widened from
+/// `private` for direct test access via InternalsVisibleTo — M15.9 test-scaffolding dedup), so
+/// these tests invoke them directly with a zero-weight-for-Weapon config — if the wiring were
 /// still hardcoded to Weapon, these tests would fail regardless of config.
 /// </summary>
 public class ArtifactCategoryWiringTests
@@ -43,25 +43,13 @@ public class ArtifactCategoryWiringTests
         return TileGridAssembler.Assemble(ctx);
     }
 
-    private static TileCoord FindLandTile(WorldState world)
-    {
-        int w = world.TileGrid.TileWidth, h = world.TileGrid.TileHeight;
-        for (int y = 0; y < h; y++)
-            for (int x = 0; x < w; x++)
-            {
-                var c = new TileCoord(x, y);
-                if (world.IsLand(c)) return c;
-            }
-        throw new InvalidOperationException("No land tile found.");
-    }
-
     // ── Battle-forged artifacts (CivTracker.TryForgeBattleArtifact) ───────────
 
     [Fact]
     public void BattleForgedArtifact_CanBeArmor_WhenWeaponWeightIsZero()
     {
         var world = BuildWorld();
-        var tile  = FindLandTile(world);
+        var tile  = WorldGenTestHelpers.FindLandTile(world, fullRange: true);
         var civId = new CivId(1);
         world.Civilizations[civId] = new Civilization(civId, "TestCiv", new EntityId(1), tile, 0);
         world.Settlements[tile] = new SettlementStub(new EntityId(1), civId, tile, 0, 50, 100);
@@ -75,9 +63,7 @@ public class ArtifactCategoryWiringTests
         int before = world.Artifacts.Count;
         var pending = new List<PendingEvent>();
 
-        var method = typeof(CivTracker).GetMethod("TryForgeBattleArtifact", BindingFlags.NonPublic | BindingFlags.Static);
-        method.Should().NotBeNull("CivTracker.TryForgeBattleArtifact must exist — if renamed, update this test alongside it");
-        method!.Invoke(null, new object[] { world, pending, tile, civId, 42L, "Test Attacker", world.CurrentYear, 12345 });
+        CivTracker.TryForgeBattleArtifact(world, pending, tile, civId, 42L, "Test Attacker", world.CurrentYear, 12345);
 
         world.Artifacts.Count.Should().Be(before + 1, "BattleForgeProbability=1.0 must guarantee an artifact is forged");
         world.Artifacts.Values.Should().Contain(a => a.Category == ArtifactCategory.Armor,
@@ -88,7 +74,7 @@ public class ArtifactCategoryWiringTests
     public void BattleForgedArtifact_DoesNotForge_WhenProbabilityIsZero()
     {
         var world = BuildWorld();
-        var tile  = FindLandTile(world);
+        var tile  = WorldGenTestHelpers.FindLandTile(world, fullRange: true);
         var civId = new CivId(1);
         world.Civilizations[civId] = new Civilization(civId, "TestCiv", new EntityId(1), tile, 0);
         world.Settlements[tile] = new SettlementStub(new EntityId(1), civId, tile, 0, 50, 100);
@@ -97,8 +83,7 @@ public class ArtifactCategoryWiringTests
         int before = world.Artifacts.Count;
         var pending = new List<PendingEvent>();
 
-        var method = typeof(CivTracker).GetMethod("TryForgeBattleArtifact", BindingFlags.NonPublic | BindingFlags.Static);
-        method!.Invoke(null, new object[] { world, pending, tile, civId, 42L, "Test Attacker", world.CurrentYear, 54321 });
+        CivTracker.TryForgeBattleArtifact(world, pending, tile, civId, 42L, "Test Attacker", world.CurrentYear, 54321);
 
         world.Artifacts.Count.Should().Be(before, "BattleForgeProbability=0 must guarantee no artifact is forged");
     }
@@ -117,7 +102,7 @@ public class ArtifactCategoryWiringTests
     public void HeroicDeathArtifact_CanBeRelic_WhenWeaponWeightIsZero()
     {
         var world = BuildWorld();
-        var tile  = FindLandTile(world);
+        var tile  = WorldGenTestHelpers.FindLandTile(world, fullRange: true);
         var cfg   = TestSimConfig.Default();
         cfg.Artifacts.HeroicDeathForgeProbability   = 1.0f;
         cfg.Artifacts.HeroicDeathCategoryWeightWeapon = 0f;
@@ -131,9 +116,7 @@ public class ArtifactCategoryWiringTests
         var pending = new List<PendingEvent>();
         var phase = new CharacterBehaviorPhase(cfg);
 
-        var method = typeof(CharacterBehaviorPhase).GetMethod("TryHeroicDeathForge", BindingFlags.NonPublic | BindingFlags.Instance);
-        method.Should().NotBeNull("CharacterBehaviorPhase.TryHeroicDeathForge must exist — if renamed, update this test alongside it");
-        method!.Invoke(phase, new object[] { character, "wounds", world, pending });
+        phase.TryHeroicDeathForge(character, "wounds", world, pending);
 
         world.Artifacts.Count.Should().Be(before + 1, "HeroicDeathForgeProbability=1.0 and Combat >= 0.5 must guarantee an artifact is forged");
         world.Artifacts.Values.Should().Contain(a => a.Category == ArtifactCategory.Relic,
@@ -144,7 +127,7 @@ public class ArtifactCategoryWiringTests
     public void HeroicDeathArtifact_DoesNotForge_ForLowCombatSkill()
     {
         var world = BuildWorld();
-        var tile  = FindLandTile(world);
+        var tile  = WorldGenTestHelpers.FindLandTile(world, fullRange: true);
         var cfg   = TestSimConfig.Default();
         cfg.Artifacts.HeroicDeathForgeProbability = 1.0f;
 
@@ -158,8 +141,7 @@ public class ArtifactCategoryWiringTests
         var pending = new List<PendingEvent>();
         var phase = new CharacterBehaviorPhase(cfg);
 
-        var method = typeof(CharacterBehaviorPhase).GetMethod("TryHeroicDeathForge", BindingFlags.NonPublic | BindingFlags.Instance);
-        method!.Invoke(phase, new object[] { character, "wounds", world, pending });
+        phase.TryHeroicDeathForge(character, "wounds", world, pending);
 
         world.Artifacts.Count.Should().Be(before, "Combat < 0.5 must never forge a heroic-death artifact regardless of probability");
     }
@@ -168,7 +150,7 @@ public class ArtifactCategoryWiringTests
     public void HeroicDeathArtifact_DoesNotForge_ForNonCombatDeathCause()
     {
         var world = BuildWorld();
-        var tile  = FindLandTile(world);
+        var tile  = WorldGenTestHelpers.FindLandTile(world, fullRange: true);
         var cfg   = TestSimConfig.Default();
         cfg.Artifacts.HeroicDeathForgeProbability = 1.0f;
 
@@ -179,8 +161,7 @@ public class ArtifactCategoryWiringTests
         var pending = new List<PendingEvent>();
         var phase = new CharacterBehaviorPhase(cfg);
 
-        var method = typeof(CharacterBehaviorPhase).GetMethod("TryHeroicDeathForge", BindingFlags.NonPublic | BindingFlags.Instance);
-        method!.Invoke(phase, new object[] { character, "starvation", world, pending });
+        phase.TryHeroicDeathForge(character, "starvation", world, pending);
 
         world.Artifacts.Count.Should().Be(before, "a non-combat death cause (starvation) must never forge a heroic-death artifact");
     }

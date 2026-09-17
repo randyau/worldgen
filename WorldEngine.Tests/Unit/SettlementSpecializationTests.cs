@@ -128,9 +128,9 @@ public class SettlementSpecializationTests
         var world = WorldTestHelper.CreateSmallWorld(seed: 23);
         world.SimConfig.Character.MerchantTradeChance = 1f;
 
-        var home  = FindLandTile(world);
-        var destA = FindLandTile(world, exclude: home, minDist: 3);
-        var destB = FindLandTile(world, exclude: home, minDist: 3, exclude2: destA);
+        var home  = WorldGenTestHelpers.FindLandTile(world);
+        var destA = WorldGenTestHelpers.FindLandTile(world, exclude: home, minDist: 3);
+        var destB = WorldGenTestHelpers.FindLandTile(world, exclude: home, minDist: 3, exclude2: destA);
         var civId = new CivId(1);
         world.Civilizations[civId] = new Civilization(civId, "TestCiv", new EntityId(1), home, 0);
 
@@ -163,25 +163,4 @@ public class SettlementSpecializationTests
             .Should().BeGreaterThan(0f, "the merchant should export iron — home's specialized resource — over timber");
     }
 
-    private static TileCoord FindLandTile(WorldState world, TileCoord? exclude = null, int minDist = 0, TileCoord? exclude2 = null)
-    {
-        for (int y = 1; y < world.TileGrid.TileHeight - 1; y++)
-        for (int x = 0; x < world.TileGrid.TileWidth; x++)
-        {
-            var c = new TileCoord(x, y);
-            if (!world.IsLand(c)) continue;
-            if (exclude is { } e)
-            {
-                int dx = c.X - e.X, dy = c.Y - e.Y;
-                if (dx * dx + dy * dy < minDist * minDist) continue;
-            }
-            if (exclude2 is { } e2)
-            {
-                int dx2 = c.X - e2.X, dy2 = c.Y - e2.Y;
-                if (dx2 * dx2 + dy2 * dy2 < minDist * minDist) continue;
-            }
-            return c;
-        }
-        throw new InvalidOperationException("No suitable land tile found");
-    }
 }

@@ -21,17 +21,6 @@ namespace WorldEngine.Tests.Unit;
 /// </summary>
 public class FamilyFormationTests
 {
-    private static TileCoord FindLandTile(WorldState world)
-    {
-        for (int y = 1; y < world.TileGrid.TileHeight - 1; y++)
-        for (int x = 0; x < world.TileGrid.TileWidth; x++)
-        {
-            var c = new TileCoord(x, y);
-            if (world.IsLand(c)) return c;
-        }
-        throw new System.Exception("no land tile found");
-    }
-
     private static (Tier1Character a, Tier1Character b) SpawnAdultPair(WorldState world, TileCoord tile, long seedOffset)
     {
         var biome = (BiomeType)world.TileGrid.GetTile(tile).BiomeType;
@@ -48,7 +37,7 @@ public class FamilyFormationTests
     public void ProposeMarriage_CreatesHouseholdFamilyOrganization()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 7);
-        var tile = FindLandTile(world);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
         var (a, b) = SpawnAdultPair(world, tile, seedOffset: 0L);
 
         var pending = new List<PendingEvent>();
@@ -77,7 +66,7 @@ public class FamilyFormationTests
     public void ProposeMarriage_BelowMinAge_DoesNothing()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 7);
-        var tile = FindLandTile(world);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
         var (a, b) = SpawnAdultPair(world, tile, seedOffset: 10L);
         a.AgeSeason = 1; // well below MarriageMinAgeSeasons
 
@@ -95,7 +84,7 @@ public class FamilyFormationTests
     public void MarriedCouple_AnnualTick_CanBearAChildWithRealParentLinkage()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 11);
-        var tile = FindLandTile(world);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
         var (a, b) = SpawnAdultPair(world, tile, seedOffset: 20L);
 
         var marriagePending = new List<PendingEvent>();

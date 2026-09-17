@@ -1,4 +1,3 @@
-using System.Reflection;
 using FluentAssertions;
 using WorldEngine.Sim.Civilizations;
 using WorldEngine.Sim.Core;
@@ -25,56 +24,20 @@ namespace WorldEngine.Tests.Unit;
 /// </summary>
 public class SameCivTrustEconomyTests
 {
-    private static TileCoord FindLandTile(WorldState world)
-    {
-        for (int y = 1; y < world.TileGrid.TileHeight - 1; y++)
-        for (int x = 0; x < world.TileGrid.TileWidth; x++)
-        {
-            var c = new TileCoord(x, y);
-            if (world.IsLand(c)) return c;
-        }
-        throw new System.Exception("no land tile found");
-    }
-
-    private static Tier1Character SpawnAt(WorldState world, TileCoord tile, long seedOffset)
-    {
-        var biome = (BiomeType)world.TileGrid.GetTile(tile).BiomeType;
-        var c = CharacterFactory.Spawn(tile, biome, world.WorldSeed, seedOffset, world.SimConfig, world.CurrentYear, startAsAdult: true);
-        world.Entities.Add(c);
-        return c;
-    }
-
-    private static (Tier1Character ruler, CivId civId) SpawnRuler(WorldState world, TileCoord tile, long seedOffset, string civName)
-    {
-        var ruler = SpawnAt(world, tile, seedOffset);
-        var civId = new CivId(world.NextCivId++);
-        world.Civilizations[civId] = new Civilization(civId, civName, ruler.Id, tile, world.CurrentYear);
-        CivTracker.SetCharacterCiv(ruler, civId, OrganizationRole.Leader, world);
-        return (ruler, civId);
-    }
-
-    private static Tier1Character SpawnMember(WorldState world, TileCoord tile, long seedOffset, CivId civId)
-    {
-        var c = SpawnAt(world, tile, seedOffset);
-        CivTracker.SetCharacterCiv(c, civId, OrganizationRole.Member, world);
-        return c;
-    }
-
     private static void InvokeApplySameCivFamiliarity(WorldState world, Tier1Character c)
     {
         var phase = new CharacterBehaviorPhase(world.SimConfig);
-        var method = typeof(CharacterBehaviorPhase).GetMethod("ApplySameCivFamiliarity", BindingFlags.NonPublic | BindingFlags.Instance);
-        method!.Invoke(phase, new object[] { c, world });
+        phase.ApplySameCivFamiliarity(c, world);
     }
 
     [Fact]
     public void CoLocatedSameCivPair_TrustMovesFromZero()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 101);
-        var tile = FindLandTile(world);
-        var (_, civId) = SpawnRuler(world, tile, 1L, "CivA");
-        var a = SpawnMember(world, tile, 2L, civId);
-        var b = SpawnMember(world, tile, 3L, civId);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var (_, civId) = WorldGenTestHelpers.SpawnRuler(world, tile, 1L, "CivA");
+        var a = WorldGenTestHelpers.SpawnMember(world, tile, 2L, civId);
+        var b = WorldGenTestHelpers.SpawnMember(world, tile, 3L, civId);
 
         world.Relationships.Get(a.Id, b.Id).Should().BeNull("sanity check: no edge exists yet");
 
@@ -89,11 +52,11 @@ public class SameCivTrustEconomyTests
     public void CrossCivPair_UnaffectedBySameCivFamiliarity()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 102);
-        var tile = FindLandTile(world);
-        var (_, civA) = SpawnRuler(world, tile, 11L, "CivA");
-        var (_, civB) = SpawnRuler(world, tile, 12L, "CivB");
-        var a = SpawnMember(world, tile, 13L, civA);
-        var b = SpawnMember(world, tile, 14L, civB);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var (_, civA) = WorldGenTestHelpers.SpawnRuler(world, tile, 11L, "CivA");
+        var (_, civB) = WorldGenTestHelpers.SpawnRuler(world, tile, 12L, "CivB");
+        var a = WorldGenTestHelpers.SpawnMember(world, tile, 13L, civA);
+        var b = WorldGenTestHelpers.SpawnMember(world, tile, 14L, civB);
 
         InvokeApplySameCivFamiliarity(world, a);
 
@@ -105,10 +68,10 @@ public class SameCivTrustEconomyTests
     public void FeudPair_TrustUnaffected()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 103);
-        var tile = FindLandTile(world);
-        var (_, civId) = SpawnRuler(world, tile, 21L, "CivA");
-        var a = SpawnMember(world, tile, 22L, civId);
-        var b = SpawnMember(world, tile, 23L, civId);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var (_, civId) = WorldGenTestHelpers.SpawnRuler(world, tile, 21L, "CivA");
+        var a = WorldGenTestHelpers.SpawnMember(world, tile, 22L, civId);
+        var b = WorldGenTestHelpers.SpawnMember(world, tile, 23L, civId);
 
         var rel = world.Relationships.GetOrCreate(a.Id, b.Id);
         world.Relationships.Upsert(rel with { Trust = -0.6f, Flags = RelationshipFlags.IsRival | RelationshipFlags.IsFeud });
@@ -123,9 +86,9 @@ public class SameCivTrustEconomyTests
     public void MarriedCouple_Hardship_DrainsTrustAndCanEstrange()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 104);
-        var tile = FindLandTile(world);
-        var a = SpawnAt(world, tile, 31L);
-        var b = SpawnAt(world, tile, 32L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var a = WorldGenTestHelpers.SpawnAt(world, tile, 31L);
+        var b = WorldGenTestHelpers.SpawnAt(world, tile, 32L);
 
         var famCfg = world.SimConfig.Family;
         a.Needs = a.Needs with { Food = famCfg.MarriageHardshipNeedThreshold - 0.1f };
@@ -137,9 +100,8 @@ public class SameCivTrustEconomyTests
         });
 
         var phase = new CharacterBehaviorPhase(world.SimConfig);
-        var method = typeof(CharacterBehaviorPhase).GetMethod("CheckMarriageEstrangement", BindingFlags.NonPublic | BindingFlags.Instance);
         var pending = new List<PendingEvent>();
-        method!.Invoke(phase, new object[] { world, pending });
+        phase.CheckMarriageEstrangement(world, pending);
 
         var after = world.Relationships.Get(a.Id, b.Id)!;
         after.IsMarried.Should().BeFalse("hardship drain pushed Trust past the Estrangement threshold this year");
@@ -150,18 +112,17 @@ public class SameCivTrustEconomyTests
     public void MarriedCouple_NoHardship_TrustUnaffectedByHardshipSink()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 105);
-        var tile = FindLandTile(world);
-        var a = SpawnAt(world, tile, 41L);
-        var b = SpawnAt(world, tile, 42L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var a = WorldGenTestHelpers.SpawnAt(world, tile, 41L);
+        var b = WorldGenTestHelpers.SpawnAt(world, tile, 42L);
 
         var famCfg = world.SimConfig.Family;
         var rel = world.Relationships.GetOrCreate(a.Id, b.Id);
         world.Relationships.Upsert(rel with { Trust = 0.5f, Flags = RelationshipFlags.IsMarried | RelationshipFlags.IsFamily });
 
         var phase = new CharacterBehaviorPhase(world.SimConfig);
-        var method = typeof(CharacterBehaviorPhase).GetMethod("CheckMarriageEstrangement", BindingFlags.NonPublic | BindingFlags.Instance);
         var pending = new List<PendingEvent>();
-        method!.Invoke(phase, new object[] { world, pending });
+        phase.CheckMarriageEstrangement(world, pending);
 
         world.Relationships.Get(a.Id, b.Id)!.Trust.Should().Be(0.5f,
             "with both spouses' needs healthy, the hardship sink must not fire");

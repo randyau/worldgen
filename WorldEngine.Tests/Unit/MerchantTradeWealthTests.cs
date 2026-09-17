@@ -21,23 +21,6 @@ namespace WorldEngine.Tests.Unit;
 /// </summary>
 public class MerchantTradeWealthTests
 {
-    private static TileCoord FindLandTile(WorldState world, TileCoord? exclude = null, int minDist = 0)
-    {
-        for (int y = 1; y < world.TileGrid.TileHeight - 1; y++)
-        for (int x = 0; x < world.TileGrid.TileWidth; x++)
-        {
-            var c = new TileCoord(x, y);
-            if (!world.IsLand(c)) continue;
-            if (exclude is { } e)
-            {
-                int dx = c.X - e.X, dy = c.Y - e.Y;
-                if (dx * dx + dy * dy < minDist * minDist) continue;
-            }
-            return c;
-        }
-        throw new InvalidOperationException("No suitable land tile found");
-    }
-
     /// <summary>
     /// Builds a minimal two-settlement world: home has a surplus of exactly one resource ("iron")
     /// so RunMerchant's routing deterministically picks it and the sole other settlement as the
@@ -56,8 +39,8 @@ public class MerchantTradeWealthTests
         // production default). See GuildTreasuryTests for Guild-formation's own coverage.
         world.SimConfig.Economy.GuildFormationWealthThreshold = float.MaxValue;
 
-        var home = FindLandTile(world);
-        var dest = FindLandTile(world, exclude: home, minDist: 3);
+        var home = WorldGenTestHelpers.FindLandTile(world);
+        var dest = WorldGenTestHelpers.FindLandTile(world, exclude: home, minDist: 3);
 
         world.Settlements[home] = new SettlementStub(
             FounderId: new EntityId(1), CivId: default, Tile: home, FoundedYear: 0,

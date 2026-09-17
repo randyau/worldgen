@@ -1,4 +1,3 @@
-using System.Reflection;
 using FluentAssertions;
 using WorldEngine.Sim.Civilizations;
 using WorldEngine.Sim.Config;
@@ -19,25 +18,6 @@ namespace WorldEngine.Tests.Unit;
 /// </summary>
 public class ReligionConversionTests
 {
-    private static TileCoord FindLandTile(WorldState world)
-    {
-        for (int y = 1; y < world.TileGrid.TileHeight - 1; y++)
-        for (int x = 0; x < world.TileGrid.TileWidth; x++)
-        {
-            var c = new TileCoord(x, y);
-            if (world.IsLand(c)) return c;
-        }
-        throw new InvalidOperationException("No suitable land tile found");
-    }
-
-    private static Tier1Character SpawnAt(WorldState world, TileCoord tile, long seedOffset)
-    {
-        var biome = (BiomeType)world.TileGrid.GetTile(tile).BiomeType;
-        var c = CharacterFactory.Spawn(tile, biome, world.WorldSeed, seedOffset, world.SimConfig, world.CurrentYear, startAsAdult: true);
-        world.Entities.Add(c);
-        return c;
-    }
-
     /// <summary>Builds a character with an explicit PersonalityVector — Tier1Character.Personality
     /// has no setter, so a custom-receptivity test character must be constructed directly rather
     /// than mutated after CharacterFactory.Spawn.</summary>
@@ -59,16 +39,14 @@ public class ReligionConversionTests
     private static List<PendingEvent> RunConversion(CharacterBehaviorPhase phase, List<Tier1Character> chars, WorldState world)
     {
         var pending = new List<PendingEvent>();
-        typeof(CharacterBehaviorPhase)
-            .GetMethod("ProcessAnnualReligionConversion", BindingFlags.NonPublic | BindingFlags.Instance)!
-            .Invoke(phase, new object[] { chars, world, pending });
+        phase.ProcessAnnualReligionConversion(chars, world, pending);
         return pending;
     }
 
     private static (WorldState world, TileCoord tile, CivId civ) SetupCiv(int seed)
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: seed);
-        var tile  = FindLandTile(world);
+        var tile  = WorldGenTestHelpers.FindLandTile(world);
         var civ   = new CivId(1);
         world.Civilizations[civ] = new Civilization(civ, "TestCiv", new EntityId(1), tile, 1);
         return (world, tile, civ);
@@ -81,7 +59,7 @@ public class ReligionConversionTests
         var (world, tile, civ) = SetupCiv(seed: 201);
         world.SimConfig.Religion.ConversionBasePullScale = 1000f; // would force conversion if the gate didn't hold first
 
-        var founder = SpawnAt(world, tile, 1L);
+        var founder = WorldGenTestHelpers.SpawnAt(world, tile, 1L);
         var orgId = CivTracker.CreateOrganization(world, OrganizationKind.Religion, "Test Faith", founder.Id, tile);
         var org = world.Organizations[orgId];
         var founderMembership = new Membership(orgId, OrganizationRole.Leader, 1f);
@@ -105,7 +83,7 @@ public class ReligionConversionTests
         var (world, tile, civ) = SetupCiv(seed: 202);
         world.SimConfig.Religion.ConversionBasePullScale = 1000f; // saturate pull so the roll always succeeds
 
-        var founder = SpawnAt(world, tile, 1L);
+        var founder = WorldGenTestHelpers.SpawnAt(world, tile, 1L);
         var orgId = CivTracker.CreateOrganization(world, OrganizationKind.Religion, "Test Faith", founder.Id, tile);
         var org = world.Organizations[orgId];
         var founderMembership = new Membership(orgId, OrganizationRole.Leader, 1f);
@@ -133,7 +111,7 @@ public class ReligionConversionTests
         {
             var (world, tile, civ) = SetupCiv(seed: 303);
 
-            var oldFounder = SpawnAt(world, tile, 1L);
+            var oldFounder = WorldGenTestHelpers.SpawnAt(world, tile, 1L);
             var oldOrgId = CivTracker.CreateOrganization(world, OrganizationKind.Religion, "Old Faith", oldFounder.Id, tile);
             var oldOrg = world.Organizations[oldOrgId];
             var oldFounderM = new Membership(oldOrgId, OrganizationRole.Leader, 1f);
@@ -141,7 +119,7 @@ public class ReligionConversionTests
             oldFounder.Memberships.Add(oldFounderM);
             oldFounder.WithCiv(civ);
 
-            var newFounder = SpawnAt(world, tile, 2L);
+            var newFounder = WorldGenTestHelpers.SpawnAt(world, tile, 2L);
             var newOrgId = CivTracker.CreateOrganization(world, OrganizationKind.Religion, "New Faith", newFounder.Id, tile);
             var newOrg = world.Organizations[newOrgId];
             var newFounderM = new Membership(newOrgId, OrganizationRole.Leader, 1f);

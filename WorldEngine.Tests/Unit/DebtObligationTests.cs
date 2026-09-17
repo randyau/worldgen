@@ -1,5 +1,4 @@
 using System.Linq;
-using System.Reflection;
 using FluentAssertions;
 using WorldEngine.Sim.Civilizations;
 using WorldEngine.Sim.Core;
@@ -23,32 +22,13 @@ namespace WorldEngine.Tests.Unit;
 /// </summary>
 public class DebtObligationTests
 {
-    private static TileCoord FindLandTile(WorldState world)
-    {
-        for (int y = 1; y < world.TileGrid.TileHeight - 1; y++)
-        for (int x = 0; x < world.TileGrid.TileWidth; x++)
-        {
-            var c = new TileCoord(x, y);
-            if (world.IsLand(c)) return c;
-        }
-        throw new System.Exception("no land tile found");
-    }
-
-    private static Tier1Character SpawnAt(WorldState world, TileCoord tile, long seedOffset)
-    {
-        var biome = (BiomeType)world.TileGrid.GetTile(tile).BiomeType;
-        var c = CharacterFactory.Spawn(tile, biome, world.WorldSeed, seedOffset, world.SimConfig, world.CurrentYear, startAsAdult: true);
-        world.Entities.Add(c);
-        return c;
-    }
-
     [Fact]
     public void GrantAid_TrustedNeedyRecipient_CreatesDebtAndRestoresNeed()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 21);
-        var tile = FindLandTile(world);
-        var granter   = SpawnAt(world, tile, 1L);
-        var recipient = SpawnAt(world, tile, 2L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var granter   = WorldGenTestHelpers.SpawnAt(world, tile, 1L);
+        var recipient = WorldGenTestHelpers.SpawnAt(world, tile, 2L);
         recipient.Needs = recipient.Needs with { Food = 0.1f };
 
         var cfg = world.SimConfig.Debt;
@@ -69,9 +49,9 @@ public class DebtObligationTests
     public void GrantAid_BelowTrustThreshold_DoesNothing()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 22);
-        var tile = FindLandTile(world);
-        var granter   = SpawnAt(world, tile, 11L);
-        var recipient = SpawnAt(world, tile, 12L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var granter   = WorldGenTestHelpers.SpawnAt(world, tile, 11L);
+        var recipient = WorldGenTestHelpers.SpawnAt(world, tile, 12L);
         recipient.Needs = recipient.Needs with { Food = 0.1f };
         // Neutral GetOrCreate edge has Trust = 0, below AidTrustThreshold — no explicit Upsert needed.
 
@@ -85,9 +65,9 @@ public class DebtObligationTests
     public void ForgiveDebt_ByCreditor_ZeroesDebtAndBoostsTrust()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 23);
-        var tile = FindLandTile(world);
-        var creditor = SpawnAt(world, tile, 21L);
-        var debtor   = SpawnAt(world, tile, 22L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var creditor = WorldGenTestHelpers.SpawnAt(world, tile, 21L);
+        var debtor   = WorldGenTestHelpers.SpawnAt(world, tile, 22L);
 
         var cfg = world.SimConfig.Debt;
         var rel = world.Relationships.GetOrCreate(creditor.Id, debtor.Id);
@@ -106,9 +86,9 @@ public class DebtObligationTests
     public void ForgiveDebt_ByNonCreditor_DoesNothing()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 24);
-        var tile = FindLandTile(world);
-        var creditor = SpawnAt(world, tile, 31L);
-        var debtor   = SpawnAt(world, tile, 32L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var creditor = WorldGenTestHelpers.SpawnAt(world, tile, 31L);
+        var debtor   = WorldGenTestHelpers.SpawnAt(world, tile, 32L);
 
         var rel = world.Relationships.GetOrCreate(creditor.Id, debtor.Id);
         float sign = debtor.Id == rel.From ? 1f : -1f;
@@ -121,19 +101,16 @@ public class DebtObligationTests
         Math.Abs(world.GetRelationship(creditor.Id, debtor.Id)!.Debt).Should().BeApproximately(0.5f, 0.001f);
     }
 
-    private static float InvokeDebtDampening(Tier1Character c, CivId targetCivId, WorldState world)
-    {
-        var method = typeof(UtilityScorer).GetMethod("DebtDampening", BindingFlags.NonPublic | BindingFlags.Static);
-        return (float)method!.Invoke(null, new object[] { c, targetCivId, world, world.SimConfig.Debt })!;
-    }
+    private static float InvokeDebtDampening(Tier1Character c, CivId targetCivId, WorldState world) =>
+        UtilityScorer.DebtDampening(c, targetCivId, world, world.SimConfig.Debt);
 
     [Fact]
     public void DebtDampening_CreditorLivesInTargetCiv_DampensProportionallyToDebt()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 25);
-        var tile = FindLandTile(world);
-        var debtor   = SpawnAt(world, tile, 41L);
-        var creditor = SpawnAt(world, tile, 42L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var debtor   = WorldGenTestHelpers.SpawnAt(world, tile, 41L);
+        var creditor = WorldGenTestHelpers.SpawnAt(world, tile, 42L);
         world.Entities.Add(debtor);
 
         var enemyCivId = new CivId(world.NextCivId++);
@@ -155,8 +132,8 @@ public class DebtObligationTests
     public void DebtDampening_NoDebtToTargetCiv_ReturnsFullScore()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 26);
-        var tile = FindLandTile(world);
-        var c = SpawnAt(world, tile, 51L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var c = WorldGenTestHelpers.SpawnAt(world, tile, 51L);
 
         InvokeDebtDampening(c, new CivId(999), world).Should().Be(1f);
     }
@@ -165,10 +142,10 @@ public class DebtObligationTests
     public void CharacterDeath_TransfersDebtToMarriedHeir()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 27);
-        var tile = FindLandTile(world);
-        var deceased    = SpawnAt(world, tile, 61L);
-        var spouse      = SpawnAt(world, tile, 62L);
-        var thirdParty  = SpawnAt(world, tile, 63L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var deceased    = WorldGenTestHelpers.SpawnAt(world, tile, 61L);
+        var spouse      = WorldGenTestHelpers.SpawnAt(world, tile, 62L);
+        var thirdParty  = WorldGenTestHelpers.SpawnAt(world, tile, 63L);
         deceased.AgeSeason = world.SimConfig.Family.MarriageMinAgeSeasons + 10;
         spouse.AgeSeason   = world.SimConfig.Family.MarriageMinAgeSeasons + 10;
 
@@ -182,9 +159,7 @@ public class DebtObligationTests
 
         var phase = new CharacterBehaviorPhase(world.SimConfig);
         var pending = new List<PendingEvent>();
-        typeof(CharacterBehaviorPhase)
-            .GetMethod("KillCharacter", BindingFlags.NonPublic | BindingFlags.Instance)!
-            .Invoke(phase, new object[] { deceased, world, "test", pending });
+        phase.KillCharacter(deceased, world, "test", pending);
 
         var oldEdge = world.GetRelationship(deceased.Id, thirdParty.Id)!;
         oldEdge.Debt.Should().Be(0f, "the deceased's own edge no longer carries the obligation");

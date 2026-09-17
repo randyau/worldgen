@@ -124,8 +124,8 @@ public class EconomicDepthTests
         var world = WorldTestHelper.CreateSmallWorld(seed: 4);
         world.SimConfig.Unrest.UnrestComfortRadius = 0;
 
-        var capital = FindLandTile(world);
-        var distant = FindLandTile(world, exclude: capital, minDist: 3);
+        var capital = WorldGenTestHelpers.FindLandTile(world);
+        var distant = WorldGenTestHelpers.FindLandTile(world, exclude: capital, minDist: 3);
 
         var civId = new CivId(1);
         world.Civilizations[civId] = new Civilization(civId, "TestCiv", new EntityId(1), capital, 0);
@@ -153,8 +153,8 @@ public class EconomicDepthTests
     public void BonusMilitaryStrength_IncreasesAttackerWinRate_AcrossYears()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 5);
-        var cityA = FindLandTile(world);
-        var cityB = FindLandTile(world, exclude: cityA, minDist: 3);
+        var cityA = WorldGenTestHelpers.FindLandTile(world);
+        var cityB = WorldGenTestHelpers.FindLandTile(world, exclude: cityA, minDist: 3);
 
         var civAId = new CivId(1);
         var civBId = new CivId(2);
@@ -216,7 +216,7 @@ public class EconomicDepthTests
     public void BonusDiseaseResistance_LowersOutbreakRate_AcrossYears()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 6);
-        var tile = FindLandTile(world);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
         var civId = new CivId(1);
         world.Civilizations[civId] = new Civilization(civId, "TestCiv", new EntityId(1), tile, 0);
 
@@ -258,8 +258,8 @@ public class EconomicDepthTests
             var world = WorldTestHelper.CreateSmallWorld(seed: 7);
             world.SimConfig.Character.MerchantTradeChance = 1f; // always attempt a trade
 
-            var home = FindLandTile(world);
-            var dest = FindLandTile(world, exclude: home, minDist: 3);
+            var home = WorldGenTestHelpers.FindLandTile(world);
+            var dest = WorldGenTestHelpers.FindLandTile(world, exclude: home, minDist: 3);
             var civId = new CivId(1);
             world.Civilizations[civId] = new Civilization(civId, "TestCiv", new EntityId(1), home, 0);
 
@@ -301,9 +301,9 @@ public class EconomicDepthTests
         var world = WorldTestHelper.CreateSmallWorld(seed: 8);
         world.SimConfig.Character.MerchantTradeChance = 1f;
 
-        var home    = FindLandTile(world);
-        var destA   = FindLandTile(world, exclude: home, minDist: 3);
-        var destB   = FindLandTile(world, exclude: home, minDist: 3, exclude2: destA);
+        var home    = WorldGenTestHelpers.FindLandTile(world);
+        var destA   = WorldGenTestHelpers.FindLandTile(world, exclude: home, minDist: 3);
+        var destB   = WorldGenTestHelpers.FindLandTile(world, exclude: home, minDist: 3, exclude2: destA);
         var civId   = new CivId(1);
         world.Civilizations[civId] = new Civilization(civId, "TestCiv", new EntityId(1), home, 0);
 
@@ -341,25 +341,4 @@ public class EconomicDepthTests
 
     // ─── Local helpers ─────────────────────────────────────────────────────────
 
-    private static TileCoord FindLandTile(WorldState world, TileCoord? exclude = null, int minDist = 0, TileCoord? exclude2 = null)
-    {
-        for (int y = 1; y < world.TileGrid.TileHeight - 1; y++)
-        for (int x = 0; x < world.TileGrid.TileWidth; x++)
-        {
-            var c = new TileCoord(x, y);
-            if (!world.IsLand(c)) continue;
-            if (exclude is { } e)
-            {
-                int dx = c.X - e.X, dy = c.Y - e.Y;
-                if (dx * dx + dy * dy < minDist * minDist) continue;
-            }
-            if (exclude2 is { } e2)
-            {
-                int dx2 = c.X - e2.X, dy2 = c.Y - e2.Y;
-                if (dx2 * dx2 + dy2 * dy2 < minDist * minDist) continue;
-            }
-            return c;
-        }
-        throw new InvalidOperationException("No suitable land tile found");
-    }
 }

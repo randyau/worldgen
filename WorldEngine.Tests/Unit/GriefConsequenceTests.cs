@@ -21,25 +21,6 @@ namespace WorldEngine.Tests.Unit;
 /// </summary>
 public class GriefConsequenceTests
 {
-    private static TileCoord FindLandTile(WorldState world)
-    {
-        for (int y = 1; y < world.TileGrid.TileHeight - 1; y++)
-        for (int x = 0; x < world.TileGrid.TileWidth; x++)
-        {
-            var c = new TileCoord(x, y);
-            if (world.IsLand(c)) return c;
-        }
-        throw new System.Exception("no land tile found");
-    }
-
-    private static Tier1Character SpawnAt(WorldState world, TileCoord tile, long seedOffset)
-    {
-        var biome = (BiomeType)world.TileGrid.GetTile(tile).BiomeType;
-        var c = CharacterFactory.Spawn(tile, biome, world.WorldSeed, seedOffset, world.SimConfig, world.CurrentYear, startAsAdult: true);
-        world.Entities.Add(c);
-        return c;
-    }
-
     private static void GiveBond(Tier1Character mourner, EntityId targetId, float intensity)
     {
         mourner.Goals.Add(new GoalData
@@ -53,9 +34,9 @@ public class GriefConsequenceTests
     public void Grief_SpouseDeath_ScalesAboveStrangerBaseline()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 61);
-        var tile = FindLandTile(world);
-        var mourner  = SpawnAt(world, tile, 1L);
-        var deceased = SpawnAt(world, tile, 2L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var mourner  = WorldGenTestHelpers.SpawnAt(world, tile, 1L);
+        var deceased = WorldGenTestHelpers.SpawnAt(world, tile, 2L);
         GiveBond(mourner, deceased.Id, 0.5f);
 
         var rel = world.Relationships.GetOrCreate(mourner.Id, deceased.Id);
@@ -73,9 +54,9 @@ public class GriefConsequenceTests
     public void Grief_FamilyDeath_ScalesBetweenStrangerAndSpouse()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 62);
-        var tile = FindLandTile(world);
-        var mourner  = SpawnAt(world, tile, 11L);
-        var deceased = SpawnAt(world, tile, 12L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var mourner  = WorldGenTestHelpers.SpawnAt(world, tile, 11L);
+        var deceased = WorldGenTestHelpers.SpawnAt(world, tile, 12L);
         GiveBond(mourner, deceased.Id, 0.5f);
 
         var rel = world.Relationships.GetOrCreate(mourner.Id, deceased.Id);
@@ -96,9 +77,9 @@ public class GriefConsequenceTests
     public void Grief_BondedStranger_UsesBaselineMultiplier()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 63);
-        var tile = FindLandTile(world);
-        var mourner  = SpawnAt(world, tile, 21L);
-        var deceased = SpawnAt(world, tile, 22L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var mourner  = WorldGenTestHelpers.SpawnAt(world, tile, 21L);
+        var deceased = WorldGenTestHelpers.SpawnAt(world, tile, 22L);
         GiveBond(mourner, deceased.Id, 0.5f);
         // No IsMarried/IsFamily flags — an ordinary bonded companion.
 
@@ -114,9 +95,9 @@ public class GriefConsequenceTests
     public void EmitGriefEvent_PayloadReflectsRelationshipScaledIntensity()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 64);
-        var tile = FindLandTile(world);
-        var mourner  = SpawnAt(world, tile, 31L);
-        var deceased = SpawnAt(world, tile, 32L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var mourner  = WorldGenTestHelpers.SpawnAt(world, tile, 31L);
+        var deceased = WorldGenTestHelpers.SpawnAt(world, tile, 32L);
         GiveBond(mourner, deceased.Id, 0.5f);
 
         var rel = world.Relationships.GetOrCreate(mourner.Id, deceased.Id);

@@ -1,4 +1,3 @@
-using System.Reflection;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Entities;
 using WorldEngine.Sim.Entities.Characters;
@@ -94,12 +93,8 @@ public class UtilityScorerSpotlightBiasTests
         return best!.Value;
     }
 
-    private static void ApplySpotlightBias(List<UtilityScorer.ScoredAction> candidates, WorldState world, Tier1Character c)
-    {
-        var method = typeof(UtilityScorer).GetMethod("ApplySpotlightBias", BindingFlags.NonPublic | BindingFlags.Static);
-        method.Should().NotBeNull("UtilityScorer.ApplySpotlightBias must exist as a private static method — if this fails, the method was renamed/removed and this test needs updating alongside it");
-        method!.Invoke(null, new object[] { candidates, world, c });
-    }
+    private static void ApplySpotlightBias(List<UtilityScorer.ScoredAction> candidates, WorldState world, Tier1Character c) =>
+        UtilityScorer.ApplySpotlightBias(candidates, world, c);
 
     [Fact]
     public void MoveTarget_BiasesOnlyTheMatchingMoveAction()

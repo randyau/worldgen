@@ -1,4 +1,3 @@
-using System.Reflection;
 using FluentAssertions;
 using WorldEngine.Sim.Civilizations;
 using WorldEngine.Sim.Core;
@@ -22,56 +21,18 @@ namespace WorldEngine.Tests.Unit;
 /// </summary>
 public class NonRulerBondsTests
 {
-    private static TileCoord FindLandTile(WorldState world)
-    {
-        for (int y = 1; y < world.TileGrid.TileHeight - 1; y++)
-        for (int x = 0; x < world.TileGrid.TileWidth; x++)
-        {
-            var c = new TileCoord(x, y);
-            if (world.IsLand(c)) return c;
-        }
-        throw new System.Exception("no land tile found");
-    }
-
-    private static Tier1Character SpawnAt(WorldState world, TileCoord tile, long seedOffset)
-    {
-        var biome = (BiomeType)world.TileGrid.GetTile(tile).BiomeType;
-        var c = CharacterFactory.Spawn(tile, biome, world.WorldSeed, seedOffset, world.SimConfig, world.CurrentYear, startAsAdult: true);
-        world.Entities.Add(c);
-        return c;
-    }
-
-    private static (Tier1Character ruler, CivId civId) SpawnRuler(WorldState world, TileCoord tile, long seedOffset, string civName)
-    {
-        var ruler = SpawnAt(world, tile, seedOffset);
-        var civId = new CivId(world.NextCivId++);
-        world.Civilizations[civId] = new Civilization(civId, civName, ruler.Id, tile, world.CurrentYear);
-        CivTracker.SetCharacterCiv(ruler, civId, OrganizationRole.Leader, world);
-        return (ruler, civId);
-    }
-
-    private static Tier1Character SpawnMember(WorldState world, TileCoord tile, long seedOffset, CivId civId)
-    {
-        var c = SpawnAt(world, tile, seedOffset);
-        CivTracker.SetCharacterCiv(c, civId, OrganizationRole.Member, world);
-        return c;
-    }
-
     // ─── FriendshipDampening ────────────────────────────────────────────────
 
-    private static float InvokeFriendshipDampening(Civilization from, Civilization to, WorldState world)
-    {
-        var method = typeof(CivTracker).GetMethod("FriendshipDampening", BindingFlags.NonPublic | BindingFlags.Static);
-        return (float)method!.Invoke(null, new object[] { from, to, world, world.SimConfig.War })!;
-    }
+    private static float InvokeFriendshipDampening(Civilization from, Civilization to, WorldState world) =>
+        CivTracker.FriendshipDampening(from, to, world, world.SimConfig.War);
 
     [Fact]
     public void FriendshipDampening_NoCrossCivFriendship_ReturnsFullMultiplier()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 81);
-        var tile = FindLandTile(world);
-        var (_, civA) = SpawnRuler(world, tile, 1L, "CivA");
-        var (_, civB) = SpawnRuler(world, tile, 2L, "CivB");
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var (_, civA) = WorldGenTestHelpers.SpawnRuler(world, tile, 1L, "CivA");
+        var (_, civB) = WorldGenTestHelpers.SpawnRuler(world, tile, 2L, "CivB");
 
         InvokeFriendshipDampening(world.Civilizations[civA], world.Civilizations[civB], world)
             .Should().Be(1f);
@@ -81,11 +42,11 @@ public class NonRulerBondsTests
     public void FriendshipDampening_StrongCrossCivFriendship_DampensProportionallyToTrust()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 82);
-        var tile = FindLandTile(world);
-        var (_, civA) = SpawnRuler(world, tile, 11L, "CivA");
-        var (_, civB) = SpawnRuler(world, tile, 12L, "CivB");
-        var memberA = SpawnMember(world, tile, 13L, civA);
-        var memberB = SpawnMember(world, tile, 14L, civB);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var (_, civA) = WorldGenTestHelpers.SpawnRuler(world, tile, 11L, "CivA");
+        var (_, civB) = WorldGenTestHelpers.SpawnRuler(world, tile, 12L, "CivB");
+        var memberA = WorldGenTestHelpers.SpawnMember(world, tile, 13L, civA);
+        var memberB = WorldGenTestHelpers.SpawnMember(world, tile, 14L, civB);
 
         float trust = 0.8f;
         var rel = world.Relationships.GetOrCreate(memberA.Id, memberB.Id);
@@ -99,19 +60,16 @@ public class NonRulerBondsTests
 
     // ─── ConfidantTrustCredit ───────────────────────────────────────────────
 
-    private static float InvokeConfidantTrustCredit(Civilization civ, CivId targetCivId, WorldState world)
-    {
-        var method = typeof(CivTracker).GetMethod("ConfidantTrustCredit", BindingFlags.NonPublic | BindingFlags.Static);
-        return (float)method!.Invoke(null, new object[] { civ, targetCivId, world, world.SimConfig.Emissary })!;
-    }
+    private static float InvokeConfidantTrustCredit(Civilization civ, CivId targetCivId, WorldState world) =>
+        CivTracker.ConfidantTrustCredit(civ, targetCivId, world, world.SimConfig.Emissary);
 
     [Fact]
     public void ConfidantTrustCredit_NoNonRulerFriendship_ReturnsZero()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 83);
-        var tile = FindLandTile(world);
-        var (_, civA) = SpawnRuler(world, tile, 21L, "CivA");
-        var (_, civB) = SpawnRuler(world, tile, 22L, "CivB");
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var (_, civA) = WorldGenTestHelpers.SpawnRuler(world, tile, 21L, "CivA");
+        var (_, civB) = WorldGenTestHelpers.SpawnRuler(world, tile, 22L, "CivB");
 
         InvokeConfidantTrustCredit(world.Civilizations[civA], civB, world).Should().Be(0f);
     }
@@ -120,11 +78,11 @@ public class NonRulerBondsTests
     public void ConfidantTrustCredit_StrongNonRulerFriendship_CreditsScaledTrust()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 84);
-        var tile = FindLandTile(world);
-        var (_, civA) = SpawnRuler(world, tile, 31L, "CivA");
-        var (_, civB) = SpawnRuler(world, tile, 32L, "CivB");
-        var memberA = SpawnMember(world, tile, 33L, civA);
-        var memberB = SpawnMember(world, tile, 34L, civB);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var (_, civA) = WorldGenTestHelpers.SpawnRuler(world, tile, 31L, "CivA");
+        var (_, civB) = WorldGenTestHelpers.SpawnRuler(world, tile, 32L, "CivB");
+        var memberA = WorldGenTestHelpers.SpawnMember(world, tile, 33L, civA);
+        var memberB = WorldGenTestHelpers.SpawnMember(world, tile, 34L, civB);
 
         float trust = 0.9f;
         var rel = world.Relationships.GetOrCreate(memberA.Id, memberB.Id);
@@ -140,11 +98,11 @@ public class NonRulerBondsTests
     public void Defect_DistressedNonRulerWithTrustedConfidant_JoinsConfidantsCiv()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 85);
-        var tile = FindLandTile(world);
-        var (_, civA) = SpawnRuler(world, tile, 41L, "CivA");
-        var (_, civB) = SpawnRuler(world, tile, 42L, "CivB");
-        var member = SpawnMember(world, tile, 43L, civA);
-        var confidant = SpawnMember(world, tile, 44L, civB);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var (_, civA) = WorldGenTestHelpers.SpawnRuler(world, tile, 41L, "CivA");
+        var (_, civB) = WorldGenTestHelpers.SpawnRuler(world, tile, 42L, "CivB");
+        var member = WorldGenTestHelpers.SpawnMember(world, tile, 43L, civA);
+        var confidant = WorldGenTestHelpers.SpawnMember(world, tile, 44L, civB);
 
         var rel = world.Relationships.GetOrCreate(member.Id, confidant.Id);
         world.Relationships.Upsert(rel with { Trust = world.SimConfig.Defection.ConfidantTrustThreshold + 0.1f });
@@ -160,10 +118,10 @@ public class NonRulerBondsTests
     public void Defect_Ruler_DoesNotDefect()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 86);
-        var tile = FindLandTile(world);
-        var (rulerA, civA) = SpawnRuler(world, tile, 51L, "CivA");
-        var (_, civB) = SpawnRuler(world, tile, 52L, "CivB");
-        var confidant = SpawnMember(world, tile, 53L, civB);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var (rulerA, civA) = WorldGenTestHelpers.SpawnRuler(world, tile, 51L, "CivA");
+        var (_, civB) = WorldGenTestHelpers.SpawnRuler(world, tile, 52L, "CivB");
+        var confidant = WorldGenTestHelpers.SpawnMember(world, tile, 53L, civB);
 
         var rel = world.Relationships.GetOrCreate(rulerA.Id, confidant.Id);
         world.Relationships.Upsert(rel with { Trust = world.SimConfig.Defection.ConfidantTrustThreshold + 0.1f });
@@ -179,11 +137,11 @@ public class NonRulerBondsTests
     public void Defect_InsufficientTrust_DoesNothing()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 87);
-        var tile = FindLandTile(world);
-        var (_, civA) = SpawnRuler(world, tile, 61L, "CivA");
-        var (_, civB) = SpawnRuler(world, tile, 62L, "CivB");
-        var member = SpawnMember(world, tile, 63L, civA);
-        var confidant = SpawnMember(world, tile, 64L, civB);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var (_, civA) = WorldGenTestHelpers.SpawnRuler(world, tile, 61L, "CivA");
+        var (_, civB) = WorldGenTestHelpers.SpawnRuler(world, tile, 62L, "CivB");
+        var member = WorldGenTestHelpers.SpawnMember(world, tile, 63L, civA);
+        var confidant = WorldGenTestHelpers.SpawnMember(world, tile, 64L, civB);
 
         var rel = world.Relationships.GetOrCreate(member.Id, confidant.Id);
         world.Relationships.Upsert(rel with { Trust = world.SimConfig.Defection.ConfidantTrustThreshold - 0.1f });
@@ -199,11 +157,11 @@ public class NonRulerBondsTests
     public void Defect_CivsAtWar_DoesNotDefect()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 88);
-        var tile = FindLandTile(world);
-        var (_, civA) = SpawnRuler(world, tile, 71L, "CivA");
-        var (_, civB) = SpawnRuler(world, tile, 72L, "CivB");
-        var member = SpawnMember(world, tile, 73L, civA);
-        var confidant = SpawnMember(world, tile, 74L, civB);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var (_, civA) = WorldGenTestHelpers.SpawnRuler(world, tile, 71L, "CivA");
+        var (_, civB) = WorldGenTestHelpers.SpawnRuler(world, tile, 72L, "CivB");
+        var member = WorldGenTestHelpers.SpawnMember(world, tile, 73L, civA);
+        var confidant = WorldGenTestHelpers.SpawnMember(world, tile, 74L, civB);
         world.Civilizations[civA].WarsAgainst[civB] = world.CurrentYear;
 
         var rel = world.Relationships.GetOrCreate(member.Id, confidant.Id);

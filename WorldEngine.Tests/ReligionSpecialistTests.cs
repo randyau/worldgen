@@ -27,7 +27,7 @@ public sealed class ReligionSpecialistTests
     private static (WorldState world, TileCoord tile) SetupWorld()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 42);
-        var tile  = FindLandTile(world);
+        var tile  = WorldGenTestHelpers.FindLandTile(world);
         var civ   = new CivId(1);
         world.Civilizations[civ] = new Civilization(civ, "TestCiv", new EntityId(1), tile, 1);
         return (world, tile);
@@ -50,18 +50,6 @@ public sealed class ReligionSpecialistTests
         c.Needs = c.Needs with { Spiritual = spiritual };
         world.Entities.Add(c);
         return c;
-    }
-
-    private static TileCoord FindLandTile(WorldState world)
-    {
-        int w = world.TileGrid.TileWidth, h = world.TileGrid.TileHeight;
-        for (int y = 1; y < h - 1; y++)
-        for (int x = 0; x < w; x++)
-        {
-            var c = new TileCoord(x, y);
-            if (world.IsLand(c)) return c;
-        }
-        return new TileCoord(0, 0);
     }
 
     // ─── Epic 4.3.1 — FoundReligion goal ─────────────────────────────────────
@@ -237,7 +225,7 @@ public sealed class ReligionSpecialistTests
         cfg.Character.GlobalSettlementMinDist = 0;
 
         var world = WorldTestHelper.CreateSmallWorld(seed: 42);
-        var tile  = FindLandTile(world);
+        var tile  = WorldGenTestHelpers.FindLandTile(world);
         var civ   = new CivId(1);
         world.Civilizations[civ] = new Civilization(civ, "TestCiv", new EntityId(1), tile, 1);
         world.Settlements[tile]  = new SettlementStub(new EntityId(1), civ, tile, 1,
@@ -275,7 +263,7 @@ public sealed class ReligionSpecialistTests
         cfg.Settlement.PopDecayRate      = 0f;
 
         var world = WorldTestHelper.CreateSmallWorld(seed: 42);
-        var tile  = FindLandTile(world);
+        var tile  = WorldGenTestHelpers.FindLandTile(world);
         var civ   = new CivId(1);
         world.Civilizations[civ] = new Civilization(civ, "TestCiv", new EntityId(1), tile, 1);
         world.Settlements[tile]  = new SettlementStub(new EntityId(1), civ, tile, 1,
@@ -301,7 +289,7 @@ public sealed class ReligionSpecialistTests
         cfg.Settlement.PopDecayRate      = 0f;
 
         var world = WorldTestHelper.CreateSmallWorld(seed: 42);
-        var tile  = FindLandTile(world);
+        var tile  = WorldGenTestHelpers.FindLandTile(world);
         var civ   = new CivId(1);
         world.Civilizations[civ] = new Civilization(civ, "TestCiv", new EntityId(1), tile, 1);
         world.Settlements[tile]  = new SettlementStub(new EntityId(1), civ, tile, 1,

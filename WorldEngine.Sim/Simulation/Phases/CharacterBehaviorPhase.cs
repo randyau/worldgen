@@ -231,7 +231,7 @@ public sealed class CharacterBehaviorPhase
     /// and its membership are left intact — divorce ends the personal bond, not shared lineage/
     /// inheritance records already built on it.
     /// </summary>
-    private void CheckMarriageEstrangement(WorldState world, List<PendingEvent> pending)
+    internal void CheckMarriageEstrangement(WorldState world, List<PendingEvent> pending)
     {
         var famCfg = world.SimConfig.Family;
         foreach (var edge in world.Relationships.AllEdges.Where(e => e.IsMarried).ToList())
@@ -416,7 +416,7 @@ public sealed class CharacterBehaviorPhase
         }
     }
 
-    private void KillCharacter(
+    internal void KillCharacter(
         Tier1Character c, WorldState world, string cause, List<PendingEvent> pending)
     {
         c.IsAlive = false;
@@ -716,7 +716,7 @@ public sealed class CharacterBehaviorPhase
     /// M14 14.0 (decision 5) — any living character standing on a WealthDrop's tile claims the
     /// whole pool. Deterministic within a tick: first match in entity-at-tile iteration order.
     /// </summary>
-    private static void ClaimWealthDrops(WorldState world)
+    internal static void ClaimWealthDrops(WorldState world)
     {
         if (world.WealthDrops.Count == 0) return;
         for (int i = world.WealthDrops.Count - 1; i >= 0; i--)
@@ -766,7 +766,7 @@ public sealed class CharacterBehaviorPhase
     /// When a legendary character (high Combat skill) dies in combat, roll HeroicDeathForgeProbability
     /// to forge an artifact owned by the fallen's settlement (or lost if no settlement).
     /// </summary>
-    private void TryHeroicDeathForge(
+    internal void TryHeroicDeathForge(
         Tier1Character c, string cause, WorldState world, List<PendingEvent> pending)
     {
         // Only trigger for combat/wound deaths of high-skill characters
@@ -960,7 +960,7 @@ public sealed class CharacterBehaviorPhase
     /// later years as presence/receptivity shift. See docs/phases/archive/m15_religion_deepened.md
     /// "Long-run balance constraints" for the sink/source reasoning behind every term here.
     /// </summary>
-    private void ProcessAnnualReligionConversion(List<Tier1Character> characters, WorldState world, List<PendingEvent> pending)
+    internal void ProcessAnnualReligionConversion(List<Tier1Character> characters, WorldState world, List<PendingEvent> pending)
     {
         var cfg = world.SimConfig.Religion;
         var (civPopulation, religionTally) = BuildReligionTally(characters, world);
@@ -1035,7 +1035,7 @@ public sealed class CharacterBehaviorPhase
     /// only, per roadmap): a resisted hit penalizes the heretic's civ Loyalty and Needs; a
     /// forced-conversion hit moves them into the state religion outright, at low (coerced) Loyalty.
     /// </summary>
-    private void ProcessAnnualReligionPersecution(List<Tier1Character> characters, WorldState world, List<PendingEvent> pending)
+    internal void ProcessAnnualReligionPersecution(List<Tier1Character> characters, WorldState world, List<PendingEvent> pending)
     {
         var cfg = world.SimConfig.Religion;
         var (_, religionTally) = BuildReligionTally(characters, world);
@@ -1130,7 +1130,7 @@ public sealed class CharacterBehaviorPhase
         });
     }
 
-    private void AdvanceFoundReligionGoal(
+    internal void AdvanceFoundReligionGoal(
         Tier1Character c, WorldState world, List<PendingEvent> pending, long tick = 0L)
     {
         var goal = c.Goals.FirstOrDefault(g => g.Type == GoalType.FoundReligion && !g.IsComplete);
@@ -1185,7 +1185,7 @@ public sealed class CharacterBehaviorPhase
     /// HomeSettlementCoord. Travel itself is handled by UtilityScorer (like SeaVoyage); arrival is
     /// detected in ResolveMoveWithVoyageTracking.
     /// </summary>
-    private void TryFormPilgrimageGoal(Tier1Character c, WorldState world, long tick, List<PendingEvent> pending)
+    internal void TryFormPilgrimageGoal(Tier1Character c, WorldState world, long tick, List<PendingEvent> pending)
     {
         var cfg = world.SimConfig.Religion;
         if (c.Skills.Piety < cfg.PilgrimagePietyThreshold) return;
@@ -1220,7 +1220,7 @@ public sealed class CharacterBehaviorPhase
     }
 
     /// <summary>Arrival at the pilgrimage site: completes the goal, grants the Needs/Loyalty boost, and starts the cooldown.</summary>
-    private static void CompletePilgrimage(Tier1Character c, GoalData goal, WorldState world, List<PendingEvent> pending)
+    internal static void CompletePilgrimage(Tier1Character c, GoalData goal, WorldState world, List<PendingEvent> pending)
     {
         var cfg = world.SimConfig.Religion;
         goal.IsComplete = true;
@@ -1286,7 +1286,7 @@ public sealed class CharacterBehaviorPhase
     /// them has the single lowest Loyalty (the "dissenter"). See
     /// docs/phases/archive/m15_religion_deepened.md "Long-run balance constraints" point 3.
     /// </summary>
-    private void ProcessAnnualReligionSchism(WorldState world, List<PendingEvent> pending)
+    internal void ProcessAnnualReligionSchism(WorldState world, List<PendingEvent> pending)
     {
         var cfg = world.SimConfig.Religion;
 
@@ -1449,7 +1449,7 @@ public sealed class CharacterBehaviorPhase
     /// Aggressive founders who see foreign chars on their settlement tile slowly
     /// develop negative trust with them — the seed of rivalry and eventual war.
     /// </summary>
-    private void ApplyTerritorialPressure(Tier1Character c, WorldState world, long tick)
+    internal void ApplyTerritorialPressure(Tier1Character c, WorldState world, long tick)
     {
         if (c.Personality.Aggression < _cfg.TerritorialAggressionMin) return;
         if (!world.Settlements.ContainsKey(c.Location)) return;
@@ -1550,7 +1550,7 @@ public sealed class CharacterBehaviorPhase
     /// same-civ pairs too) — a companion is not built, personality compatibility just quietly does
     /// the work for whichever pairing happens to be nearby.
     /// </summary>
-    private void ApplySameCivFamiliarity(Tier1Character c, WorldState world)
+    internal void ApplySameCivFamiliarity(Tier1Character c, WorldState world)
     {
         foreach (var e in world.GetEntitiesAt(c.Location))
         {
