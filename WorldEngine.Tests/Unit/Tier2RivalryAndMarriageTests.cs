@@ -15,7 +15,7 @@ namespace WorldEngine.Tests.Unit;
 /// M13.8.1 — Tier2 as an eligible target for DeclareRivalry/Placate, and marriage-to-Tier2 as an
 /// auto-crystallization trigger. Built on 13.8.0's isolation guard (Tier2RivalryIsolationTests) —
 /// these tests confirm the *positive* path now works, not just that it stays contained.
-/// See docs/phases/m13_8_tier2_relationship_exposure.md.
+/// See docs/phases/archive/m13_8_tier2_relationship_exposure.md.
 /// </summary>
 public class Tier2RivalryAndMarriageTests
 {

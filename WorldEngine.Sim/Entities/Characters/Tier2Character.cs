@@ -25,12 +25,12 @@ public sealed class Tier2Character : SimEntity
 
     // M13.8.2: recent Tier1-driven relationship exposure (Bond/Rivalry/Placate/GrantAid/
     // ForgiveDebt targeting this character), decaying each tick. Feeds TryCrystallize's gate
-    // alongside Needs.Status — see docs/phases/m13_8_tier2_relationship_exposure.md.
+    // alongside Needs.Status — see docs/phases/archive/m13_8_tier2_relationship_exposure.md.
     public float Notability { get; internal set; } = 0f;
 
     // M14 14.0 — personal wealth accumulator (mirrors Notability's shape: internally-set,
     // externally readable). Denominated against EconomyConfig.BaseValuePerUnit; see
-    // docs/phases/m14_economy_independent_wealth.md decision 4. Unlike Notability, this field has
+    // docs/phases/archive/m14_economy_independent_wealth.md decision 4. Unlike Notability, this field has
     // real DTO/mapper persistence coverage from day one (WorldStateDto.cs/WorldStateMapper.cs).
     public float Wealth { get; internal set; } = 0f;
 

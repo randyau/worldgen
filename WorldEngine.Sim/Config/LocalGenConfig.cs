@@ -44,7 +44,7 @@ public class LocalGenConfig
 
     /// <summary>
     /// Chunk-radius around the local-view camera that stays generated (Minecraft-style lazy
-    /// loading, per docs/phases/m11_local_scale_generation.md's "chunked, lazy generation"
+    /// loading, per docs/phases/archive/m11_local_scale_generation.md's "chunked, lazy generation"
     /// decision); chunks further away than this are discarded, not persisted.
     /// </summary>
     public int ViewDistanceChunks { get; set; } = 3;

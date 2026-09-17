@@ -12,7 +12,7 @@ namespace WorldEngine.Sim.Simulation.Phases;
 /// makes the price-index clamp meaningful — see decision 10). No new source is introduced: every
 /// term summed here is money that already exists in some other form (mining production is the only
 /// source, spoilage/raid destruction the only sinks).
-/// See docs/phases/m14_economy_independent_wealth.md.
+/// See docs/phases/archive/m14_economy_independent_wealth.md.
 /// </summary>
 public static class EconomyPhase
 {

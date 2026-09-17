@@ -21,7 +21,7 @@ namespace WorldEngine.Tests.Unit;
 /// M14 14.3 — goal fulfillment via trade: <see cref="PurchaseArtifact"/>/
 /// <see cref="ArtifactPurchaseResolver"/>, extending GoalManager's CovetArtifact resolution with a
 /// purchase path alongside (not replacing) the existing claim-if-Lost path. See
-/// docs/phases/m14_economy_independent_wealth.md decisions 3, 7, 8.
+/// docs/phases/archive/m14_economy_independent_wealth.md decisions 3, 7, 8.
 ///
 /// **Instrument-first finding (2026-08-05):** a full-worldgen run (5 seeds, 300 years,
 /// TestSimConfig.Default()) initially showed <c>ArtifactPurchased</c> firing 0 times in every seed —

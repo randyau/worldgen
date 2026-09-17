@@ -16,7 +16,7 @@ namespace WorldEngine.Tests.Unit;
 
 /// <summary>
 /// M14 14.0 — Wealth substrate: seeded pricing, GlobalPriceIndex EMA, personal balances, death
-/// disposition. See docs/phases/m14_economy_independent_wealth.md.
+/// disposition. See docs/phases/archive/m14_economy_independent_wealth.md.
 /// </summary>
 public class EconomyWealthSubstrateTests : IDisposable
 {

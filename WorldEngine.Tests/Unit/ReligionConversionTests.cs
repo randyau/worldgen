@@ -14,7 +14,7 @@ using Xunit;
 namespace WorldEngine.Tests.Unit;
 
 /// <summary>
-/// M15 15.1 — religion conversion via exposure. See docs/phases/m15_religion_deepened.md
+/// M15 15.1 — religion conversion via exposure. See docs/phases/archive/m15_religion_deepened.md
 /// "Long-run balance constraints".
 /// </summary>
 public class ReligionConversionTests

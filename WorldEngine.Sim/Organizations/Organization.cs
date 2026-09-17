@@ -39,7 +39,7 @@ public sealed class Organization
     /// M14 14.0 (decision 10) — a real stored balance, not a live-computed claim on shared
     /// settlement ResourceStores (the original design couldn't represent insolvency or distinguish
     /// one org's money from another's sharing a settlement — see
-    /// docs/phases/m14_economy_independent_wealth.md decision 10). Nothing credits this except a
+    /// docs/phases/archive/m14_economy_independent_wealth.md decision 10). Nothing credits this except a
     /// real Wealth transfer in (14.4's ContributeToTreasury); 14.0 only adds the field and its
     /// persistence coverage — no command moves it yet.
     /// </summary>
@@ -65,7 +65,7 @@ public sealed class Organization
     /// <summary>
     /// M15 — true once this Organization's last living member has died (currently only set for
     /// Religion, the sink half of M15's population balance — see
-    /// docs/phases/m15_religion_deepened.md "Long-run balance constraints"). Members/relationship
+    /// docs/phases/archive/m15_religion_deepened.md "Long-run balance constraints"). Members/relationship
     /// state are left in place for history queries, same convention as a dead leader never being
     /// removed from Members; conversion/exposure logic (M15 15.1+) must skip extinct religions.
     /// </summary>

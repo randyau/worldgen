@@ -27,7 +27,7 @@ public sealed class Tier1Character : SimEntity
     /// <summary>
     /// M12 12.2: this character's Organization affiliations (civ, and from M13-M15 also
     /// family/guild/religion). Replaces the old IdentityData.CivId scalar field — see
-    /// docs/phases/m12_organization_model.md. Mutate only via CivTracker.SetCharacterCiv.
+    /// docs/phases/archive/m12_organization_model.md. Mutate only via CivTracker.SetCharacterCiv.
     /// </summary>
     public List<Membership> Memberships { get; } = [];
 
@@ -78,7 +78,7 @@ public sealed class Tier1Character : SimEntity
     // M14 14.0 — personal wealth accumulator (mirrors Tier2Character.Notability's shape). Portable
     // value denominated against EconomyConfig.BaseValuePerUnit; physically conserved — every
     // transfer debits some other pool (settlement ResourceStores, another character's Wealth, an
-    // Organization.Treasury). See docs/phases/m14_economy_independent_wealth.md decision 4.
+    // Organization.Treasury). See docs/phases/archive/m14_economy_independent_wealth.md decision 4.
     public float Wealth { get; internal set; } = 0f;
 
     /// <summary>Adds (or subtracts) Wealth, floored at 0 so spend/spoilage can never go negative.</summary>

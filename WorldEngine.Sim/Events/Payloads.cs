@@ -289,7 +289,7 @@ internal sealed record ReligiousLeadershipTransferredPayload(
 
 /// <summary>A Religion Organization loses its last living member — fires instead of leaving a
 /// zero-member Organization sitting in undead limbo (the sink half of M15's population balance;
-/// see docs/phases/m15_religion_deepened.md "Long-run balance constraints").</summary>
+/// see docs/phases/archive/m15_religion_deepened.md "Long-run balance constraints").</summary>
 internal sealed record ReligionExtinctPayload(
     long OrganizationId, string ReligionName, int Year);
 

@@ -123,7 +123,7 @@ public sealed class PhaseRunner
         // (no incremental/since-last-rebuild filtering), so cost scales with total historical
         // event count, not just events since the last rebuild — repeating that every 50 years
         // was the dominant driver of a ~3x tick-rate slowdown observed over a 10k-year profiling
-        // run (see docs/phases/m11_phase0_longrun_performance.md). Interval is config-driven so
+        // run (see docs/phases/archive/m11_phase0_longrun_performance.md). Interval is config-driven so
         // headless runs that never call GetHistoryQuery() mid-run (Program.cs) can disable this
         // entirely (0 = never auto-rebuild) instead of paying for UI data nothing reads.
         int rebuildInterval = _config.SimLoop.SummaryRebuildIntervalYears;

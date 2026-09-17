@@ -33,7 +33,7 @@ public sealed record SaveWorld(string SaveDir) : ICommand;
 /// Writes one sparse local-tile modification to persistent storage (M11 phase 11.5). No real
 /// gameplay system produces this yet — it exists to prove the LocalTileDelta pipeline end-to-end
 /// ahead of a future milestone wiring in actual local-scale interaction; see
-/// docs/phases/m11_local_scale_generation.md "Explicitly out of scope".
+/// docs/phases/archive/m11_local_scale_generation.md "Explicitly out of scope".
 /// </summary>
 public sealed record ModifyLocalTile(
     ChunkCoord Chunk, LocalTileCoord Local, LocalChangeType ChangeType, string PayloadJson) : ICommand;

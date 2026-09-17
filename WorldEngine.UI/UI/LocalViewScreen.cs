@@ -210,7 +210,7 @@ public sealed class LocalViewScreen : IDisposable
         // DECISION: local view is scoped to the single world tile it was opened on (11.7) —
         // panning past that tile's own chunk grid shows empty background rather than loading a
         // neighboring world tile's chunks. Cross-world-tile local panning is left to a future
-        // milestone; see docs/phases/m11_local_scale_generation.md "Explicitly out of scope".
+        // milestone; see docs/phases/archive/m11_local_scale_generation.md "Explicitly out of scope".
         List<ChunkCoord>? missing = null;
         for (int cy = minChunkY; cy <= maxChunkY; cy++)
         {

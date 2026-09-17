@@ -5,7 +5,7 @@ namespace WorldEngine.Sim.Entities.Characters;
 /// <summary>
 /// Immutable identity record for a character: name, epithet, ancestry, and birth/death metadata.
 /// Civ/org affiliation lives on Tier1Character.Memberships (M12 12.2), not here — see
-/// docs/phases/m12_organization_model.md.
+/// docs/phases/archive/m12_organization_model.md.
 /// </summary>
 public sealed record IdentityData(
     string     Name,
