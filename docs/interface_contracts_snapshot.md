@@ -1,6 +1,6 @@
-<!-- contract-snapshot-hash: 4ff2e9f6be149634 -->
+<!-- contract-snapshot-hash: 136444ca859e5093 -->
 # Interface Contracts — Snapshot & World Structures
-**Parent:** `interface_contracts.md` | **Version:** 0.9 | **Status:** M3 complete
+**Parent:** `interface_contracts.md` | **Version:** 0.9 | **Status:** living document, kept current via SCIP-verified snapshots
 
 Covers: TileDisplayData, EntitySnapshot, IdentityData, AncestryConfig, AncestryRegistry, TileInspectorData, WorldSnapshot, SettlementStub, SettlementSnapshot, RuinRecord, TerritorySnapshot, ImprovementSnapshot, CharacterWatchSnapshot, Civilization, ID wrappers.
 
@@ -48,7 +48,8 @@ public sealed record EntitySnapshot(
     bool IsAlive,
     string? CivName    = null,  // non-null for characters that belong to a civilization
     string AncestryId  = "",    // ancestry id from ancestries.toml; empty for non-character entities
-    float  Wellbeing   = 0f    // -1 spiraling … +1 flourishing; 0 for non-character entities
+    float  Wellbeing   = 0f,    // -1 spiraling … +1 flourishing; 0 for non-character entities
+    float  Wealth      = 0f     // M14 14.5 — personal Wealth; 0 for non-character entities
 );
 ```
 
@@ -65,11 +66,16 @@ public sealed record IdentityData(
     string     AncestryId,    // key into AncestryRegistry / ancestries.toml
     EntityId?  MotherId,
     EntityId?  FatherId,
-    CivId      CivId,         // CivId(0) if no civ; check .IsValid before use
     int        BirthYear,
     int        BirthSeason,
     int        NameOrdinal  = 0,   // 0 = first bearer of this name; 1 = II, 2 = III, etc.
-    int        RulerOrdinal = 0);  // Nth ruler of their civ (0 = founder / not yet a ruler)
+    int        RulerOrdinal = 0,   // Nth ruler of their civ (0 = founder / not yet a ruler)
+    string     Surname      = "");// family/house/clan name (M15.x namespace expansion); "" = none generated
+```
+
+**M12 12.2:** civ/org affiliation no longer lives here — it moved to `Tier1Character.Memberships`
+(a set of `(OrganizationId, Role, Loyalty)` entries). Do not look for a `CivId` field on
+`IdentityData`; read memberships instead.
 ```
 
 ---
@@ -102,8 +108,24 @@ public sealed class AncestryConfig
     // Cultural distance (0–1) driving passive per-tick trust drain
     public Dictionary<string, float> CulturalDistance  { get; set; }
 
-    public string[] FirstNames { get; set; }  // ancestry-specific name pool
-    public string[] Epithets   { get; set; }
+    // Syllable-based name generation (M15.x namespace expansion) — replaced the old flat
+    // FirstNames pool; NameGenerator composes Onset+Middle+Coda for given names and
+    // SurnameOnsets+SurnameCodas for inherited surnames.
+    public string[] NameOnsets    { get; set; }
+    public string[] NameMiddles   { get; set; }
+    public string[] NameCodas     { get; set; }
+    public string[] SurnameOnsets { get; set; }
+    public string[] SurnameCodas  { get; set; }
+    public string[] Epithets      { get; set; }
+
+    // Flavor-text fields for descriptive UI copy (settlement/artisan/culture descriptions)
+    public string   ArchitecturalStyle     { get; set; }
+    public string   SettlementDescriptor   { get; set; }
+    public string[] BiomeAdaptations       { get; set; }
+    public string[] ImprovementDescriptors { get; set; }
+    public string[] ArtisticTraditions     { get; set; }
+    public string   CivNameSuffix          { get; set; }
+    public string[] PhysicalTags           { get; set; }
 }
 ```
 
@@ -157,7 +179,18 @@ public sealed record TileInspectorData(
     IReadOnlyList<ResourceDeposit> Deposits,       // from ResourceRegistry
     IReadOnlyList<ActiveDisaster> Disasters,       // from ActiveTileDisasters
     bool IsInActiveDrought,                        // computed from ActiveDroughts list
-    EventId? DroughtOriginEventId                  // set if IsInActiveDrought
+    EventId? DroughtOriginEventId,                 // set if IsInActiveDrought
+
+    // Territory section (M3 Phase 3.4)
+    string?          TerritoryOwnerName      = null,
+    string?          TerritoryCityName       = null,
+    TileCoord?       TerritoryCityTile       = null,
+    ImprovementType? Improvement             = null,
+    int              ImprovementBuiltYear    = 0,
+    string?          ImprovementBuilderName  = null,
+
+    // History section — up to 10 recent events at this tile, newest first (M3 Phase 3.4)
+    IReadOnlyList<(int Year, string EventDescription)>? TileHistory = null
 );
 ```
 
@@ -242,12 +275,30 @@ public sealed record WorldSnapshot(
     float GlobalPrecipitationMultiplier,
     float StormCorridorNormalizedLat,
 
-    // Character watch panel (M3 Phase 3.4) — null when no character is being watched
+    // Watch panel (M3 Phase 3.4) — exactly one of these is non-null at a time (or neither, if
+    // nothing is watched), depending on the watched entity's kind. Tier1Character gets the rich
+    // needs/goals/personality card; everything else (Tier2Character, LegendaryBeast, ...) gets
+    // the thinner vitals-only card.
     CharacterWatchSnapshot? WatchedCharacter = null,
+    BasicWatchSnapshot?     WatchedBasic     = null,
 
     // Save state — used by UI to show "Saving..." overlay
     bool IsSaving     = false,
-    long LastSaveTick = -1
+    long LastSaveTick = -1,
+
+    // Artifact system (M5) — all artifacts known to the world at snapshot time, including
+    // destroyed ones so the UI can show historical context.
+    IReadOnlyList<ArtifactSnapshot>? Artifacts = null,
+
+    // Spotlight (M7+) — set when the player is controlling a character
+    EntityId?  SpotlightCharacterId = null,
+    TileCoord? SpotlightMoveTarget  = null,
+
+    // Economy (M14 14.5) — world-level per-capita price index and every Guild/Civ Organization's
+    // treasury for the read-only economic ledger panel. Personal Wealth and settlement-level
+    // precious-commodity data already live on EntitySnapshot/SettlementSnapshot.
+    float GlobalPriceIndex = 1f,
+    IReadOnlyList<GuildSnapshot>? Guilds = null
 );
 ```
 
@@ -281,7 +332,9 @@ public sealed record SettlementStub(
     bool      IsColony             = false,      // true when founded beyond ColonyMinDistance from all same-civ settlements
     bool      IsInfected           = false,      // currently suffering a disease outbreak
     int       InfectedSinceYear    = 0,          // year the current infection started
-    float     Unrest               = 0f);        // 0=content, 1=fully rebellious; drives secession
+    float     Unrest               = 0f,         // 0=content, 1=fully rebellious; drives secession
+    string?   Specialization         = null,     // M9 9.2: non-vital resource key this settlement specializes in
+    float     SpecializationStrength = 0f);      // M9 9.2: EMA confidence [0,1] in Specialization
 ```
 
 **ResourceLedger keys:** `"food"`, `"water"`, `"timber"`, lowercase deposit type names  
@@ -305,7 +358,10 @@ public sealed record SettlementSnapshot(
     IReadOnlyDictionary<string, float>? ResourceLedger   = null,
     int       ConqueredYear      = 0,
     int       ConqueredFromCivId = 0,
-    IReadOnlyDictionary<string, float>? ResourceStores   = null);
+    IReadOnlyDictionary<string, float>? ResourceStores   = null,
+    // M14 14.5 — economic ledger UI: per-money-equivalent-commodity local scarcity multiplier,
+    // keyed by EconomyConfig.MoneyEquivalentCommodities.
+    IReadOnlyDictionary<string, float>? LocalScarcityMultipliers = null);
 ```
 
 ---
@@ -361,8 +417,11 @@ Live snapshot of a watched character for the character watch panel. Populated by
 public sealed record CharacterWatchSnapshot(
     EntityId          Id,
     string            Name,
+    string            Surname,       // M15.x namespace expansion; "" if none generated
     string            Epithet,
     string            CivName,
+    string            ReligionName,  // M15 — "" if not a member of any religion
+    string            ReligionRole,  // M15 — "" if not a member of any religion
     TileCoord         Location,
     string            BiomeName,
     int               AgeSeasons,
@@ -389,6 +448,7 @@ public sealed class Civilization
     public EntityId   FounderId   { get; }
     /// <summary>Current ruling character. Starts as FounderId; updated by succession.</summary>
     public EntityId   RulerId     { get; set; }
+    public OrganizationId? OrgId  { get; set; }  // M12 — this civ's backing Organization record
     public TileCoord  CapitalTile { get; set; }
     public int        FoundedYear { get; }
     public bool       IsCollapsed { get; set; }
@@ -428,7 +488,7 @@ public sealed class Civilization
     public int  TotalSettlementsFounded { get; set; }
     public int  TotalScholarDiscoveries { get; set; }
     public int  NearCollapseCount       { get; set; }
-    public HashSet<string> CulturalTraits { get; }
+    public HashSet<CulturalTrait> CulturalTraits { get; }
     public CulturalProfile? CulturalProfile { get; set; }  // null until civ is fully initialized
 
     // M4.1 awareness / emissary system

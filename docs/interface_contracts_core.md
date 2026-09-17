@@ -1,6 +1,6 @@
-<!-- contract-snapshot-hash: 1453380f25c29726 -->
+<!-- contract-snapshot-hash: 0dd8f1c610f29f17 -->
 # Interface Contracts — Core Interfaces
-**Parent:** `interface_contracts.md` | **Version:** 0.9 | **Status:** M3 complete
+**Parent:** `interface_contracts.md` | **Version:** 0.9 | **Status:** living document, kept current via SCIP-verified snapshots
 
 Covers: PendingEvent, IEntity, ICommand, IWorldStateReadOnly, IWorldGenLayer, StateCache.
 

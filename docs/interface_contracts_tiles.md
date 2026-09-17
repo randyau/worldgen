@@ -1,6 +1,6 @@
 <!-- contract-snapshot-hash: 2e8c8cd8e23f0e5d -->
 # Interface Contracts — Tile Structures
-**Parent:** `interface_contracts.md` | **Version:** 0.7 | **Status:** M2 complete
+**Parent:** `interface_contracts.md` | **Version:** 0.7 | **Status:** living document, kept current via SCIP-verified snapshots
 
 Covers: TileData, flag enums, SeasonalProfile, ResourceDeposit, disaster types.
 

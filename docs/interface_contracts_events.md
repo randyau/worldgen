@@ -1,6 +1,6 @@
-<!-- contract-snapshot-hash: 8804eb586a103681 -->
+<!-- contract-snapshot-hash: 2ca711d4bfac89da -->
 # Interface Contracts — Events & Enumerations
-**Parent:** `interface_contracts.md` | **Version:** 0.9 | **Status:** M3 complete (M4 Phase 1 emissary system included)
+**Parent:** `interface_contracts.md` | **Version:** 0.9 | **Status:** living document, kept current via SCIP-verified snapshots
 
 Covers: Events table schema, EventEntities table, CausalEdges table, EventsReadable view, typed payloads, EventType ranges, SimEvent, IHistoryGraphReadOnly, key enumerations, ID wrappers.
 
@@ -73,20 +73,22 @@ WHERE Type BETWEEN 3101 AND 3199
 
 `TypeName` is the string name of the `EventType` enum value (e.g. `"CharacterDied"`, `"WarDeclared"`). It is written at insert time and never changes. Useful for ad-hoc queries without needing the enum reference.
 
-`Domain` is a high-level category bucket. Values:
+`Domain` is a coarse category bucket computed by `PhaseRunner.GetEventDomain` — it is much coarser
+than the `EventType` range table below suggests. There is no separate Civilization/Tier2/
+Population/Religion/Seafaring/Artifact/Economy domain string; everything from 3000 up through
+6999 (character actions, civ/settlement events, Tier2 specialists, population, religion,
+emissary, seafaring, economy/trade, artifacts) is bucketed as `"Character"`:
 
 | Domain          | EventType range(s)      |
 |-----------------|-------------------------|
-| `Environmental` | 1001–1099               |
-| `Beast`         | 2001–2099               |
-| `Character`     | 3001–3099, 3101–3199    |
-| `Civilization`  | 3201–3299               |
-| `Tier2`         | 3301–3399               |
-| `Population`    | 3401–3499               |
-| `Religion`      | 4001–4099               |
-| `Seafaring`     | 5100–5199               |
-| `Artifact`      | 6001–6099               |
-| `GodMode`       | 9001–9099               |
+| `Environmental` | 1000–1999               |
+| `Beast`         | 2000–2999               |
+| `Character`     | 3000–6999                |
+| `GodMode`       | 9000+                    |
+| `Unknown`       | anything else (fallback) |
+
+Use the finer-grained `EventType` value itself (or the ranges in the "EventType Ranges" section
+below) to distinguish civ/religion/economy/etc. stories — `Domain` alone cannot.
 
 ### Indexes
 
@@ -233,10 +235,27 @@ Example: `SELECT TypeName, Year, SeasonName, Tier, ActorName FROM EventsReadable
 | `AllianceFormed`  | `AllianceFormedPayload`    | `DeclarerId`, `DeclarerName`, `TargetId`, `TargetName`, `DeclarerCivId`, `TargetCivId` |
 | `AllianceBroken`  | `AllianceBrokenPayload`    | `CharacterAId`, `CharacterAName`, `CharacterBId`, `CharacterBName`, `Reason` |
 | `RivalryFormed`   | `RivalryFormedPayload`     | `CharacterId`, `CharacterName`, `TargetId`, `TargetName`                    |
+| `CharacterMarried`| `MarriagePayload`          | `CharacterAId`, `CharacterAName`, `CharacterBId`, `CharacterBName`, `FamilyOrgId` |
 | `WarDeclared`     | `WarDeclaredPayload`       | `DeclarerId`, `DeclarerName`, `DeclarerCivId`, `DeclarerCivName`, `TargetCivId`, `TargetCivName`, `Cause`, `CauseDescription`, `WarNumber`, `DeclarerTraits?` |
 | `WarEnded`        | `WarEndedPayload`          | `CivAId`, `CivAName`, `CivBId`, `CivBName`, `Outcome`, `WarNumber`          |
 | `Negotiated`      | `NegotiatedPayload`        | `CharacterId`, `CharacterName`, `TargetId`, `TrustGain`                     |
 | `BattleOccurred`  | `BattlePayload`            | `RaiderId`, `RaiderName`, `Damage`, `SettlementHealth`, `RaidOutcome`, `RaiderWounded`, `RaiderHealthPct` |
+
+### Relationship Transition Domain (M13, 3111–3118)
+
+Widened the `RelationshipEdge` palette beyond `Trust`/`IsRival` — see the M13 relationship-system
+audit in `docs/roadmap.md` § "M13" for why these exist.
+
+| EventType                | Payload record                   | Key fields                                                                  |
+|---------------------------|----------------------------------|-----------------------------------------------------------------------------|
+| `DebtIncurred`            | `DebtIncurredPayload`            | `GranterId`, `GranterName`, `RecipientId`, `RecipientName`, `DebtMagnitude` |
+| `DebtForgiven`            | `DebtForgivenPayload`            | `CreditorId`, `CreditorName`, `DebtorId`, `DebtorName`, `ForgivenMagnitude` |
+| `RivalryPlacated`         | `RivalryPlacatedPayload`         | `CharacterId`, `CharacterName`, `TargetId`, `TargetName`                    |
+| `CharacterDefected`       | `CharacterDefectedPayload`       | `CharacterId`, `CharacterName`, `OldCivId`, `OldCivName`, `NewCivId`, `NewCivName`, `ConfidantId`, `ConfidantName` |
+| `RivalsReconciled`        | `RivalsReconciledPayload`        | `CharacterId`, `CharacterName`, `TargetId`, `TargetName`                    |
+| `RivalryEscalatedToFeud`  | `RivalryEscalatedToFeudPayload`  | `CharacterId`, `CharacterName`, `TargetId`, `TargetName`                    |
+| `CharacterEstranged`      | `CharacterEstrangedPayload`      | `CharacterAId`, `CharacterAName`, `CharacterBId`, `CharacterBName`          |
+| `OathBroken`              | `OathBrokenPayload`              | `DebtorId`, `DebtorName`, `CreditorId`, `CreditorName`, `DebtorCivId`, `CreditorCivId`, `DebtBroken` |
 
 ### Civilization / Settlement Domain
 
@@ -265,6 +284,22 @@ Example: `SELECT TypeName, Year, SeasonName, Tier, ActorName FROM EventsReadable
 | `PhysicianHealed`       | `PhysicianHealedPayload`     | `CharacterId`, `CharacterName`, `PatientId`, `PatientName`, `Healed`, `Critical` |
 | `ArtisanCrafted`        | `ArtisanCraftedPayload`      | `CharacterId`, `CharacterName`, `GoodType`                                  |
 | `DismissedFromRole`     | `SpecialistDismissedPayload` | `CharacterId`, `CharacterName`, `Role`, `Reason`                            |
+
+### Economy Domain (M14, fresh 3500-range — see `docs/phases/archive/m14_economy_independent_wealth.md`)
+
+| EventType                    | Payload record                | Key fields                                                                  |
+|-------------------------------|-------------------------------|-----------------------------------------------------------------------------|
+| `TradePaid`                  | `TradePaidPayload`            | `CharacterId`, `CharacterName`, `Resource`, `Quantity`, `PaidValue`, `MerchantShare`, `DestX`, `DestY` |
+| `TradeRouteFormed`           | `TradeRouteFormedPayload`     | `TileAX`, `TileAY`, `TileBX`, `TileBY`, `Reopened`                          |
+| `TradeRouteSevered`          | `TradeRouteSeveredPayload`    | `TileAX`, `TileAY`, `TileBX`, `TileBY`, `Cause` ("war"/"settlement-lost"/"losses") |
+| `CaravanRaided`              | `CaravanRaidedPayload`        | `MerchantId`, `Resource`, `Quantity`, `Cause` ("war"/"disaster"/"piracy"), `HomeX`, `HomeY`, `DestX`, `DestY` |
+| `ArtifactPurchased`          | `ArtifactPurchasedPayload`    | `ArtifactId`, `ArtifactName`, `BuyerId`, `BuyerName`, `FromOwner`, `ToOwnerName`, `Price` |
+| `GuildFormed`                | `GuildFormedPayload`          | `OrganizationId`, `GuildName`, `FounderId`, `FounderName`, `TileX`, `TileY` |
+| `TreasuryContribution`       | `TreasuryContributionPayload` | `CharacterId`, `CharacterName`, `OrganizationId`, `OrganizationName`, `Amount` |
+| `TreasuryWithdrawal`         | `TreasuryWithdrawalPayload`   | `LeaderId`, `LeaderName`, `OrganizationId`, `OrganizationName`, `RecipientId`, `RecipientName`, `Amount` |
+| `TreasuryInsolvent`          | `TreasuryInsolventPayload`    | `CivId`, `CivName`, `Treasury`                                              |
+| `WarReparationsPaid`         | `WarReparationsPaidPayload`   | `WinnerCivId`, `WinnerCivName`, `LoserCivId`, `LoserCivName`, `Amount`      |
+| `GuildLeadershipTransferred` | `GuildSuccessionPayload`      | `OrganizationId`, `GuildName`, `PredecessorId`, `PredecessorName`, `SuccessorId`, `SuccessorName` |
 
 ### Beast Domain
 
@@ -304,11 +339,17 @@ Example: `SELECT TypeName, Year, SeasonName, Tier, ActorName FROM EventsReadable
 | `ReligiousEmissaryArrived`   | `ReligiousEmissaryArrivedPayload`   | `FromCivId`, `FromCivName`, `ToCivId`, `ToCivName`, `CharactersAffected`  |
 | `CivIntelGathered`           | `CivIntelGatheredPayload`           | `FromCivId`, `FromCivName`, `ToCivId`, `ToCivName`, `NewConfidence`       |
 
-### Religion Domain
+### Religion Domain (M15, see `docs/phases/archive/m15_religion_deepened.md`)
 
-| EventType        | Payload record           | Key fields                                                           |
-|------------------|--------------------------|----------------------------------------------------------------------|
-| `ReligionFounded` | `ReligionFoundedPayload` | `FounderId`, `FounderName`, `Year`, `TileX`, `TileY`                |
+| EventType                       | Payload record                       | Key fields                                                           |
+|----------------------------------|---------------------------------------|-----------------------------------------------------------------------|
+| `ReligionFounded`                | `ReligionFoundedPayload`             | `FounderId`, `FounderName`, `Year`, `TileX`, `TileY`, `OrganizationId`, `ReligionName`, `ArchetypeId` |
+| `ReligionExtinct`                | `ReligionExtinctPayload`             | `OrganizationId`, `ReligionName`, `Year`                             |
+| `ReligiousLeadershipTransferred` | `ReligiousLeadershipTransferredPayload` | `OrganizationId`, `ReligionName`, `PredecessorId`, `PredecessorName`, `SuccessorId`, `SuccessorName` |
+| `CharacterConvertedReligion`     | `CharacterConvertedPayload`          | `CharacterId`, `CharacterName`, `ToOrganizationId`, `ToReligionName`, `FromOrganizationId` (0 = previously unaffiliated) |
+| `ReligionSchism`                 | `ReligionSchismPayload`              | `ParentOrganizationId`, `ParentReligionName`, `NewOrganizationId`, `NewReligionName`, `NewLeaderId`, `NewLeaderName`, `MembersSeceded`, `NewArchetypeId` |
+| `PersecutionOccurred`            | `PersecutionOccurredPayload`         | `HereticId`, `HereticName`, `CivId`, `StateReligionOrganizationId`, `StateReligionName`, `HereticReligionOrganizationId`, `HereticReligionName`, `Outcome` ("forced_conversion"/"resisted") |
+| `PilgrimageEmbarked`/`PilgrimageCompleted` | `PilgrimagePayload`        | `CharacterId`, `CharacterName`, `OrganizationId`, `ReligionName`, `TileX`, `TileY` |
 
 ### Seafaring Domain (M11)
 
@@ -340,7 +381,11 @@ Character lifecycle: 3001–3099
 Character/civ actions: 3101–3199
     AllianceFormed=3101, AllianceBroken=3102, WarDeclared=3103, WarEnded=3104,
     BattleOccurred=3105, RivalryFormed=3106, Negotiated=3107,
-    ArtworkCreated=3108, GoalFormed=3109, GoalResolved=3110
+    ArtworkCreated=3108, GoalFormed=3109, GoalResolved=3110,
+    DebtIncurred=3111, DebtForgiven=3112, RivalryPlacated=3113 (M13 13.1/13.2),
+    CharacterDefected=3114 (M13 13.4),
+    RivalsReconciled=3115, RivalryEscalatedToFeud=3116, CharacterEstranged=3117,
+    OathBroken=3118 (M13 13.5 relationship-transition events)
 
 Civilization/settlement: 3201–3299
     CivilizationFounded=3201, CivilizationCollapsed=3202, SettlementFounded=3203,
@@ -354,20 +399,33 @@ Tier2 specialist: 3301–3399
     ScholarDiscovery=3304, PhysicianHealed=3305, CharacterCrystallized=3306,
     ArtisanCrafted=3307
 
+Economy (M14, fresh 3500-range rather than packing into the 3300s): 3500–3510
+    TradePaid=3500 (14.1 real Wealth transfer, distinct from MerchantTradeCompleted's status-gain marker),
+    TradeRouteFormed=3501, TradeRouteSevered=3502, CaravanRaided=3503 (14.2 persistent trade routes/caravans),
+    ArtifactPurchased=3504 (14.3 goal fulfillment via trade),
+    GuildFormed=3505, TreasuryContribution=3506, TreasuryWithdrawal=3507,
+    TreasuryInsolvent=3508, WarReparationsPaid=3509, GuildLeadershipTransferred=3510 (14.4)
+
 Population: 3401–3499
     SettlementGrew=3401, SettlementShrank=3402, SettlementAbandoned=3403,
     DiseaseOutbreak=3404, DiseaseRecovered=3405, WildlifeRaid=3406, SuccessionCrisis=3407
 
-Religion:   4001–4099   (ReligionFounded=4003, ReligionExtinct=4004)
+Religion:   4001–4099   (ReligionFounded=4003, ReligionExtinct=4004,
+                         ReligiousLeadershipTransferred=4005, CharacterConvertedReligion=4006 (M15 15.1),
+                         ReligionSchism=4007 (M15 15.2), PersecutionOccurred=4008 (M15 15.3),
+                         PilgrimageEmbarked=4009, PilgrimageCompleted=4010 (M15 15.4))
 Emissary:   5001–5099   (EmissaryDispatched=5001, EmissaryLost=5002,
                          ReligiousEmissaryArrived=5003, CivIntelGathered=5004)
 Seafaring:  5100–5199   (SeaVoyageEmbarked=5101, SeaVoyageCompleted=5102;
                          SeaVoyageLost=5103 reserved for a future weather/sea-monster failure hook)
-Artifacts:  6001–6099   (ArtifactCreated=6001, ArtifactDestroyed=6002)
+Artifacts:  6001–6099   (ArtifactCreated=6001, ArtifactDestroyed=6002, ArtifactTransferred=6003)
 God Mode:   9001–9099   (GodModeDisasterTriggered=9001, GodModeEntitySpawned=9002,
                          GodModeCharacterCreated=9003, GodModeArtifactPlaced=9004,
-                         GodModeCivilizationForced=9005)
+                         GodModeCivilizationForced=9005, GodModeCharacterNudged=9006)
 ```
+
+Note: `Economy` here is a range label for readability only — per the Domain table above, these
+events (like everything else in 3000–6999) are stamped `Domain = "Character"` in the database.
 
 ---
 
