@@ -478,4 +478,20 @@ public class DisasterSystemTests
             "blight should destroy a fraction of the settlement's stored food on onset");
         pending.Should().Contain(p => p.Type == EventType.BlightBegan);
     }
+
+    [Fact]
+    public void HarshWinter_TriggersAndTicksDown()
+    {
+        var world = BuildWorld();
+        world.SimConfig.Disasters.HarshWinterProbabilityPerYear = 1.0f;
+        var pending = new List<PendingEvent>();
+        new EnvironmentalPhase(world.SimConfig).RunTick(world, pending, isAnnualTick: true);
+
+        world.HarshWinterTicksRemaining.Should().Be(world.SimConfig.Disasters.HarshWinterDurationTicks);
+        pending.Should().Contain(p => p.Type == EventType.HarshWinterBegan);
+
+        new EnvironmentalPhase(world.SimConfig).RunTick(world, new List<PendingEvent>());
+        world.HarshWinterTicksRemaining.Should().Be(world.SimConfig.Disasters.HarshWinterDurationTicks - 1,
+            "harsh winter should tick down by exactly one per RunTick call");
+    }
 }

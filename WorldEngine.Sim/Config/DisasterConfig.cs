@@ -52,4 +52,11 @@ public class DisasterConfig
     public float BlightFoodStoreDestructionFraction  { get; set; } = 0.4f;
     public byte  BlightFertilityPenalty              { get; set; } = 50;
     public byte  BlightFertilityFloor                { get; set; } = 30;
+
+    // M16 16.1b — Harsh winter. Global (not tile-or-settlement-scoped): rolled once per year,
+    // active for a bounded number of ticks across the whole world.
+    public float HarshWinterProbabilityPerYear    { get; set; } = 0.03f;
+    public int   HarshWinterDurationTicks         { get; set; } = 4; // one season
+    public float HarshWinterSettlementDecayBonus  { get; set; } = 0.15f; // added to settlement decayF
+    public int   HarshWinterCharacterHealthDrain  { get; set; } = 4;
 }

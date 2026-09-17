@@ -60,6 +60,10 @@ public sealed class CharacterBehaviorPhase
             if (isAnnualTick) ProcessAnnualDisease(c, world, pending);
             if (!c.IsAlive) { deathsThisTick.Add((c.Id, c.Identity.Name)); continue; }
 
+            // M16 16.1b — harsh winter: global Health drain while active
+            if (isAnnualTick) ProcessAnnualHarshWinter(c, world, pending);
+            if (!c.IsAlive) { deathsThisTick.Add((c.Id, c.Identity.Name)); continue; }
+
             // Annual religion: progress existing FoundReligion goal first; then try to form one
             if (isAnnualTick)
             {
@@ -918,6 +922,18 @@ public sealed class CharacterBehaviorPhase
                 c.InfectedSinceYear = 0;
             }
         }
+    }
+
+    // ─── Harsh winter (M16 16.1b) ───────────────────────────────────────────────
+
+    /// <summary>Annual Health drain for every living character while a harsh winter is active.</summary>
+    private void ProcessAnnualHarshWinter(Tier1Character c, WorldState world, List<PendingEvent> pending)
+    {
+        if (world.HarshWinterTicksRemaining <= 0) return;
+
+        c.Health = Math.Max(0, c.Health - _simCfg.Disasters.HarshWinterCharacterHealthDrain);
+        if (c.Health <= 0)
+            KillCharacter(c, world, "harsh_winter", pending);
     }
 
     // ─── Religion conversion (M15 15.1) ────────────────────────────────────────

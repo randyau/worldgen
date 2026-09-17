@@ -1,7 +1,8 @@
 # M16 — Disasters, Reworked
 
 **Status:** IN PROGRESS — started 2026-09-17. 16.0 shipped 2026-09-17. 16.1 (Blight) shipped
-2026-09-17; HarshWinter deferred within 16.1 (see below).
+2026-09-17. 16.1b (Harsh Winter) shipped 2026-09-17 — all of 16.1's roadmap-scoped disaster
+variety is now complete.
 
 See `docs/roadmap.md` § "M16" for the one-line scope statement: wire real consequences onto
 disasters (destroyed settlements/improvements, ash-driven famine, displacement); expand variety
@@ -48,12 +49,14 @@ Reuse targets found:
   fertility on the settlement tile while active (same penalty/floor shape as drought/ash), so a
   blighted settlement starves through the same `ResourcePressurePhase` pipeline. Also eligible
   for the generic improvement-destruction roll from 16.0 (a blighted farm can be destroyed too).
-  New event `BlightBegan`. **Deferred:** harsh winter — a global/seasonal disaster (not
-  tile-or-settlement-scoped) touching `PopulationDynamicsPhase` decay and/or
-  `CharacterBehaviorPhase` Health drain across multiple files; scoping it properly is more than
-  a `EnvironmentalPhase`-local change, so it's left for a dedicated 16.1b pass rather than rushed
-  in alongside Blight. `DisasterType` enum's old `// V2: Plague, Blight, ArmyPresence` comment is
-  superseded — Blight is now implemented; Plague/ArmyPresence remain V2.
+  New event `BlightBegan`. `DisasterType` enum's old `// V2: Plague, Blight, ArmyPresence`
+  comment is superseded — Blight is now implemented; Plague/ArmyPresence remain V2.
+- **16.1b — Harsh winter.** ✅ Shipped 2026-09-17. Global, not tile-or-settlement-scoped (unlike
+  every other disaster) — a single `WorldState.HarshWinterTicksRemaining` counter, rolled once
+  per year and persisted through `WorldStateDto`/`WorldStateMapper` like
+  `VolcanicActivityMultiplier`. Consumed by `PopulationDynamicsPhase` (extra settlement decayF)
+  and `CharacterBehaviorPhase` (per-year character Health drain, killing on 0 like disease).
+  New event `HarshWinterBegan`.
 - **16.2 — Narrative/UI parity.** Event log labels for the new event types; ruin cause "disaster"
   surfaced distinctly from "war_damage"/"abandoned" where the UI shows ruin history.
 - **16.3 — Balance pass.** Long-run instrumented test (same shape as M14/M15's balance suites)

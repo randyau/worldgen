@@ -153,6 +153,9 @@ public sealed class WorldState : IWorldStateReadOnly
     /// <summary>Global scaling of volcanic event probability. Starts at 1.0.</summary>
     public float VolcanicActivityMultiplier { get; internal set; } = 1.0f;
 
+    /// <summary>M16 16.1b — ticks left in an active harsh winter (0 = none). Global, not tile-scoped.</summary>
+    public int HarshWinterTicksRemaining { get; internal set; }
+
     // === UI INSPECTOR ===
     /// <summary>Set by SetInspectedTile command. Null means no tile is selected.</summary>
     public TileCoord? InspectedTile { get; internal set; }

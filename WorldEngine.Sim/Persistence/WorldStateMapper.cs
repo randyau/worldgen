@@ -59,6 +59,7 @@ internal static class WorldStateMapper
             StormCorridorHalfWidth:      w.StormCorridorHalfWidth,
             MonsoonIntensityMultiplier:  w.MonsoonIntensityMultiplier,
             VolcanicActivityMultiplier:  w.VolcanicActivityMultiplier,
+            HarshWinterTicksRemaining:   w.HarshWinterTicksRemaining,
             NextCivId:                   w.NextCivId,
             ResourceRegistry:            MapResourceRegistry(w),
             ActiveTileDisasters:         MapActiveTileDisasters(w),
@@ -391,6 +392,7 @@ internal static class WorldStateMapper
         world.StormCorridorHalfWidth       = dto.StormCorridorHalfWidth;
         world.MonsoonIntensityMultiplier   = dto.MonsoonIntensityMultiplier;
         world.VolcanicActivityMultiplier   = dto.VolcanicActivityMultiplier;
+        world.HarshWinterTicksRemaining    = dto.HarshWinterTicksRemaining;
 
         // 8. Restore civ counter
         world.NextCivId = dto.NextCivId;

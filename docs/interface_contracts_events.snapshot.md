@@ -92,7 +92,7 @@ public interface IHistoryQuery
 ```
 
 ## EventType
-**File:** `WorldEngine.Sim/Core/Enumerations.cs:91`  
+**File:** `WorldEngine.Sim/Core/Enumerations.cs:92`  
 **Kind:** `enum`
 
 ```csharp
@@ -112,6 +112,7 @@ public enum EventType
     ImprovementDestroyed        = 1011,  // M16 16.0 — a TileImprovement destroyed by a disaster
     SettlementDamagedByDisaster = 1012,  // M16 16.0 — non-lethal disaster Health damage to a settlement
     BlightBegan                 = 1013,  // M16 16.1 — crop disease struck a settlement
+    HarshWinterBegan            = 1014,  // M16 16.1b — global seasonal disaster
     // Beast events (2001–2099) — M2.1
     BeastSpawned        = 2001,
     BeastAwakened       = 2002,
@@ -267,4 +268,4 @@ public enum EventType
 }
 ```
 
-<!-- content-hash: 1733f99994840289 -->
+<!-- content-hash: f6e41ff0d6edee6a -->

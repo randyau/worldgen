@@ -44,6 +44,7 @@ public sealed record WorldStateDto(
     float StormCorridorHalfWidth,
     float MonsoonIntensityMultiplier,
     float VolcanicActivityMultiplier,
+    int HarshWinterTicksRemaining,
 
     // Civ id counter
     int NextCivId,

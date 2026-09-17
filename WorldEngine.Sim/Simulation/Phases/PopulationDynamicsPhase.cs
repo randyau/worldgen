@@ -114,6 +114,8 @@ public sealed class PopulationDynamicsPhase
         float foodGrowthScale = Math.Clamp(foodRatio, 0f, 1f);
         float growthF  = fertility * safetyScore * _cfg.PopGrowthRate * foodGrowthScale * logisticFactor;
         float decayF   = _cfg.PopDecayRate + starvationDecay;
+        if (world.HarshWinterTicksRemaining > 0)
+            decayF += _simCfg.Disasters.HarshWinterSettlementDecayBonus;
 
         // Succession crisis: distant settlements decay faster after the founding ruler dies
         var charCfg = _simCfg.Character;

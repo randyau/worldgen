@@ -278,6 +278,10 @@ Edit values in `sim_config.toml`; all keys live there without recompiling.
 | `blight_food_store_destruction_fraction` | `0.4` | `SimConfig.Disasters.BlightFoodStoreDestructionFraction` |  |
 | `blight_fertility_penalty` | `50` | `SimConfig.Disasters.BlightFertilityPenalty` |  |
 | `blight_fertility_floor` | `30` | `SimConfig.Disasters.BlightFertilityFloor` |  |
+| `harsh_winter_probability_per_year` | `0.03` | `SimConfig.Disasters.HarshWinterProbabilityPerYear` | M16 16.1b — Harsh winter. Global (not tile-or-settlement-scoped): rolled once per year, active for a bounded number of ticks across the whole world. |
+| `harsh_winter_duration_ticks` | `4` | `SimConfig.Disasters.HarshWinterDurationTicks` | one season |
+| `harsh_winter_settlement_decay_bonus` | `0.15` | `SimConfig.Disasters.HarshWinterSettlementDecayBonus` | added to settlement decayF while active |
+| `harsh_winter_character_health_drain` | `4` | `SimConfig.Disasters.HarshWinterCharacterHealthDrain` | per year, while active |
 
 ## `[beasts]` {#beasts}
 

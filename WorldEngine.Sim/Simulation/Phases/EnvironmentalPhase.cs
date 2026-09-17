@@ -29,6 +29,7 @@ public sealed class EnvironmentalPhase
         RunSeasonalClimate(world);
         VolcanicMultiplierDecay(world);
         RunDisasterTick(world, pending);
+        TickDownHarshWinter(world);
 
         if (isAnnualTick)
         {
@@ -37,6 +38,7 @@ public sealed class EnvironmentalPhase
             RunAnnualResourceDynamics(world);
             RunDroughtsAnnual(world, pending);
             RunBlightAnnual(world, pending);
+            RunHarshWinterAnnual(world, pending);
         }
 
         return pending;
@@ -599,6 +601,30 @@ public sealed class EnvironmentalPhase
                 world.Settlements[tile] = world.Settlements[tile] with { ResourceStores = updated };
             }
         }
+    }
+
+    // =========================================================================
+    // M16 16.1b — Harsh winter. Global, not tile-or-settlement-scoped: a single world-wide
+    // counter (WorldState.HarshWinterTicksRemaining) consumed by PopulationDynamicsPhase
+    // (extra settlement decay) and CharacterBehaviorPhase (extra character Health drain).
+    // =========================================================================
+
+    private void RunHarshWinterAnnual(WorldState world, List<PendingEvent> pending)
+    {
+        if (world.HarshWinterTicksRemaining > 0) return;
+
+        var dcfg = _cfg.Disasters;
+        float roll = WorldRng.FloatAt(world.WorldSeed, world.CurrentYear, 0, 0, DisasterSalts.HarshWinterCheck);
+        if (roll >= dcfg.HarshWinterProbabilityPerYear) return;
+
+        world.HarshWinterTicksRemaining = dcfg.HarshWinterDurationTicks;
+        pending.Add(new PendingEvent(EventType.HarshWinterBegan, null, null, "{}"));
+    }
+
+    private static void TickDownHarshWinter(WorldState world)
+    {
+        if (world.HarshWinterTicksRemaining > 0)
+            world.HarshWinterTicksRemaining--;
     }
 
     private void AddDisaster(WorldState world, TileCoord coord, ActiveDisaster disaster,

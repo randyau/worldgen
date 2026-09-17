@@ -11,4 +11,5 @@ public static class DisasterSalts
     public const int DroughtCheck = 6;
     public const int ImprovementDestruction = 7;
     public const int Blight = 8;
+    public const int HarshWinterCheck = 9;
 }

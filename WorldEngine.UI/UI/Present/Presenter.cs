@@ -190,6 +190,7 @@ public sealed class Presenter
         EventType.ImprovementDestroyed       => "improvement destroyed",
         EventType.SettlementDamagedByDisaster => "damaged by disaster",
         EventType.BlightBegan                 => "struck by blight",
+        EventType.HarshWinterBegan            => "harsh winter began",
         EventType.BeastSpawned             => "beast spawned",
         EventType.BeastAwakened            => "beast awakened",
         EventType.BeastDied                => "beast died",

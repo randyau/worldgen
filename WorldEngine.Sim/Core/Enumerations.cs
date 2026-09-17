@@ -105,6 +105,7 @@ public enum EventType
     ImprovementDestroyed        = 1011,  // M16 16.0 — a TileImprovement destroyed by a disaster
     SettlementDamagedByDisaster = 1012,  // M16 16.0 — non-lethal disaster Health damage to a settlement
     BlightBegan                 = 1013,  // M16 16.1 — crop disease struck a settlement
+    HarshWinterBegan            = 1014,  // M16 16.1b — global seasonal disaster
     // Beast events (2001–2099) — M2.1
     BeastSpawned        = 2001,
     BeastAwakened       = 2002,
@@ -276,6 +277,7 @@ public static class VerbClassification
         EventType.ImprovementDestroyed        => VerbClass.Destruction,
         EventType.SettlementDamagedByDisaster  => VerbClass.Transformation,
         EventType.BlightBegan                  => VerbClass.Destruction,
+        EventType.HarshWinterBegan              => VerbClass.Destruction,
         // M2+ stubs — reasonable defaults
         EventType.CharacterBorn           => VerbClass.Creation,
         EventType.CharacterDied           => VerbClass.Transformation, // Destruction floor=Regional floods DB; impact drives tier for notable deaths
