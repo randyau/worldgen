@@ -310,6 +310,17 @@ drought_precipitation_threshold        = 0.7
 drought_min_seasons                    = 2
 drought_max_seasons                    = 8
 
+# M16 16.0 — settlement/improvement consequences, applied once per disaster onset (ignition/spread),
+# not per burning tick. Health damage reuses the same 0-100 substrate as war-raid damage.
+wildfire_settlement_damage             = 8
+flood_settlement_damage                = 6
+earthquake_settlement_damage           = 15
+volcanic_eruption_settlement_damage    = 35
+improvement_destruction_chance         = 0.15    # chance a co-located TileImprovement is destroyed on disaster onset
+volcanic_ash_fertility_penalty         = 60      # fertility subtracted while ash is active (drought uses the same shape)
+volcanic_ash_fertility_floor           = 20      # fertility can't be pushed below this by ash alone
+volcanic_ash_duration_ticks            = 64      # ~4 years at 16 ticks/year — was indefinite; now a real recovery arc
+
 # =============================================================================
 # BEASTS (lifecycle constants — species stats are in config/beasts.toml)
 # =============================================================================

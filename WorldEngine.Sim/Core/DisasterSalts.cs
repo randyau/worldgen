@@ -9,4 +9,5 @@ public static class DisasterSalts
     public const int VolcanicEruption = 4;
     public const int Earthquake = 5;
     public const int DroughtCheck = 6;
+    public const int ImprovementDestruction = 7;
 }

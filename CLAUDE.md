@@ -26,7 +26,7 @@ phase-doc links live in `docs/roadmap.md` — read its milestone table before sc
 Packaging/distribution is deferred to the final pre-release milestone, M19.
 
 **For coding sessions — read the active phase doc:**
-- No M16 phase doc exists yet — check `docs/roadmap.md` § "M16" before starting new work.
+- `docs/phases/m16_disasters_reworked.md` — M16 (Disasters, Reworked), IN PROGRESS, phase 16.0.
 - `docs/phases/archive/` — every completed milestone's phase docs (M1–M15.95) live here for reference.
 - `docs/archive/runbook_m1.md` — M1 manual test runbook (reference for regression testing).
 

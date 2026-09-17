@@ -1,3 +1,4 @@
+using WorldEngine.Sim.Civilizations;
 using WorldEngine.Sim.Config;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Simulation.Phases;
@@ -348,5 +349,101 @@ public class DisasterSystemTests
 
         keys1.Should().BeEquivalentTo(keys2,
             "same seed + same world state must produce identical disaster events (WorldRng determinism)");
+    }
+
+    // ─── M16 16.0 — settlement/improvement consequences ────────────────────────
+
+    private static SettlementStub MakeSettlement(TileCoord tile, int health = 100) => new(
+        FounderId: new EntityId(1), CivId: new CivId(1), Tile: tile, FoundedYear: 0,
+        Population: 500, Health: health, Name: "Testville");
+
+    [Fact]
+    public void Disaster_EarthquakeDamagesCoLocatedSettlement()
+    {
+        var probe = BuildWorld();
+        probe.SimConfig.Disasters.EarthquakeProbabilityPerTick = 1.0f;
+        RunDisasterTick(probe);
+        var quakeCoord = probe.ActiveTileDisasters
+            .First(kv => kv.Value.Any(d => d.Type == DisasterType.SeismicDamage)).Key;
+
+        var world = BuildWorld();
+        world.SimConfig.Disasters.EarthquakeProbabilityPerTick = 1.0f;
+        world.Settlements[quakeCoord] = MakeSettlement(quakeCoord);
+
+        var pending = new List<PendingEvent>();
+        new EnvironmentalPhase(world.SimConfig).RunTick(world, pending);
+
+        world.Settlements[quakeCoord].Health.Should().Be(
+            100 - world.SimConfig.Disasters.EarthquakeSettlementDamage,
+            "earthquake should damage a co-located settlement's Health");
+        pending.Should().Contain(p => p.Type == EventType.SettlementDamagedByDisaster);
+    }
+
+    [Fact]
+    public void Disaster_DestroysSettlementWhenHealthReachesZero()
+    {
+        var probe = BuildWorld();
+        probe.SimConfig.Disasters.EarthquakeProbabilityPerTick = 1.0f;
+        RunDisasterTick(probe);
+        var quakeCoord = probe.ActiveTileDisasters
+            .First(kv => kv.Value.Any(d => d.Type == DisasterType.SeismicDamage)).Key;
+
+        var world = BuildWorld();
+        world.SimConfig.Disasters.EarthquakeProbabilityPerTick = 1.0f;
+        world.Settlements[quakeCoord] = MakeSettlement(quakeCoord,
+            health: world.SimConfig.Disasters.EarthquakeSettlementDamage);
+
+        var pending = new List<PendingEvent>();
+        new EnvironmentalPhase(world.SimConfig).RunTick(world, pending);
+
+        world.Settlements.Should().NotContainKey(quakeCoord,
+            "settlement should be removed once disaster damage brings Health to 0");
+        world.Ruins.Should().ContainKey(quakeCoord);
+        world.Ruins[quakeCoord].Cause.Should().Be("disaster");
+        pending.Should().Contain(p => p.Type == EventType.SettlementDestroyed);
+    }
+
+    [Fact]
+    public void Disaster_DestroysCoLocatedImprovementWhenChanceIsCertain()
+    {
+        var probe = BuildWorld();
+        probe.SimConfig.Disasters.EarthquakeProbabilityPerTick = 1.0f;
+        RunDisasterTick(probe);
+        var quakeCoord = probe.ActiveTileDisasters
+            .First(kv => kv.Value.Any(d => d.Type == DisasterType.SeismicDamage)).Key;
+
+        var world = BuildWorld();
+        world.SimConfig.Disasters.EarthquakeProbabilityPerTick = 1.0f;
+        world.SimConfig.Disasters.ImprovementDestructionChance = 1.0f;
+        world.ImprovementMap[quakeCoord] = new TileImprovement(
+            ImprovementType.Farm, quakeCoord, 0, new EntityId(1));
+
+        var pending = new List<PendingEvent>();
+        new EnvironmentalPhase(world.SimConfig).RunTick(world, pending);
+
+        world.ImprovementMap.Should().NotContainKey(quakeCoord,
+            "improvement should be destroyed when destruction chance is certain");
+        pending.Should().Contain(p => p.Type == EventType.ImprovementDestroyed);
+    }
+
+    [Fact]
+    public void Disaster_VolcanicAshHasFiniteDurationAndSuppressesFertility()
+    {
+        var world = BuildWorld();
+        world.SimConfig.Disasters.VolcanicEruptionProbabilityPerTick = 1.0f;
+        var pending = new List<PendingEvent>();
+        new EnvironmentalPhase(world.SimConfig).RunTick(world, pending, isAnnualTick: true);
+
+        var ashEntry = world.ActiveTileDisasters
+            .First(kv => kv.Value.Any(d => d.Type == DisasterType.VolcanicAsh));
+        var ash = ashEntry.Value.First(d => d.Type == DisasterType.VolcanicAsh);
+
+        ash.TicksRemaining.Should().Be(world.SimConfig.Disasters.VolcanicAshDurationTicks - 1,
+            "ash should now have a finite, decrementing duration instead of the old indefinite -1");
+
+        var tile = world.TileGrid.GetTile(ashEntry.Key);
+        tile.Fertility.Should().BeLessOrEqualTo(
+            (byte)Math.Max(0, 255 - world.SimConfig.Disasters.VolcanicAshFertilityPenalty),
+            "ash should suppress fertility on its tile the same year it lands");
     }
 }

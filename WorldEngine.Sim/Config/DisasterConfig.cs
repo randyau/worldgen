@@ -32,4 +32,15 @@ public class DisasterConfig
     public float DroughtPrecipitationThreshold { get; set; } = 0.7f;
     public int DroughtMinSeasons { get; set; } = 2;
     public int DroughtMaxSeasons { get; set; } = 8;
+
+    // M16 16.0 — settlement/improvement consequences, applied once when a disaster newly
+    // occupies a tile (ignition/spread-onset, not per burning tick).
+    public int WildfireSettlementDamage        { get; set; } = 8;
+    public int FloodSettlementDamage           { get; set; } = 6;
+    public int EarthquakeSettlementDamage      { get; set; } = 15;
+    public int VolcanicEruptionSettlementDamage { get; set; } = 35;
+    public float ImprovementDestructionChance  { get; set; } = 0.15f;
+    public byte  VolcanicAshFertilityPenalty   { get; set; } = 60;
+    public byte  VolcanicAshFertilityFloor     { get; set; } = 20;
+    public int  VolcanicAshDurationTicks       { get; set; } = 64; // ~4 years at 16 ticks/year
 }

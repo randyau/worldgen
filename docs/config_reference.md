@@ -264,6 +264,14 @@ Edit values in `sim_config.toml`; all keys live there without recompiling.
 | `drought_precipitation_threshold` | `0.7` | `SimConfig.Disasters.DroughtPrecipitationThreshold` |  |
 | `drought_min_seasons` | `2` | `SimConfig.Disasters.DroughtMinSeasons` |  |
 | `drought_max_seasons` | `8` | `SimConfig.Disasters.DroughtMaxSeasons` |  |
+| `wildfire_settlement_damage` | `8` | `SimConfig.Disasters.WildfireSettlementDamage` | M16 16.0 — settlement/improvement consequences, applied once per disaster onset (ignition/spread), not per burning tick. Health damage reuses the same 0-100 substrate as war-raid damage. |
+| `flood_settlement_damage` | `6` | `SimConfig.Disasters.FloodSettlementDamage` |  |
+| `earthquake_settlement_damage` | `15` | `SimConfig.Disasters.EarthquakeSettlementDamage` |  |
+| `volcanic_eruption_settlement_damage` | `35` | `SimConfig.Disasters.VolcanicEruptionSettlementDamage` |  |
+| `improvement_destruction_chance` | `0.15` | `SimConfig.Disasters.ImprovementDestructionChance` | chance a co-located TileImprovement is destroyed on disaster onset |
+| `volcanic_ash_fertility_penalty` | `60` | `SimConfig.Disasters.VolcanicAshFertilityPenalty` | fertility subtracted while ash is active (drought uses the same shape) |
+| `volcanic_ash_fertility_floor` | `20` | `SimConfig.Disasters.VolcanicAshFertilityFloor` | fertility can't be pushed below this by ash alone |
+| `volcanic_ash_duration_ticks` | `64` | `SimConfig.Disasters.VolcanicAshDurationTicks` | ~4 years at 16 ticks/year — was indefinite; now a real recovery arc |
 
 ## `[beasts]` {#beasts}
 

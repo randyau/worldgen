@@ -12,11 +12,12 @@ The `Type` column stores integer values. Use these constants in WHERE clauses:
 <!-- GENERATED:enums — DO NOT EDIT BELOW THIS LINE; run python3 scripts/gen-enum-tables.py -->
 ```
 -- Environmental (1000–1099)
-  1001 = VolcanicEruption      1002 = EarthquakeOccurred  
-  1003 = WildfireOccurred      1004 = FloodOccurred       
-  1005 = DroughtBegan          1006 = DroughtEnded        
-  1007 = SeaLevelChanged       1008 = BiomeChanged        
-  1009 = ClimateShifted        1010 = ResourceRecovered   
+  1001 = VolcanicEruption               1002 = EarthquakeOccurred           
+  1003 = WildfireOccurred               1004 = FloodOccurred                
+  1005 = DroughtBegan                   1006 = DroughtEnded                 
+  1007 = SeaLevelChanged                1008 = BiomeChanged                 
+  1009 = ClimateShifted                 1010 = ResourceRecovered            
+  1011 = ImprovementDestroyed           1012 = SettlementDamagedByDisaster  
 
 -- Beast events (2000–2099)
   2001 = BeastSpawned         2002 = BeastAwakened      

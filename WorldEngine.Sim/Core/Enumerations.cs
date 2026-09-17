@@ -72,7 +72,8 @@ public enum DisasterType
     Flood         = 1,
     VolcanicAsh   = 2,
     SeismicDamage = 3,
-    // V2: Plague, Blight, ArmyPresence
+    // M16 16.1: Blight, HarshWinter — roadmap-scoped, not yet implemented.
+    // V2: Plague, ArmyPresence
 }
 
 public enum CulturalTrait
@@ -100,6 +101,8 @@ public enum EventType
     BiomeChanged        = 1008,
     ClimateShifted      = 1009,
     ResourceRecovered   = 1010,
+    ImprovementDestroyed        = 1011,  // M16 16.0 — a TileImprovement destroyed by a disaster
+    SettlementDamagedByDisaster = 1012,  // M16 16.0 — non-lethal disaster Health damage to a settlement
     // Beast events (2001–2099) — M2.1
     BeastSpawned        = 2001,
     BeastAwakened       = 2002,
@@ -268,6 +271,8 @@ public static class VerbClassification
         EventType.BiomeChanged       => VerbClass.Transformation,
         EventType.ClimateShifted     => VerbClass.Transformation,
         EventType.ResourceRecovered  => VerbClass.Maintenance,
+        EventType.ImprovementDestroyed        => VerbClass.Destruction,
+        EventType.SettlementDamagedByDisaster  => VerbClass.Transformation,
         // M2+ stubs — reasonable defaults
         EventType.CharacterBorn           => VerbClass.Creation,
         EventType.CharacterDied           => VerbClass.Transformation, // Destruction floor=Regional floods DB; impact drives tier for notable deaths

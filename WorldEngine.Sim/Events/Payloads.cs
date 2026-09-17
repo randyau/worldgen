@@ -224,6 +224,13 @@ internal sealed record BiomeChangedPayload(string From, string To, float GlobalT
 
 internal sealed record SeaLevelChangedPayload(float PreviousLevel, float NewLevel, float Delta);
 
+// M16 16.0 — disaster consequences onto settlements/improvements
+internal sealed record ImprovementDestroyedPayload(string ImprovementType, string DisasterType);
+
+internal sealed record SettlementDamagedByDisasterPayload(string DisasterType, int Damage, int NewHealth);
+
+internal sealed record SettlementDestroyedByDisasterPayload(string DisasterType, int TimesSettled);
+
 internal sealed record EmptyPayload();
 
 // ─── Cultural Traits (Phase 3.2) ─────────────────────────────────────────────

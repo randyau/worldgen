@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Text.Json;
+using WorldEngine.Sim.Civilizations;
 using WorldEngine.Sim.Config;
 using WorldEngine.Sim.Core;
 using WorldEngine.Sim.Events;
@@ -347,7 +348,8 @@ public sealed class EnvironmentalPhase
                 float roll = WorldRng.FloatAt(world.WorldSeed, world.CurrentTick, coord.X, coord.Y, DisasterSalts.VolcanicEruption);
                 float prob = dcfg.VolcanicEruptionProbabilityPerTick * world.VolcanicActivityMultiplier;
                 if (roll >= prob) continue;
-                AddDisaster(world, coord, new ActiveDisaster(DisasterType.VolcanicAsh, dcfg.VolcanicAshIntensity, -1, new EventId(0)));
+                AddDisaster(world, coord, new ActiveDisaster(DisasterType.VolcanicAsh, dcfg.VolcanicAshIntensity, dcfg.VolcanicAshDurationTicks, new EventId(0)),
+                    pending, dcfg.VolcanicEruptionSettlementDamage);
                 world.VolcanicActivityMultiplier = MathF.Min(
                     world.VolcanicActivityMultiplier + dcfg.VolcanicActivityBoost,
                     dcfg.VolcanicActivityMultiplierCap);
@@ -369,7 +371,8 @@ public sealed class EnvironmentalPhase
                 if ((BiomeType)tile.BiomeType is BiomeType.Ocean or BiomeType.CoastalWater) continue;
                 float roll = WorldRng.FloatAt(world.WorldSeed, world.CurrentTick, coord.X, coord.Y, DisasterSalts.Earthquake);
                 if (roll >= dcfg.EarthquakeProbabilityPerTick) continue;
-                AddDisaster(world, coord, new ActiveDisaster(DisasterType.SeismicDamage, dcfg.EarthquakeIntensity, dcfg.EarthquakeDecayTicks, new EventId(0)));
+                AddDisaster(world, coord, new ActiveDisaster(DisasterType.SeismicDamage, dcfg.EarthquakeIntensity, dcfg.EarthquakeDecayTicks, new EventId(0)),
+                    pending, dcfg.EarthquakeSettlementDamage);
                 pending.Add(new PendingEvent(EventType.EarthquakeOccurred, coord, null,
                     JsonSerializer.Serialize(new DisasterPayload(dcfg.EarthquakeIntensity))));
             }
@@ -399,7 +402,8 @@ public sealed class EnvironmentalPhase
 
                 float roll = WorldRng.FloatAt(world.WorldSeed, world.CurrentTick, coord.X, coord.Y, DisasterSalts.Wildfire);
                 if (roll >= prob) continue;
-                AddDisaster(world, coord, new ActiveDisaster(DisasterType.Wildfire, dcfg.WildfireIntensity, dcfg.WildfireMaxTicks, new EventId(0)));
+                AddDisaster(world, coord, new ActiveDisaster(DisasterType.Wildfire, dcfg.WildfireIntensity, dcfg.WildfireMaxTicks, new EventId(0)),
+                    pending, dcfg.WildfireSettlementDamage);
                 pending.Add(new PendingEvent(EventType.WildfireOccurred, coord, null,
                     JsonSerializer.Serialize(new DisasterPayload(dcfg.WildfireIntensity))));
             }
@@ -427,7 +431,8 @@ public sealed class EnvironmentalPhase
 
                 float roll = WorldRng.FloatAt(world.WorldSeed, world.CurrentTick, nb.X, nb.Y, DisasterSalts.WildfireSpread);
                 if (roll >= dcfg.WildfireSpreadProbabilityPerTick) continue;
-                AddDisaster(world, nb, new ActiveDisaster(DisasterType.Wildfire, dcfg.WildfireIntensity, dcfg.WildfireMaxTicks, new EventId(0)));
+                AddDisaster(world, nb, new ActiveDisaster(DisasterType.Wildfire, dcfg.WildfireIntensity, dcfg.WildfireMaxTicks, new EventId(0)),
+                    pending, dcfg.WildfireSettlementDamage);
                 // No new PendingEvent for spread — shares root fire's causal chain
             }
         }
@@ -453,7 +458,8 @@ public sealed class EnvironmentalPhase
                 float roll = WorldRng.FloatAt(world.WorldSeed, world.CurrentTick, coord.X, coord.Y, DisasterSalts.Flood);
                 if (roll >= prob) continue;
 
-                AddDisaster(world, coord, new ActiveDisaster(DisasterType.Flood, dcfg.FloodOriginIntensity, dcfg.FloodOriginTicks, new EventId(0)));
+                AddDisaster(world, coord, new ActiveDisaster(DisasterType.Flood, dcfg.FloodOriginIntensity, dcfg.FloodOriginTicks, new EventId(0)),
+                    pending, dcfg.FloodSettlementDamage);
                 pending.Add(new PendingEvent(EventType.FloodOccurred, coord, null,
                     JsonSerializer.Serialize(new DisasterPayload(dcfg.FloodOriginIntensity))));
 
@@ -462,7 +468,8 @@ public sealed class EnvironmentalPhase
                     if (nb == coord) continue;
                     var nbTile = world.TileGrid.GetTile(nb);
                     if ((BiomeType)nbTile.BiomeType is BiomeType.Ocean or BiomeType.CoastalWater) continue;
-                    AddDisaster(world, nb, new ActiveDisaster(DisasterType.Flood, dcfg.FloodSpreadIntensity, dcfg.FloodSpreadTicks, new EventId(0)));
+                    AddDisaster(world, nb, new ActiveDisaster(DisasterType.Flood, dcfg.FloodSpreadIntensity, dcfg.FloodSpreadTicks, new EventId(0)),
+                        pending, dcfg.FloodSettlementDamage);
                 }
             }
         }
@@ -557,7 +564,8 @@ public sealed class EnvironmentalPhase
         }
     }
 
-    private static void AddDisaster(WorldState world, TileCoord coord, ActiveDisaster disaster)
+    private void AddDisaster(WorldState world, TileCoord coord, ActiveDisaster disaster,
+        List<PendingEvent> pending, int settlementDamageBase)
     {
         if (!world.ActiveTileDisasters.TryGetValue(coord, out var list))
             world.ActiveTileDisasters[coord] = list = new List<ActiveDisaster>();
@@ -566,6 +574,49 @@ public sealed class EnvironmentalPhase
         var tile = world.TileGrid.GetTile(coord);
         tile.DynFlags |= TileDynFlags.HasActiveDisaster;
         world.TileGrid.SetTile(coord, tile);
+
+        ApplyDisasterConsequences(world, coord, disaster.Type, settlementDamageBase, pending);
+    }
+
+    // M16 16.0 — settlement/improvement consequences applied once at disaster onset (ignition/
+    // spread-onset), reusing the same Health-damage/RegisterRuin substrate as war-raid damage
+    // so disasters get the same multi-year recovery arc for free.
+    private void ApplyDisasterConsequences(
+        WorldState world, TileCoord coord, DisasterType type, int settlementDamageBase, List<PendingEvent> pending)
+    {
+        var dcfg = _cfg.Disasters;
+
+        if (world.ImprovementMap.TryGetValue(coord, out var improvement))
+        {
+            float roll = WorldRng.FloatAt(world.WorldSeed, world.CurrentTick, coord.X, coord.Y, DisasterSalts.ImprovementDestruction);
+            if (roll < dcfg.ImprovementDestructionChance)
+            {
+                world.ImprovementMap.Remove(coord);
+                pending.Add(new PendingEvent(EventType.ImprovementDestroyed, coord, null,
+                    JsonSerializer.Serialize(new ImprovementDestroyedPayload(improvement.Type.ToString(), type.ToString())),
+                    new[] { improvement.BuilderId.Value }));
+            }
+        }
+
+        if (settlementDamageBase <= 0) return;
+        if (!world.Settlements.TryGetValue(coord, out var settlement)) return;
+
+        int newHealth = settlement.Health - settlementDamageBase;
+        if (newHealth <= 0)
+        {
+            world.Settlements.Remove(coord);
+            int timesSettled = CivTracker.RegisterRuin(coord, settlement, "disaster", world, pending);
+            pending.Add(new PendingEvent(EventType.SettlementDestroyed, coord, null,
+                JsonSerializer.Serialize(new SettlementDestroyedByDisasterPayload(type.ToString(), timesSettled)),
+                CivId: settlement.CivId.Value, SettlementName: settlement.Name));
+        }
+        else
+        {
+            world.Settlements[coord] = settlement with { Health = newHealth };
+            pending.Add(new PendingEvent(EventType.SettlementDamagedByDisaster, coord, null,
+                JsonSerializer.Serialize(new SettlementDamagedByDisasterPayload(type.ToString(), settlementDamageBase, newHealth)),
+                CivId: settlement.CivId.Value, SettlementName: settlement.Name));
+        }
     }
 
     private static bool HasActiveDisasterType(WorldState world, TileCoord coord, DisasterType type) =>
@@ -581,6 +632,7 @@ public sealed class EnvironmentalPhase
     private void RunAnnualResourceDynamics(WorldState world)
     {
         var cfg = _cfg.WorldGen.Resources;
+        var dcfg = _cfg.Disasters;
         int w = world.TileGrid.TileWidth, h = world.TileGrid.TileHeight;
 
         for (int y = 0; y < h; y++)
@@ -606,6 +658,13 @@ public sealed class EnvironmentalPhase
                     // recovery at 3/year then takes decades on a tile near 0.
                     fertility = Math.Max(cfg.DroughtFertilityFloor,
                                          fertility - cfg.DroughtFertilityPenaltyPerSeason);
+                }
+                else if (HasActiveDisasterType(world, coord, DisasterType.VolcanicAsh))
+                {
+                    // M16 16.0 — ash-driven famine: same shape as drought (penalty + floor),
+                    // recovers naturally via the branch below once VolcanicAshDurationTicks expires.
+                    fertility = Math.Max(dcfg.VolcanicAshFertilityFloor,
+                                         fertility - dcfg.VolcanicAshFertilityPenalty);
                 }
                 else
                 {

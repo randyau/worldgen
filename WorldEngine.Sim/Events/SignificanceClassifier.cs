@@ -43,6 +43,8 @@ public static class SignificanceClassifier
             EventType.DroughtBegan      => PopulationImpact.Moderate,
             EventType.SeaLevelChanged   => TryGetFloat(payloadJson, "Delta") > SeaLevelCatastrophicDelta
                                            ? PopulationImpact.Catastrophic : PopulationImpact.Major,
+            EventType.ImprovementDestroyed         => PopulationImpact.Minor,
+            EventType.SettlementDamagedByDisaster  => PopulationImpact.Moderate,
             // Beast events
             EventType.BeastAwakened     => PopulationImpact.Major,   // → Regional tier
             EventType.BeastSlain        => PopulationImpact.None,     // VerbClass.Destruction → Regional

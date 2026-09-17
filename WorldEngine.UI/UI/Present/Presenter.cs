@@ -187,6 +187,8 @@ public sealed class Presenter
         EventType.BiomeChanged             => "biome changed",
         EventType.ClimateShifted           => "climate shifted",
         EventType.ResourceRecovered        => "resource recovered",
+        EventType.ImprovementDestroyed       => "improvement destroyed",
+        EventType.SettlementDamagedByDisaster => "damaged by disaster",
         EventType.BeastSpawned             => "beast spawned",
         EventType.BeastAwakened            => "beast awakened",
         EventType.BeastDied                => "beast died",
