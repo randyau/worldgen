@@ -154,7 +154,12 @@ public sealed record OrganizationDto(
     float                     Treasury = 0f,
     string?                   HomeSettlementCoord = null,
     // M14 14.4 — TreasuryInsolvent edge-trigger latch (see Organization.TreasuryInsolvencyFlagged).
-    bool                      TreasuryInsolvencyFlagged = false);
+    bool                      TreasuryInsolvencyFlagged = false,
+    // M15 15.0 — religion extinction latch and the archetype a Religion was founded from.
+    // Both default so pre-M15 saves load unchanged (an old save's religions are, correctly,
+    // neither extinct nor archetype-bearing).
+    bool                      IsExtinct = false,
+    string                    ReligionArchetypeId = "");
 
 public sealed record CulturalProfileDto(
     string   AncestryId,

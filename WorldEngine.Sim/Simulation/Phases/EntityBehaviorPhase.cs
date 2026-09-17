@@ -43,8 +43,9 @@ public sealed class EntityBehaviorPhase
         if (!isAnnualTick || world.BeastEmergenceSchedule.Count == 0) return;
 
         var toRemove = new List<(int, string)>();
-        foreach (var entry in world.BeastEmergenceSchedule)
+        for (int scheduleIdx = 0; scheduleIdx < world.BeastEmergenceSchedule.Count; scheduleIdx++)
         {
+            var entry = world.BeastEmergenceSchedule[scheduleIdx];
             if (world.CurrentYear < entry.EmergenceYear) continue;
             toRemove.Add(entry);
 
@@ -54,7 +55,15 @@ public sealed class EntityBehaviorPhase
             var validTiles = CollectValidTiles(world, species);
             if (validTiles.Count == 0) continue;
 
-            long seq = world.CurrentTick;
+            // EntityId is derived from entitySeq, so the derivation has to be unique across every
+            // spawn site and every tick — the convention every other runtime spawner follows
+            // (50_000/60_000/200_000/300_000/400_000/9_000_000 bases + a tick/year and position
+            // term; see CharacterBehaviorPhase, CivTracker.Unrest/.Diplomacy, AuthoringResolver).
+            // A bare `world.CurrentTick` broke it twice over: two mythologicals emerging in the
+            // same year got the *same* id (EntityRegistry.Add then keeps one in _all but both in
+            // _beasts), and past tick 10_000 the ids walked straight into the Tier1 character
+            // range, silently overwriting living characters in _all.
+            long seq = (700_000L + world.CurrentTick * 997L + scheduleIdx * 31L) & 0x7FFFFFFF;
             int tileIdx = world.GetRandomInt(new EntityId(seq), 0, validTiles.Count, S.BeastEmergeTile);
             var tile = validTiles[Math.Clamp(tileIdx, 0, validTiles.Count - 1)];
 
@@ -133,7 +142,10 @@ public sealed class EntityBehaviorPhase
         var species = _catalog.Get(parent.SpeciesId);
         if (species is null) return;
 
-        long seq = world.CurrentTick + parent.Id.Value;
+        // Same id-space discipline as ProcessEmergenceSchedule above: `CurrentTick + parent.Id`
+        // drifts into the Tier1 (10_000+) and Tier2 (20_000+) character ranges within a few
+        // thousand ticks, and two parents whose (tick + id) sums coincide produced one id twice.
+        long seq = (800_000L + world.CurrentTick * 997L + parent.Id.Value * 31L) & 0x7FFFFFFF;
         var child = BeastFactory.Spawn(species, parent.HomeTile, world.WorldSeed, seq);
         world.Entities.Add(child);
 
@@ -157,7 +169,7 @@ public sealed class EntityBehaviorPhase
         foreach (var (beast, cmd) in commands)
         {
             if (!beast.IsAlive) continue;
-            Resolve(beast, cmd, world, pending, commands);
+            Resolve(beast, cmd, world, pending);
         }
     }
 
@@ -165,8 +177,7 @@ public sealed class EntityBehaviorPhase
         LegendaryBeast beast,
         ICommand cmd,
         WorldState world,
-        List<PendingEvent> pending,
-        List<(LegendaryBeast, ICommand)> allCommands)
+        List<PendingEvent> pending)
     {
         switch (cmd)
         {

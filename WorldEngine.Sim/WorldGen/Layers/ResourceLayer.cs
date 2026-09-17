@@ -17,7 +17,6 @@ public sealed class ResourceLayer : IWorldGenLayer<ResourceResult>
         CancellationToken ct = default)
     {
         var tec  = ctx.Tectonic!;
-        var elev = ctx.Elevation!;
         var biome = ctx.Biome!;
         var ocean = ctx.Ocean!;
         var cfg  = ctx.SimConfig.WorldGen;

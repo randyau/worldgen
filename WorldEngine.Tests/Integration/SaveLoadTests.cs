@@ -313,6 +313,49 @@ public class SaveLoadTests : IDisposable
         loadedRuler.CivId.Should().Be(civId);
     }
 
+    // M15 15.0 added Organization.IsExtinct and Organization.ReligionArchetypeId but never wired
+    // them into OrganizationDto, so both were silently dropped on every save/load: extinct
+    // religions came back alive, and every religion lost its archetype (hence its Zealotry, which
+    // gates conversion pull and persecution entirely).
+    [Fact]
+    public void WorldStateSaver_RoundTrip_ReligionOrganizationFields()
+    {
+        var world  = WorldTestHelper.CreateSmallWorld(seed: 42);
+        var simCfg = TestSimConfig.Default();
+
+        var founder = new Tier1Character(
+            new EntityId(201L), new TileCoord(5, 5),
+            PersonalityVector.Default, AptitudeVector.Default, SkillVector.Default,
+            new IdentityData("Prophet", "the Devout", "test", null, null, 0, 0),
+            100, 200);
+        world.Entities.Add(founder);
+
+        var liveId    = new OrganizationId(1);
+        var extinctId = new OrganizationId(2);
+        var live = new Organization(liveId, OrganizationKind.Religion, "Faith of Vaal", founder.Id, 0)
+        {
+            ReligionArchetypeId = "militant"
+        };
+        var extinct = new Organization(extinctId, OrganizationKind.Religion, "Dead Faith", founder.Id, 0)
+        {
+            ReligionArchetypeId = "ascetic",
+            IsExtinct = true
+        };
+        world.Organizations[liveId]    = live;
+        world.Organizations[extinctId] = extinct;
+        world.NextOrganizationId = 3;
+
+        WorldStateSaver.Save(world, _saveDir, simCfg);
+        var loaded = WorldStateSaver.Load(_saveDir, simCfg);
+
+        loaded.Organizations[liveId].ReligionArchetypeId.Should().Be("militant",
+            "a religion's archetype drives Zealotry, which gates conversion pull and persecution");
+        loaded.Organizations[liveId].IsExtinct.Should().BeFalse();
+        loaded.Organizations[extinctId].ReligionArchetypeId.Should().Be("ascetic");
+        loaded.Organizations[extinctId].IsExtinct.Should().BeTrue(
+            "an extinct religion must not be resurrected by a save/load round trip");
+    }
+
     // ── Test 10: settlement specialization round-trip (M9 9.2) ──────────────
     // The 9.2 phase doc explicitly calls for DTO/persistence coverage of these two fields
     // (same pattern as ResourceStores/Unrest); this was the one concrete gap the M9 audit found.

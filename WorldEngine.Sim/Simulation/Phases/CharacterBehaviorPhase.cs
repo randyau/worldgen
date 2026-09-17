@@ -72,7 +72,6 @@ public sealed class CharacterBehaviorPhase
             NeedsUpdater.Update(c, world, _cfg);
             GoalManager.UpdateGoals(c, world, tick, _cfg, pending);
             bool wasSpiraling = c.Wellbeing <= _cfg.SpiralThreshold;
-            bool wasFlourishingBefore = c.Wellbeing >= _cfg.FlourishingThreshold;
             bool isSpiraling = GoalManager.UpdateWellbeing(c, world, tick, _cfg, out bool crossedFlourishing);
             if (crossedFlourishing)
                 EmitFlourishingEvent(c, pending);
@@ -900,21 +899,9 @@ public sealed class CharacterBehaviorPhase
     // ─── Religion conversion (M15 15.1) ────────────────────────────────────────
 
     /// <summary>
-    /// Exposure/personal-receptivity conversion: characters weigh each Religion present in their
-    /// own civ (civ-scoped exposure, not settlement-scoped — DECISION: simplest reasonable choice
-    /// that still satisfies "multiple religions can coexist in a civ"; also happens to be exactly
-    /// the scope 15.3's state-religion/heresy determination needs) by presence fraction × personal
-    /// receptivity × archetype pull, resisted by their current religion's Loyalty if they have one.
-    /// The highest-pull candidate gets one roll per character per year — DECISION: picking the
-    /// single best candidate rather than a full weighted-random draw across all candidates is a
-    /// simplification; a candidate that loses this year's comparison still gets its own turn in
-    /// later years as presence/receptivity shift. See docs/phases/m15_religion_deepened.md
-    /// "Long-run balance constraints" for the sink/source reasoning behind every term here.
-    /// </summary>
-    /// <summary>
     /// Shared per-civ tally: named population count, and living-membership count per Religion
-    /// Organization. Built once per annual tick and reused by conversion (15.1), and the
-    /// state-religion/heresy determination (15.3) needs exactly this same civ-scoped shape.
+    /// Organization. Rebuilt by conversion (15.1) and by the state-religion/heresy determination
+    /// (15.3), which needs exactly this same civ-scoped shape.
     /// </summary>
     private static (Dictionary<CivId, int> CivPopulation, Dictionary<CivId, Dictionary<OrganizationId, int>> ReligionTally)
         BuildReligionTally(List<Tier1Character> characters, WorldState world)
@@ -938,6 +925,18 @@ public sealed class CharacterBehaviorPhase
         return (civPopulation, religionTally);
     }
 
+    /// <summary>
+    /// Exposure/personal-receptivity conversion: characters weigh each Religion present in their
+    /// own civ (civ-scoped exposure, not settlement-scoped — DECISION: simplest reasonable choice
+    /// that still satisfies "multiple religions can coexist in a civ"; also happens to be exactly
+    /// the scope 15.3's state-religion/heresy determination needs) by presence fraction × personal
+    /// receptivity × archetype pull, resisted by their current religion's Loyalty if they have one.
+    /// The highest-pull candidate gets one roll per character per year — DECISION: picking the
+    /// single best candidate rather than a full weighted-random draw across all candidates is a
+    /// simplification; a candidate that loses this year's comparison still gets its own turn in
+    /// later years as presence/receptivity shift. See docs/phases/m15_religion_deepened.md
+    /// "Long-run balance constraints" for the sink/source reasoning behind every term here.
+    /// </summary>
     private void ProcessAnnualReligionConversion(List<Tier1Character> characters, WorldState world, List<PendingEvent> pending)
     {
         var cfg = world.SimConfig.Religion;

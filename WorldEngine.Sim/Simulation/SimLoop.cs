@@ -236,7 +236,11 @@ public sealed class SimLoop
         if (_world.IsSaving) return;   // don't stack saves
         _world.IsSaving = true;
         var saveTick = _world.CurrentTick;
-        var cfg = _world.SimConfig;
+        // Captured here with saveTick, not read inside the background task: the sim thread keeps
+        // ticking (and keeps writing CurrentYear) while the task runs, so reading it there both
+        // races the writer and can stamp meta.json with a different year than the state.bin DTO
+        // captured a moment earlier.
+        var saveYear = _world.CurrentYear;
         // Capture a DTO snapshot on the sim thread before handing off to avoid data races
         WorldStateDto dto;
         try { dto = WorldStateMapper.ToDto(_world); }
@@ -255,7 +259,7 @@ public sealed class SimLoop
                 Directory.CreateDirectory(saveDir);
                 var meta = new MetaDto(WorldStateSaver.FormatVersion, _world.Config.Seed,
                     _world.Config.WidthKm, _world.Config.HeightKm, _world.Config.TileWidthKm,
-                    _world.CurrentYear, saveTick);
+                    saveYear, saveTick);
                 File.WriteAllBytes(Path.Combine(saveDir, "meta.json"),
                     System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(meta, WorldStateSerializerContext.Default.MetaDto));
                 File.WriteAllBytes(Path.Combine(saveDir, "state.bin"),

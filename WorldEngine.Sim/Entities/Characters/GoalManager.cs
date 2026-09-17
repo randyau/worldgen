@@ -149,9 +149,6 @@ public static class GoalManager
         }
         c.Goals.RemoveAll(g => g.Type == GoalType.Survive);
 
-        // Mild unmet needs still suppress action but don't block goal formation entirely.
-        string? urgent = c.Needs.MostUrgentUnmet();
-
         // 3. Personality-driven goal generation
         bool hasDominance = c.Goals.Any(g => g.Type == GoalType.Dominance);
         bool hasAlliance  = c.Goals.Any(g => g.Type == GoalType.Alliance);
@@ -161,7 +158,6 @@ public static class GoalManager
         int  activeBonds  = c.Goals.Count(g => g.Type == GoalType.Bond);
         bool hasBondRoom  = activeBonds < bondMax;
 
-        bool isFounder = c.CivId.IsValid && world.ActiveFounders.Contains(c.Id);
         var myCiv = c.CivId.IsValid ? world.GetCivilization(c.CivId) : null;
 
         // M13 13.5 balance: shared ceiling on discretionary goal formation — see MaxConcurrentGoals.

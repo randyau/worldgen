@@ -202,6 +202,14 @@ public sealed class Presenter
         EventType.GodModeCivilizationForced => "✦ civilization forced",
         EventType.SeaVoyageEmbarked        => "set sail",
         EventType.SeaVoyageCompleted       => "made landfall",
+        EventType.RivalsReconciled         => "rivals reconciled",
+        EventType.CharacterEstranged       => "estranged",
+        EventType.OathBroken               => "oath broken",
+        EventType.RivalryEscalatedToFeud   => "rivalry became a feud",
+        EventType.RivalryPlacated          => "rivalry placated",
+        EventType.CharacterDefected        => "defected",
+        EventType.DebtIncurred             => "incurred a debt",
+        EventType.DebtForgiven             => "debt forgiven",
         _                                   => type.ToString()
     };
 
@@ -227,6 +235,7 @@ public sealed class Presenter
         GoalType.SlayBeast        => "hunting a legendary beast",
         GoalType.CovetArtifact    => "coveting an artifact",
         GoalType.SeaVoyage        => "voyaging across the sea",
+        GoalType.Pilgrimage       => "on pilgrimage",
         _                         => type.ToString()
     };
 

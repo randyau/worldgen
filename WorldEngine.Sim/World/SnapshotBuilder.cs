@@ -231,16 +231,6 @@ public sealed class SnapshotBuilder
         );
     }
 
-    private static int GetSeasonalTempDelta(SeasonalProfile profile, Season season) =>
-        season switch
-        {
-            Season.Spring => profile.TempDeltaSpring,
-            Season.Summer => profile.TempDeltaSummer,
-            Season.Autumn => profile.TempDeltaAutumn,
-            Season.Winter => profile.TempDeltaWinter,
-            _             => 0
-        };
-
     private static TileInspectorData BuildInspectorData(
         WorldState world, TileCoord coord, IReadOnlyList<SimEvent> recentEvents)
     {
