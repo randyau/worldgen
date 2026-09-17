@@ -72,7 +72,6 @@ public sealed class CharacterBehaviorPhase
             NeedsUpdater.Update(c, world, _cfg);
             GoalManager.UpdateGoals(c, world, tick, _cfg, pending);
             bool wasSpiraling = c.Wellbeing <= _cfg.SpiralThreshold;
-            bool wasFlourishingBefore = c.Wellbeing >= _cfg.FlourishingThreshold;
             bool isSpiraling = GoalManager.UpdateWellbeing(c, world, tick, _cfg, out bool crossedFlourishing);
             if (crossedFlourishing)
                 EmitFlourishingEvent(c, pending);
