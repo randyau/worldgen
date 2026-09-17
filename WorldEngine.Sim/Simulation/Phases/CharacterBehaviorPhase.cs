@@ -562,74 +562,99 @@ public sealed class CharacterBehaviorPhase
             }
         }
 
-        // M14 14.4 — Guild leader succession: reuses SuccessionResolver.SelectSuccessor unmodified
-        // (no new succession mechanism, per the M12 audit note this milestone is bound by),
-        // mirroring the civ ruler succession block above generalized only as far as Guild needs
-        // it (Family/Religion leader succession stays out of scope for 14.4). Dead members are
-        // never removed from Organization.Members (same convention Family already follows — see
-        // FindHeir/SelectSuccessor's IsAlive filters below), so no cleanup is needed here beyond
-        // reassigning LeaderId, mirroring how the civ block above only reassigns civ.RulerId/
-        // succOrg.LeaderId without touching Members' Role entries.
+        // M14 14.4 / M15 15.0 — non-civ leader succession (Guild, Religion). Both reuse
+        // SuccessionResolver.SelectSuccessor unmodified (no new succession mechanism, per the M12
+        // audit note), mirroring the civ ruler succession block above as far as they need: dead
+        // members are never removed from Organization.Members (the same convention Family follows —
+        // see FindHeir/SelectSuccessor's IsAlive filters), so no cleanup is needed here beyond
+        // reassigning LeaderId, just as the civ block only reassigns civ.RulerId/succOrg.LeaderId
+        // without touching Members' Role entries. Civ succession stays separate above: it also
+        // carries RulerOrdinal/RulerCount and collapse bookkeeping that does not generalize.
+        //
+        // M15.9: one pass over Memberships rather than one per kind. A character can only ever lead
+        // one Guild and one Religion, and the two event kinds are independent, so the only visible
+        // difference is that a dual-leader's two events now interleave in membership order instead
+        // of Guild-always-first; nothing downstream reads them positionally.
         foreach (var membership in c.Memberships)
         {
-            if (!world.Organizations.TryGetValue(membership.OrganizationId, out var guildOrg)) continue;
-            if (guildOrg.Kind != OrganizationKind.Guild || guildOrg.LeaderId != c.Id) continue;
+            if (!world.Organizations.TryGetValue(membership.OrganizationId, out var org)) continue;
+            if (org.LeaderId != c.Id) continue;
 
-            var successorId = SuccessionResolver.SelectSuccessor(guildOrg, world, _cfg.MinRulerAgeSeasons,
-                member => (member.Personality.Ambition + member.Skills.Leadership) * 0.5f);
-            if (!successorId.HasValue) continue; // no eligible member — seat simply stays vacant
-
-            guildOrg.LeaderId = successorId.Value;
-            var successor = (Tier1Character)world.GetEntity(successorId.Value)!;
-
-            var succPayload = JsonSerializer.Serialize(new GuildSuccessionPayload(
-                guildOrg.Id.Value, guildOrg.Name,
-                c.Id.Value, c.Identity.Name,
-                successorId.Value.Value, successor.Identity.Name));
-            pending.Add(new PendingEvent(EventType.GuildLeadershipTransferred, c.Location, null,
-                succPayload, new[] { c.Id.Value, successorId.Value.Value },
-                ActorId: successorId.Value.Value, ActorName: successor.Identity.Name));
-        }
-
-        // M15 15.0 — Religion leader succession: same SuccessionResolver reuse as the Guild block
-        // above. Unlike Guild (seat simply stays vacant when no eligible successor exists), a
-        // religion with zero remaining living members is genuinely extinct — the sink half of
-        // M15's population balance (docs/phases/archive/m15_religion_deepened.md "Long-run balance
-        // constraints"). "Eligible" (age-gated) successor absence doesn't necessarily mean extinct
-        // (a young-only congregation still has living followers), so extinction is checked
-        // separately against IsAlive alone, not SelectSuccessor's age-gated result.
-        foreach (var membership in c.Memberships)
-        {
-            if (!world.Organizations.TryGetValue(membership.OrganizationId, out var religionOrg)) continue;
-            if (religionOrg.Kind != OrganizationKind.Religion || religionOrg.LeaderId != c.Id) continue;
-
-            var successorId = SuccessionResolver.SelectSuccessor(religionOrg, world, _cfg.MinRulerAgeSeasons,
-                member => (member.Personality.Wonder + member.Skills.Piety) * 0.5f);
-            if (successorId.HasValue)
+            switch (org.Kind)
             {
-                religionOrg.LeaderId = successorId.Value;
-                var successor = (Tier1Character)world.GetEntity(successorId.Value)!;
+                // No eligible member -> the seat simply stays vacant.
+                case OrganizationKind.Guild:
+                    ResolveOrgSuccession(c, org, world, pending,
+                        m => (m.Personality.Ambition + m.Skills.Leadership) * 0.5f,
+                        EventType.GuildLeadershipTransferred,
+                        (o, successor) => JsonSerializer.Serialize(new GuildSuccessionPayload(
+                            o.Id.Value, o.Name,
+                            c.Id.Value, c.Identity.Name,
+                            successor.Id.Value, successor.Identity.Name)));
+                    break;
 
-                var succPayload = JsonSerializer.Serialize(new ReligiousLeadershipTransferredPayload(
-                    religionOrg.Id.Value, religionOrg.Name,
-                    c.Id.Value, c.Identity.Name,
-                    successorId.Value.Value, successor.Identity.Name));
-                pending.Add(new PendingEvent(EventType.ReligiousLeadershipTransferred, c.Location, null,
-                    succPayload, new[] { c.Id.Value, successorId.Value.Value },
-                    ActorId: successorId.Value.Value, ActorName: successor.Identity.Name));
-                continue;
+                // Unlike Guild, a religion with zero remaining living members is genuinely extinct —
+                // the sink half of M15's population balance (docs/phases/archive/
+                // m15_religion_deepened.md "Long-run balance constraints"). "Eligible" (age-gated)
+                // successor absence doesn't necessarily mean extinct (a young-only congregation still
+                // has living followers), so extinction is checked separately against IsAlive alone,
+                // not SelectSuccessor's age-gated result.
+                case OrganizationKind.Religion:
+                    bool transferred = ResolveOrgSuccession(c, org, world, pending,
+                        m => (m.Personality.Wonder + m.Skills.Piety) * 0.5f,
+                        EventType.ReligiousLeadershipTransferred,
+                        (o, successor) => JsonSerializer.Serialize(new ReligiousLeadershipTransferredPayload(
+                            o.Id.Value, o.Name,
+                            c.Id.Value, c.Identity.Name,
+                            successor.Id.Value, successor.Identity.Name)));
+                    if (!transferred) MaybeMarkReligionExtinct(c, org, world, pending);
+                    break;
             }
-
-            bool anyLivingFollower = religionOrg.Members.Keys.Any(id =>
-                id != c.Id && world.GetEntity(id) is Tier1Character t && t.IsAlive);
-            if (anyLivingFollower) continue; // seat vacant, congregation survives — mirrors Guild
-
-            religionOrg.IsExtinct = true;
-            var extinctPayload = JsonSerializer.Serialize(new ReligionExtinctPayload(
-                religionOrg.Id.Value, religionOrg.Name, world.CurrentYear));
-            pending.Add(new PendingEvent(EventType.ReligionExtinct, c.Location, null,
-                extinctPayload, new[] { c.Id.Value }));
         }
+    }
+
+    /// <summary>
+    /// Promotes the highest-scoring eligible living member of <paramref name="org"/> into the seat
+    /// <paramref name="deceased"/> just vacated and emits <paramref name="eventType"/>. Returns
+    /// false (leaving the seat vacant, emitting nothing) when no eligible successor exists.
+    /// </summary>
+    private bool ResolveOrgSuccession(
+        Tier1Character deceased,
+        Organization org,
+        WorldState world,
+        List<PendingEvent> pending,
+        Func<Tier1Character, float> score,
+        EventType eventType,
+        Func<Organization, Tier1Character, string> payload)
+    {
+        var successorId = SuccessionResolver.SelectSuccessor(org, world, _cfg.MinRulerAgeSeasons, score);
+        if (!successorId.HasValue) return false;
+
+        org.LeaderId = successorId.Value;
+        var successor = (Tier1Character)world.GetEntity(successorId.Value)!;
+
+        pending.Add(new PendingEvent(eventType, deceased.Location, null,
+            payload(org, successor), new[] { deceased.Id.Value, successorId.Value.Value },
+            ActorId: successorId.Value.Value, ActorName: successor.Identity.Name));
+        return true;
+    }
+
+    /// <summary>
+    /// Marks <paramref name="religionOrg"/> extinct when <paramref name="deceased"/> was its last
+    /// living member. Guild has no equivalent — a leaderless guild just carries on.
+    /// </summary>
+    private static void MaybeMarkReligionExtinct(
+        Tier1Character deceased, Organization religionOrg, WorldState world, List<PendingEvent> pending)
+    {
+        bool anyLivingFollower = religionOrg.Members.Keys.Any(id =>
+            id != deceased.Id && world.GetEntity(id) is Tier1Character t && t.IsAlive);
+        if (anyLivingFollower) return; // seat vacant, congregation survives — mirrors Guild
+
+        religionOrg.IsExtinct = true;
+        var extinctPayload = JsonSerializer.Serialize(new ReligionExtinctPayload(
+            religionOrg.Id.Value, religionOrg.Name, world.CurrentYear));
+        pending.Add(new PendingEvent(EventType.ReligionExtinct, deceased.Location, null,
+            extinctPayload, new[] { deceased.Id.Value }));
     }
 
     /// <summary>
