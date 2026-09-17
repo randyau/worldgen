@@ -186,8 +186,6 @@ public static partial class CivTracker
         world.Civilizations[newCivId] = newCiv;
         newCiv.OrgId = CreateOrganization(world, OrganizationKind.Civilization, civName, leader.Id, leadTile);
 
-        parent.Members.Remove(leader.Id);
-        newCiv.Members.Add(leader.Id);
         SetCharacterCiv(leader, newCivId, OrganizationRole.Leader, world);
         leader.Identity = leader.Identity with { RulerOrdinal = 1 };
 
@@ -205,8 +203,6 @@ public static partial class CivTracker
         }
         foreach (var id in movingMembers)
         {
-            parent.Members.Remove(id);
-            newCiv.Members.Add(id);
             if (world.GetEntity(id) is Tier1Character m)
                 SetCharacterCiv(m, newCivId, OrganizationRole.Member, world);
         }

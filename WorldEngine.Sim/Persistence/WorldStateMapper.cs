@@ -122,13 +122,9 @@ internal static class WorldStateMapper
             Name:                    o.Name,
             LeaderId:                o.LeaderId.Value,
             FoundedYear:             o.FoundedYear,
-            SuccessionCrisisEndYear: o.SuccessionCrisisEndYear,
             Members:                 o.Members
                                       .Select(kv => new MembershipDto(kv.Key.Value, (int)kv.Value.Role, kv.Value.Loyalty, kv.Value.CivId.Value))
                                       .ToList(),
-            WarsAgainst:             o.WarsAgainst.ToDictionary(kv => kv.Key.Value.ToString(), kv => kv.Value),
-            BorderTension:           o.BorderTension.ToDictionary(kv => kv.Key.Value.ToString(), kv => kv.Value),
-            PeaceTreaties:           o.PeaceTreaties.ToDictionary(kv => kv.Key.Value.ToString(), kv => kv.Value),
             Allies:                  o.Allies.Select(a => a.Value).ToList(),
             Treasury:                o.Treasury,
             HomeSettlementCoord:     o.HomeSettlementCoord.HasValue ? TileKey(o.HomeSettlementCoord.Value) : null,
@@ -428,7 +424,6 @@ internal static class WorldStateMapper
                 new EntityId(odto.LeaderId), odto.FoundedYear,
                 odto.HomeSettlementCoord is not null ? ParseTile(odto.HomeSettlementCoord) : null)
             {
-                SuccessionCrisisEndYear = odto.SuccessionCrisisEndYear,
                 Treasury = odto.Treasury,
                 TreasuryInsolvencyFlagged = odto.TreasuryInsolvencyFlagged,
                 IsExtinct = odto.IsExtinct,
@@ -437,9 +432,6 @@ internal static class WorldStateMapper
             foreach (var m in odto.Members)
                 org.Members[new EntityId(m.CharacterId)] = new Organizations.Membership(
                     org.Id, (Organizations.OrganizationRole)m.Role, m.Loyalty, new CivId(m.CivId));
-            foreach (var kv in odto.WarsAgainst)   org.WarsAgainst[new OrganizationId(int.Parse(kv.Key))]   = kv.Value;
-            foreach (var kv in odto.BorderTension) org.BorderTension[new OrganizationId(int.Parse(kv.Key))] = kv.Value;
-            foreach (var kv in odto.PeaceTreaties) org.PeaceTreaties[new OrganizationId(int.Parse(kv.Key))] = kv.Value;
             foreach (var a in odto.Allies) org.Allies.Add(new OrganizationId(a));
             world.Organizations[org.Id] = org;
         }

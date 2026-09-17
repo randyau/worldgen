@@ -20,17 +20,13 @@ public sealed class Organization
 
     public Dictionary<EntityId, Membership> Members { get; } = new();
 
-    /// <summary>Year the leader seat became vacant. int.MinValue = seat filled, no succession pending. Generalized in 12.3.</summary>
-    public int SuccessionCrisisEndYear { get; set; } = int.MinValue;
-
-    /// <summary>Active wars: maps the enemy OrganizationId to the year war was declared.</summary>
-    public Dictionary<OrganizationId, int> WarsAgainst { get; } = new();
-
-    /// <summary>Accumulated tension toward each other Organization, mirroring Civilization.BorderTension.</summary>
-    public Dictionary<OrganizationId, float> BorderTension { get; } = new();
-
-    /// <summary>Peace treaties: maps a former enemy OrganizationId to the year peace was made.</summary>
-    public Dictionary<OrganizationId, int> PeaceTreaties { get; } = new();
+    // M15.95: SuccessionCrisisEndYear/WarsAgainst/BorderTension/PeaceTreaties previously lived
+    // here too as an intended generalization of Civilization's war/succession state, but no
+    // production code ever wrote them for any Organization Kind (Civilization's war/tension/peace
+    // mechanics deliberately stayed on Civilization per the M12 12.1 scope decision — entangled
+    // with territory/conquest/population, not generalizable membership/leadership state; nothing
+    // else populated them either). Removed rather than left as permanent dead weight — see
+    // docs/roadmap.md M15.95.
 
     /// <summary>Standing alliances, tracked as an independent fact rather than derived from leader trust.</summary>
     public HashSet<OrganizationId> Allies { get; } = new();
@@ -90,6 +86,5 @@ public sealed class Organization
         HomeSettlementCoord = homeSettlementCoord;
     }
 
-    public bool IsAtWarWith(OrganizationId other) => WarsAgainst.ContainsKey(other);
     public bool IsAllyOf(OrganizationId other) => Allies.Contains(other);
 }

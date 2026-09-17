@@ -146,11 +146,7 @@ public sealed record OrganizationDto(
     string Name,
     long   LeaderId,
     int    FoundedYear,
-    int    SuccessionCrisisEndYear,
     List<MembershipDto>     Members,
-    Dictionary<string, int> WarsAgainst,      // CivId (or future org id) → year declared
-    Dictionary<string, float> BorderTension,
-    Dictionary<string, int> PeaceTreaties,
     List<int>                Allies,
     // M14 14.0 (decision 10) — real stored treasury balance + founding-time settlement anchor.
     float                     Treasury = 0f,

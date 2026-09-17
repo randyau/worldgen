@@ -197,11 +197,7 @@ public sealed class CharacterBehaviorPhase
             // marriage leader-seat tiebreak.
             var civId = mother.CivId.IsValid ? mother.CivId : father.CivId;
             if (civId.IsValid)
-            {
                 CivTracker.SetCharacterCiv(child, civId, OrganizationRole.Member, world);
-                if (world.Civilizations.TryGetValue(civId, out var parentCiv))
-                    parentCiv.Members.Add(child.Id);
-            }
 
             world.Entities.Add(child);
 
@@ -305,7 +301,6 @@ public sealed class CharacterBehaviorPhase
             int bornOrdinal = world.ClaimNameOrdinal(born.Identity.Name);
             born.Identity = born.Identity with { NameOrdinal = bornOrdinal };
             CivTracker.SetCharacterCiv(born, stub.CivId, OrganizationRole.Member, world);
-            civ.Members.Add(born.Id);
             world.Entities.Add(born);
 
             // Emigrant: seed FoundCity (or, M11, SeaVoyage when the home landmass has no local
@@ -471,7 +466,11 @@ public sealed class CharacterBehaviorPhase
             && world.Civilizations.TryGetValue(c.CivId, out var civ))
         {
             bool wasRuler = civ.RulerId == c.Id;
-            civ.Members.Remove(c.Id);
+            // M15.95: route through SetCharacterCiv (not a bare civ.Members.Remove) so the
+            // Organization.Members side is retired too — previously only the Civilization side
+            // was cleared here, so a dead character stayed in the backing Organization's roster
+            // forever (visible as a monotonically-growing GuildSnapshot.MemberCount in the UI).
+            CivTracker.SetCharacterCiv(c, CivId.None, OrganizationRole.Member, world);
 
             // Succession: promote the highest-scoring living member to ruler. The heir-selection
             // kernel is generalized onto Organization (M12 12.3, SuccessionResolver) so M13-M15 can
@@ -535,7 +534,6 @@ public sealed class CharacterBehaviorPhase
                         reOrg.LeaderId = newRuler.Id;
                     civ.RulerCount++;
                     civ.TotalSuccessions++;
-                    civ.Members.Add(newRuler.Id);
                     newRuler.Identity = newRuler.Identity with
                     {
                         NameOrdinal = nameOrdinal,

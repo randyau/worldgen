@@ -45,8 +45,14 @@ public static partial class CivTracker
     /// <summary>
     /// M12 12.2: sets (or clears, when civId is invalid) a character's Civilization-kind
     /// membership — the sole write path for Tier1Character.Memberships' civ entry, replacing the
-    /// old `Identity = Identity with { CivId = x }` pattern. Keeps Tier1Character.Memberships and
-    /// the backing Organization.Members in sync from one call, so they can never drift.
+    /// old `Identity = Identity with { CivId = x }` pattern. Keeps Tier1Character.Memberships, the
+    /// backing Organization.Members, and Civilization.Members in sync from one call, so they can
+    /// never drift. M15.95: previously only the first two were kept in sync here — every call site
+    /// had to separately touch civ.Members.Add/Remove by hand, and the civ-death path
+    /// (CharacterBehaviorPhase.KillCharacter) forgot the Organization.Members half, letting a
+    /// Civilization-kind org's member roster grow forever with dead characters (visible in the
+    /// economic ledger panel's GuildSnapshot.MemberCount). Passing CivId.None here now retires
+    /// membership from all three collections at once, so a future call site can't repeat that bug.
     /// </summary>
     internal static void SetCharacterCiv(Tier1Character c, CivId civId, OrganizationRole role, WorldState world)
     {
@@ -57,6 +63,9 @@ public static partial class CivTracker
                 OrganizationMembership.Leave(c, oldOrg);
             else
                 c.Memberships.Remove(existing); // no Organization record (pre-M12 test fixture)
+
+            if (world.Civilizations.TryGetValue(existing.CivId, out var oldCiv))
+                oldCiv.Members.Remove(c.Id);
         }
 
         if (!civId.IsValid) return;
@@ -76,6 +85,8 @@ public static partial class CivTracker
             // Organization record missing (pre-M12 test fixture) — character side only.
             c.Memberships.Add(new Membership(orgId, role, 1.0f, civId));
         }
+
+        civ.Members.Add(c.Id);
     }
 
     public static void Resolve(
@@ -152,7 +163,6 @@ public static partial class CivTracker
             string civSuffix = GetCivNameSuffix(founder.Identity.AncestryId, world.SimConfig.AncestryRegistry);
             string civName   = $"{founder.Identity.Name}'s {civSuffix}";
             var civ = new Civilization(civId, civName, founder.Id, cmd.Tile, world.CurrentYear);
-            civ.Members.Add(founder.Id);
             world.Civilizations[civId] = civ;
             civ.OrgId = CreateOrganization(world, OrganizationKind.Civilization, civName, founder.Id, cmd.Tile);
             SetCharacterCiv(founder, civId, OrganizationRole.Leader, world);
