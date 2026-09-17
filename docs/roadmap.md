@@ -62,7 +62,7 @@ where the codebase now is.
 | M13 | Generational & Domestic Drama | ✅ COMPLETE 2026-08-02 | Family bonds, mentorship, non-war rivalry, betrayal within a civ. See archive. |
 | M14 | Economy & Independent Wealth | ✅ COMPLETE 2026-08-05 | Persistent trade routes; merchant wealth as a power track separate from rulership. See `docs/phases/archive/m14_economy_independent_wealth.md`. |
 | M15 | Religion, Deepened | ✅ COMPLETE 2026-08-06 | Schism, heresy, pilgrimage; religious leaders as a third power track alongside rulers/merchants. See `docs/phases/archive/m15_religion_deepened.md`. |
-| M15.9 | Sim Tech Debt *(new — inserted 2026-09-17)* | not started | Config-ify pervasive M2/M4-era hardcoded constants; review the entity-ID base-offset allocation scheme for collision risk; refactor debt from a 2026-09-17 review (membership-invariant consolidation, dead command-dispatch duplication, GoalManager goal-type tables, org succession dedup, cooldown-field conventions, dampening composition, test scaffolding). |
+| M15.9 | Sim Tech Debt *(new — inserted 2026-09-17)* | partially complete | Shipped 2026-09-17: membership-invariant consolidation, command-dispatch dedup, GoalManager goal-type tables, org succession dedup, cooldown-field conventions, dampening composition. Remaining: config-ify pervasive M2/M4-era hardcoded constants; review the entity-ID base-offset allocation scheme; test-scaffolding dedup (`FindLandTile`/`SpawnAt`/reflection call sites); reset `IdGenerator._counter` between test runs. |
 | M15.95 | Civilization/Organization Unification *(new — inserted 2026-09-17)* | not started | Finish the M12 migration: `Civilization` and `Organization` still carry parallel, one-directionally-mirrored copies of members/succession-timer/tension state. Either make `Civilization`'s copies computed views over the `Organization` side, or formally retire `Organization`'s civ-membership fields as unused. Large, atomic (cannot be half-migrated), touches the save format and war/unrest/diplomacy hot paths — deliberately scheduled as its own milestone rather than folded into M15.9. |
 | M16 | Disasters, Reworked | summary | Give eruptions/disasters real consequences; expand variety beyond wildfire/beasts; multi-year recovery arcs. |
 | M17 | Exploration & the Unknown | summary | Land expeditions; first contact; discovering ruins/artifacts from prior collapsed civs. |
@@ -459,27 +459,35 @@ M12–M18 extends them instead of duplicating them.
   previously only read Ambition/Status/RNG with zero input from relationships.
 - **M14 — Economy & Independent Wealth.** ✅ COMPLETE 2026-08-05 — see `docs/phases/archive/m14_economy_independent_wealth.md` for the phase-by-phase plan, kickoff design decisions, and what shipped (all six phases 14.0–14.5 same session). Trade routes as persistent entities between settlements (replacing the current one-shot `MerchantTradeCompleted` transaction) that can be severed by war/disaster/piracy, creating dependency and scarcity stories — built as a full caravan/travel-time simulation, not a lightweight link. Wealth is a real fungible currency, not an abstract score — a per-character `Wealth` balance backed by (not minted separately from) the gold/silver/gems the economy already produces, so it needs no new production behavior to exist; sourced from trade, spent on goal fulfillment (buying a coveted artifact instead of only claim/conflict), inherited-and-partially-looted on death. Prices are seeded/formulaic (a base-value table modulated by local scarcity, not a discovered market — 10k-year transaction volume can't support real price-seeking) and corrected over time by a single world-wide, per-capita `GlobalPriceIndex` so ~10,000 years of near-permanent precious-metal accretion (`WealthSpoilageRate` ≈ 0) doesn't decouple fixed prices from a steadily inflating money supply. Guilds model as `Organization`s (M12), whose heads use the generalized succession mechanic unmodified. Debt and economic ruin extend the existing civ-level collapse/splinter pathway rather than becoming a parallel failure mode. Faction-funding ("wealth buys political influence") and interpersonal theft are explicitly deferred past M14. Builds on M9's economic-depth foundation (per-capita demand, settlement specialization) and the trade-network topology M9 deliberately left out of scope; also the second consumer (after M18) of Tier2-role behavior variability.
 - **M15 — Religion, Deepened.** ✅ COMPLETE 2026-08-06 — see `docs/phases/archive/m15_religion_deepened.md` (all six phases 15.0–15.6 same session). Schism — reuse the `CivSplintered` pattern (`3212`) for religions splitting into competing sects, now modeled as an `Organization` (M12) with real followers instead of a flavor event. Heresy/persecution short of holy war. Pilgrimage as a goal type. Religious leaders as a third power track alongside rulers (political) and merchants (M14, economic), using the generalized succession mechanic for a religious-leader seat (e.g. contested succession of a high priest).
-- **M15.9 — Sim Tech Debt.** Not started. Two systemic items surfaced by a 2026-09-17 code-review
-  pass, deliberately deferred rather than fixed inline because both are pervasive rather than
-  localized: (1) hardcoded sim-affecting constants in older M2/M4-era code (e.g.
-  `AdvanceFoundReligionGoal`'s need-boosts, `ResolveRest`'s increments) that predate the
-  SimConfig-everywhere convention M9+ code follows — bring them into `SimConfig`/`sim_config.toml`.
-  (2) The entity-ID allocation scheme (`tick * 997 & 0x7FFFFFFF` plus a per-system base offset,
-  e.g. `400_000` shared by `CivTracker.Unrest` and `PopulationDynamicsPhase` crystallization with
-  differing hash multipliers) has already produced two real collision bugs (beast emergence/
-  reproduction, fixed in the same review pass) — worth a design review of the whole scheme rather
-  than patching each collision site as it's found. Do this before M16 so disaster-driven mass
-  entity spawns (settlement destruction, displacement waves) don't inherit the same collision risk.
-  Also carries the refactor debt from a 2026-09-17 review pass covering M9–M15 accretion:
-  consolidate the nine ad-hoc `Membership` join/leave/loyalty-update sites into one shared helper
-  (and fix a reorder side-effect in loyalty updates that lets `Tier1Character.CivId` resolution
-  drift — re-run the balance suite after); dedupe the civ-vs-org command dispatch double-switch in
-  `CivTracker.Resolve`/`CharacterBehaviorPhase.ResolveCommand`; collapse `GoalManager`'s four
-  hand-maintained goal-type membership lists into one `GoalTypeTraits` table; merge the
-  near-identical Guild/Religion succession blocks in `CharacterBehaviorPhase.KillCharacter`; unify
-  the three cooldown-field sentinel/boundary conventions; and compose the `*Dampening` call-site
-  duplication. See the 2026-09-17 review findings for file:line detail. Deliberately excludes the
-  `Civilization`/`Organization` dual-state migration — see M15.95.
+- **M15.9 — Sim Tech Debt.** Partially complete (2026-09-17). The refactor-debt half of this
+  milestone shipped same-day: consolidated the nine ad-hoc `Membership` join/leave/loyalty-update
+  sites into `OrganizationMembership.Join/Leave/SetLoyalty` (fixing a reorder side-effect in
+  loyalty updates that let `Tier1Character.CivId` resolution drift, and a related save/load bug
+  where `Organization.Members[...].CivId` didn't round-trip); deduped the civ-vs-org command
+  dispatch double-switch behind an `ICivCommand` marker (with an architecture-rule guard);
+  collapsed `GoalManager`'s five hand-maintained goal-type lists into one `GoalTypeTraits` table;
+  merged the near-identical Guild/Religion succession blocks in
+  `CharacterBehaviorPhase.KillCharacter`; unified the cooldown-field conventions via a `Cooldown`
+  helper; and composed the `*Dampening` call-site duplication into `HostilityDampening`. Fast
+  suite: 851/851 passing, doc-check green. **Still not started:** (1) hardcoded sim-affecting
+  constants in older M2/M4-era code (e.g. `AdvanceFoundReligionGoal`'s need-boosts,
+  `ResolveRest`'s increments) that predate the SimConfig-everywhere convention M9+ code follows —
+  bring them into `SimConfig`/`sim_config.toml`. (2) The entity-ID allocation scheme
+  (`tick * 997 & 0x7FFFFFFF` plus a per-system base offset, e.g. `400_000` shared by
+  `CivTracker.Unrest` and `PopulationDynamicsPhase` crystallization with differing hash
+  multipliers) has already produced two real collision bugs (beast emergence/reproduction, fixed
+  in the 2026-09-17 code-review pass) — worth a design review of the whole scheme rather than
+  patching each collision site as it's found. Do this before M16 so disaster-driven mass entity
+  spawns (settlement destruction, displacement waves) don't inherit the same collision risk.
+  (3) *New, found during the membership-consolidation work:* `IdGenerator._counter`
+  (`WorldEngine.Sim/Core/EntityId.cs`) is a process-wide static field never reset between test
+  runs. `WorldRng` draws are keyed by entity ID, so any test sensitive to absolute ID values
+  depends on how many IDs other tests happened to consume first in the same process — the
+  `Category=Balance` suite's religion long-run test showed run-to-run-inconsistent results when
+  run as a full batch (but is 100% reproducible in isolation) because of exactly this. Not a sim
+  correctness bug (production runs are single-world-per-process), but worth a per-test-run reset
+  hook so balance-test results stop depending on unrelated tests' execution order. Deliberately
+  excludes the `Civilization`/`Organization` dual-state migration — see M15.95.
 - **M15.95 — Civilization/Organization Unification.** Not started. `Civilization` and
   `Organization` still carry parallel, one-directionally-mirrored copies of the same state
   (`Members`, `SuccessionCrisisEndYear`, `BorderTension`, war/peace state) — a migration M12 started
