@@ -1,4 +1,3 @@
-using System.Reflection;
 using FluentAssertions;
 using WorldEngine.Sim.Civilizations;
 using WorldEngine.Sim.Config;
@@ -20,34 +19,11 @@ namespace WorldEngine.Tests.Unit;
 /// </summary>
 public class ReligionOrganizationTests
 {
-    private static TileCoord FindLandTile(WorldState world)
-    {
-        for (int y = 1; y < world.TileGrid.TileHeight - 1; y++)
-        for (int x = 0; x < world.TileGrid.TileWidth; x++)
-        {
-            var c = new TileCoord(x, y);
-            if (world.IsLand(c)) return c;
-        }
-        throw new InvalidOperationException("No suitable land tile found");
-    }
-
-    private static Tier1Character SpawnAt(WorldState world, TileCoord tile, long seedOffset)
-    {
-        var biome = (BiomeType)world.TileGrid.GetTile(tile).BiomeType;
-        var c = CharacterFactory.Spawn(tile, biome, world.WorldSeed, seedOffset, world.SimConfig, world.CurrentYear, startAsAdult: true);
-        world.Entities.Add(c);
-        return c;
-    }
-
     private static void KillCharacter(CharacterBehaviorPhase phase, Tier1Character c, WorldState world, List<PendingEvent> pending) =>
-        typeof(CharacterBehaviorPhase)
-            .GetMethod("KillCharacter", BindingFlags.NonPublic | BindingFlags.Instance)!
-            .Invoke(phase, new object[] { c, world, "test", pending });
+        phase.KillCharacter(c, world, "test", pending);
 
     private static void AdvanceFoundReligionGoal(CharacterBehaviorPhase phase, Tier1Character c, WorldState world, List<PendingEvent> pending) =>
-        typeof(CharacterBehaviorPhase)
-            .GetMethod("AdvanceFoundReligionGoal", BindingFlags.NonPublic | BindingFlags.Instance)!
-            .Invoke(phase, new object[] { c, world, pending, 0L });
+        phase.AdvanceFoundReligionGoal(c, world, pending, 0L);
 
     // ─── religions.toml content ───────────────────────────────────────────────
 
@@ -84,11 +60,11 @@ public class ReligionOrganizationTests
     public void AdvanceFoundReligionGoal_CreatesOrganization_WithFounderAsLeader()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 42);
-        var tile = FindLandTile(world);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
         var civ = new CivId(1);
         world.Civilizations[civ] = new Civilization(civ, "TestCiv", new EntityId(1), tile, 1);
 
-        var founder = SpawnAt(world, tile, 1L);
+        var founder = WorldGenTestHelpers.SpawnAt(world, tile, 1L);
         founder.Goals.Add(new GoalData
         {
             Type = GoalType.FoundReligion,
@@ -118,9 +94,9 @@ public class ReligionOrganizationTests
     public void ReligionLeaderDeath_TriggersSuccession_ViaSuccessionResolverKernel()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 105);
-        var tile = FindLandTile(world);
-        var leader = SpawnAt(world, tile, 1L);
-        var heir = SpawnAt(world, tile, 2L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var leader = WorldGenTestHelpers.SpawnAt(world, tile, 1L);
+        var heir = WorldGenTestHelpers.SpawnAt(world, tile, 2L);
 
         var orgId = CivTracker.CreateOrganization(world, OrganizationKind.Religion, "Test Faith", leader.Id, tile);
         var org = world.Organizations[orgId];
@@ -144,8 +120,8 @@ public class ReligionOrganizationTests
     public void ReligionLeaderDeath_WithNoOtherLivingMembers_FiresExtinct()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 106);
-        var tile = FindLandTile(world);
-        var leader = SpawnAt(world, tile, 1L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var leader = WorldGenTestHelpers.SpawnAt(world, tile, 1L);
 
         var orgId = CivTracker.CreateOrganization(world, OrganizationKind.Religion, "Lonely Faith", leader.Id, tile);
         var org = world.Organizations[orgId];
@@ -168,8 +144,8 @@ public class ReligionOrganizationTests
     public void WatchSnapshot_ForReligionLeader_ShowsLeaderRole()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 107);
-        var tile = FindLandTile(world);
-        var leader = SpawnAt(world, tile, 1L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var leader = WorldGenTestHelpers.SpawnAt(world, tile, 1L);
         var orgId = CivTracker.CreateOrganization(world, OrganizationKind.Religion, "Watched Faith", leader.Id, tile);
         var membership = new Membership(orgId, OrganizationRole.Leader, 1f);
         world.Organizations[orgId].Members[leader.Id] = membership;
@@ -192,8 +168,8 @@ public class ReligionOrganizationTests
     public void WatchSnapshot_ForUnaffiliatedCharacter_ShowsNoReligion()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 108);
-        var tile = FindLandTile(world);
-        var agnostic = SpawnAt(world, tile, 1L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var agnostic = WorldGenTestHelpers.SpawnAt(world, tile, 1L);
 
         world.WatchedEntityId   = agnostic.Id;
         world.WatchedEntityKind = EntityKind.Tier1Character;

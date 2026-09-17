@@ -19,40 +19,13 @@ namespace WorldEngine.Tests.Unit;
 /// </summary>
 public class Tier2RivalryAndMarriageTests
 {
-    private static TileCoord FindLandTile(WorldState world)
-    {
-        for (int y = 1; y < world.TileGrid.TileHeight - 1; y++)
-        for (int x = 0; x < world.TileGrid.TileWidth; x++)
-        {
-            var c = new TileCoord(x, y);
-            if (world.IsLand(c)) return c;
-        }
-        throw new System.Exception("no land tile found");
-    }
-
-    private static Tier1Character SpawnAt(WorldState world, TileCoord tile, long seedOffset)
-    {
-        var biome = (BiomeType)world.TileGrid.GetTile(tile).BiomeType;
-        var c = CharacterFactory.Spawn(tile, biome, world.WorldSeed, seedOffset, world.SimConfig, world.CurrentYear, startAsAdult: true);
-        world.Entities.Add(c);
-        return c;
-    }
-
-    private static Tier2Character SpawnTier2At(WorldState world, TileCoord tile, string name)
-    {
-        var c = new Tier2Character(EntityId.New(), tile, name, PersonalityVector6.Default,
-            new LivelihoodData(Tier2Role.Merchant, null, tile, 0.5f), maxHealth: 100, maxAgeSeason: 800);
-        world.Entities.Add(c);
-        return c;
-    }
-
     [Fact]
     public void DeclareRivalry_AgainstTier2_SetsRivalFlagWithBaseFearOnly()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 301);
-        var tile  = FindLandTile(world);
-        var c     = SpawnAt(world, tile, 1L);
-        var t2    = SpawnTier2At(world, tile, "T2Rival");
+        var tile  = WorldGenTestHelpers.FindLandTile(world);
+        var c     = WorldGenTestHelpers.SpawnAt(world, tile, 1L);
+        var t2    = WorldGenTestHelpers.SpawnTier2At(world, tile, "T2Rival");
 
         var pending = new List<PendingEvent>();
         CivTracker.Resolve(new DeclareRivalry(c.Id, t2.Id), world, pending);
@@ -69,9 +42,9 @@ public class Tier2RivalryAndMarriageTests
     public void DeclareRivalry_ReDeclaredAgainstExistingTier2Rival_EscalatesToFeud()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 302);
-        var tile  = FindLandTile(world);
-        var c     = SpawnAt(world, tile, 11L);
-        var t2    = SpawnTier2At(world, tile, "T2Rival");
+        var tile  = WorldGenTestHelpers.FindLandTile(world);
+        var c     = WorldGenTestHelpers.SpawnAt(world, tile, 11L);
+        var t2    = WorldGenTestHelpers.SpawnTier2At(world, tile, "T2Rival");
 
         var pending1 = new List<PendingEvent>();
         CivTracker.Resolve(new DeclareRivalry(c.Id, t2.Id), world, pending1);
@@ -88,9 +61,9 @@ public class Tier2RivalryAndMarriageTests
     public void Placate_Tier2Rival_ReducesFearAndCanReconcile()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 303);
-        var tile  = FindLandTile(world);
-        var c     = SpawnAt(world, tile, 21L);
-        var t2    = SpawnTier2At(world, tile, "T2Rival");
+        var tile  = WorldGenTestHelpers.FindLandTile(world);
+        var c     = WorldGenTestHelpers.SpawnAt(world, tile, 21L);
+        var t2    = WorldGenTestHelpers.SpawnTier2At(world, tile, "T2Rival");
 
         var rel = world.Relationships.GetOrCreate(c.Id, t2.Id);
         world.Relationships.Upsert(rel with { Trust = -0.5f, Fear = 0.6f, Flags = RelationshipFlags.IsRival });
@@ -108,12 +81,12 @@ public class Tier2RivalryAndMarriageTests
     public void ProposeMarriage_ToTier2BondCompanion_PromotesThenMarries()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 304);
-        var tile  = FindLandTile(world);
+        var tile  = WorldGenTestHelpers.FindLandTile(world);
         var famCfg = world.SimConfig.Family;
 
-        var c  = SpawnAt(world, tile, 31L);
+        var c  = WorldGenTestHelpers.SpawnAt(world, tile, 31L);
         c.AgeSeason = famCfg.MarriageMinAgeSeasons + 10; // MinRulerAgeSeasons (startAsAdult's floor) < MarriageMinAgeSeasons
-        var t2 = SpawnTier2At(world, tile, "T2Beloved");
+        var t2 = WorldGenTestHelpers.SpawnTier2At(world, tile, "T2Beloved");
 
         // Hand-construct the Bond goal targeting the Tier2 (bypassing GoalManager's formation gate,
         // which is exercised elsewhere) and satisfy ResolveMarriage's preconditions directly.
@@ -153,9 +126,9 @@ public class Tier2RivalryAndMarriageTests
     public void ProposeMarriage_ToDeadTier2_DoesNothing()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 305);
-        var tile  = FindLandTile(world);
-        var c     = SpawnAt(world, tile, 41L);
-        var t2    = SpawnTier2At(world, tile, "T2Gone");
+        var tile  = WorldGenTestHelpers.FindLandTile(world);
+        var c     = WorldGenTestHelpers.SpawnAt(world, tile, 41L);
+        var t2    = WorldGenTestHelpers.SpawnTier2At(world, tile, "T2Gone");
         t2.IsAlive = false;
 
         var pending = new List<PendingEvent>();

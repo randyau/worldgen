@@ -20,21 +20,10 @@ namespace WorldEngine.Tests.Integration;
 /// </summary>
 public class SuccessionAgeGateTests
 {
-    private static TileCoord FindLandTile(WorldState world)
-    {
-        for (int y = 1; y < world.TileGrid.TileHeight - 1; y++)
-        for (int x = 0; x < world.TileGrid.TileWidth; x++)
-        {
-            var c = new TileCoord(x, y);
-            if (world.IsLand(c)) return c;
-        }
-        throw new InvalidOperationException("No land tile found");
-    }
-
     private static (WorldState world, Civilization civ, TileCoord tile) PlantCiv(int seed)
     {
         var world = WorldTestHelper.CreateSmallWorld(seed);
-        var tile  = FindLandTile(world);
+        var tile  = WorldGenTestHelpers.FindLandTile(world);
         var biome = (BiomeType)world.TileGrid.GetTile(tile).BiomeType;
 
         var founder = CharacterFactory.Spawn(tile, biome, world.WorldSeed, 1L, world.SimConfig, world.CurrentYear, startAsAdult: true);

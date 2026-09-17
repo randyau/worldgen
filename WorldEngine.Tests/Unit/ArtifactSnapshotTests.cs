@@ -65,7 +65,7 @@ public class ArtifactSnapshotTests
         var world = BuildWorld();
 
         // Find a land tile and plant a settlement manually
-        var tile = FindLandTile(world);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
         var settlementName = "Ironvale";
         PlantSettlementAt(world, tile, settlementName);
 
@@ -162,17 +162,6 @@ public class ArtifactSnapshotTests
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
-
-    private static TileCoord FindLandTile(WorldState world)
-    {
-        for (int y = 1; y < world.TileGrid.TileHeight - 1; y++)
-        for (int x = 0; x < world.TileGrid.TileWidth;      x++)
-        {
-            var c = new TileCoord(x, y);
-            if (world.IsLand(c)) return c;
-        }
-        throw new InvalidOperationException("No land tile found in test world.");
-    }
 
     private static void PlantSettlementAt(WorldState world, TileCoord tile, string name)
     {

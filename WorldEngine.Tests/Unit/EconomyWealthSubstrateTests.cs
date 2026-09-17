@@ -24,33 +24,14 @@ public class EconomyWealthSubstrateTests : IDisposable
 
     public void Dispose() => WorldStateSaver.DeleteSave(_saveDir);
 
-    private static TileCoord FindLandTile(WorldState world)
-    {
-        for (int y = 1; y < world.TileGrid.TileHeight - 1; y++)
-        for (int x = 0; x < world.TileGrid.TileWidth; x++)
-        {
-            var c = new TileCoord(x, y);
-            if (world.IsLand(c)) return c;
-        }
-        throw new Exception("no land tile found");
-    }
-
-    private static Tier1Character SpawnAt(WorldState world, TileCoord tile, long seedOffset)
-    {
-        var biome = (BiomeType)world.TileGrid.GetTile(tile).BiomeType;
-        var c = CharacterFactory.Spawn(tile, biome, world.WorldSeed, seedOffset, world.SimConfig, world.CurrentYear, startAsAdult: true);
-        world.Entities.Add(c);
-        return c;
-    }
-
     // ─── DTO round-trip: Wealth (Tier1 + Tier2) and Notability (Tier2) ─────────────────────────
 
     [Fact]
     public void Tier1Wealth_RoundTripsThroughSaveLoad()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 501);
-        var tile = FindLandTile(world);
-        var c = SpawnAt(world, tile, 1L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var c = WorldGenTestHelpers.SpawnAt(world, tile, 1L);
         c.AddWealth(42.5f);
 
         WorldStateSaver.Save(world, _saveDir, world.SimConfig);
@@ -64,7 +45,7 @@ public class EconomyWealthSubstrateTests : IDisposable
     public void Tier2WealthAndNotability_RoundTripThroughSaveLoad()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 502);
-        var tile = FindLandTile(world);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
         var t2 = new Tier2Character(EntityId.New(), tile, "T2Wealthy", PersonalityVector6.Default,
             new LivelihoodData(Tier2Role.Merchant, null, tile, 0.5f), maxHealth: 100, maxAgeSeason: 800);
         t2.AddWealth(17f);
@@ -84,8 +65,8 @@ public class EconomyWealthSubstrateTests : IDisposable
     public void OrganizationTreasuryAndHomeSettlement_RoundTripThroughSaveLoad()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 503);
-        var tile = FindLandTile(world);
-        var founder = SpawnAt(world, tile, 1L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var founder = WorldGenTestHelpers.SpawnAt(world, tile, 1L);
         var pending = new List<PendingEvent>();
         CivTracker.Resolve(new EstablishSettlement(founder.Id, tile), world, pending);
 
@@ -170,8 +151,8 @@ public class EconomyWealthSubstrateTests : IDisposable
     public void EconomyPhase_RunAnnual_MovesIndexTowardTarget()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 509);
-        var tile = FindLandTile(world);
-        var c = SpawnAt(world, tile, 1L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var c = WorldGenTestHelpers.SpawnAt(world, tile, 1L);
         // High per-capita Wealth relative to ReferenceMoneySupplyPerCapita pushes the target above
         // the seeded starting index.
         c.AddWealth(world.SimConfig.Economy.ReferenceMoneySupplyPerCapita * 10f);
@@ -187,8 +168,8 @@ public class EconomyWealthSubstrateTests : IDisposable
     public void EconomyPhase_RunAnnual_StaysWithinClampBand()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 510);
-        var tile = FindLandTile(world);
-        var c = SpawnAt(world, tile, 1L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var c = WorldGenTestHelpers.SpawnAt(world, tile, 1L);
         c.AddWealth(1_000_000f); // absurdly large — target would blow past PriceIndexMax without the clamp
 
         for (int i = 0; i < 50; i++)
@@ -202,8 +183,8 @@ public class EconomyWealthSubstrateTests : IDisposable
     public void EconomyPhase_RunAnnual_AppliesPersonalWealthSpoilage()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 511);
-        var tile = FindLandTile(world);
-        var c = SpawnAt(world, tile, 1L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var c = WorldGenTestHelpers.SpawnAt(world, tile, 1L);
         c.AddWealth(100f);
 
         EconomyPhase.RunAnnual(world, world.SimConfig);
@@ -218,11 +199,11 @@ public class EconomyWealthSubstrateTests : IDisposable
         // A standing WealthDrop must move the index the same way personal Wealth would — confirms
         // decision 5's revision (drops counted in TotalMoneySupply, not a measurement leak).
         var world = WorldTestHelper.CreateSmallWorld(seed: 512);
-        var tile = FindLandTile(world);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
         world.WealthDrops.Add(new WealthDrop(tile, world.SimConfig.Economy.ReferenceMoneySupplyPerCapita * 10f, 0));
         // Give the world at least one population unit so per-capita isn't dividing by the drop's
         // own nonexistent population.
-        SpawnAt(world, tile, 1L);
+        WorldGenTestHelpers.SpawnAt(world, tile, 1L);
 
         float before = world.GlobalPriceIndex;
         EconomyPhase.RunAnnual(world, world.SimConfig);
@@ -234,7 +215,7 @@ public class EconomyWealthSubstrateTests : IDisposable
     public void EconomyPhase_RunAnnual_SpoilsAndPrunesWealthDrops()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 513);
-        var tile = FindLandTile(world);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
         world.WealthDrops.Add(new WealthDrop(tile, 100f, 0));
 
         EconomyPhase.RunAnnual(world, world.SimConfig);
@@ -248,7 +229,7 @@ public class EconomyWealthSubstrateTests : IDisposable
     public void EconomyPhase_RunAnnual_PrunesNegligibleWealthDrops()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 514);
-        var tile = FindLandTile(world);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
         world.WealthDrops.Add(new WealthDrop(tile, 0.005f, 0)); // below the 0.01 prune floor
 
         EconomyPhase.RunAnnual(world, world.SimConfig);
@@ -258,18 +239,16 @@ public class EconomyWealthSubstrateTests : IDisposable
 
     // ─── TransferWealthOnDeath ──────────────────────────────────────────────────────────────────
 
-    private static void KillViaReflection(CharacterBehaviorPhase phase, Tier1Character c, WorldState world, List<PendingEvent> pending) =>
-        typeof(CharacterBehaviorPhase)
-            .GetMethod("KillCharacter", BindingFlags.NonPublic | BindingFlags.Instance)!
-            .Invoke(phase, new object[] { c, world, "test", pending });
+    private static void KillCharacterHelper(CharacterBehaviorPhase phase, Tier1Character c, WorldState world, List<PendingEvent> pending) =>
+        phase.KillCharacter(c, world, "test", pending);
 
     [Fact]
     public void TransferWealthOnDeath_WithEligibleHeir_SplitsByInheritanceShare()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 515);
-        var tile = FindLandTile(world);
-        var deceased = SpawnAt(world, tile, 61L);
-        var spouse   = SpawnAt(world, tile, 62L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var deceased = WorldGenTestHelpers.SpawnAt(world, tile, 61L);
+        var spouse   = WorldGenTestHelpers.SpawnAt(world, tile, 62L);
         deceased.AgeSeason = world.SimConfig.Family.MarriageMinAgeSeasons + 10;
         spouse.AgeSeason   = world.SimConfig.Family.MarriageMinAgeSeasons + 10;
 
@@ -278,7 +257,7 @@ public class EconomyWealthSubstrateTests : IDisposable
 
         var phase = new CharacterBehaviorPhase(world.SimConfig);
         var pending = new List<PendingEvent>();
-        KillViaReflection(phase, deceased, world, pending);
+        KillCharacterHelper(phase, deceased, world, pending);
 
         var econCfg = world.SimConfig.Economy;
         spouse.Wealth.Should().BeApproximately(100f * econCfg.WealthInheritanceShare, 0.01f);
@@ -293,13 +272,13 @@ public class EconomyWealthSubstrateTests : IDisposable
     public void TransferWealthOnDeath_NoEligibleHeir_DropsInFull()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 516);
-        var tile = FindLandTile(world);
-        var deceased = SpawnAt(world, tile, 71L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var deceased = WorldGenTestHelpers.SpawnAt(world, tile, 71L);
         deceased.AddWealth(50f); // no family/spouse — FindHeir returns null
 
         var phase = new CharacterBehaviorPhase(world.SimConfig);
         var pending = new List<PendingEvent>();
-        KillViaReflection(phase, deceased, world, pending);
+        KillCharacterHelper(phase, deceased, world, pending);
 
         deceased.Wealth.Should().Be(0f);
         world.WealthDrops.Should().ContainSingle(d => d.Location == deceased.Location);
@@ -310,12 +289,12 @@ public class EconomyWealthSubstrateTests : IDisposable
     public void TransferWealthOnDeath_ZeroWealth_IsNoOp()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 517);
-        var tile = FindLandTile(world);
-        var deceased = SpawnAt(world, tile, 81L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var deceased = WorldGenTestHelpers.SpawnAt(world, tile, 81L);
 
         var phase = new CharacterBehaviorPhase(world.SimConfig);
         var pending = new List<PendingEvent>();
-        KillViaReflection(phase, deceased, world, pending);
+        KillCharacterHelper(phase, deceased, world, pending);
 
         world.WealthDrops.Should().BeEmpty();
     }
@@ -327,13 +306,11 @@ public class EconomyWealthSubstrateTests : IDisposable
         // isn't at the mercy of the utility scorer choosing to move the character away from the
         // drop's tile before the claim check runs later in the same tick.
         var world = WorldTestHelper.CreateSmallWorld(seed: 518);
-        var tile = FindLandTile(world);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
         world.WealthDrops.Add(new WealthDrop(tile, 30f, 0));
-        var claimant = SpawnAt(world, tile, 91L);
+        var claimant = WorldGenTestHelpers.SpawnAt(world, tile, 91L);
 
-        typeof(CharacterBehaviorPhase)
-            .GetMethod("ClaimWealthDrops", BindingFlags.NonPublic | BindingFlags.Static)!
-            .Invoke(null, new object[] { world });
+        CharacterBehaviorPhase.ClaimWealthDrops(world);
 
         claimant.Wealth.Should().BeApproximately(30f, 0.01f);
         world.WealthDrops.Should().BeEmpty();

@@ -80,7 +80,7 @@ public sealed class UtilityScorer
         return candidates[^1].Command;
     }
 
-    private List<ScoredAction> BuildCandidates(
+    internal List<ScoredAction> BuildCandidates(
         Tier1Character c,
         IWorldStateReadOnly world,
         CharacterSimConfig cfg)
@@ -856,7 +856,7 @@ public sealed class UtilityScorer
     /// family tie (low Loyalty) is barely deterred; one who holds it strongly is dampened down to
     /// <see cref="FamilyConfig.KinInEnemyCivWarDampenMin"/>.
     /// </summary>
-    private static float KinDampening(Tier1Character c, CivId targetCivId, IWorldStateReadOnly world, FamilyConfig cfg)
+    internal static float KinDampening(Tier1Character c, CivId targetCivId, IWorldStateReadOnly world, FamilyConfig cfg)
     {
         if (!targetCivId.IsValid) return 1f;
         float maxFamilyLoyalty = 0f;
@@ -884,7 +884,7 @@ public sealed class UtilityScorer
     /// self-interest" (roadmap proposal #2). Scales with how much of the edge's -1..1 Debt range is
     /// owed, same shape as <see cref="KinDampening"/>.
     /// </summary>
-    private static float DebtDampening(Tier1Character c, CivId targetCivId, IWorldStateReadOnly world, DebtConfig cfg)
+    internal static float DebtDampening(Tier1Character c, CivId targetCivId, IWorldStateReadOnly world, DebtConfig cfg)
     {
         if (!targetCivId.IsValid) return 1f;
         float maxOwed = 0f;
@@ -909,7 +909,7 @@ public sealed class UtilityScorer
     /// active outlet; this is the passive one. Same shape as <see cref="KinDampening"/>/
     /// <see cref="DebtDampening"/>.
     /// </summary>
-    private static float FearDampening(Tier1Character c, CivId targetCivId, IWorldStateReadOnly world, FearConfig cfg)
+    internal static float FearDampening(Tier1Character c, CivId targetCivId, IWorldStateReadOnly world, FearConfig cfg)
     {
         if (!targetCivId.IsValid) return 1f;
         float maxFear = 0f;
@@ -1146,7 +1146,7 @@ public sealed class UtilityScorer
     /// <see cref="SpotlightIntentBias"/>. Operates as an in-place mutation of the candidates list
     /// so the softmax still selects probabilistically — survival instincts can still win.
     /// </summary>
-    private static void ApplySpotlightBias(
+    internal static void ApplySpotlightBias(
         List<ScoredAction> candidates,
         IWorldStateReadOnly world,
         Tier1Character c)

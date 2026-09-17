@@ -19,38 +19,23 @@ namespace WorldEngine.Tests.Unit;
 /// </summary>
 public class MarriageDiplomacyTests
 {
-    private static TileCoord FindLandTile(WorldState world)
-    {
-        for (int y = 1; y < world.TileGrid.TileHeight - 1; y++)
-        for (int x = 0; x < world.TileGrid.TileWidth; x++)
-        {
-            var c = new TileCoord(x, y);
-            if (world.IsLand(c)) return c;
-        }
-        throw new System.Exception("no land tile found");
-    }
-
-    private static (Tier1Character ruler, CivId civId) SpawnRuler(WorldState world, TileCoord tile, long seedOffset, string civName)
-    {
-        var biome = (BiomeType)world.TileGrid.GetTile(tile).BiomeType;
-        var ruler = CharacterFactory.Spawn(tile, biome, world.WorldSeed, seedOffset, world.SimConfig, world.CurrentYear, startAsAdult: true);
-        ruler.AgeSeason = world.SimConfig.Family.MarriageMinAgeSeasons + 10;
-        world.Entities.Add(ruler);
-
-        var civId = new CivId(world.NextCivId++);
-        world.Civilizations[civId] = new Civilization(civId, civName, ruler.Id, tile, world.CurrentYear);
-        CivTracker.SetCharacterCiv(ruler, civId, OrganizationRole.Leader, world);
-        return (ruler, civId);
-    }
-
     private static Organization GetCivOrg(WorldState world, CivId civId) =>
         world.Organizations[world.Civilizations[civId].OrgId!.Value];
+
+    /// <summary>Unlike the shared WorldGenTestHelpers.SpawnRuler, this civ's ruler must already be
+    /// of marriage age — every test in this file exercises ProposeMarriage.</summary>
+    private static (Tier1Character ruler, CivId civId) SpawnRuler(WorldState world, TileCoord tile, long seedOffset, string civName)
+    {
+        var (ruler, civId) = WorldGenTestHelpers.SpawnRuler(world, tile, seedOffset, civName);
+        ruler.AgeSeason = world.SimConfig.Family.MarriageMinAgeSeasons + 10;
+        return (ruler, civId);
+    }
 
     [Fact]
     public void RulerMarriage_CrossCivAtPeace_FormsOrgAlliance()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 71);
-        var tile = FindLandTile(world);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
         var (rulerA, civA) = SpawnRuler(world, tile, 1L, "CivA");
         var (rulerB, civB) = SpawnRuler(world, tile, 2L, "CivB");
 
@@ -67,7 +52,7 @@ public class MarriageDiplomacyTests
     public void RulerMarriage_CivsAtWar_DoesNotFormAlliance()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 72);
-        var tile = FindLandTile(world);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
         var (rulerA, civA) = SpawnRuler(world, tile, 11L, "CivA");
         var (rulerB, civB) = SpawnRuler(world, tile, 12L, "CivB");
         world.Civilizations[civA].WarsAgainst[civB] = world.CurrentYear;
@@ -87,7 +72,7 @@ public class MarriageDiplomacyTests
     public void Marriage_NonRulerSpouse_DoesNotFormOrgAlliance()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 73);
-        var tile = FindLandTile(world);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
         var (rulerA, civA) = SpawnRuler(world, tile, 21L, "CivA");
         var biome = (BiomeType)world.TileGrid.GetTile(tile).BiomeType;
         var commonerB = CharacterFactory.Spawn(tile, biome, world.WorldSeed, 22L, world.SimConfig, world.CurrentYear, startAsAdult: true);

@@ -1,4 +1,3 @@
-using System.Reflection;
 using FluentAssertions;
 using WorldEngine.Sim.Civilizations;
 using WorldEngine.Sim.Core;
@@ -23,50 +22,15 @@ namespace WorldEngine.Tests.Unit;
 /// </summary>
 public class RelationshipTransitionsTests
 {
-    private static TileCoord FindLandTile(WorldState world)
-    {
-        for (int y = 1; y < world.TileGrid.TileHeight - 1; y++)
-        for (int x = 0; x < world.TileGrid.TileWidth; x++)
-        {
-            var c = new TileCoord(x, y);
-            if (world.IsLand(c)) return c;
-        }
-        throw new System.Exception("no land tile found");
-    }
-
-    private static Tier1Character SpawnAt(WorldState world, TileCoord tile, long seedOffset)
-    {
-        var biome = (BiomeType)world.TileGrid.GetTile(tile).BiomeType;
-        var c = CharacterFactory.Spawn(tile, biome, world.WorldSeed, seedOffset, world.SimConfig, world.CurrentYear, startAsAdult: true);
-        world.Entities.Add(c);
-        return c;
-    }
-
-    private static (Tier1Character ruler, CivId civId) SpawnRuler(WorldState world, TileCoord tile, long seedOffset, string civName)
-    {
-        var ruler = SpawnAt(world, tile, seedOffset);
-        var civId = new CivId(world.NextCivId++);
-        world.Civilizations[civId] = new Civilization(civId, civName, ruler.Id, tile, world.CurrentYear);
-        CivTracker.SetCharacterCiv(ruler, civId, OrganizationRole.Leader, world);
-        return (ruler, civId);
-    }
-
-    private static Tier1Character SpawnMember(WorldState world, TileCoord tile, long seedOffset, CivId civId)
-    {
-        var c = SpawnAt(world, tile, seedOffset);
-        CivTracker.SetCharacterCiv(c, civId, OrganizationRole.Member, world);
-        return c;
-    }
-
     // ─── Reconciliation ─────────────────────────────────────────────────────
 
     [Fact]
     public void Placate_CoolsRivalryPastThresholds_EndsItOutright()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 91);
-        var tile = FindLandTile(world);
-        var a = SpawnAt(world, tile, 1L);
-        var b = SpawnAt(world, tile, 2L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var a = WorldGenTestHelpers.SpawnAt(world, tile, 1L);
+        var b = WorldGenTestHelpers.SpawnAt(world, tile, 2L);
 
         var cfg = world.SimConfig.Fear;
         var rel = world.Relationships.GetOrCreate(a.Id, b.Id);
@@ -89,9 +53,9 @@ public class RelationshipTransitionsTests
     public void Placate_PartialCooling_KeepsRivalryActive()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 92);
-        var tile = FindLandTile(world);
-        var a = SpawnAt(world, tile, 11L);
-        var b = SpawnAt(world, tile, 12L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var a = WorldGenTestHelpers.SpawnAt(world, tile, 11L);
+        var b = WorldGenTestHelpers.SpawnAt(world, tile, 12L);
 
         var rel = world.Relationships.GetOrCreate(a.Id, b.Id);
         world.Relationships.Upsert(rel with { Fear = 0.9f, Trust = -0.9f, Flags = RelationshipFlags.IsRival });
@@ -110,9 +74,9 @@ public class RelationshipTransitionsTests
     public void DeclareRivalry_AgainstExistingRival_EscalatesToFeud()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 93);
-        var tile = FindLandTile(world);
-        var a = SpawnAt(world, tile, 21L);
-        var b = SpawnAt(world, tile, 22L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var a = WorldGenTestHelpers.SpawnAt(world, tile, 21L);
+        var b = WorldGenTestHelpers.SpawnAt(world, tile, 22L);
 
         var pending1 = new List<PendingEvent>();
         CivTracker.Resolve(new DeclareRivalry(a.Id, b.Id), world, pending1);
@@ -135,9 +99,9 @@ public class RelationshipTransitionsTests
     public void DeclareRivalry_AgainstExistingFeud_IsNoOp()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 94);
-        var tile = FindLandTile(world);
-        var a = SpawnAt(world, tile, 31L);
-        var b = SpawnAt(world, tile, 32L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var a = WorldGenTestHelpers.SpawnAt(world, tile, 31L);
+        var b = WorldGenTestHelpers.SpawnAt(world, tile, 32L);
 
         var rel = world.Relationships.GetOrCreate(a.Id, b.Id);
         world.Relationships.Upsert(rel with { Flags = RelationshipFlags.IsRival | RelationshipFlags.IsFeud });
@@ -153,17 +117,16 @@ public class RelationshipTransitionsTests
     private static void InvokeCheckMarriageEstrangement(WorldState world, List<PendingEvent> pending)
     {
         var phase = new CharacterBehaviorPhase(world.SimConfig);
-        var method = typeof(CharacterBehaviorPhase).GetMethod("CheckMarriageEstrangement", BindingFlags.NonPublic | BindingFlags.Instance);
-        method!.Invoke(phase, new object[] { world, pending });
+        phase.CheckMarriageEstrangement(world, pending);
     }
 
     [Fact]
     public void MarriedCouple_TrustDecayedBelowThreshold_Estranges()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 95);
-        var tile = FindLandTile(world);
-        var a = SpawnAt(world, tile, 41L);
-        var b = SpawnAt(world, tile, 42L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var a = WorldGenTestHelpers.SpawnAt(world, tile, 41L);
+        var b = WorldGenTestHelpers.SpawnAt(world, tile, 42L);
 
         var famCfg = world.SimConfig.Family;
         var rel = world.Relationships.GetOrCreate(a.Id, b.Id);
@@ -186,9 +149,9 @@ public class RelationshipTransitionsTests
     public void MarriedCouple_HealthyTrust_StaysMarried()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 96);
-        var tile = FindLandTile(world);
-        var a = SpawnAt(world, tile, 51L);
-        var b = SpawnAt(world, tile, 52L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var a = WorldGenTestHelpers.SpawnAt(world, tile, 51L);
+        var b = WorldGenTestHelpers.SpawnAt(world, tile, 52L);
 
         var rel = world.Relationships.GetOrCreate(a.Id, b.Id);
         world.Relationships.Upsert(rel with
@@ -211,11 +174,11 @@ public class RelationshipTransitionsTests
     public void Raid_AgainstCreditorsCiv_BreaksTheDebt()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 97);
-        var tile = FindLandTile(world);
-        var (_, civA) = SpawnRuler(world, tile, 61L, "CivA");
-        var (_, civB) = SpawnRuler(world, tile, 62L, "CivB");
-        var raider = SpawnMember(world, tile, 63L, civA);
-        var creditor = SpawnMember(world, tile, 64L, civB);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var (_, civA) = WorldGenTestHelpers.SpawnRuler(world, tile, 61L, "CivA");
+        var (_, civB) = WorldGenTestHelpers.SpawnRuler(world, tile, 62L, "CivB");
+        var raider = WorldGenTestHelpers.SpawnMember(world, tile, 63L, civA);
+        var creditor = WorldGenTestHelpers.SpawnMember(world, tile, 64L, civB);
         world.Settlements[tile] = new SettlementStub(
             FounderId: creditor.Id, CivId: civB, Tile: tile, FoundedYear: 0,
             Population: 10, Health: 100, Name: "Debtholm");
@@ -238,11 +201,11 @@ public class RelationshipTransitionsTests
     public void Raid_NoOutstandingDebtToDefenderCiv_NoOathBreaking()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 98);
-        var tile = FindLandTile(world);
-        var (_, civA) = SpawnRuler(world, tile, 71L, "CivA");
-        var (_, civB) = SpawnRuler(world, tile, 72L, "CivB");
-        var raider = SpawnMember(world, tile, 73L, civA);
-        var defender = SpawnMember(world, tile, 74L, civB);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var (_, civA) = WorldGenTestHelpers.SpawnRuler(world, tile, 71L, "CivA");
+        var (_, civB) = WorldGenTestHelpers.SpawnRuler(world, tile, 72L, "CivB");
+        var raider = WorldGenTestHelpers.SpawnMember(world, tile, 73L, civA);
+        var defender = WorldGenTestHelpers.SpawnMember(world, tile, 74L, civB);
         world.Settlements[tile] = new SettlementStub(
             FounderId: defender.Id, CivId: civB, Tile: tile, FoundedYear: 0,
             Population: 10, Health: 100, Name: "Debtfree");
@@ -264,13 +227,13 @@ public class RelationshipTransitionsTests
     public void Raid_AgainstUnrelatedThirdCiv_StillBreaksOutstandingDebtToADifferentCiv()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 99);
-        var tile = FindLandTile(world);
-        var (_, civA) = SpawnRuler(world, tile, 81L, "CivA");
-        var (_, civB) = SpawnRuler(world, tile, 82L, "CivB");
-        var (_, civC) = SpawnRuler(world, tile, 83L, "CivC");
-        var raider   = SpawnMember(world, tile, 84L, civA);
-        var creditor = SpawnMember(world, tile, 85L, civB);
-        var defender = SpawnMember(world, tile, 86L, civC);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var (_, civA) = WorldGenTestHelpers.SpawnRuler(world, tile, 81L, "CivA");
+        var (_, civB) = WorldGenTestHelpers.SpawnRuler(world, tile, 82L, "CivB");
+        var (_, civC) = WorldGenTestHelpers.SpawnRuler(world, tile, 83L, "CivC");
+        var raider   = WorldGenTestHelpers.SpawnMember(world, tile, 84L, civA);
+        var creditor = WorldGenTestHelpers.SpawnMember(world, tile, 85L, civB);
+        var defender = WorldGenTestHelpers.SpawnMember(world, tile, 86L, civC);
         world.Settlements[tile] = new SettlementStub(
             FounderId: defender.Id, CivId: civC, Tile: tile, FoundedYear: 0,
             Population: 10, Health: 100, Name: "ThirdPartyTown");

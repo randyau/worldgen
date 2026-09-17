@@ -1,4 +1,3 @@
-using System.Reflection;
 using FluentAssertions;
 using WorldEngine.Sim.Civilizations;
 using WorldEngine.Sim.Core;
@@ -26,17 +25,6 @@ namespace WorldEngine.Tests.Unit;
 /// </summary>
 public class Tier2RivalryIsolationTests
 {
-    private static TileCoord FindLandTile(WorldState world)
-    {
-        for (int y = 1; y < world.TileGrid.TileHeight - 1; y++)
-        for (int x = 0; x < world.TileGrid.TileWidth; x++)
-        {
-            var c = new TileCoord(x, y);
-            if (world.IsLand(c)) return c;
-        }
-        throw new System.Exception("no land tile found");
-    }
-
     /// <summary>Builds a Tier1Character with a specific Aggression and mid-range everything else.</summary>
     private static Tier1Character MakeCharacter(WorldState world, float aggression, TileCoord tile)
     {
@@ -57,19 +45,11 @@ public class Tier2RivalryIsolationTests
         return c;
     }
 
-    private static Tier2Character SpawnTier2At(WorldState world, TileCoord tile, string name)
-    {
-        var c = new Tier2Character(EntityId.New(), tile, name, PersonalityVector6.Default,
-            new LivelihoodData(Tier2Role.Merchant, null, tile, 0.5f), maxHealth: 100, maxAgeSeason: 800);
-        world.Entities.Add(c);
-        return c;
-    }
-
     [Fact]
     public void WarHostility_Tier2RivalDoesNotJustifyWar_ButEquivalentTier1RivalDoes()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 201);
-        var tile  = FindLandTile(world);
+        var tile  = WorldGenTestHelpers.FindLandTile(world);
         var wCfg  = world.SimConfig.War;
 
         var ruler = MakeCharacter(world, wCfg.WarAggressionThreshold + 0.2f, tile);
@@ -81,15 +61,13 @@ public class Tier2RivalryIsolationTests
         world.Civilizations[civB] = new Civilization(civB, "CivB", EntityId.New(), tile, world.CurrentYear);
         world.Settlements[tile] = new SettlementStub(new EntityId(1), civB, tile, 0, 50, 100);
 
-        var tier2Rival = SpawnTier2At(world, tile, "T2Rival");
+        var tier2Rival = WorldGenTestHelpers.SpawnTier2At(world, tile, "T2Rival");
         var rel = world.Relationships.GetOrCreate(ruler.Id, tier2Rival.Id);
         world.Relationships.Upsert(rel with { Trust = -0.9f, Flags = RelationshipFlags.IsRival });
 
         var scorer = new UtilityScorer(world.SimConfig);
-        var buildCandidates = typeof(UtilityScorer).GetMethod("BuildCandidates", BindingFlags.NonPublic | BindingFlags.Instance);
 
-        var candidatesWithTier2Rival = (List<UtilityScorer.ScoredAction>)buildCandidates!.Invoke(
-            scorer, new object[] { ruler, world, world.SimConfig.Character })!;
+        var candidatesWithTier2Rival = scorer.BuildCandidates(ruler, world, world.SimConfig.Character);
         candidatesWithTier2Rival.Should().NotContain(a => a.Command is DeclareWar,
             "a Tier2 rival must be invisible to the war-declaration hostility check");
 
@@ -101,8 +79,7 @@ public class Tier2RivalryIsolationTests
         var rel2 = world.Relationships.GetOrCreate(ruler.Id, tier1Rival.Id);
         world.Relationships.Upsert(rel2 with { Trust = -0.9f, Flags = RelationshipFlags.IsRival });
 
-        var candidatesWithTier1Rival = (List<UtilityScorer.ScoredAction>)buildCandidates!.Invoke(
-            scorer, new object[] { ruler, world, world.SimConfig.Character })!;
+        var candidatesWithTier1Rival = scorer.BuildCandidates(ruler, world, world.SimConfig.Character);
         candidatesWithTier1Rival.Should().Contain(a => a.Command is DeclareWar,
             "sanity check: an equivalent Tier1 rival in the target civ SHOULD justify war, proving the " +
             "Tier2 case above is isolated by the type filter and not by an unrelated missing precondition");
@@ -112,16 +89,15 @@ public class Tier2RivalryIsolationTests
     public void FearDampening_Tier2RivalInTargetCiv_ReturnsFullScore()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 202);
-        var tile  = FindLandTile(world);
+        var tile  = WorldGenTestHelpers.FindLandTile(world);
         var c     = MakeCharacter(world, 0.5f, tile);
 
-        var tier2Rival = SpawnTier2At(world, tile, "T2Rival");
+        var tier2Rival = WorldGenTestHelpers.SpawnTier2At(world, tile, "T2Rival");
         var rel = world.Relationships.GetOrCreate(c.Id, tier2Rival.Id);
         world.Relationships.Upsert(rel with { Fear = 0.9f, Flags = RelationshipFlags.IsRival });
 
         var enemyCivId = new CivId(world.NextCivId++);
-        var method = typeof(UtilityScorer).GetMethod("FearDampening", BindingFlags.NonPublic | BindingFlags.Static);
-        float result = (float)method!.Invoke(null, new object[] { c, enemyCivId, world, world.SimConfig.Fear })!;
+        float result = UtilityScorer.FearDampening(c, enemyCivId, world, world.SimConfig.Fear);
 
         result.Should().Be(1f,
             "a Tier2 rival must be invisible to FearDampening regardless of Fear — Tier2Character has " +
@@ -132,16 +108,14 @@ public class Tier2RivalryIsolationTests
     public void FindNearbyRival_SkipsTier2Rival()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 203);
-        var tile  = FindLandTile(world);
+        var tile  = WorldGenTestHelpers.FindLandTile(world);
         var c     = MakeCharacter(world, 0.8f, tile);
 
-        var tier2Rival = SpawnTier2At(world, tile, "T2Rival");
+        var tier2Rival = WorldGenTestHelpers.SpawnTier2At(world, tile, "T2Rival");
         var rel = world.Relationships.GetOrCreate(c.Id, tier2Rival.Id);
         world.Relationships.Upsert(rel with { Flags = RelationshipFlags.IsRival });
 
-        var method = typeof(GoalManager).GetMethod("FindNearbyRival", BindingFlags.NonPublic | BindingFlags.Static);
-        var result = (EntityId?)method!.Invoke(null,
-            new object[] { c, world, world.SimConfig.Character.RivalSearchRadius });
+        var result = GoalManager.FindNearbyRival(c, world, world.SimConfig.Character.RivalSearchRadius);
 
         result.Should().BeNull(
             "a Tier2 rival must be invisible to the Dominance goal's rival search, which only scans Tier1Character candidates");
@@ -151,13 +125,11 @@ public class Tier2RivalryIsolationTests
     public void FindNearbyNeutral_SkipsTier2Entirely()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 204);
-        var tile  = FindLandTile(world);
+        var tile  = WorldGenTestHelpers.FindLandTile(world);
         var c     = MakeCharacter(world, 0.3f, tile);
-        SpawnTier2At(world, tile, "T2Bystander"); // no relationship edge — "neutral" by definition if it were eligible at all
+        WorldGenTestHelpers.SpawnTier2At(world, tile, "T2Bystander"); // no relationship edge — "neutral" by definition if it were eligible at all
 
-        var method = typeof(GoalManager).GetMethod("FindNearbyNeutral", BindingFlags.NonPublic | BindingFlags.Static);
-        var result = (EntityId?)method!.Invoke(null,
-            new object[] { c, world, world.SimConfig.Character.AllianceSearchRadius });
+        var result = GoalManager.FindNearbyNeutral(c, world, world.SimConfig.Character.AllianceSearchRadius);
 
         result.Should().BeNull(
             "a Tier2 must be invisible to the Alliance goal's neutral-candidate search entirely — not offered as an ally candidate any more than as a rival");
@@ -167,7 +139,7 @@ public class Tier2RivalryIsolationTests
     public void TerritorialPressure_SkipsCoLocatedTier2_TrustUnchanged()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 205);
-        var tile  = FindLandTile(world);
+        var tile  = WorldGenTestHelpers.FindLandTile(world);
         var cfg   = world.SimConfig.Character;
         var c     = MakeCharacter(world, cfg.TerritorialAggressionMin + 0.2f, tile);
 
@@ -176,13 +148,12 @@ public class Tier2RivalryIsolationTests
         CivTracker.SetCharacterCiv(c, civA, OrganizationRole.Leader, world);
         world.Settlements[tile] = new SettlementStub(new EntityId(1), civA, tile, 0, 50, 100);
 
-        var tier2 = SpawnTier2At(world, tile, "T2Bystander");
+        var tier2 = WorldGenTestHelpers.SpawnTier2At(world, tile, "T2Bystander");
         var relBefore = world.Relationships.GetOrCreate(c.Id, tier2.Id);
         float trustBefore = relBefore.Trust;
 
         var phase = new CharacterBehaviorPhase(world.SimConfig);
-        var method = typeof(CharacterBehaviorPhase).GetMethod("ApplyTerritorialPressure", BindingFlags.NonPublic | BindingFlags.Instance);
-        method!.Invoke(phase, new object[] { c, world, world.CurrentTick });
+        phase.ApplyTerritorialPressure(c, world, world.CurrentTick);
 
         var relAfter = world.Relationships.Get(c.Id, tier2.Id);
         relAfter!.Trust.Should().Be(trustBefore,

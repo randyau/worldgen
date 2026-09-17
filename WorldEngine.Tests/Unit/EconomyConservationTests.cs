@@ -45,31 +45,6 @@ public class EconomyConservationTests
 {
     private const float Epsilon = 0.01f;
 
-    private static TileCoord FindLandTile(WorldState world, TileCoord? exclude = null, int minDist = 0)
-    {
-        for (int y = 1; y < world.TileGrid.TileHeight - 1; y++)
-        for (int x = 0; x < world.TileGrid.TileWidth; x++)
-        {
-            var c = new TileCoord(x, y);
-            if (!world.IsLand(c)) continue;
-            if (exclude is { } e)
-            {
-                int dx = c.X - e.X, dy = c.Y - e.Y;
-                if (dx * dx + dy * dy < minDist * minDist) continue;
-            }
-            return c;
-        }
-        throw new InvalidOperationException("no land tile found");
-    }
-
-    private static Tier1Character SpawnAt(WorldState world, TileCoord tile, long seedOffset)
-    {
-        var biome = (BiomeType)world.TileGrid.GetTile(tile).BiomeType;
-        var c = CharacterFactory.Spawn(tile, biome, world.WorldSeed, seedOffset, world.SimConfig, world.CurrentYear, startAsAdult: true);
-        world.Entities.Add(c);
-        return c;
-    }
-
     private static float TotalSupply(WorldState world) =>
         EconomyPhase.ComputeTotalMoneySupply(world, world.SimConfig.Economy).TotalMoneySupply;
 
@@ -79,8 +54,8 @@ public class EconomyConservationTests
     public void ContributeToTreasury_ConservesTotalMoneySupply()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 9001);
-        var tile = FindLandTile(world);
-        var founder = SpawnAt(world, tile, 1L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var founder = WorldGenTestHelpers.SpawnAt(world, tile, 1L);
         var pending = new List<PendingEvent>();
         CivTracker.Resolve(new EstablishSettlement(founder.Id, tile), world, pending, world.SimConfig.SettlementNames);
         var civ = world.Civilizations[world.Settlements[tile].CivId];
@@ -98,8 +73,8 @@ public class EconomyConservationTests
     public void WithdrawFromTreasury_ConservesTotalMoneySupply()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 9002);
-        var tile = FindLandTile(world);
-        var founder = SpawnAt(world, tile, 1L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var founder = WorldGenTestHelpers.SpawnAt(world, tile, 1L);
         var pending = new List<PendingEvent>();
         CivTracker.Resolve(new EstablishSettlement(founder.Id, tile), world, pending, world.SimConfig.SettlementNames);
         var civ = world.Civilizations[world.Settlements[tile].CivId];
@@ -120,10 +95,10 @@ public class EconomyConservationTests
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 9003);
         world.SimConfig.Character.GlobalSettlementMinDist = 3;
-        var a = FindLandTile(world);
-        var b = FindLandTile(world, exclude: a, minDist: 5);
-        var founderA = SpawnAt(world, a, 1L);
-        var founderB = SpawnAt(world, b, 2L);
+        var a = WorldGenTestHelpers.FindLandTile(world);
+        var b = WorldGenTestHelpers.FindLandTile(world, exclude: a, minDist: 5);
+        var founderA = WorldGenTestHelpers.SpawnAt(world, a, 1L);
+        var founderB = WorldGenTestHelpers.SpawnAt(world, b, 2L);
         var pending = new List<PendingEvent>();
         CivTracker.Resolve(new EstablishSettlement(founderA.Id, a), world, pending, world.SimConfig.SettlementNames);
         CivTracker.Resolve(new EstablishSettlement(founderB.Id, b), world, pending, world.SimConfig.SettlementNames);
@@ -152,8 +127,8 @@ public class EconomyConservationTests
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 9004);
         var cfg = world.SimConfig.Economy;
-        var tile = FindLandTile(world);
-        var buyer = SpawnAt(world, tile, 1L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var buyer = WorldGenTestHelpers.SpawnAt(world, tile, 1L);
 
         var identity = new IdentityData("TestOwner", "", "human", null, null, world.CurrentYear, 0);
         var personality = PersonalityVector.Default with { Compassion = 1f };
@@ -179,10 +154,10 @@ public class EconomyConservationTests
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 9005);
         var cfg = world.SimConfig.Economy;
-        var tile = FindLandTile(world);
-        var buyer = SpawnAt(world, tile, 1L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var buyer = WorldGenTestHelpers.SpawnAt(world, tile, 1L);
 
-        var settlementTile = FindLandTile(world);
+        var settlementTile = WorldGenTestHelpers.FindLandTile(world);
         world.Settlements[settlementTile] = new SettlementStub(
             FounderId: new EntityId(999), CivId: default, Tile: settlementTile, FoundedYear: 0,
             Population: 50, Health: 100, Name: "TestTown");
@@ -215,8 +190,8 @@ public class EconomyConservationTests
         world.SimConfig.Character.Tier2CrystalAmbitionThreshold = 2f;
         world.SimConfig.Economy.GuildFormationWealthThreshold = 1_000_000f;
 
-        var home = FindLandTile(world);
-        var dest = FindLandTile(world, exclude: home, minDist: 3);
+        var home = WorldGenTestHelpers.FindLandTile(world);
+        var dest = WorldGenTestHelpers.FindLandTile(world, exclude: home, minDist: 3);
 
         world.Settlements[home] = new SettlementStub(
             FounderId: new EntityId(1), CivId: default, Tile: home, FoundedYear: 0,
@@ -290,17 +265,15 @@ public class EconomyConservationTests
     // ─── TransferWealthOnDeath ──────────────────────────────────────────────────────────────────
 
     private static void KillViaReflection(CharacterBehaviorPhase phase, Tier1Character c, WorldState world, List<PendingEvent> pending) =>
-        typeof(CharacterBehaviorPhase)
-            .GetMethod("KillCharacter", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
-            .Invoke(phase, new object[] { c, world, "test", pending });
+        phase.KillCharacter(c, world, "test", pending);
 
     [Fact]
     public void TransferWealthOnDeath_WithHeir_ConservesTotalMoneySupply()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 9009);
-        var tile = FindLandTile(world);
-        var deceased = SpawnAt(world, tile, 61L);
-        var spouse   = SpawnAt(world, tile, 62L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var deceased = WorldGenTestHelpers.SpawnAt(world, tile, 61L);
+        var spouse   = WorldGenTestHelpers.SpawnAt(world, tile, 62L);
         deceased.AgeSeason = world.SimConfig.Family.MarriageMinAgeSeasons + 10;
         spouse.AgeSeason   = world.SimConfig.Family.MarriageMinAgeSeasons + 10;
         CivTracker.Resolve(new ProposeMarriage(deceased.Id, spouse.Id), world, new List<PendingEvent>());
@@ -320,8 +293,8 @@ public class EconomyConservationTests
     public void TransferWealthOnDeath_NoHeir_ConservesTotalMoneySupply()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 9010);
-        var tile = FindLandTile(world);
-        var deceased = SpawnAt(world, tile, 71L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var deceased = WorldGenTestHelpers.SpawnAt(world, tile, 71L);
         deceased.AddWealth(50f);
 
         float before = TotalSupply(world);
@@ -350,8 +323,8 @@ public class EconomyConservationTests
         var world = WorldTestHelper.CreateSmallWorld(seed: 9011);
         var econCfg = world.SimConfig.Economy;
         var rpCfg = world.SimConfig.ResourcePressure;
-        var tile = FindLandTile(world);
-        var founder = SpawnAt(world, tile, 1L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var founder = WorldGenTestHelpers.SpawnAt(world, tile, 1L);
         var pending0 = new List<PendingEvent>();
         CivTracker.Resolve(new EstablishSettlement(founder.Id, tile), world, pending0, world.SimConfig.SettlementNames);
 

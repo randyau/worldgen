@@ -1,4 +1,3 @@
-using System.Reflection;
 using FluentAssertions;
 using WorldEngine.Sim.Civilizations;
 using WorldEngine.Sim.Core;
@@ -20,32 +19,13 @@ namespace WorldEngine.Tests.Unit;
 /// </summary>
 public class FearAppeasementTests
 {
-    private static TileCoord FindLandTile(WorldState world)
-    {
-        for (int y = 1; y < world.TileGrid.TileHeight - 1; y++)
-        for (int x = 0; x < world.TileGrid.TileWidth; x++)
-        {
-            var c = new TileCoord(x, y);
-            if (world.IsLand(c)) return c;
-        }
-        throw new System.Exception("no land tile found");
-    }
-
-    private static Tier1Character SpawnAt(WorldState world, TileCoord tile, long seedOffset)
-    {
-        var biome = (BiomeType)world.TileGrid.GetTile(tile).BiomeType;
-        var c = CharacterFactory.Spawn(tile, biome, world.WorldSeed, seedOffset, world.SimConfig, world.CurrentYear, startAsAdult: true);
-        world.Entities.Add(c);
-        return c;
-    }
-
     [Fact]
     public void DeclareRivalry_AgainstStrongerTarget_ScalesFearAboveBaseIncrement()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 31);
-        var tile = FindLandTile(world);
-        var weak   = SpawnAt(world, tile, 1L);
-        var strong = SpawnAt(world, tile, 2L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var weak   = WorldGenTestHelpers.SpawnAt(world, tile, 1L);
+        var strong = WorldGenTestHelpers.SpawnAt(world, tile, 2L);
         weak.Skills   = weak.Skills   with { Combat = 0.1f };
         strong.Skills = strong.Skills with { Combat = 0.9f };
 
@@ -61,9 +41,9 @@ public class FearAppeasementTests
     public void Placate_ExistingFearedRival_ReducesFearAndRaisesTrust()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 32);
-        var tile = FindLandTile(world);
-        var c      = SpawnAt(world, tile, 11L);
-        var rival  = SpawnAt(world, tile, 12L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var c      = WorldGenTestHelpers.SpawnAt(world, tile, 11L);
+        var rival  = WorldGenTestHelpers.SpawnAt(world, tile, 12L);
 
         var rivalryPending = new List<PendingEvent>();
         CivTracker.Resolve(new DeclareRivalry(c.Id, rival.Id), world, rivalryPending);
@@ -84,9 +64,9 @@ public class FearAppeasementTests
     public void Placate_NonRival_DoesNothing()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 33);
-        var tile = FindLandTile(world);
-        var c = SpawnAt(world, tile, 21L);
-        var other = SpawnAt(world, tile, 22L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var c = WorldGenTestHelpers.SpawnAt(world, tile, 21L);
+        var other = WorldGenTestHelpers.SpawnAt(world, tile, 22L);
 
         var pending = new List<PendingEvent>();
         CivTracker.Resolve(new Placate(c.Id, other.Id), world, pending);
@@ -94,19 +74,16 @@ public class FearAppeasementTests
         pending.Should().BeEmpty();
     }
 
-    private static float InvokeFearDampening(Tier1Character c, CivId targetCivId, WorldState world)
-    {
-        var method = typeof(UtilityScorer).GetMethod("FearDampening", BindingFlags.NonPublic | BindingFlags.Static);
-        return (float)method!.Invoke(null, new object[] { c, targetCivId, world, world.SimConfig.Fear })!;
-    }
+    private static float InvokeFearDampening(Tier1Character c, CivId targetCivId, WorldState world) =>
+        UtilityScorer.FearDampening(c, targetCivId, world, world.SimConfig.Fear);
 
     [Fact]
     public void FearDampening_FearedRivalInTargetCiv_DampensProportionallyToFear()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 34);
-        var tile = FindLandTile(world);
-        var c     = SpawnAt(world, tile, 41L);
-        var rival = SpawnAt(world, tile, 42L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var c     = WorldGenTestHelpers.SpawnAt(world, tile, 41L);
+        var rival = WorldGenTestHelpers.SpawnAt(world, tile, 42L);
 
         var enemyCivId = new CivId(world.NextCivId++);
         world.Civilizations[enemyCivId] = new Civilization(enemyCivId, "EnemyCiv", rival.Id, tile, world.CurrentYear);
@@ -126,8 +103,8 @@ public class FearAppeasementTests
     public void FearDampening_NoRivalInTargetCiv_ReturnsFullScore()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 35);
-        var tile = FindLandTile(world);
-        var c = SpawnAt(world, tile, 51L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var c = WorldGenTestHelpers.SpawnAt(world, tile, 51L);
 
         InvokeFearDampening(c, new CivId(999), world).Should().Be(1f);
     }

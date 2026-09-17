@@ -51,25 +51,6 @@ namespace WorldEngine.Tests.Unit;
 /// </summary>
 public class ArtifactPurchaseTests
 {
-    private static TileCoord FindLandTile(WorldState world)
-    {
-        for (int y = 1; y < world.TileGrid.TileHeight - 1; y++)
-        for (int x = 0; x < world.TileGrid.TileWidth; x++)
-        {
-            var c = new TileCoord(x, y);
-            if (world.IsLand(c)) return c;
-        }
-        throw new InvalidOperationException("no land tile found");
-    }
-
-    private static Tier1Character SpawnAt(WorldState world, TileCoord tile, long seedOffset)
-    {
-        var biome = (BiomeType)world.TileGrid.GetTile(tile).BiomeType;
-        var c = CharacterFactory.Spawn(tile, biome, world.WorldSeed, seedOffset, world.SimConfig, world.CurrentYear, startAsAdult: true);
-        world.Entities.Add(c);
-        return c;
-    }
-
     /// <summary>Personality is set-once at construction (no setter, no `with`-friendly mutation
     /// path exposed on Tier1Character) — spawn directly with a chosen Compassion for willingness
     /// tests rather than mutating a CharacterFactory-spawned instance.</summary>
@@ -119,8 +100,8 @@ public class ArtifactPurchaseTests
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 62);
         var cfg = world.SimConfig.Economy;
-        var tile = FindLandTile(world);
-        var buyer = SpawnAt(world, tile, 1L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var buyer = WorldGenTestHelpers.SpawnAt(world, tile, 1L);
         var owner = SpawnWithCompassion(world, tile, 20002, compassion: 1f); // always willing
 
         var artifact = MakeArtifact(world, ArtifactOwner.OfCharacter(owner.Id), ArtifactCategory.Artwork, quality: 0.5f);
@@ -143,10 +124,10 @@ public class ArtifactPurchaseTests
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 63);
         var cfg = world.SimConfig.Economy;
-        var tile = FindLandTile(world);
-        var buyer = SpawnAt(world, tile, 3L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var buyer = WorldGenTestHelpers.SpawnAt(world, tile, 3L);
 
-        var settlementTile = FindLandTile(world);
+        var settlementTile = WorldGenTestHelpers.FindLandTile(world);
         world.Settlements[settlementTile] = new SettlementStub(
             FounderId: new EntityId(999), CivId: default, Tile: settlementTile, FoundedYear: 0,
             Population: 50, Health: 100, Name: "TestTown");
@@ -173,8 +154,8 @@ public class ArtifactPurchaseTests
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 64);
         var cfg = world.SimConfig.Economy;
-        var tile = FindLandTile(world);
-        var buyer = SpawnAt(world, tile, 4L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var buyer = WorldGenTestHelpers.SpawnAt(world, tile, 4L);
         var owner = SpawnWithCompassion(world, tile, 20005, compassion: 1f);
 
         var artifact = MakeArtifact(world, ArtifactOwner.OfCharacter(owner.Id), ArtifactCategory.Relic, quality: 1f);
@@ -195,8 +176,8 @@ public class ArtifactPurchaseTests
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 65);
         var cfg = world.SimConfig.Economy;
-        var tile = FindLandTile(world);
-        var buyer = SpawnAt(world, tile, 6L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var buyer = WorldGenTestHelpers.SpawnAt(world, tile, 6L);
         var owner = SpawnWithCompassion(world, tile, 20007, compassion: 0f); // unwilling, no relationship Trust either
 
         var artifact = MakeArtifact(world, ArtifactOwner.OfCharacter(owner.Id), ArtifactCategory.Relic, quality: 0.5f);
@@ -216,8 +197,8 @@ public class ArtifactPurchaseTests
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 66);
         var cfg = world.SimConfig.Economy;
-        var tile = FindLandTile(world);
-        var buyer = SpawnAt(world, tile, 8L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var buyer = WorldGenTestHelpers.SpawnAt(world, tile, 8L);
         buyer.AddWealth(1000f);
 
         var artifact = MakeArtifact(world, ArtifactOwner.Lost);
@@ -234,8 +215,8 @@ public class ArtifactPurchaseTests
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 67);
         var cfg = world.SimConfig.Economy;
-        var tile = FindLandTile(world);
-        var buyer = SpawnAt(world, tile, 9L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var buyer = WorldGenTestHelpers.SpawnAt(world, tile, 9L);
         buyer.AddWealth(1000f);
 
         var artifact = MakeArtifact(world, ArtifactOwner.OfCharacter(buyer.Id));
@@ -253,8 +234,8 @@ public class ArtifactPurchaseTests
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 68);
         var cfg = world.SimConfig.Economy;
-        var tile = FindLandTile(world);
-        var buyer = SpawnAt(world, tile, 10L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var buyer = WorldGenTestHelpers.SpawnAt(world, tile, 10L);
         var owner = SpawnWithCompassion(world, tile, 20011, compassion: 1f);
 
         var artifact = MakeArtifact(world, ArtifactOwner.OfCharacter(owner.Id), ArtifactCategory.Artwork, quality: 0.5f);
@@ -280,8 +261,8 @@ public class ArtifactPurchaseTests
     public void UpdateGoals_LostArtifactClaimPath_StillWorks_Unaffected()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 69);
-        var tile = FindLandTile(world);
-        var claimant = SpawnAt(world, tile, 12L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var claimant = WorldGenTestHelpers.SpawnAt(world, tile, 12L);
 
         var artifact = MakeArtifact(world, ArtifactOwner.Lost);
         claimant.Goals.Add(new GoalData

@@ -519,7 +519,7 @@ public static partial class CivTracker
     /// On a decisive campaign battle victory, rolls battle_forge_probability to create a new artifact
     /// owned by the winning settlement tile.
     /// </summary>
-    private static void TryForgeBattleArtifact(
+    internal static void TryForgeBattleArtifact(
         WorldState world, List<PendingEvent> pending,
         TileCoord victorTile, CivId victorCivId,
         long attackerEntityId, string attackerName,

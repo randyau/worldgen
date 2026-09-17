@@ -623,7 +623,7 @@ public static partial class CivTracker
     /// Same shape as UtilityScorer.KinDampening/DebtDampening/FearDampening, applied at civ scope
     /// (over an Organization's whole membership) instead of a single character's relationships.
     /// </summary>
-    private static float FriendshipDampening(Civilization from, Civilization to, WorldState world, WarConfig cfg)
+    internal static float FriendshipDampening(Civilization from, Civilization to, WorldState world, WarConfig cfg)
     {
         var org = GetOrg(world, from);
         if (org == null) return 1f;
@@ -1098,7 +1098,7 @@ public static partial class CivTracker
     /// Trust held directly by the ruler. Same scan shape as CivTracker.Diplomacy's
     /// FriendshipDampening, reused here to feed SelectEmissaryPurpose instead of tension accrual.
     /// </summary>
-    private static float ConfidantTrustCredit(Civilization civ, CivId targetCivId, WorldState world, EmissaryConfig cfg)
+    internal static float ConfidantTrustCredit(Civilization civ, CivId targetCivId, WorldState world, EmissaryConfig cfg)
     {
         var org = GetOrg(world, civ);
         if (org == null) return 0f;

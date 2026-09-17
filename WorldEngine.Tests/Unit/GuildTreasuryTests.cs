@@ -1,5 +1,4 @@
 using System.Linq;
-using System.Reflection;
 using FluentAssertions;
 using WorldEngine.Sim.Civilizations;
 using WorldEngine.Sim.Core;
@@ -25,35 +24,8 @@ namespace WorldEngine.Tests.Unit;
 /// </summary>
 public class GuildTreasuryTests
 {
-    private static TileCoord FindLandTile(WorldState world, TileCoord? exclude = null, int minDist = 0)
-    {
-        for (int y = 1; y < world.TileGrid.TileHeight - 1; y++)
-        for (int x = 0; x < world.TileGrid.TileWidth; x++)
-        {
-            var c = new TileCoord(x, y);
-            if (!world.IsLand(c)) continue;
-            if (exclude is { } e)
-            {
-                int dx = c.X - e.X, dy = c.Y - e.Y;
-                if (dx * dx + dy * dy < minDist * minDist) continue;
-            }
-            return c;
-        }
-        throw new InvalidOperationException("No suitable land tile found");
-    }
-
-    private static Tier1Character SpawnAt(WorldState world, TileCoord tile, long seedOffset)
-    {
-        var biome = (BiomeType)world.TileGrid.GetTile(tile).BiomeType;
-        var c = CharacterFactory.Spawn(tile, biome, world.WorldSeed, seedOffset, world.SimConfig, world.CurrentYear, startAsAdult: true);
-        world.Entities.Add(c);
-        return c;
-    }
-
     private static void KillCharacter(CharacterBehaviorPhase phase, Tier1Character c, WorldState world, List<PendingEvent> pending) =>
-        typeof(CharacterBehaviorPhase)
-            .GetMethod("KillCharacter", BindingFlags.NonPublic | BindingFlags.Instance)!
-            .Invoke(phase, new object[] { c, world, "test", pending });
+        phase.KillCharacter(c, world, "test", pending);
 
     // ─── ContributeToTreasury / WithdrawFromTreasury ───────────────────────────
 
@@ -61,8 +33,8 @@ public class GuildTreasuryTests
     public void ContributeToTreasury_MovesWealth_FromCharacterToOrgTreasury()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 42);
-        var tile = FindLandTile(world);
-        var founder = SpawnAt(world, tile, 1L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var founder = WorldGenTestHelpers.SpawnAt(world, tile, 1L);
         var pending = new List<PendingEvent>();
         CivTracker.Resolve(new EstablishSettlement(founder.Id, tile), world, pending, world.SimConfig.SettlementNames);
         var civ = world.Civilizations[world.Settlements[tile].CivId];
@@ -81,8 +53,8 @@ public class GuildTreasuryTests
     public void ContributeToTreasury_CapsAtAvailableWealth()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 43);
-        var tile = FindLandTile(world);
-        var founder = SpawnAt(world, tile, 1L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var founder = WorldGenTestHelpers.SpawnAt(world, tile, 1L);
         var pending = new List<PendingEvent>();
         CivTracker.Resolve(new EstablishSettlement(founder.Id, tile), world, pending, world.SimConfig.SettlementNames);
         var civ = world.Civilizations[world.Settlements[tile].CivId];
@@ -101,15 +73,15 @@ public class GuildTreasuryTests
     public void WithdrawFromTreasury_LeaderOnly_NonLeaderIsRejected()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 44);
-        var tile = FindLandTile(world);
-        var founder = SpawnAt(world, tile, 1L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var founder = WorldGenTestHelpers.SpawnAt(world, tile, 1L);
         var pending = new List<PendingEvent>();
         CivTracker.Resolve(new EstablishSettlement(founder.Id, tile), world, pending, world.SimConfig.SettlementNames);
         var civ = world.Civilizations[world.Settlements[tile].CivId];
         var org = world.Organizations[civ.OrgId!.Value];
         org.Treasury = 50f;
 
-        var nonLeader = SpawnAt(world, tile, 2L);
+        var nonLeader = WorldGenTestHelpers.SpawnAt(world, tile, 2L);
         CivTracker.SetCharacterCiv(nonLeader, civ.Id, OrganizationRole.Member, world);
         civ.Members.Add(nonLeader.Id);
 
@@ -123,8 +95,8 @@ public class GuildTreasuryTests
     public void WithdrawFromTreasury_Leader_MovesWealth_FromTreasuryToRecipient()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 45);
-        var tile = FindLandTile(world);
-        var founder = SpawnAt(world, tile, 1L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var founder = WorldGenTestHelpers.SpawnAt(world, tile, 1L);
         var pending = new List<PendingEvent>();
         CivTracker.Resolve(new EstablishSettlement(founder.Id, tile), world, pending, world.SimConfig.SettlementNames);
         var civ = world.Civilizations[world.Settlements[tile].CivId];
@@ -142,8 +114,8 @@ public class GuildTreasuryTests
     public void WithdrawFromTreasury_CapsAtAvailableTreasury()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 46);
-        var tile = FindLandTile(world);
-        var founder = SpawnAt(world, tile, 1L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var founder = WorldGenTestHelpers.SpawnAt(world, tile, 1L);
         var pending = new List<PendingEvent>();
         CivTracker.Resolve(new EstablishSettlement(founder.Id, tile), world, pending, world.SimConfig.SettlementNames);
         var civ = world.Civilizations[world.Settlements[tile].CivId];
@@ -174,8 +146,8 @@ public class GuildTreasuryTests
         // assertion. The Guild-formation-specific tests below override this back down explicitly.
         world.SimConfig.Economy.GuildFormationWealthThreshold = 1_000_000f;
 
-        var home = FindLandTile(world);
-        var dest = FindLandTile(world, exclude: home, minDist: 3);
+        var home = WorldGenTestHelpers.FindLandTile(world);
+        var dest = WorldGenTestHelpers.FindLandTile(world, exclude: home, minDist: 3);
 
         world.Settlements[home] = new SettlementStub(
             FounderId: new EntityId(1), CivId: default, Tile: home, FoundedYear: 0,
@@ -273,9 +245,9 @@ public class GuildTreasuryTests
     public void GuildLeaderDeath_TriggersSuccession_ViaSuccessionResolverKernel()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 104);
-        var tile = FindLandTile(world);
-        var leader = SpawnAt(world, tile, 1L);
-        var heir = SpawnAt(world, tile, 2L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var leader = WorldGenTestHelpers.SpawnAt(world, tile, 1L);
+        var heir = WorldGenTestHelpers.SpawnAt(world, tile, 2L);
 
         var guildOrgId = CivTracker.CreateOrganization(world, OrganizationKind.Guild, "Test Guild", leader.Id, tile);
         var org = world.Organizations[guildOrgId];
@@ -298,8 +270,8 @@ public class GuildTreasuryTests
     public void GuildLeaderDeath_NoEligibleMember_SeatStaysVacant_NoThrow()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 105);
-        var tile = FindLandTile(world);
-        var leader = SpawnAt(world, tile, 1L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var leader = WorldGenTestHelpers.SpawnAt(world, tile, 1L);
 
         var guildOrgId = CivTracker.CreateOrganization(world, OrganizationKind.Guild, "Test Guild", leader.Id, tile);
         var org = world.Organizations[guildOrgId];
@@ -320,8 +292,8 @@ public class GuildTreasuryTests
     private static (WorldState world, Civilization civ, Organization org) PlantCiv(int seed)
     {
         var world = WorldTestHelper.CreateSmallWorld(seed);
-        var tile = FindLandTile(world);
-        var founder = SpawnAt(world, tile, 1L);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
+        var founder = WorldGenTestHelpers.SpawnAt(world, tile, 1L);
         var pending = new List<PendingEvent>();
         CivTracker.Resolve(new EstablishSettlement(founder.Id, tile), world, pending, world.SimConfig.SettlementNames);
         var civ = world.Civilizations[world.Settlements[tile].CivId];
@@ -375,11 +347,11 @@ public class GuildTreasuryTests
         var world = WorldTestHelper.CreateSmallWorld(seed);
         world.SimConfig.Character.GlobalSettlementMinDist = 3;
 
-        var a = FindLandTile(world);
-        var b = FindLandTile(world, exclude: a, minDist: 5);
+        var a = WorldGenTestHelpers.FindLandTile(world);
+        var b = WorldGenTestHelpers.FindLandTile(world, exclude: a, minDist: 5);
 
-        var founderA = SpawnAt(world, a, 1L);
-        var founderB = SpawnAt(world, b, 2L);
+        var founderA = WorldGenTestHelpers.SpawnAt(world, a, 1L);
+        var founderB = WorldGenTestHelpers.SpawnAt(world, b, 2L);
         var pending = new List<PendingEvent>();
         CivTracker.Resolve(new EstablishSettlement(founderA.Id, a), world, pending, world.SimConfig.SettlementNames);
         CivTracker.Resolve(new EstablishSettlement(founderB.Id, b), world, pending, world.SimConfig.SettlementNames);

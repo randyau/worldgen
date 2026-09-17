@@ -19,40 +19,13 @@ namespace WorldEngine.Tests.Unit;
 /// </summary>
 public class Tier2NotabilityTests
 {
-    private static TileCoord FindLandTile(WorldState world)
-    {
-        for (int y = 1; y < world.TileGrid.TileHeight - 1; y++)
-        for (int x = 0; x < world.TileGrid.TileWidth; x++)
-        {
-            var c = new TileCoord(x, y);
-            if (world.IsLand(c)) return c;
-        }
-        throw new System.Exception("no land tile found");
-    }
-
-    private static Tier1Character SpawnAt(WorldState world, TileCoord tile, long seedOffset)
-    {
-        var biome = (BiomeType)world.TileGrid.GetTile(tile).BiomeType;
-        var c = CharacterFactory.Spawn(tile, biome, world.WorldSeed, seedOffset, world.SimConfig, world.CurrentYear, startAsAdult: true);
-        world.Entities.Add(c);
-        return c;
-    }
-
-    private static Tier2Character SpawnTier2At(WorldState world, TileCoord tile, string name)
-    {
-        var c = new Tier2Character(EntityId.New(), tile, name, PersonalityVector6.Default,
-            new LivelihoodData(Tier2Role.Merchant, null, tile, 0.5f), maxHealth: 100, maxAgeSeason: 800);
-        world.Entities.Add(c);
-        return c;
-    }
-
     [Fact]
     public void DeclareRivalry_AgainstTier2_BumpsNotability()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 401);
-        var tile  = FindLandTile(world);
-        var c     = SpawnAt(world, tile, 1L);
-        var t2    = SpawnTier2At(world, tile, "T2");
+        var tile  = WorldGenTestHelpers.FindLandTile(world);
+        var c     = WorldGenTestHelpers.SpawnAt(world, tile, 1L);
+        var t2    = WorldGenTestHelpers.SpawnTier2At(world, tile, "T2");
 
         CivTracker.Resolve(new DeclareRivalry(c.Id, t2.Id), world, new List<PendingEvent>());
 
@@ -63,9 +36,9 @@ public class Tier2NotabilityTests
     public void Placate_Tier2Rival_BumpsNotability()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 402);
-        var tile  = FindLandTile(world);
-        var c     = SpawnAt(world, tile, 11L);
-        var t2    = SpawnTier2At(world, tile, "T2");
+        var tile  = WorldGenTestHelpers.FindLandTile(world);
+        var c     = WorldGenTestHelpers.SpawnAt(world, tile, 11L);
+        var t2    = WorldGenTestHelpers.SpawnTier2At(world, tile, "T2");
         var rel   = world.Relationships.GetOrCreate(c.Id, t2.Id);
         world.Relationships.Upsert(rel with { Trust = -0.5f, Fear = 0.6f, Flags = RelationshipFlags.IsRival });
 
@@ -78,9 +51,9 @@ public class Tier2NotabilityTests
     public void GrantAid_ToTier2Recipient_BumpsNotability()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 403);
-        var tile  = FindLandTile(world);
-        var c     = SpawnAt(world, tile, 21L);
-        var t2    = SpawnTier2At(world, tile, "T2");
+        var tile  = WorldGenTestHelpers.FindLandTile(world);
+        var c     = WorldGenTestHelpers.SpawnAt(world, tile, 21L);
+        var t2    = WorldGenTestHelpers.SpawnTier2At(world, tile, "T2");
         t2.Needs  = t2.Needs with { Food = 0f, Safety = 0f };
 
         CivTracker.Resolve(new GrantAid(c.Id, t2.Id), world, new List<PendingEvent>());
@@ -92,9 +65,9 @@ public class Tier2NotabilityTests
     public void ForgiveDebt_ToTier2Debtor_BumpsNotability()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 404);
-        var tile  = FindLandTile(world);
-        var c     = SpawnAt(world, tile, 31L);
-        var t2    = SpawnTier2At(world, tile, "T2");
+        var tile  = WorldGenTestHelpers.FindLandTile(world);
+        var c     = WorldGenTestHelpers.SpawnAt(world, tile, 31L);
+        var t2    = WorldGenTestHelpers.SpawnTier2At(world, tile, "T2");
         var rel   = world.Relationships.GetOrCreate(c.Id, t2.Id);
         // RelationshipGraph.Upsert canonicalizes storage so From is always the lower EntityId
         // value — the Debt sign must be chosen relative to that canonical order (not whichever
@@ -115,7 +88,7 @@ public class Tier2NotabilityTests
     public void BondGoalFormation_TargetingTier2_BumpsNotability()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 407);
-        var tile  = FindLandTile(world);
+        var tile  = WorldGenTestHelpers.FindLandTile(world);
         var cfg   = world.SimConfig;
 
         // High Compassion (> GoalCompassionThreshold) is the only gate FindHighTrustCompanion's
@@ -128,7 +101,7 @@ public class Tier2NotabilityTests
             SkillVector.Default, identity, maxHealth: 100, maxAgeSeason: 1200);
         world.Entities.Add(c);
 
-        var t2 = SpawnTier2At(world, tile, "T2Companion");
+        var t2 = WorldGenTestHelpers.SpawnTier2At(world, tile, "T2Companion");
 
         var pending = new List<PendingEvent>();
         GoalManager.UpdateGoals(c, world, currentTick: 1, cfg.Character, pending);
@@ -141,8 +114,8 @@ public class Tier2NotabilityTests
     public void Notability_DecaysEachTick()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 405);
-        var tile  = FindLandTile(world);
-        var t2    = SpawnTier2At(world, tile, "T2");
+        var tile  = WorldGenTestHelpers.FindLandTile(world);
+        var t2    = WorldGenTestHelpers.SpawnTier2At(world, tile, "T2");
         var cfg   = world.SimConfig;
         t2.GainNotability(0.5f);
 
@@ -159,7 +132,7 @@ public class Tier2NotabilityTests
         // gate — this is 13.8.2's whole point: drama exposure is an alternate path, not a bonus
         // that only matters once Status is already high.
         var world = WorldTestHelper.CreateSmallWorld(seed: 406);
-        var tile  = FindLandTile(world);
+        var tile  = WorldGenTestHelpers.FindLandTile(world);
         var cfg   = world.SimConfig;
 
         var t2 = new Tier2Character(EntityId.New(), tile, "T2Notable",

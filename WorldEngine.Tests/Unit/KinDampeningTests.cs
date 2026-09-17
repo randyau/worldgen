@@ -1,4 +1,3 @@
-using System.Reflection;
 using FluentAssertions;
 using WorldEngine.Sim.Civilizations;
 using WorldEngine.Sim.Core;
@@ -20,28 +19,14 @@ namespace WorldEngine.Tests.Unit;
 /// </summary>
 public class KinDampeningTests
 {
-    private static float InvokeKinDampening(Tier1Character c, CivId targetCivId, WorldState world)
-    {
-        var method = typeof(UtilityScorer).GetMethod("KinDampening", BindingFlags.NonPublic | BindingFlags.Static);
-        return (float)method!.Invoke(null, new object[] { c, targetCivId, world, world.SimConfig.Family })!;
-    }
-
-    private static TileCoord FindLandTile(WorldState world)
-    {
-        for (int y = 1; y < world.TileGrid.TileHeight - 1; y++)
-        for (int x = 0; x < world.TileGrid.TileWidth; x++)
-        {
-            var c = new TileCoord(x, y);
-            if (world.IsLand(c)) return c;
-        }
-        throw new System.Exception("no land tile found");
-    }
+    private static float InvokeKinDampening(Tier1Character c, CivId targetCivId, WorldState world) =>
+        UtilityScorer.KinDampening(c, targetCivId, world, world.SimConfig.Family);
 
     [Fact]
     public void NoFamilyRelativeInTargetCiv_ReturnsFullScore()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 3);
-        var tile = FindLandTile(world);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
         var biome = (BiomeType)world.TileGrid.GetTile(tile).BiomeType;
         var c = CharacterFactory.Spawn(tile, biome, world.WorldSeed, 1L, world.SimConfig, world.CurrentYear, startAsAdult: true);
         world.Entities.Add(c);
@@ -54,7 +39,7 @@ public class KinDampeningTests
     public void FamilyRelativeInTargetCiv_DampensProportionallyToLoyalty()
     {
         var world = WorldTestHelper.CreateSmallWorld(seed: 3);
-        var tile = FindLandTile(world);
+        var tile = WorldGenTestHelpers.FindLandTile(world);
         var biome = (BiomeType)world.TileGrid.GetTile(tile).BiomeType;
 
         var c        = CharacterFactory.Spawn(tile, biome, world.WorldSeed, 10L, world.SimConfig, world.CurrentYear, startAsAdult: true);
