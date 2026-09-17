@@ -42,3 +42,7 @@ character.ocean_crossing_enabled
 
 # M9 Phase 9.1 doc — private helper method, not a SCIP-indexed type
 ApplyVitalStore
+
+# mvp_spec.md is frozen history; CharacterSnapshot was removed as dead code in the
+# 2026-09-17 review pass (see roadmap.md M15.9) — the historical mention stands
+CharacterSnapshot

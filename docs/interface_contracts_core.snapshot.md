@@ -104,6 +104,7 @@ public interface IWorldStateReadOnly
     EntityId? SpotlightCharacterId { get; }
     TileCoord? SpotlightMoveTarget { get; }
     GoalType?  SpotlightGoalIntent { get; }
+    EntityId?  SpotlightSocialTarget { get; }
 
     // === RELATIONSHIPS / HISTORY (M3+) ===
     // float GetRelationshipTrust(EntityId from, EntityId to);
@@ -124,4 +125,4 @@ public sealed class StateCache
 }
 ```
 
-<!-- content-hash: 0dd8f1c610f29f17 -->
+<!-- content-hash: d78d54f0d5e269a0 -->

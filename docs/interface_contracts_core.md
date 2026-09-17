@@ -1,4 +1,4 @@
-<!-- contract-snapshot-hash: 0dd8f1c610f29f17 -->
+<!-- contract-snapshot-hash: d78d54f0d5e269a0 -->
 # Interface Contracts — Core Interfaces
 **Parent:** `interface_contracts.md` | **Version:** 0.9 | **Status:** living document, kept current via SCIP-verified snapshots
 
