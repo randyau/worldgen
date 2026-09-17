@@ -15,25 +15,25 @@ public sealed record Attack(EntityId Attacker, EntityId Target) : ICommand;
 public sealed record Flee(EntityId EntityId, TileCoord AwayFrom) : ICommand;
 
 // Character commands (Phase 2.2+)
-public sealed record EstablishSettlement(EntityId CharacterId, TileCoord Tile) : ICommand;
-public sealed record AllyWith(EntityId CharacterId, EntityId TargetId) : ICommand;
-public sealed record DeclareRivalry(EntityId CharacterId, EntityId TargetId) : ICommand;
+public sealed record EstablishSettlement(EntityId CharacterId, TileCoord Tile) : ICivCommand;
+public sealed record AllyWith(EntityId CharacterId, EntityId TargetId) : ICivCommand;
+public sealed record DeclareRivalry(EntityId CharacterId, EntityId TargetId) : ICivCommand;
 // War is a civ-level action: the declaring character must be their civ's ruler;
 // the target is a civilization, not an individual character.
-public sealed record DeclareWar(EntityId CharacterId, CivId TargetCivId) : ICommand;
-public sealed record RaidSettlement(EntityId CharacterId, TileCoord SettlementTile) : ICommand;
-public sealed record Negotiate(EntityId CharacterId, EntityId TargetId) : ICommand;
+public sealed record DeclareWar(EntityId CharacterId, CivId TargetCivId) : ICivCommand;
+public sealed record RaidSettlement(EntityId CharacterId, TileCoord SettlementTile) : ICivCommand;
+public sealed record Negotiate(EntityId CharacterId, EntityId TargetId) : ICivCommand;
 // M13 13.0 — upgrades a high-trust Bond into marriage: RelationshipFlags.IsMarried|IsFamily
 // plus a new Family-kind Organization (the household). See CivTracker.ResolveMarriage.
-public sealed record ProposeMarriage(EntityId CharacterId, EntityId TargetId) : ICommand;
+public sealed record ProposeMarriage(EntityId CharacterId, EntityId TargetId) : ICivCommand;
 // M13 13.2 — GranterId materially aids RecipientId (in need), creating a Debt obligation.
-public sealed record GrantAid(EntityId GranterId, EntityId RecipientId) : ICommand;
+public sealed record GrantAid(EntityId GranterId, EntityId RecipientId) : ICivCommand;
 // M13 13.2 — CreditorId forgives DebtorId's obligation: zeroes Debt, boosts Trust.
-public sealed record ForgiveDebt(EntityId CreditorId, EntityId DebtorId) : ICommand;
+public sealed record ForgiveDebt(EntityId CreditorId, EntityId DebtorId) : ICivCommand;
 // M13 13.1 — CharacterId appeases an existing, feared rival: reduces Fear, nudges Trust up.
-public sealed record Placate(EntityId CharacterId, EntityId TargetId) : ICommand;
+public sealed record Placate(EntityId CharacterId, EntityId TargetId) : ICivCommand;
 // M13 13.4 — CharacterId defects to ConfidantId's civ, seeking asylum with a trusted foreign friend.
-public sealed record Defect(EntityId CharacterId, EntityId ConfidantId) : ICommand;
+public sealed record Defect(EntityId CharacterId, EntityId ConfidantId) : ICivCommand;
 public sealed record CreateArtwork(EntityId CharacterId) : ICommand;
 public sealed record FleeRegion(EntityId CharacterId, TileCoord Destination) : ICommand;
 
@@ -82,16 +82,16 @@ public sealed record PurchaseArtifact(EntityId BuyerId, ArtifactId ArtifactId) :
 // transferred amount is config-driven at resolution, same as GrantAid's AidDebtIncrement, rather
 // than a command field). ContributeToTreasury: any member of OrganizationId, no authority check —
 // moves personal Wealth into Organization.Treasury. Resolved by CivTracker.ResolveContributeToTreasury.
-public sealed record ContributeToTreasury(EntityId CharacterId, OrganizationId OrganizationId) : ICommand;
+public sealed record ContributeToTreasury(EntityId CharacterId, OrganizationId OrganizationId) : ICivCommand;
 // WithdrawFromTreasury: gated on LeaderId == Organization.LeaderId (the only authority check in
 // the whole model, per decision 9) — moves Organization.Treasury into RecipientId's personal
 // Wealth. RecipientId may be LeaderId themself or any other living member. Resolved by
 // CivTracker.ResolveWithdrawFromTreasury.
 public sealed record WithdrawFromTreasury(
-    EntityId LeaderId, OrganizationId OrganizationId, EntityId RecipientId) : ICommand;
+    EntityId LeaderId, OrganizationId OrganizationId, EntityId RecipientId) : ICivCommand;
 
 // Phase 3.0 — city-state territory commands
 public sealed record BuildImprovement(
     EntityId        CharacterId,
     TileCoord       TargetTile,
-    ImprovementType ImprovementType) : ICommand;
+    ImprovementType ImprovementType) : ICivCommand;

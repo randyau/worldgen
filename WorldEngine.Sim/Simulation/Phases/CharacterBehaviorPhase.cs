@@ -1360,20 +1360,9 @@ public sealed class CharacterBehaviorPhase
             case FleeRegion flee:
                 ResolveMove(c, flee.Destination, world);
                 break;
-            case EstablishSettlement:
-            case AllyWith:
-            case DeclareRivalry:
-            case DeclareWar:
-            case RaidSettlement:
-            case Negotiate:
-            case ProposeMarriage:
-            case GrantAid:
-            case ForgiveDebt:
-            case Placate:
-            case Defect:
-            case BuildImprovement:
-            case ContributeToTreasury:
-            case WithdrawFromTreasury:
+            // Everything CivTracker.Resolve owns is marked ICivCommand, so a new civ-level command
+            // needs no edit here — it is dispatched the moment it implements the marker.
+            case ICivCommand:
                 CivTracker.Resolve(cmd, world, pending, _simCfg.SettlementNames);
                 break;
         }
