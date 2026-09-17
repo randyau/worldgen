@@ -19,15 +19,15 @@ The primary audience is worldbuilders and writers, not traditional gamers. The c
 - `docs/interface_contracts.md` — **index only** — links to 4 split files; load only the relevant one
 - `docs/implementation_plan_m1.md` — M1 phase ordering and story-level guide (archived reference)
 
-**Current milestone status:** M1–M15.95 are all COMPLETE, most recently M15.9 (Sim Tech Debt)
-and M15.95 (Civilization/Organization Unification), both shipped 2026-09-17. **M16 — Disasters,
-Reworked is next; no phase plan drafted yet.** Full milestone history, dates, and archived
-phase-doc links live in `docs/roadmap.md` — read its milestone table before scoping anything.
-Packaging/distribution is deferred to the final pre-release milestone, M19.
+**Current milestone status:** M1–M16 are all COMPLETE, most recently M16 (Disasters, Reworked),
+shipped 2026-09-17. **M17 is next; no phase plan drafted yet — check `docs/roadmap.md` § "M17"
+before scoping.** Full milestone history, dates, and archived phase-doc links live in
+`docs/roadmap.md` — read its milestone table before scoping anything. Packaging/distribution is
+deferred to the final pre-release milestone, M19.
 
 **For coding sessions — read the active phase doc:**
-- `docs/phases/m16_disasters_reworked.md` — M16 (Disasters, Reworked), IN PROGRESS, phase 16.0.
-- `docs/phases/archive/` — every completed milestone's phase docs (M1–M15.95) live here for reference.
+- No M17 phase doc exists yet — check `docs/roadmap.md` § "M17" before starting new work.
+- `docs/phases/archive/` — every completed milestone's phase docs (M1–M16) live here for reference.
 - `docs/archive/runbook_m1.md` — M1 manual test runbook (reference for regression testing).
 
 **Reusable code patterns and test templates:**

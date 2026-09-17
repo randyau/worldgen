@@ -1,8 +1,6 @@
 # M16 — Disasters, Reworked
 
-**Status:** IN PROGRESS — started 2026-09-17. 16.0 shipped 2026-09-17. 16.1 (Blight) shipped
-2026-09-17. 16.1b (Harsh Winter) shipped 2026-09-17 — all of 16.1's roadmap-scoped disaster
-variety is now complete.
+**Status:** COMPLETE — 2026-09-17. All phases (16.0, 16.1, 16.1b, 16.2, 16.3) shipped same day.
 
 See `docs/roadmap.md` § "M16" for the one-line scope statement: wire real consequences onto
 disasters (destroyed settlements/improvements, ash-driven famine, displacement); expand variety
@@ -57,8 +55,14 @@ Reuse targets found:
   `VolcanicActivityMultiplier`. Consumed by `PopulationDynamicsPhase` (extra settlement decayF)
   and `CharacterBehaviorPhase` (per-year character Health drain, killing on 0 like disease).
   New event `HarshWinterBegan`.
-- **16.2 — Narrative/UI parity.** Event log labels for the new event types; ruin cause "disaster"
-  surfaced distinctly from "war_damage"/"abandoned" where the UI shows ruin history.
-- **16.3 — Balance pass.** Long-run instrumented test (same shape as M14/M15's balance suites)
-  confirming disaster-driven abandonment/destruction rates are meaningful but not
-  civilization-ending at default config.
+- **16.2 — Narrative/UI parity.** ✅ Shipped alongside 16.0/16.1/16.1b: `Presenter.EventVerbPhrase`
+  labels for `ImprovementDestroyed`/`SettlementDamagedByDisaster`/`BlightBegan`/`HarshWinterBegan`.
+  Ruin-cause UI parity needed **no new code** — `TileInspectorPanel` already renders
+  `RuinRecord.Cause` as raw text, and `RegisterRuin`'s free-text `cause` parameter meant
+  `"disaster"` shows up distinctly from `"war_damage"`/`"abandoned"`/`"destroyed"` automatically.
+- **16.3 — Balance pass.** ✅ Shipped 2026-09-17:
+  `WorldEngine.Tests/Balance/DisasterBalanceInstrumentationTests.cs`, 3-seed/300-year sweep (same
+  discipline as M14/M15's balance suites). Observed at default config: `ImprovementsDestroyed`
+  1–33, `SettlementsDamaged` 0–210, `Blights` 17–25, `HarshWinters` 8–9, `DisasterRuins` 0 across
+  all three seeds — consequences fire meaningfully without ever reaching total settlement
+  destruction or wiping out a civilization in a 300-year window. No constant needed retuning.
