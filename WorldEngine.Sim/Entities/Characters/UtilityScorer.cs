@@ -387,10 +387,9 @@ public sealed class UtilityScorer
 
                     if (hostileEnough)
                     {
-                        float warScore = Score(c, ActionType.War, c.Personality.Aggression, world, cfg)
-                                        * KinDampening(c, nearSettle.CivId, world, world.SimConfig.Family)
-                                        * DebtDampening(c, nearSettle.CivId, world, world.SimConfig.Debt)
-                                        * FearDampening(c, nearSettle.CivId, world, world.SimConfig.Fear);
+                        float warScore = HostilityDampening(
+                            Score(c, ActionType.War, c.Personality.Aggression, world, cfg),
+                            c, nearSettle.CivId, world);
                         actions.Add(new(new DeclareWar(c.Id, nearSettle.CivId), warScore));
                         break;
                     }
@@ -414,10 +413,9 @@ public sealed class UtilityScorer
                     if (myCivForRaid.IsAtWarWith(settlement.CivId))
                     {
                         float successProb = c.Skills.Combat * c.Aptitude.Diligence;
-                        float raidScore = Score(c, ActionType.Raid, successProb, world, cfg)
-                                         * KinDampening(c, settlement.CivId, world, world.SimConfig.Family)
-                                         * DebtDampening(c, settlement.CivId, world, world.SimConfig.Debt)
-                                         * FearDampening(c, settlement.CivId, world, world.SimConfig.Fear);
+                        float raidScore = HostilityDampening(
+                            Score(c, ActionType.Raid, successProb, world, cfg),
+                            c, settlement.CivId, world);
                         actions.Add(new(new RaidSettlement(c.Id, coord), raidScore));
                         break;
                     }
@@ -832,6 +830,22 @@ public sealed class UtilityScorer
     }
 
     // ─── M13 13.0 — weighted-loyalty conflict scoring ──────────────────────────
+
+    /// <summary>
+    /// The single composed social brake on aggression toward <paramref name="targetCivId"/>:
+    /// kin ties, outstanding debt, and fear of a rival resident there, applied to
+    /// <paramref name="baseScore"/>. Used by both the War and Raid scoring sites so the two can
+    /// never drift apart.
+    /// </summary>
+    // DECISION: takes the base score rather than returning a bare product so the arithmetic stays
+    // bit-identical to the original ((score * kin) * debt) * fear grouping — float multiplication
+    // is not associative and the reproducibility tests compare exact outputs.
+    private static float HostilityDampening(
+        float baseScore, Tier1Character c, CivId targetCivId, IWorldStateReadOnly world)
+        => baseScore
+           * KinDampening(c, targetCivId, world, world.SimConfig.Family)
+           * DebtDampening(c, targetCivId, world, world.SimConfig.Debt)
+           * FearDampening(c, targetCivId, world, world.SimConfig.Fear);
 
     /// <summary>
     /// First real consumer of M12 design decision 2 (weighted-loyalty conflict scoring): dampens
