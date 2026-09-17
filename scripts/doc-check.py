@@ -464,6 +464,10 @@ def main() -> int:
     print("Checking generated docs are in sync...", file=sys.stderr)
     all_v.extend(check_generated_in_sync())
 
+    # Check (e)
+    print("Checking prose contract docs are reviewed against their snapshots...", file=sys.stderr)
+    all_v.extend(check_prose_snapshot_hashes())
+
     if all_v:
         print(f"\nDOC-CHECK: {len(all_v)} violation(s):\n", file=sys.stderr)
         for violation in all_v:

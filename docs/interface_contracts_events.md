@@ -1,4 +1,4 @@
-<!-- contract-snapshot-hash: 2ca711d4bfac89da -->
+<!-- contract-snapshot-hash: 15642e781f0318c5 -->
 # Interface Contracts — Events & Enumerations
 **Parent:** `interface_contracts.md` | **Version:** 0.9 | **Status:** living document, kept current via SCIP-verified snapshots
 
