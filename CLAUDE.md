@@ -19,16 +19,16 @@ The primary audience is worldbuilders and writers, not traditional gamers. The c
 - `docs/interface_contracts.md` — **index only** — links to 4 split files; load only the relevant one
 - `docs/implementation_plan_m1.md` — M1 phase ordering and story-level guide (archived reference)
 
-**Current milestone status:** M13 — Generational & Domestic Drama COMPLETE (2026-08-01/02, phases 13.0–13.7 shipped, including the 13.7 lifespan-units-mismatch fix) — see `docs/phases/archive/m13_generational_domestic_drama.md`. M13.8 — Tier2 Relationship Exposure COMPLETE (2026-08-03, all four phases 13.8.0–13.8.3 shipped) — see `docs/phases/archive/m13_8_tier2_relationship_exposure.md`. M14 — Economy & Independent Wealth COMPLETE (2026-08-05, all six phases 14.0–14.5 shipped same session: wealth substrate, paid trade, persistent trade routes/caravans, goal fulfillment via trade, Guild organizations/treasuries/economic ruin/war reparations, balance pass + economic ledger UI) — see `docs/phases/archive/m14_economy_independent_wealth.md`. M15 — Religion, Deepened COMPLETE (2026-08-06, all six phases 15.0–15.6 shipped same session: religion as a real Organization with authored archetypes, exposure-based conversion, schism, heresy/persecution, pilgrimage, religious-leader UI, balance pass) — see `docs/phases/archive/m15_religion_deepened.md`. A 2026-09-17 code-review/docs-audit pass followed M15 (bugfixes, dead-code removal, doc-check gate fix, Spotlight social-intent completion) — see the roadmap's M15.9 entry. M15.9 — Sim Tech Debt is PARTIALLY COMPLETE (2026-09-17: membership-invariant consolidation, command-dispatch dedup, GoalManager goal-type tables, org succession dedup, cooldown conventions, dampening composition, and test-scaffolding dedup all shipped same day). Remaining: config-ify old hardcoded constants, review entity-ID allocation scheme, reset `IdGenerator._counter` between test runs — see `docs/roadmap.md` § "M15.9". M15.95 — Civilization/Organization Unification is scheduled after M15.9, not started. M16 — Disasters, Reworked follows per `docs/roadmap.md` § "M16"; no phase plan drafted yet. M12 — Organization Model COMPLETE (2026-07-31); see `docs/phases/archive/m12_organization_model.md`. M11 — Scale is otherwise complete (perf + local-scale gen); packaging/distribution pushed out to final pre-release milestone M19, see `docs/roadmap.md` § "M19". M10 — Worldgen Preview & Modding COMPLETE (2026-07-26); see `docs/phases/archive/m10_worldgen_preview_modding.md` for phase sequence. M9 (Created-Object Unification & Economic Depth) COMPLETE (2026-07-26) — see `docs/phases/archive/m9_created_object_unification.md`. Milestones were renumbered on 2026-07-23 when M8 was inserted (old M8→M9, M9→M10, M10→M11) — see `docs/roadmap.md`.
+**Current milestone status:** M1–M15.95 are all COMPLETE, most recently M15.9 (Sim Tech Debt)
+and M15.95 (Civilization/Organization Unification), both shipped 2026-09-17. **M16 — Disasters,
+Reworked is next; no phase plan drafted yet.** Full milestone history, dates, and archived
+phase-doc links live in `docs/roadmap.md` — read its milestone table before scoping anything.
+Packaging/distribution is deferred to the final pre-release milestone, M19.
 
 **For coding sessions — read the active phase doc:**
-- M13 (Generational & Domestic Drama, phases 13.0–13.7) COMPLETE (2026-08-01/02) — see `docs/phases/archive/m13_generational_domestic_drama.md`.
-- M13.8 (Tier2 Relationship Exposure, phases 13.8.0–13.8.3) COMPLETE (2026-08-03, all four phases shipped same session) — see `docs/phases/archive/m13_8_tier2_relationship_exposure.md`. M14 (Economy & Independent Wealth, phases 14.0–14.5) COMPLETE 2026-08-05, all six phases shipped same session — see `docs/phases/archive/m14_economy_independent_wealth.md`. M15 (Religion, Deepened, phases 15.0–15.6) COMPLETE 2026-08-06, all six phases shipped same session — see `docs/phases/archive/m15_religion_deepened.md`. M16 (Disasters, Reworked) is next per `docs/roadmap.md`; no phase plan drafted yet.
-- M12 (Organization Model, phases 12.0–12.3) COMPLETE (2026-07-31) — see `docs/phases/archive/m12_organization_model.md`.
-- M11 phase 0 (long-run performance) COMPLETE (2026-07-27) — see `docs/phases/archive/m11_phase0_longrun_performance.md`.
-- M11 local-scale generation (phases 11.1–11.8) COMPLETE (2026-07-29) — see `docs/phases/archive/m11_local_scale_generation.md`. M11 is otherwise complete; cross-platform packaging/distribution has been pushed out to **M19 — Packaging & Release**, the final pre-release milestone, per `docs/roadmap.md` § "M19" (deferred 2026-07-31 until the M12–M18 narrative-depth backlog is settled).
-- `docs/phases/archive/` — all M1–M13 phases archived here for reference
-- `docs/archive/runbook_m1.md` — M1 manual test runbook (reference for regression testing)
+- No M16 phase doc exists yet — check `docs/roadmap.md` § "M16" before starting new work.
+- `docs/phases/archive/` — every completed milestone's phase docs (M1–M15.95) live here for reference.
+- `docs/archive/runbook_m1.md` — M1 manual test runbook (reference for regression testing).
 
 **Reusable code patterns and test templates:**
 - `docs/snippets/patterns.md` — command pattern, WorldRng, tile iteration, StateCache, etc.
@@ -297,7 +297,7 @@ At the start of each session:
 
 1. Read this file
 2. Run `python3 scripts/scip-query.py stats` — confirms the SCIP index is fresh and tells you the document/symbol counts. If missing, run `scip-dotnet index WorldEngine.sln --skip-dotnet-restore` first.
-3. Read the active phase doc from `docs/phases/` (whichever phase is in progress). M8–M10 are complete (archived); the current milestone is **M11 — Scale & Distribution** — check `docs/roadmap.md` § "M11" and `docs/phases/` for whether a phase doc exists yet.
+3. Read the active phase doc from `docs/phases/` (whichever phase is in progress). Check `docs/roadmap.md` for the current milestone and whether a phase doc exists yet for it.
 4. Use `docs/codebase_map.md` to orient yourself — one-line description of every source file; skip filesystem scans when possible. This file is generated per-commit and is current.
 5. Check only the relevant `docs/interface_contracts_*.md` split file for interfaces you'll be implementing against.
 6. Use `python3 scripts/scip-query.py defs <TypeName>` to locate types before reading files.

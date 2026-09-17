@@ -81,87 +81,26 @@ because M7 does not depend on it. M10 (complete) and M11 are the long-tail platf
 
 ---
 
-## M6 — UI Experience & Polish  *(DETAILED)*
+## M6 — UI Experience & Polish  ✅ COMPLETE 2026-07-21
 
-**Progress:** COMPLETE 2026-07-21. All epics done:
-- Phase 1 (6.1.1–6.1.4, 6.2.1): foundation + interaction architecture — `docs/phases/archive/m6_phase1_foundation.md`
-- Phase 2 (6.2.2–6.4.3): visual polish, filter panel, causal chain, cross-panel linking, first-run, empty states — `docs/phases/archive/m6_phase2_visual_polish.md`
-
-### Goal
-A cohesive, legible, discoverable UI over the existing simulation. No new sim systems — this
-milestone makes the current feature set (overlays, panels, timeline, worldgen screen) feel
-like one designed product rather than an accretion of panels. Success = a first-time
-worldbuilder can open a world, understand what they're seeing, and navigate history without a
-keyboard cheat-sheet.
-
-### Success criteria
-- Every overlay and panel is reachable from visible, labeled UI (not keyboard-only).
-- A consistent visual language: color, typography, spacing, panel chrome are unified.
-- Overlays have on-screen legends; the active overlay is always indicated.
-- Event log and history views are filterable and readable at a glance (tier, type, civ, character).
-- The app has an onboarding path: launch → generate → oriented, with no dead ends.
-- No regressions: `scripts/test-fast.sh` green, architecture tests pass, UI stays `WorldSnapshot`-only.
-
-### Epic 6.1 — Interaction & information architecture
-- **6.1.1 — Overlay control bar.** Replace keyboard-only overlay switching (B/E/T/M/R/G) with a visible, labeled overlay toolbar; keep keybinds as accelerators. Show the active overlay state. Source of truth stays `SetActiveOverlay` command.
-- **6.1.2 — Panel manager & docking.** Unify panel show/hide (inspector, profile, civ history, watch, timeline) under one consistent toggle model with visible affordances, replacing the ad-hoc `H`/`W` toggles. Panels remember open/closed state.
-- **6.1.3 — Global keybind + help overlay.** A single discoverable "?" help panel listing every shortcut, generated from one keybind registry (so it can't drift from `Game1` input handling).
-- **6.1.4 — Selection model.** One consistent "selected thing" concept (tile / settlement / character / civ) that drives which contextual panel is shown, instead of independent click handlers.
-
-### Epic 6.2 — Visual design pass
-- **6.2.1 — Design tokens.** Centralize colors, fonts, spacing, panel chrome into a single theme applied across all Myra panels (today each panel styles itself). One place to retune.
-- **6.2.2 — Map legibility.** Overlay legends (color ramp + labels) rendered on-map for each `OverlayType`; consistent civ-color derivation shared between territory overlay and panels.
-- **6.2.3 — Marker & icon consistency.** Unify settlement markers, improvement icons, character/beast markers into one styled sprite set with zoom-appropriate scaling.
-- **6.2.4 — Event log readability.** Tier color-coding, type icons/grouping, timestamp formatting, and readable density in `EventLogPanel`.
-
-### Epic 6.3 — History navigation polish
-- **6.3.1 — Filter panel.** First-class filter UI over the event log/history: by tier, event type, civ, character, year range. (Focus-lens state exists — surface it properly.)
-- **6.3.2 — Timeline scrubber polish.** `TimelineBar` gets tick density markers, headline-event pips, and readable scrub feedback.
-- **6.3.3 — Causal chain view.** "What led to this?" — render the causal-edge graph for a selected event as a navigable chain (data exists in `CausalEdges`/`HistoryQueryService`).
-- **6.3.4 — Cross-panel linking.** Clicking a civ/character/settlement name anywhere opens the relevant profile/history panel (wire the existing panels together).
-
-### Epic 6.4 — Onboarding & worldgen screen
-- **6.4.1 — Worldgen screen polish.** `WorldGenScreen` shows per-layer progress with names and a final map preview before "Start Simulation."
-- **6.4.2 — First-run orientation.** A dismissible intro pointing at time controls, overlays, and the event log — no dead-end empty states.
-- **6.4.3 — Empty/loading states.** Consistent handling for pre-sim, loading-save, and no-results-in-filter states.
+A cohesive, legible, discoverable UI over the existing simulation (no new sim systems):
+overlay control bar, panel manager/docking, global keybind+help overlay, selection model,
+design tokens, map legibility, event log readability, filter panel, timeline polish, causal
+chain view, cross-panel linking, worldgen screen polish, first-run onboarding. All epics
+6.1–6.4 shipped — see `docs/phases/archive/m6_phase1_foundation.md` (6.1.1–6.1.4, 6.2.1) and
+`docs/phases/archive/m6_phase2_visual_polish.md` (6.2.2–6.4.3) for story-level detail.
 
 ---
 
-## M7 — Authoring & Agency: Spotlight + God Mode  *(DETAILED)*
+## M7 — Authoring & Agency: Spotlight + God Mode  ✅ COMPLETE 2026-07-23
 
-### Goal
-Deliver the two "lost" pillars that define the product for worldbuilders: **God Mode**
-(author world events and nudge history) and **Spotlight** (inhabit and steer a single
-character). Both are player agency layered on top of the deterministic sim without breaking
-the command/resolve architecture or reproducibility of the un-authored baseline.
-
-### Success criteria
-- A player can pause, author a world event (disaster, artifact placement, character nudge) via UI, and see it land in history flagged `IsGodMode = true`.
-- A player can enter Spotlight on any living character, issue high-level intents, and return control to the AI; the character remains a normal sim entity throughout.
-- All authoring flows through `ICommand` → `CommandResolver`; no direct `WorldState` mutation from UI.
-- God-Mode-authored events are visually distinguished in history and excluded from balance-invariant baselines where appropriate.
-- Determinism preserved: a run with **no** authoring reproduces byte-for-byte against the current baseline.
-
-### Epic 7.1 — God Mode foundation
-- **7.1.1 — Authoring command taxonomy.** Define the `ICommand` set for authored acts (place artifact, trigger disaster, spawn/modify character, alter tile, force event). Sealed records, value-type fields only.
-- **7.1.2 — Authoring resolve + provenance.** `CommandResolver` handles authored commands, stamping resulting `SimEvent`s with `IsGodMode = true`. Wire `EventType.GodModeArtifactPlaced = 9004` (Session G / G-3) as the first concrete case.
-- **7.1.3 — Authoring guardrails.** Validation so authored acts can't corrupt invariants (valid coords, living targets, config-bounded magnitudes). Reject invalid commands cleanly.
-
-### Epic 7.2 — God Mode UI
-- **7.2.1 — Author panel.** A God Mode toolbar/panel (pause-gated) to pick an authoring action and target via map/selection, then confirm → command.
-- **7.2.2 — Artifact & disaster authoring.** Concrete authoring flows for placing an artifact (leans on Session G artifact system) and triggering a disaster at a tile/region.
-- **7.2.3 — Character authoring.** Spawn a character, or nudge an existing one's goal/needs/relationships, within guardrails.
-- **7.2.4 — Provenance display.** God-Mode events badged distinctly in the event log/timeline; a toggle to show/hide authored history.
-
-### Epic 7.3 — Spotlight foundation
-- **7.3.1 — Spotlight session model.** Entering/exiting Spotlight on a character; the character stays a normal sim entity, but player intent biases its decision-making. Define the intent surface (movement, social, goal-setting) as commands.
-- **7.3.2 — Intent → behavior integration.** `CharacterBehaviorPhase`/decision system consumes standing Spotlight intents as strong utility inputs rather than hard overrides, so the character still behaves coherently. `// DECISION:` the override-vs-bias policy.
-- **7.3.3 — Determinism & handoff.** Spotlight input is command-sourced and logged; releasing Spotlight returns the character to pure-AI control with no residual state divergence.
-
-### Epic 7.4 — Spotlight UI
-- **7.4.1 — Spotlight HUD.** Promote `CharacterWatchPanel` into an interactive Spotlight view: current needs/goals/relationships + intent controls.
-- **7.4.2 — Intent issuance.** Map/panel controls to issue movement, social, and goal intents; visible feedback on what the character is doing and why.
-- **7.4.3 — Camera & follow.** Camera follow mode for the spotlighted character; smooth enter/exit transitions.
+The two "lost" pillars for worldbuilders: **God Mode** (author world events via `ICommand` →
+`CommandResolver`, stamped `IsGodMode = true`, excluded from balance baselines) and
+**Spotlight** (inhabit a character — intents bias its utility scoring rather than hard-override
+it, so it stays a normal sim entity). Determinism preserved: an unauthored run still reproduces
+byte-for-byte. All epics 7.1–7.4 (command taxonomy, guardrails, author panel, artifact/disaster/
+character authoring, provenance display, Spotlight session model, intent integration, HUD,
+camera follow) shipped — see `docs/phases/archive/m7_authoring_agency.md` for story-level detail.
 
 ---
 
@@ -360,201 +299,13 @@ M12–M18 extends them instead of duplicating them.
   static-after-founding, letting it drift over time from trade/contact (M14/M17) is a cheap way
   to generate contact-driven stories using a value that already exists, rather than a new system.
 
-- **M12 — Organization Model.** ✅ COMPLETE 2026-07-31 — see `docs/phases/archive/m12_organization_model.md` for the phase-by-phase implementation record (12.0 Organization entity/registry, 12.1 org-to-org alliance fact decoupled from ruler death, 12.2 full `IdentityData.CivId` → `Tier1Character.Memberships` migration, 12.3 generalized succession kernel). New foundational milestone, inserted 2026-07-30 — hard prerequisite for M13 (family), M14 (guilds), and M15 (religion), all of which need "an organization with a leader, members, and relationships to other organizations" and would otherwise each hand-roll a bespoke version of what `Civilization` already does ad hoc.
-
-  **Why this exists.** Audited how civ diplomacy actually works today (`Civilization.cs`,
-  `CivTracker*.cs`): there is no civ-pair relationship record. `WarsAgainst`/`BorderTension`/
-  `PeaceTreaties` are per-civ dictionaries, but alliance state itself is **derived on the fly
-  from the ruler-pair's personal `RelationshipEdge`** — `CivTracker.Diplomacy.cs` fires
-  `AllianceFormed` when the ruler-to-ruler `Trust` crosses a threshold, breaks it when `Trust`
-  drops. There is no independent "these two civs are allied" fact, just two individuals'
-  feelings read as if they were one. Character civ-membership is a single `CivId` field on
-  `IdentityData` (not a set) — `Tier2Character` doesn't even have that. Religion currently has
-  no entity, no follower list, and no membership tracking at all — `ReligionFounded` is a pure
-  flavor event. There is no shared type or interface between `Civilization`, settlements, or
-  (nonexistent) religion — every concept is independently bespoke. This pattern will not survive
-  three more copies.
-
-  **Design decisions made 2026-07-30 (user-confirmed, both cross-cutting/schema-level per
-  CLAUDE.md's "stop and ask" rule — do not revisit without reopening the discussion):**
-  1. **Org-to-org relationships are decoupled from individual leaders.** An `Organization`
-     (Kind: Civilization / Guild / Religion / Family) gets its own persisted relationship state
-     to other organizations (alliance/war/tension), instead of being derived from its leader's
-     personal `RelationshipEdge`. The leader's personal trust becomes one *input/lever* into
-     that state, not the source of truth — fixes the "assassinate the ruler, alliance evaporates"
-     fragility and supports organizations without a single leader later. `Civilization`'s
-     existing `WarsAgainst`/`BorderTension`/`PeaceTreaties` machinery is the model to generalize
-     onto `Organization`, not to replace.
-  2. **Multi-membership uses weighted loyalty, not a fixed priority order.** Replace the
-     single `CivId` field with a membership set per character (`OrganizationId`, `Role`,
-     `Loyalty` — a continuous value analogous to `RelationshipEdge.Trust`). When memberships
-     conflict (e.g. a character's religion's mother civ is at war with their own civ), goal/
-     utility scoring weighs by whichever organization has the higher `Loyalty` stake in the
-     decision at hand, rather than a hardcoded ranking. This is genuinely new scoring logic in
-     `UtilityScorer`/`GoalManager`, not just a schema change — budget real design time for it,
-     likely alongside M13 since domestic/family loyalty is the first real test of it.
-  3. **Leadership succession (see the reusable-mechanics note above) becomes part of this
-     model** — the vacant-seat/heir-pool/crisis-window pattern hangs off `Organization.LeaderId`
-     generically, with civ rulers as the existing (now-migrated) instance.
-
-  **Scope boundaries:** `Civilization`-specific mechanics that aren't about
-  membership/leadership/relationships (territory, `CulturalProfile`, war mechanics themselves)
-  stay on `Civilization`; only the generalizable parts (membership, leader seat, org-relationship
-  state) move up into the shared `Organization` layer. This is a `WorldEngine.Sim`-only schema
-  and behavior migration — no new UI surface required, though existing panels that read `CivId`
-  will need updating to read the membership set instead.
-
-- **M13 — Generational & Domestic Drama.** ✅ COMPLETE 2026-08-02 — see `docs/phases/archive/m13_generational_domestic_drama.md` (phases 13.0–13.7, including the 13.7 lifespan-units-mismatch fix). Parent-child bonds with inherited traits/grudges/goals; mentorship (master→apprentice skill transfer, and its failure modes); non-war rivalry (romantic, professional, succession disputes within a family); betrayal by an ally, spouse, or heir. Highest-leverage item — mostly wiring new goal types onto existing character relationships, no new worldgen or event-log domains required. First consumer of the generalized succession mechanic (family-head seats) and the M12 Organization Model's weighted-loyalty scoring.
-
-  **Relationship-system audit (2026-07-30) — why this milestone exists and what it should fix.**
-  Traced every read/write of `RelationshipEdge` (`WorldEngine.Sim/Entities/Characters/
-  RelationshipEdge.cs`) and its consumers. Functionally the palette is 7 fields but only 2 do
-  anything:
-  - `Trust` — gates Bond formation (`GoalManager.FindHighTrustCompanion`), feeds
-    `UtilityScorer` alliance/rivalry/negotiate scoring, drains via territorial disputes
-    (`CharacterBehaviorPhase`). **Also reused verbatim as civ-level diplomacy** —
-    `CivTracker` reads/writes the *ruler pair's* personal `RelationshipEdge` as the civ's
-    diplomatic state (`CivTracker.Diplomacy.cs`, `CivTracker.War.cs`). One substrate, two
-    callers: a ruler's personal feelings toward another ruler *are* their civs' foreign policy.
-  - `IsRival` — feeds Dominance-goal targeting (`GoalManager.FindNearbyRival`) and
-    territorial-dispute resolution. No non-war outlet exists — every rivalry's only mechanical
-    endpoint is a war goal.
-  - `Fear` — written once (`CivTracker.cs`, ruler intimidation), persisted, **never read by
-    anything**. Dead code path, not just underused.
-  - `Debt` — **never written with a nonzero value anywhere in the codebase and never read.**
-    Fully vestigial despite being a modeled field with persistence support.
-  - `IsFamily` / `IsMarried` — defined, **never read anywhere in behavior.** Marriage and
-    family are cosmetic flags today.
-  - **`Grieve` (the goal that produces `CharacterGrieved`, `3005`) is the only behavioral
-    consequence of any bond**, and it isn't even gated by `IsFamily`/`IsMarried` — it fires
-    for *any* live `Bond` goal above the `Trust` threshold, so a spouse and a co-located
-    trusted stranger grieve identically today.
-  - No test in `WorldEngine.Tests` exercises `Fear`, `Debt`, the Bond→Grieve pipeline, or the
-    family/marriage flags — this surface is unverified, not just unbalanced.
-
-  **Mechanic proposals to widen the palette (reuse-first order):**
-  1. Activate `Fear` as a submission/appeasement axis distinct from `Trust` — a feared rival
-     gets avoided or placated rather than confronted, giving rivalry an outlet other than
-     Dominance/war.
-  2. Activate `Debt` as the obligation mechanic — an indebted character protects/favors their
-     creditor even against self-interest; debt is inheritable (ties to the generalized
-     succession mechanic) and forgivable (a reconciliation event).
-  3. Wire `IsFamily`/`IsMarried` into actual consequence weight: grief severity/probability
-     scaled by relationship type (spouse > family > bonded stranger, not uniform); shared
-     household/resource effects; and — since civ diplomacy already reuses the ruler's personal
-     edge — a ruler married across civ lines becomes a real diplomatic lever (arranged marriage
-     as alliance-cement).
-  4. Let non-ruler bonds reach the wider world. Today only the *ruler's* personal relationships
-     ever escape the character layer. A trusted confidant could become an emissary candidate; a
-     cross-civ friendship could dampen war tension or trigger asylum/defection — reuses the
-     existing emissary and civ-tension systems rather than new ones.
-  5. New relationship-transition events, cheap given `CivSplintered`-style patterns already
-     exist: Reconciliation, Feud, Estrangement, Oath-breaking (a violated `Debt`).
-- **M13.8 — Tier2 Relationship Exposure.** COMPLETE (2026-08-03) — see
-  `docs/phases/archive/m13_8_tier2_relationship_exposure.md`. Let Tier1 relationship actions
-  (Bond/Rivalry/Placate/Marriage) target a co-located Tier2 character the same way `GrantAid`/
-  `ForgiveDebt` already did (Tier1-initiated, Tier1-scanned, Tier2-received — never a Tier2-side
-  scorer, preserving the scale split), and added a Notability signal so a Tier2 pulled into enough
-  Tier1-driven drama crystallizes into a hero more readily, closing the gap where `TryCrystallize`
-  previously only read Ambition/Status/RNG with zero input from relationships.
-- **M14 — Economy & Independent Wealth.** ✅ COMPLETE 2026-08-05 — see `docs/phases/archive/m14_economy_independent_wealth.md` for the phase-by-phase plan, kickoff design decisions, and what shipped (all six phases 14.0–14.5 same session). Trade routes as persistent entities between settlements (replacing the current one-shot `MerchantTradeCompleted` transaction) that can be severed by war/disaster/piracy, creating dependency and scarcity stories — built as a full caravan/travel-time simulation, not a lightweight link. Wealth is a real fungible currency, not an abstract score — a per-character `Wealth` balance backed by (not minted separately from) the gold/silver/gems the economy already produces, so it needs no new production behavior to exist; sourced from trade, spent on goal fulfillment (buying a coveted artifact instead of only claim/conflict), inherited-and-partially-looted on death. Prices are seeded/formulaic (a base-value table modulated by local scarcity, not a discovered market — 10k-year transaction volume can't support real price-seeking) and corrected over time by a single world-wide, per-capita `GlobalPriceIndex` so ~10,000 years of near-permanent precious-metal accretion (`WealthSpoilageRate` ≈ 0) doesn't decouple fixed prices from a steadily inflating money supply. Guilds model as `Organization`s (M12), whose heads use the generalized succession mechanic unmodified. Debt and economic ruin extend the existing civ-level collapse/splinter pathway rather than becoming a parallel failure mode. Faction-funding ("wealth buys political influence") and interpersonal theft are explicitly deferred past M14. Builds on M9's economic-depth foundation (per-capita demand, settlement specialization) and the trade-network topology M9 deliberately left out of scope; also the second consumer (after M18) of Tier2-role behavior variability.
-- **M15 — Religion, Deepened.** ✅ COMPLETE 2026-08-06 — see `docs/phases/archive/m15_religion_deepened.md` (all six phases 15.0–15.6 same session). Schism — reuse the `CivSplintered` pattern (`3212`) for religions splitting into competing sects, now modeled as an `Organization` (M12) with real followers instead of a flavor event. Heresy/persecution short of holy war. Pilgrimage as a goal type. Religious leaders as a third power track alongside rulers (political) and merchants (M14, economic), using the generalized succession mechanic for a religious-leader seat (e.g. contested succession of a high priest).
-- **M15.9 — Sim Tech Debt.** ✅ COMPLETE 2026-09-17. The refactor-debt half of this
-  milestone shipped same-day: consolidated the nine ad-hoc `Membership` join/leave/loyalty-update
-  sites into `OrganizationMembership.Join/Leave/SetLoyalty` (fixing a reorder side-effect in
-  loyalty updates that let `Tier1Character.CivId` resolution drift, and a related save/load bug
-  where `Organization.Members[...].CivId` didn't round-trip); deduped the civ-vs-org command
-  dispatch double-switch behind an `ICivCommand` marker (with an architecture-rule guard);
-  collapsed `GoalManager`'s five hand-maintained goal-type lists into one `GoalTypeTraits` table;
-  merged the near-identical Guild/Religion succession blocks in
-  `CharacterBehaviorPhase.KillCharacter`; unified the cooldown-field conventions via a `Cooldown`
-  helper; composed the `*Dampening` call-site duplication into `HostilityDampening`; and
-  consolidated the test-scaffolding duplication (31 `FindLandTile` / 17 `SpawnAt`-shaped copies
-  into `WorldEngine.Tests/Helpers/WorldGenTestHelpers.cs`; 22 sim members reflected into via
-  `GetMethod`/`BindingFlags` across ~19 test files widened to `internal` and called directly).
-  The same session also closed the three items left open after that pass:
-  (1) **Config-ified the last M2/M4-era hardcoded need constants** — `AdvanceFoundReligionGoal`'s
-  Purpose/Spiritual/Status founding boosts and its abandon-threshold hysteresis margin moved into
-  `ReligionConfig` (`ReligionFoundingPurposeBoost`/`SpiritualBoost`/`StatusBoost`/`AbandonMargin`);
-  `ResolveRest`'s six need increments moved into `CharacterSimConfig` (`Rest*Recovery`), which
-  required threading `WorldState` into `ResolveRest` since it previously took only the character.
-  (2) **Replaced the entity-ID base-offset scheme with `DeterministicId`**
-  (`WorldEngine.Sim/Core/DeterministicId.cs`) — every deterministic-formula spawn site (civ-floor
-  spawn, unrest-secession leader, God Mode authoring spawn, family birth, civ-born, leaderless
-  resurrection, Tier2 crystallization, beast emergence, beast reproduction) now tags its hash with
-  a `DeterministicIdSystem` enum value folded into the ID's high byte instead of an additive base
-  offset (400_000, 9_000_000, ...) that didn't bound the hash's growth and had already produced a
-  real collision (`CivTracker.Unrest` and `PopulationDynamicsPhase` both reused 400_000 with
-  different multiplier schemes). The tag is structurally collision-free — two systems can never
-  produce the same ID regardless of hash magnitude. One nuance found while fixing this:
-  `WorldState.GetRandomFloat/GetRandomInt` read `EntityId.Value`'s low 16 bits *and* high 32 bits
-  (unlike `CharacterFactory`/`BeastFactory.Spawn`'s internal RNG, which only ever reads the low 31
-  bits), so a tag placed in the top byte does perturb any RNG draw keyed directly off the
-  tagged EntityId before construction — `EntityBehaviorPhase`'s beast-emergence tile pick was the
-  one call site doing this; it now rolls off the untagged hash and only tags the value used for
-  the beast's actual `EntityId`.
-  (3) **Added `IdGenerator.ResetForTests()`** — resets the process-global counter to a fixed base
-  (1,000,000, chosen clear of the small literal seed offsets test helpers pass to
-  hand-constructed characters) so `WorldRng` draws stay reproducible regardless of prior tests'
-  execution order; wired into `WorldTestHelper.CreateSmallWorld` (most world-based tests) and into
-  each `Category=Balance` test file's own harness-builder (`BalanceRegressionTests`,
-  `EconomyBalanceInstrumentationTests`, `M13RelationshipEventBalanceTests`,
-  `ReligionBalanceInstrumentationTests`, `Tier2CrystallizationBalanceTests` — none of these use
-  `WorldTestHelper`, each builds its own `SimHarness` directly off `WorldGenPipeline`).
-  Deliberately excludes the `Civilization`/`Organization` dual-state migration — see M15.95.
-  **Known trade-off:** removing the additive base offsets (item 2) changes the low-order bits fed
-  into `CharacterFactory.Spawn`'s RNG substream even where no collision existed, so it reshuffles
-  which characters spawn/marry/found-religion for any fixed seed on the affected code paths — this
-  flipped `ReligionBalanceInstrumentationTests.LongRun_..._AcrossThreeThousandYears` (seed 42) to
-  only ever 1 religion founded (extinct within a few hundred years), failing its "2+ coexisting
-  religions" constraint. Verified with the reset hook in place, run in isolation (single test,
-  fresh process) so this isn't a counter-ordering artifact — it is a genuine, deterministic
-  consequence of the ID-formula fix for seed 42, not a logic bug. The fix corrects a real
-  collision at the cost of reshuffling one already-fragile, seed-42-specific long-run outcome
-  (this suite was already flagged
-  run-to-run-inconsistent pre-fix; `Category=Balance` is excluded from `test-fast.sh`'s gate).
-  Fast suite (851/851), doc-check, and architecture tests all pass; not re-baselining the
-  Religion long-run test in this pass — revisit if M16 disaster work needs a stable religion
-  baseline to build on.
-- **M15.95 — Civilization/Organization Unification.** ✅ COMPLETE 2026-09-17. The 2026-09-17
-  review's characterization of this as a large, atomic, save-format-touching migration didn't
-  survive scoping — the actual evidence (grepped read/write sites for every field the roadmap
-  named) told a different story:
-  - **`Members`**: not "every sim read still goes through the Civilization copy" — three real
-    production hot paths already read `Organization.Members` for Civilization-kind orgs
-    (cross-civ friendship dampening, confidant-trust emissary selection, and civ ruler succession
-    itself via `SuccessionResolver`), matching M12's original intent that Organization become
-    canonical for membership. Every join/switch site already dual-wrote both collections
-    correctly (via a manual `civ.Members.Add/Remove` next to `SetCharacterCiv`/
-    `OrganizationMembership.Join`) — except one: `CharacterBehaviorPhase.KillCharacter`'s
-    civ-death branch only cleared `Civilization.Members`, never `Organization.Members`, so a
-    Civilization-kind org's roster grew forever with dead characters. This was already UI-visible
-    (`GuildSnapshot.MemberCount`, the economic ledger panel, reads `org.Members.Count`).
-  - **Fix**: reused the pattern the user asked to evaluate for reuse rather than inventing a new
-    one — `CivTracker.SetCharacterCiv` (already the sole write path for civ membership, wrapping
-    `OrganizationMembership.Join`/`Leave`) now also maintains `Civilization.Members` on both the
-    join and leave branch, making it a three-sided invariant (`Tier1Character.Memberships` /
-    `Organization.Members` / `Civilization.Members`) enforced from one call. The 6 now-redundant
-    manual `civ.Members.Add/Remove` call sites (`CivTracker.cs`, `CivTracker.Unrest.cs`,
-    3× `CharacterBehaviorPhase.cs`) were deleted, and the death path was rewired to call
-    `SetCharacterCiv(c, CivId.None, ...)` instead of a bare `civ.Members.Remove` — closing the
-    bug at its root rather than patching the one call site, so a future 7th join/leave site can't
-    reintroduce the same class of drift.
-  - **`SuccessionCrisisEndYear`/`WarsAgainst`/`BorderTension`/`PeaceTreaties`**: not "mirrored" at
-    all — grepped every write site across `WorldEngine.Sim` and found *no production code ever
-    wrote these on `Organization`* for *any* org kind (Civilization included), only the
-    persistence round-trip of an always-empty dict. `Organization.IsAtWarWith` (reads
-    `WarsAgainst`) was similarly dead — only `Civilization.IsAtWarWith` is ever called. Deleted
-    all four fields plus `IsAtWarWith` from `Organization`, and their `OrganizationDto`
-    persistence coverage — no back-compat shim, since the user confirmed save-format
-    compatibility isn't a constraint pre-release (no other users yet).
-  - **`CivId`-on-`Membership`-DTO round-trip drift**: already fixed by M15.9, same day, before
-    this scoping pass started (`WorldStateSaver_RoundTrip_Organizations` regression test already
-    green in the tree) — the roadmap's clause describing it was stale by the time M15.95 began.
-  - Fast suite 851/851, doc-check green, zero warnings. War/BorderTension/PeaceTreaties staying
-    on `Civilization` (never generalized to `Organization`) remains the correct M12 12.1 decision —
-    those mechanics are entangled with territory/conquest/population, not generalizable
-    membership/leadership state, so this was a dead-field cleanup, not a design reversal.
+- **M12 — Organization Model.** ✅ COMPLETE 2026-07-31 — see `docs/phases/archive/m12_organization_model.md`. Generalized civ/guild/religion/family into a shared `Organization` abstraction (entity/registry, org-to-org alliance state decoupled from the leader's personal relationship, `Tier1Character.Memberships` replacing the single `CivId` field, a generalized leadership-succession kernel). Hard prerequisite for M13–M15, all of which need "an organization with a leader, members, and relationships to other organizations."
+- **M13 — Generational & Domestic Drama.** ✅ COMPLETE 2026-08-02 — see `docs/phases/archive/m13_generational_domestic_drama.md` (phases 13.0–13.7, including the 13.7 lifespan-units-mismatch fix). Parent-child bonds with inherited traits/grudges/goals; mentorship; non-war rivalry within a family; betrayal by an ally, spouse, or heir. Activated the previously-dormant `RelationshipEdge` fields (`Fear`, `Debt`, `IsFamily`/`IsMarried`) that a 2026-07-30 audit found written but never read. First consumer of the generalized succession mechanic (family-head seats) and M12's weighted-loyalty scoring.
+- **M13.8 — Tier2 Relationship Exposure.** ✅ COMPLETE 2026-08-03 — see `docs/phases/archive/m13_8_tier2_relationship_exposure.md`. Let Tier1 relationship actions (Bond/Rivalry/Placate/Marriage) target a co-located Tier2 character the same way `GrantAid`/`ForgiveDebt` already did, plus a Notability signal so Tier2 characters pulled into Tier1-driven drama crystallize into heroes more readily.
+- **M14 — Economy & Independent Wealth.** ✅ COMPLETE 2026-08-05 — see `docs/phases/archive/m14_economy_independent_wealth.md` (all six phases 14.0–14.5). Trade routes as persistent, severable entities between settlements (full caravan/travel-time simulation, not a lightweight link); a real fungible per-character `Wealth` balance backed by the economy's existing precious-metal production, corrected over time by a world-wide `GlobalPriceIndex`; guilds modeled as `Organization`s; economic ruin/reparations extend the existing civ-collapse pathway. Builds on M9's economic-depth foundation.
+- **M15 — Religion, Deepened.** ✅ COMPLETE 2026-08-06 — see `docs/phases/archive/m15_religion_deepened.md` (all six phases 15.0–15.6). Religion modeled as an `Organization` with real followers (not a flavor event); schism (reusing the `CivSplintered` pattern), heresy/persecution short of holy war, pilgrimage as a goal type, religious leaders as a third power track using the generalized succession mechanic.
+- **M15.9 — Sim Tech Debt.** ✅ COMPLETE 2026-09-17 — see commit `9382e01` for full detail if needed. Consolidated membership join/leave/loyalty sites, deduped civ-vs-org command dispatch, collapsed `GoalManager`'s goal-type lists into one table, merged Guild/Religion succession blocks, unified cooldown-field conventions, deduped `*Dampening` composition, consolidated test-scaffolding duplication. Also config-ified the last hardcoded need constants, replaced the entity-ID base-offset scheme with a collision-free `DeterministicId` tag, and added `IdGenerator.ResetForTests()`. **Known trade-off:** the ID-formula fix reshuffled one seed-42 long-run Religion balance test's outcome (a pre-existing flaky suite, excluded from `test-fast.sh`) — not re-baselined; revisit if M16 needs a stable religion baseline.
+- **M15.95 — Civilization/Organization Unification.** ✅ COMPLETE 2026-09-17 — see commit `780b726`. Scoping found the migration much smaller than assumed: `Organization.Members` was already canonical on 3 production hot paths; the one real gap (civ-death path not clearing `Organization.Members`) is now fixed via `CivTracker.SetCharacterCiv` maintaining a three-sided invariant (`Memberships`/`Organization.Members`/`Civilization.Members`). `SuccessionCrisisEndYear`/`WarsAgainst`/`BorderTension`/`PeaceTreaties` turned out to be 100% dead fields on `Organization` (deleted, along with `IsAtWarWith`) — no back-compat shim needed pre-release.
 - **M16 — Disasters, Reworked.** Eruptions currently fire (`DisasterConfig`/`[disasters]`) but have no gameplay consequence — wire real effects (destroyed settlements/improvements, ash-driven famine, displacement). Expand disaster variety beyond wildfire/beasts: flood, drought, earthquake, blight/crop disease, harsh winter. Model disasters as multi-year recovery arcs rather than single-tick events, so they leave a visible scar in a settlement's history instead of resolving instantly.
 - **M17 — Exploration & the Unknown.** Land expeditions mirroring the M11 water-crossing pattern (`Port`/`SeaVoyage` delegation) — lost expeditions, first contact with an unknown ancestry or beast species. Ruins/artifacts from a *previously collapsed* civ (`CivilizationCollapsed`, `3202`, is already logged) discoverable by a later civ, resurfacing dead history as new story material.
 - **M18 — Intrigue & Espionage.** Failed/attempted assassinations (today only resolved outcomes are logged). Coups — a civ's power changing hands without full `CivilizationCollapsed`. Corruption or abuse by an appointed Tier-2 role-holder (`AppointedToRole`, `3301`, exists; nothing currently exploits the role) — first consumer of the Tier2-role behavior variability described above. Spies/informants as a character role, feeding `CivIntelGathered` (`5004`) into deliberate sabotage rather than passive intel.
