@@ -9,6 +9,10 @@ public static class WorldTestHelper
 {
     public static WorldState CreateSmallWorld(int seed = 42)
     {
+        // Reset the process-global entity-ID counter so WorldRng draws (keyed off entity ID)
+        // don't depend on how many IDs earlier tests in the same run happened to consume.
+        IdGenerator.ResetForTests();
+
         var config = new WorldConfig
         {
             Seed       = seed,

@@ -315,7 +315,8 @@ public static partial class CivTracker
             var tile = FindCivFloorSpawnTile(world, cfg);
             if (tile is null) continue;
 
-            long seq     = (200_000L + world.CurrentYear * 997L + slot * 31L) & 0x7FFFFFFF;
+            long seq     = DeterministicId.Seq(DeterministicIdSystem.CivFloorSpawn,
+                world.CurrentYear * 997L + slot * 31L);
             var  biome   = (BiomeType)world.TileGrid.GetTile(tile.Value).BiomeType;
             var  founder = CharacterFactory.Spawn(tile.Value, biome, world.WorldSeed, seq, cfg, world.CurrentYear, startAsAdult: true);
             int  founderOrdinal = world.ClaimNameOrdinal(founder.Identity.Name);

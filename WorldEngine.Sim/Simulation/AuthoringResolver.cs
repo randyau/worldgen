@@ -100,7 +100,8 @@ internal static class AuthoringResolver
         var (valid, reason) = AuthoringValidator.ValidateLandTile(cmd.Coord, world);
         if (!valid) { LogRejection(nameof(AuthorSpawnCharacter), reason!); return; }
 
-        long seq = (9_000_000L + world.CurrentTick * 997L + cmd.Coord.X * 31L + cmd.Coord.Y) & 0x7FFFFFFF;
+        long seq = DeterministicId.Seq(DeterministicIdSystem.AuthoringSpawn,
+            world.CurrentTick * 997L + cmd.Coord.X * 31L + cmd.Coord.Y);
         var tileData = world.TileGrid.GetTile(cmd.Coord);
         var biome    = (BiomeType)tileData.BiomeType;
 

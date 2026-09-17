@@ -315,6 +315,12 @@ Edit values in `sim_config.toml`; all keys live there without recompiling.
 | `ambient_food_recovery` | `0.07` | `SimConfig.Character.AmbientFoodRecovery` |  |
 | `settlement_shelter_recovery` | `0.10` | `SimConfig.Character.SettlementShelterRecovery` | shelter recovery while on a settlement tile |
 | `ally_presence_belonging_bonus` | `0.05` | `SimConfig.Character.AllyPresenceBelongingBonus` | belonging bonus for standing near an allied character |
+| `rest_safety_recovery` | `0.05` | `SimConfig.Character.RestSafetyRecovery` | Rest command recovery (CharacterBehaviorPhase.ResolveRest) |
+| `rest_food_recovery` | `0.05` | `SimConfig.Character.RestFoodRecovery` |  |
+| `rest_shelter_recovery` | `0.03` | `SimConfig.Character.RestShelterRecovery` |  |
+| `rest_status_recovery` | `0.01` | `SimConfig.Character.RestStatusRecovery` |  |
+| `rest_purpose_recovery` | `0.02` | `SimConfig.Character.RestPurposeRecovery` |  |
+| `rest_spiritual_recovery` | `0.03` | `SimConfig.Character.RestSpiritualRecovery` |  |
 | `default_biome_shelter_recovery` | `0.01` | `SimConfig.Character.DefaultBiomeShelterRecovery` | fallback for biomes not listed in [character.biome_shelter_recovery] |
 | `needs_weight` | `0.5` | `SimConfig.Character.NeedsWeight` |  |
 | `goals_weight` | `0.3` | `SimConfig.Character.GoalsWeight` |  |
@@ -697,6 +703,10 @@ _Natural shelter recovery per tick when NOT on a settlement tile, by biome. Dens
 | `wonder_founding_threshold` | `0.60` | `SimConfig.Religion.WonderFoundingThreshold` | Wonder personality trait floor |
 | `religion_founding_progress_per_year` | `0.35` | `SimConfig.Religion.ReligionFoundingProgressPerYear` | progress per year; ~3 years to complete |
 | `religion_founding_cooldown_years` | `50` | `SimConfig.Religion.ReligionFoundingCooldownYears` | per character: min years between foundings |
+| `religion_founding_abandon_margin` | `0.1` | `SimConfig.Religion.ReligionFoundingAbandonMargin` | hysteresis margin below spiritual_founding_threshold before an in-progress goal is abandoned |
+| `religion_founding_purpose_boost` | `0.25` | `SimConfig.Religion.ReligionFoundingPurposeBoost` | Needs.Purpose gain on successfully founding a religion |
+| `religion_founding_spiritual_boost` | `0.15` | `SimConfig.Religion.ReligionFoundingSpiritualBoost` | Needs.Spiritual gain on successfully founding a religion |
+| `religion_founding_status_boost` | `0.20` | `SimConfig.Religion.ReligionFoundingStatusBoost` | Needs.Status gain on successfully founding a religion |
 | `conversion_weight_piety` | `0.5` | `SimConfig.Religion.ConversionWeightPiety` | personal-receptivity gate weight: Piety |
 | `conversion_weight_wonder` | `0.3` | `SimConfig.Religion.ConversionWeightWonder` | personal-receptivity gate weight: Wonder |
 | `conversion_weight_curiosity` | `0.2` | `SimConfig.Religion.ConversionWeightCuriosity` | personal-receptivity gate weight: Curiosity |

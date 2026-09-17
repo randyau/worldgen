@@ -67,6 +67,7 @@ One-line description of every non-trivial source file. Check here before running
 
 ## WorldEngine.Sim/Core/
 - `CommandQueue.cs` — Unbounded channel connecting the UI thread (Enqueue) to the sim thread (DrainAll). Thread-safe by Channel design — no additional locking needed.
+- `DeterministicId.cs` — Identifies every call site that derives an EntityId from a deterministic formula (tick/year + position, etc.) rather than the sequential WorldEngine.Sim.Core.IdGenerator counter — needed so a world regenerated from the same seed gets byte-identical entity IDs. See WorldEngine.Sim.Core.DeterministicId.Seq for why each site needs a distinct tag.
 - `DisasterSalts.cs` — RNG salt constants for disaster phase; keeps disaster rolls reproducible and independent.
 - `Enumerations.cs` — All enums: BiomeType, Season, SimPhase, EntityKind, EventType, EventTier, VerbClass, etc.
 - `ICommand.cs` — Marker interface for simulation commands. All implementations must be sealed records with value-type fields only. No callbacks, delegates, or mutable object references.

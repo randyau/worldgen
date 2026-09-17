@@ -160,7 +160,8 @@ public static partial class CivTracker
         if (leader is null)
         {
             // Promote from settlement population (reuses the auto-succession spawn approach).
-            long seq = (400_000L + world.CurrentYear * 997L + leadTile.X * 31L + leadTile.Y) & 0x7FFFFFFF;
+            long seq = DeterministicId.Seq(DeterministicIdSystem.UnrestSecessionLeader,
+                world.CurrentYear * 997L + leadTile.X * 31L + leadTile.Y);
             var tileData = world.TileGrid.GetTile(leadTile);
             leader = CharacterFactory.Spawn(leadTile, (BiomeType)tileData.BiomeType,
                 world.WorldSeed, seq, world.SimConfig, world.CurrentYear, startAsAdult: true);

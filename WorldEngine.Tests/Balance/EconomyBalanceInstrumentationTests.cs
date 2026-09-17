@@ -55,6 +55,7 @@ public class EconomyBalanceInstrumentationTests
     /// harness blocks on it exactly once here — never sits directly inside an [Fact] method body.</summary>
     private static SimHarness BuildHarness(int seed)
     {
+        IdGenerator.ResetForTests();
         var worldCfg = new WorldConfig { Seed = seed, WidthKm = 1000, HeightKm = 800, TileWidthKm = 10 };
         var simCfg   = TestSimConfig.Default();
         var world    = new WorldGenPipeline().RunFullAsync(worldCfg, simCfg).GetAwaiter().GetResult();

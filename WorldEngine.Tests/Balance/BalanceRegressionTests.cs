@@ -140,6 +140,7 @@ public class BalanceRegressionTests
 
     private static (WorldState world, EventStore eventStore) RunSim(int seed)
     {
+        IdGenerator.ResetForTests();
         var cfg    = new WorldConfig { Seed = seed, WidthKm = 1000, HeightKm = 800, TileWidthKm = 10 };
         var simCfg = TestSimConfig.Default();
         var world  = new WorldGenPipeline().RunFullAsync(cfg, simCfg).GetAwaiter().GetResult();

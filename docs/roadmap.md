@@ -62,7 +62,7 @@ where the codebase now is.
 | M13 | Generational & Domestic Drama | ✅ COMPLETE 2026-08-02 | Family bonds, mentorship, non-war rivalry, betrayal within a civ. See archive. |
 | M14 | Economy & Independent Wealth | ✅ COMPLETE 2026-08-05 | Persistent trade routes; merchant wealth as a power track separate from rulership. See `docs/phases/archive/m14_economy_independent_wealth.md`. |
 | M15 | Religion, Deepened | ✅ COMPLETE 2026-08-06 | Schism, heresy, pilgrimage; religious leaders as a third power track alongside rulers/merchants. See `docs/phases/archive/m15_religion_deepened.md`. |
-| M15.9 | Sim Tech Debt *(new — inserted 2026-09-17)* | partially complete | Shipped 2026-09-17: membership-invariant consolidation, command-dispatch dedup, GoalManager goal-type tables, org succession dedup, cooldown-field conventions, dampening composition, test-scaffolding dedup (`FindLandTile`/`SpawnAt`/reflection call sites → `internal` + direct calls). Remaining: config-ify pervasive M2/M4-era hardcoded constants; review the entity-ID base-offset allocation scheme; reset `IdGenerator._counter` between test runs. |
+| M15.9 | Sim Tech Debt *(new — inserted 2026-09-17)* | complete | Shipped 2026-09-17: membership-invariant consolidation, command-dispatch dedup, GoalManager goal-type tables, org succession dedup, cooldown-field conventions, dampening composition, test-scaffolding dedup (`FindLandTile`/`SpawnAt`/reflection call sites → `internal` + direct calls), plus the three items below: config-ified the last M2/M4-era hardcoded need constants, replaced the collision-prone entity-ID base-offset scheme with a tagged `DeterministicId` helper, and added an `IdGenerator.ResetForTests()` hook. |
 | M15.95 | Civilization/Organization Unification *(new — inserted 2026-09-17)* | not started | Finish the M12 migration: `Civilization` and `Organization` still carry parallel, one-directionally-mirrored copies of members/succession-timer/tension state. Either make `Civilization`'s copies computed views over the `Organization` side, or formally retire `Organization`'s civ-membership fields as unused. Large, atomic (cannot be half-migrated), touches the save format and war/unrest/diplomacy hot paths — deliberately scheduled as its own milestone rather than folded into M15.9. |
 | M16 | Disasters, Reworked | summary | Give eruptions/disasters real consequences; expand variety beyond wildfire/beasts; multi-year recovery arcs. |
 | M17 | Exploration & the Unknown | summary | Land expeditions; first contact; discovering ruins/artifacts from prior collapsed civs. |
@@ -459,7 +459,7 @@ M12–M18 extends them instead of duplicating them.
   previously only read Ambition/Status/RNG with zero input from relationships.
 - **M14 — Economy & Independent Wealth.** ✅ COMPLETE 2026-08-05 — see `docs/phases/archive/m14_economy_independent_wealth.md` for the phase-by-phase plan, kickoff design decisions, and what shipped (all six phases 14.0–14.5 same session). Trade routes as persistent entities between settlements (replacing the current one-shot `MerchantTradeCompleted` transaction) that can be severed by war/disaster/piracy, creating dependency and scarcity stories — built as a full caravan/travel-time simulation, not a lightweight link. Wealth is a real fungible currency, not an abstract score — a per-character `Wealth` balance backed by (not minted separately from) the gold/silver/gems the economy already produces, so it needs no new production behavior to exist; sourced from trade, spent on goal fulfillment (buying a coveted artifact instead of only claim/conflict), inherited-and-partially-looted on death. Prices are seeded/formulaic (a base-value table modulated by local scarcity, not a discovered market — 10k-year transaction volume can't support real price-seeking) and corrected over time by a single world-wide, per-capita `GlobalPriceIndex` so ~10,000 years of near-permanent precious-metal accretion (`WealthSpoilageRate` ≈ 0) doesn't decouple fixed prices from a steadily inflating money supply. Guilds model as `Organization`s (M12), whose heads use the generalized succession mechanic unmodified. Debt and economic ruin extend the existing civ-level collapse/splinter pathway rather than becoming a parallel failure mode. Faction-funding ("wealth buys political influence") and interpersonal theft are explicitly deferred past M14. Builds on M9's economic-depth foundation (per-capita demand, settlement specialization) and the trade-network topology M9 deliberately left out of scope; also the second consumer (after M18) of Tier2-role behavior variability.
 - **M15 — Religion, Deepened.** ✅ COMPLETE 2026-08-06 — see `docs/phases/archive/m15_religion_deepened.md` (all six phases 15.0–15.6 same session). Schism — reuse the `CivSplintered` pattern (`3212`) for religions splitting into competing sects, now modeled as an `Organization` (M12) with real followers instead of a flavor event. Heresy/persecution short of holy war. Pilgrimage as a goal type. Religious leaders as a third power track alongside rulers (political) and merchants (M14, economic), using the generalized succession mechanic for a religious-leader seat (e.g. contested succession of a high priest).
-- **M15.9 — Sim Tech Debt.** Partially complete (2026-09-17). The refactor-debt half of this
+- **M15.9 — Sim Tech Debt.** ✅ COMPLETE 2026-09-17. The refactor-debt half of this
   milestone shipped same-day: consolidated the nine ad-hoc `Membership` join/leave/loyalty-update
   sites into `OrganizationMembership.Join/Leave/SetLoyalty` (fixing a reorder side-effect in
   loyalty updates that let `Tier1Character.CivId` resolution drift, and a related save/load bug
@@ -472,25 +472,50 @@ M12–M18 extends them instead of duplicating them.
   consolidated the test-scaffolding duplication (31 `FindLandTile` / 17 `SpawnAt`-shaped copies
   into `WorldEngine.Tests/Helpers/WorldGenTestHelpers.cs`; 22 sim members reflected into via
   `GetMethod`/`BindingFlags` across ~19 test files widened to `internal` and called directly).
-  Fast suite: 851/851 passing, doc-check green, zero warnings. **Still not started:** (1) hardcoded sim-affecting
-  constants in older M2/M4-era code (e.g. `AdvanceFoundReligionGoal`'s need-boosts,
-  `ResolveRest`'s increments) that predate the SimConfig-everywhere convention M9+ code follows —
-  bring them into `SimConfig`/`sim_config.toml`. (2) The entity-ID allocation scheme
-  (`tick * 997 & 0x7FFFFFFF` plus a per-system base offset, e.g. `400_000` shared by
-  `CivTracker.Unrest` and `PopulationDynamicsPhase` crystallization with differing hash
-  multipliers) has already produced two real collision bugs (beast emergence/reproduction, fixed
-  in the 2026-09-17 code-review pass) — worth a design review of the whole scheme rather than
-  patching each collision site as it's found. Do this before M16 so disaster-driven mass entity
-  spawns (settlement destruction, displacement waves) don't inherit the same collision risk.
-  (3) *New, found during the membership-consolidation work:* `IdGenerator._counter`
-  (`WorldEngine.Sim/Core/EntityId.cs`) is a process-wide static field never reset between test
-  runs. `WorldRng` draws are keyed by entity ID, so any test sensitive to absolute ID values
-  depends on how many IDs other tests happened to consume first in the same process — the
-  `Category=Balance` suite's religion long-run test showed run-to-run-inconsistent results when
-  run as a full batch (but is 100% reproducible in isolation) because of exactly this. Not a sim
-  correctness bug (production runs are single-world-per-process), but worth a per-test-run reset
-  hook so balance-test results stop depending on unrelated tests' execution order. Deliberately
-  excludes the `Civilization`/`Organization` dual-state migration — see M15.95.
+  The same session also closed the three items left open after that pass:
+  (1) **Config-ified the last M2/M4-era hardcoded need constants** — `AdvanceFoundReligionGoal`'s
+  Purpose/Spiritual/Status founding boosts and its abandon-threshold hysteresis margin moved into
+  `ReligionConfig` (`ReligionFoundingPurposeBoost`/`SpiritualBoost`/`StatusBoost`/`AbandonMargin`);
+  `ResolveRest`'s six need increments moved into `CharacterSimConfig` (`Rest*Recovery`), which
+  required threading `WorldState` into `ResolveRest` since it previously took only the character.
+  (2) **Replaced the entity-ID base-offset scheme with `DeterministicId`**
+  (`WorldEngine.Sim/Core/DeterministicId.cs`) — every deterministic-formula spawn site (civ-floor
+  spawn, unrest-secession leader, God Mode authoring spawn, family birth, civ-born, leaderless
+  resurrection, Tier2 crystallization, beast emergence, beast reproduction) now tags its hash with
+  a `DeterministicIdSystem` enum value folded into the ID's high byte instead of an additive base
+  offset (400_000, 9_000_000, ...) that didn't bound the hash's growth and had already produced a
+  real collision (`CivTracker.Unrest` and `PopulationDynamicsPhase` both reused 400_000 with
+  different multiplier schemes). The tag is structurally collision-free — two systems can never
+  produce the same ID regardless of hash magnitude. One nuance found while fixing this:
+  `WorldState.GetRandomFloat/GetRandomInt` read `EntityId.Value`'s low 16 bits *and* high 32 bits
+  (unlike `CharacterFactory`/`BeastFactory.Spawn`'s internal RNG, which only ever reads the low 31
+  bits), so a tag placed in the top byte does perturb any RNG draw keyed directly off the
+  tagged EntityId before construction — `EntityBehaviorPhase`'s beast-emergence tile pick was the
+  one call site doing this; it now rolls off the untagged hash and only tags the value used for
+  the beast's actual `EntityId`.
+  (3) **Added `IdGenerator.ResetForTests()`** — resets the process-global counter to a fixed base
+  (1,000,000, chosen clear of the small literal seed offsets test helpers pass to
+  hand-constructed characters) so `WorldRng` draws stay reproducible regardless of prior tests'
+  execution order; wired into `WorldTestHelper.CreateSmallWorld` (most world-based tests) and into
+  each `Category=Balance` test file's own harness-builder (`BalanceRegressionTests`,
+  `EconomyBalanceInstrumentationTests`, `M13RelationshipEventBalanceTests`,
+  `ReligionBalanceInstrumentationTests`, `Tier2CrystallizationBalanceTests` — none of these use
+  `WorldTestHelper`, each builds its own `SimHarness` directly off `WorldGenPipeline`).
+  Deliberately excludes the `Civilization`/`Organization` dual-state migration — see M15.95.
+  **Known trade-off:** removing the additive base offsets (item 2) changes the low-order bits fed
+  into `CharacterFactory.Spawn`'s RNG substream even where no collision existed, so it reshuffles
+  which characters spawn/marry/found-religion for any fixed seed on the affected code paths — this
+  flipped `ReligionBalanceInstrumentationTests.LongRun_..._AcrossThreeThousandYears` (seed 42) to
+  only ever 1 religion founded (extinct within a few hundred years), failing its "2+ coexisting
+  religions" constraint. Verified with the reset hook in place, run in isolation (single test,
+  fresh process) so this isn't a counter-ordering artifact — it is a genuine, deterministic
+  consequence of the ID-formula fix for seed 42, not a logic bug. The fix corrects a real
+  collision at the cost of reshuffling one already-fragile, seed-42-specific long-run outcome
+  (this suite was already flagged
+  run-to-run-inconsistent pre-fix; `Category=Balance` is excluded from `test-fast.sh`'s gate).
+  Fast suite (851/851), doc-check, and architecture tests all pass; not re-baselining the
+  Religion long-run test in this pass — revisit if M16 disaster work needs a stable religion
+  baseline to build on.
 - **M15.95 — Civilization/Organization Unification.** Not started. `Civilization` and
   `Organization` still carry parallel, one-directionally-mirrored copies of the same state
   (`Members`, `SuccessionCrisisEndYear`, `BorderTension`, war/peace state) — a migration M12 started

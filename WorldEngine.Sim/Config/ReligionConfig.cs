@@ -18,6 +18,14 @@ public class ReligionConfig
     public float ReligionFoundingProgressPerYear { get; set; } = 0.35f;
     /// <summary>Minimum years between religion foundings for the same character.</summary>
     public int   ReligionFoundingCooldownYears  { get; set; } = 50;
+    /// <summary>Hysteresis margin below SpiritualFoundingThreshold before an in-progress FoundReligion goal is abandoned.</summary>
+    public float ReligionFoundingAbandonMargin  { get; set; } = 0.1f;
+    /// <summary>Purpose need boost on successfully founding a religion.</summary>
+    public float ReligionFoundingPurposeBoost   { get; set; } = 0.25f;
+    /// <summary>Spiritual need boost on successfully founding a religion.</summary>
+    public float ReligionFoundingSpiritualBoost { get; set; } = 0.15f;
+    /// <summary>Status need boost on successfully founding a religion.</summary>
+    public float ReligionFoundingStatusBoost    { get; set; } = 0.20f;
 
     // ─── M15 15.1 — conversion via exposure ────────────────────────────────
     // See docs/phases/archive/m15_religion_deepened.md "Long-run balance constraints". Receptivity is a

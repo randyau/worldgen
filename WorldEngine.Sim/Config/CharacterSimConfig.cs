@@ -94,6 +94,14 @@ public sealed class CharacterSimConfig
     // Belonging bonus for standing on the same tile as an allied character.
     public float AllyPresenceBelongingBonus         { get; set; } = 0.05f;
 
+    // Needs recovery from the Rest command (CharacterBehaviorPhase.ResolveRest).
+    public float RestSafetyRecovery                 { get; set; } = 0.05f;
+    public float RestFoodRecovery                   { get; set; } = 0.05f;
+    public float RestShelterRecovery                { get; set; } = 0.03f;
+    public float RestStatusRecovery                 { get; set; } = 0.01f;
+    public float RestPurposeRecovery                { get; set; } = 0.02f;
+    public float RestSpiritualRecovery              { get; set; } = 0.03f;
+
     /// <summary>
     /// Per-biome natural shelter recovery (no settlement present), keyed by BiomeType name in
     /// snake_case (e.g. "temperate_forest"). TOML section: [character.biome_shelter_recovery]

@@ -181,7 +181,8 @@ public sealed class CharacterBehaviorPhase
                 (int)(edge.From.Value & 0x7FFFFFFF), (int)(edge.To.Value & 0x7FFFFFFF), S.CharFamilyBirth);
             if (roll > famCfg.ChildbirthChancePerYear) continue;
 
-            long seq = (60_000L + tick * 997L + edge.From.Value * 31 + edge.To.Value) & 0x7FFFFFFF;
+            long seq = DeterministicId.Seq(DeterministicIdSystem.FamilyBirth,
+                tick * 997L + edge.From.Value * 31 + edge.To.Value);
             var tileData = world.TileGrid.GetTile(mother.Location);
             var child = CharacterFactory.SpawnChild(
                 mother, father, mother.Location, (BiomeType)tileData.BiomeType,
@@ -297,7 +298,8 @@ public sealed class CharacterBehaviorPhase
             if (r > chance) continue;
 
             // Unique entitySeq derived from tick + tile to stay deterministic
-            long seq  = (50_000L + tick * 997L + kvp.Key.X * 31 + kvp.Key.Y) & 0x7FFFFFFF;
+            long seq  = DeterministicId.Seq(DeterministicIdSystem.CivBorn,
+                tick * 997L + kvp.Key.X * 31 + kvp.Key.Y);
             var tileData = world.TileGrid.GetTile(kvp.Key);
             var born  = CharacterFactory.Spawn(kvp.Key, (BiomeType)tileData.BiomeType, world.WorldSeed, seq, _simCfg, world.CurrentYear);
             int bornOrdinal = world.ClaimNameOrdinal(born.Identity.Name);
@@ -522,7 +524,8 @@ public sealed class CharacterBehaviorPhase
                 if (survivingTile.HasValue)
                 {
                     var sTile = survivingTile.Value;
-                    long seq = (300_000L + world.CurrentYear * 997L + sTile.X * 31L + sTile.Y) & 0x7FFFFFFF;
+                    long seq = DeterministicId.Seq(DeterministicIdSystem.LeaderlessResurrection,
+                        world.CurrentYear * 997L + sTile.X * 31L + sTile.Y);
                     var tileData = world.TileGrid.GetTile(sTile);
                     var newRuler = CharacterFactory.Spawn(sTile, (BiomeType)tileData.BiomeType,
                         world.WorldSeed, seq, _simCfg, world.CurrentYear, startAsAdult: true);
@@ -1139,7 +1142,7 @@ public sealed class CharacterBehaviorPhase
         var cfg = world.SimConfig.Religion;
 
         // Abandon if Spiritual has dropped well below the threshold
-        if (c.Needs.Spiritual < cfg.SpiritualFoundingThreshold - 0.1f)
+        if (c.Needs.Spiritual < cfg.SpiritualFoundingThreshold - cfg.ReligionFoundingAbandonMargin)
         {
             goal.IsComplete = true;
             return;
@@ -1153,9 +1156,9 @@ public sealed class CharacterBehaviorPhase
         c.LastReligionFoundedYear = world.CurrentYear;
         c.Needs = c.Needs with
         {
-            Purpose   = Math.Min(1f, c.Needs.Purpose   + 0.25f),
-            Spiritual = Math.Min(1f, c.Needs.Spiritual + 0.15f),
-            Status    = Math.Min(1f, c.Needs.Status    + 0.20f),
+            Purpose   = Math.Min(1f, c.Needs.Purpose   + cfg.ReligionFoundingPurposeBoost),
+            Spiritual = Math.Min(1f, c.Needs.Spiritual + cfg.ReligionFoundingSpiritualBoost),
+            Status    = Math.Min(1f, c.Needs.Status    + cfg.ReligionFoundingStatusBoost),
         };
 
         // M15 15.0 — Religion becomes a real Organization (previously a bare flavor event;
@@ -1355,7 +1358,7 @@ public sealed class CharacterBehaviorPhase
                 ResolveMoveWithVoyageTracking(c, move.Destination, world, pending, tick);
                 break;
             case Rest:
-                ResolveRest(c);
+                ResolveRest(c, world);
                 break;
             case CreateArtwork:
                 ResolveCreateArtwork(c, world, pending, tick);
@@ -1428,18 +1431,19 @@ public sealed class CharacterBehaviorPhase
         }
     }
 
-    private static void ResolveRest(Tier1Character c)
+    private static void ResolveRest(Tier1Character c, WorldState world)
     {
         // Resting restores physical needs plus identity/spiritual needs —
         // stillness enables reflection, contemplation, and sense of self.
+        var cfg = world.SimConfig.Character;
         c.Needs = c.Needs with
         {
-            Safety    = Math.Min(1f, c.Needs.Safety    + 0.05f),
-            Food      = Math.Min(1f, c.Needs.Food      + 0.05f),
-            Shelter   = Math.Min(1f, c.Needs.Shelter   + 0.03f),
-            Status    = Math.Min(1f, c.Needs.Status    + 0.01f),
-            Purpose   = Math.Min(1f, c.Needs.Purpose   + 0.02f),
-            Spiritual = Math.Min(1f, c.Needs.Spiritual + 0.03f),
+            Safety    = Math.Min(1f, c.Needs.Safety    + cfg.RestSafetyRecovery),
+            Food      = Math.Min(1f, c.Needs.Food      + cfg.RestFoodRecovery),
+            Shelter   = Math.Min(1f, c.Needs.Shelter   + cfg.RestShelterRecovery),
+            Status    = Math.Min(1f, c.Needs.Status    + cfg.RestStatusRecovery),
+            Purpose   = Math.Min(1f, c.Needs.Purpose   + cfg.RestPurposeRecovery),
+            Spiritual = Math.Min(1f, c.Needs.Spiritual + cfg.RestSpiritualRecovery),
         };
     }
 

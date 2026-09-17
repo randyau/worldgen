@@ -56,16 +56,23 @@ public sealed class EntityBehaviorPhase
             if (validTiles.Count == 0) continue;
 
             // EntityId is derived from entitySeq, so the derivation has to be unique across every
-            // spawn site and every tick — the convention every other runtime spawner follows
-            // (50_000/60_000/200_000/300_000/400_000/9_000_000 bases + a tick/year and position
-            // term; see CharacterBehaviorPhase, CivTracker.Unrest/.Diplomacy, AuthoringResolver).
-            // A bare `world.CurrentTick` broke it twice over: two mythologicals emerging in the
-            // same year got the *same* id (EntityRegistry.Add then keeps one in _all but both in
-            // _beasts), and past tick 10_000 the ids walked straight into the Tier1 character
-            // range, silently overwriting living characters in _all.
-            long seq = (700_000L + world.CurrentTick * 997L + scheduleIdx * 31L) & 0x7FFFFFFF;
-            int tileIdx = world.GetRandomInt(new EntityId(seq), 0, validTiles.Count, S.BeastEmergeTile);
+            // spawn site and every tick — see DeterministicId (WorldEngine.Sim/Core) for the
+            // per-system-tag convention every runtime spawner follows. A bare `world.CurrentTick`
+            // broke it twice over: two mythologicals emerging in the same year got the *same* id
+            // (EntityRegistry.Add then keeps one in _all but both in _beasts), and past tick
+            // 10_000 the ids walked straight into the Tier1 character range, silently overwriting
+            // living characters in _all.
+            //
+            // The tile-pick roll below is keyed off the untagged hash, not the tagged seq: unlike
+            // CharacterFactory/BeastFactory.Spawn (which only ever read entitySeq's low 31 bits),
+            // WorldState.GetRandomFloat also reads entityId.Value's high 32 bits, and those carry
+            // DeterministicId's system tag — feeding the tagged value in would let the tag itself
+            // perturb the roll.
+            long hash = world.CurrentTick * 997L + scheduleIdx * 31L;
+            int tileIdx = world.GetRandomInt(new EntityId(hash & 0x7FFFFFFF), 0, validTiles.Count, S.BeastEmergeTile);
             var tile = validTiles[Math.Clamp(tileIdx, 0, validTiles.Count - 1)];
+
+            long seq = DeterministicId.Seq(DeterministicIdSystem.BeastEmergence, hash);
 
             var beast = BeastFactory.Spawn(species, tile, world.WorldSeed, seq, forceLegendary: true);
             world.Entities.Add(beast);
@@ -142,10 +149,9 @@ public sealed class EntityBehaviorPhase
         var species = _catalog.Get(parent.SpeciesId);
         if (species is null) return;
 
-        // Same id-space discipline as ProcessEmergenceSchedule above: `CurrentTick + parent.Id`
-        // drifts into the Tier1 (10_000+) and Tier2 (20_000+) character ranges within a few
-        // thousand ticks, and two parents whose (tick + id) sums coincide produced one id twice.
-        long seq = (800_000L + world.CurrentTick * 997L + parent.Id.Value * 31L) & 0x7FFFFFFF;
+        // Same id-space discipline as ProcessEmergenceSchedule above — see DeterministicId.
+        long seq = DeterministicId.Seq(DeterministicIdSystem.BeastReproduction,
+            world.CurrentTick * 997L + parent.Id.Value * 31L);
         var child = BeastFactory.Spawn(species, parent.HomeTile, world.WorldSeed, seq);
         world.Entities.Add(child);
 
