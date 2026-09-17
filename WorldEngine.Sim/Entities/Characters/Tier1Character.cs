@@ -35,8 +35,7 @@ public sealed class Tier1Character : SimEntity
     /// O(1) convenience accessor for this character's Civilization-kind membership, if any.
     /// The overwhelming majority of the sim's per-tick reads only ever care about "what civ is
     /// this character in", so this stays a fast property instead of forcing every call site to
-    /// scan Memberships or thread a WorldState reference through (ToCharacterSnapshot below has
-    /// none available at all).
+    /// scan Memberships or thread a WorldState reference through.
     /// </summary>
     public CivId CivId
     {
@@ -123,27 +122,4 @@ public sealed class Tier1Character : SimEntity
     protected override string  SnapshotAncestryId   => Identity.AncestryId;
     protected override float   SnapshotWellbeing    => Wellbeing;
     protected override float   SnapshotWealth       => Wealth;
-
-    public CharacterSnapshot ToCharacterSnapshot() => new(
-        Id:             Id,
-        Kind:           Kind,
-        Name:           Identity.Name,
-        Surname:        Identity.Surname,
-        Epithet:        Identity.Epithet,
-        AncestryId:     Identity.AncestryId,
-        Location:       Location,
-        CivId:          CivId,
-        IsAlive:        IsAlive,
-        Ambition:       Personality.Ambition,
-        Aggression:     Personality.Aggression,
-        Loyalty:        Personality.Loyalty,
-        Safety:         Needs.Safety,
-        Status:         Needs.Status,
-        Purpose:        Needs.Purpose,
-        Combat:         Skills.Combat,
-        Leadership:     Skills.Leadership,
-        Diplomacy:      Skills.Diplomacy,
-        AgeSeason:      AgeSeason,
-        HealthFraction: MaxHealth > 0 ? (float)Health / MaxHealth : 0f,
-        Wellbeing:      Wellbeing);
 }

@@ -215,11 +215,6 @@ public readonly record struct CivId(int Value)
 
 public readonly record struct EventId(long Value);
 
-public readonly record struct ModifierId(Guid Value)
-{
-    public static ModifierId New() => new(Guid.NewGuid());
-}
-
 public readonly record struct ArtifactId(long Value)
 {
     public static ArtifactId New() => new(IdGenerator.Next());

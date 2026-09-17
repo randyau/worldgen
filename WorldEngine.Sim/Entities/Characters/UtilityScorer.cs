@@ -1137,8 +1137,9 @@ public sealed class UtilityScorer
         IWorldStateReadOnly world,
         Tier1Character c)
     {
-        var moveTarget = world.SpotlightMoveTarget;
-        var goalIntent = world.SpotlightGoalIntent;
+        var moveTarget   = world.SpotlightMoveTarget;
+        var goalIntent   = world.SpotlightGoalIntent;
+        var socialTarget = world.SpotlightSocialTarget;
 
         for (int i = 0; i < candidates.Count; i++)
         {
@@ -1158,6 +1159,22 @@ public sealed class UtilityScorer
                 // FleeRegion also moves the character — treat the same way
                 var step = StepToward(c.Location, moveTarget.Value, world);
                 if (step.HasValue && step.Value == flee.Destination)
+                    bias = SpotlightIntentBias;
+            }
+
+            // SocialTarget: bias any social action directed at the intent character
+            if (socialTarget.HasValue && bias == 1.0f && ca.Command is AllyWith or Negotiate or ProposeMarriage or Placate or DeclareRivalry)
+            {
+                var targetId = ca.Command switch
+                {
+                    AllyWith aw          => aw.TargetId,
+                    Negotiate n          => n.TargetId,
+                    ProposeMarriage pm   => pm.TargetId,
+                    Placate p            => p.TargetId,
+                    DeclareRivalry dr    => dr.TargetId,
+                    _                    => (EntityId?)null
+                };
+                if (targetId == socialTarget.Value)
                     bias = SpotlightIntentBias;
             }
 

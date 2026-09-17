@@ -16,7 +16,7 @@ namespace WorldEngine.Sim.Organizations;
 /// Organization's Kind is Civilization. CivId and OrganizationId are independently-counted ID
 /// spaces (see docs/phases/archive/m12_organization_model.md 12.2), and the ~70 existing per-tick reads
 /// of "what civ is this character in" (UtilityScorer, GoalManager, CharacterBehaviorPhase, etc.)
-/// need an O(1) answer with no WorldState lookup available at some call sites
-/// (Tier1Character.ToCharacterSnapshot has none) — so it's carried here instead of reverse-looked-up.
+/// need an O(1) answer with no WorldState lookup available at some call sites — so it's carried
+/// here instead of reverse-looked-up.
 /// </param>
 public sealed record Membership(OrganizationId OrganizationId, OrganizationRole Role, float Loyalty, CivId CivId = default);

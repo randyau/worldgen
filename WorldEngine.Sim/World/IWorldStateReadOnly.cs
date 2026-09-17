@@ -87,6 +87,8 @@ public interface IWorldStateReadOnly
     TileCoord? SpotlightMoveTarget { get; }
     /// <summary>Player's current goal intent for the spotlit character. Null if no goal intent is set.</summary>
     GoalType?  SpotlightGoalIntent { get; }
+    /// <summary>Player's current social-target intent for the spotlit character. Null if no social intent is set.</summary>
+    EntityId?  SpotlightSocialTarget { get; }
 
     // === RELATIONSHIPS / HISTORY (M3+) ===
     // float GetRelationshipTrust(EntityId from, EntityId to);

@@ -105,7 +105,6 @@ One-line description of every non-trivial source file. Check here before running
 
 ## WorldEngine.Sim/Entities/Characters/
 - `CharacterFactory.cs` — Creates Tier1Character instances with seeded-random traits.
-- `CharacterSnapshot.cs` — Immutable UI-facing summary of a Tier 1 character. Carried in WorldSnapshot; only key fields for display purposes.
 - `CharacterSpawner.cs` — Populates the world with initial Tier 1 characters at world start. Characters are placed on fertile land tiles, one per tile.
 - `GoalData.cs` — GoalType enum and GoalData record: type, target, priority, staleness, and resolution tracking.
 - `GoalManager.cs` — Goal formation, priority, staleness, and resolution for Tier1 characters (~357 lines).

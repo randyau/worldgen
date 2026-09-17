@@ -175,6 +175,7 @@ public sealed class WorldState : IWorldStateReadOnly
     // IWorldStateReadOnly spotlight projection — entity logic reads these; never reads SpotlightIntent directly
     TileCoord? IWorldStateReadOnly.SpotlightMoveTarget => SpotlightIntent?.MoveTarget;
     GoalType?  IWorldStateReadOnly.SpotlightGoalIntent => SpotlightIntent?.GoalIntent;
+    EntityId?  IWorldStateReadOnly.SpotlightSocialTarget => SpotlightIntent?.SocialTarget;
 
     // === SAVE STATE ===
     /// <summary>True while an auto-save or manual save is running on the background Task.</summary>

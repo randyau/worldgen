@@ -610,6 +610,5 @@ See `interface_contracts_snapshot.md` for the full ID wrapper definitions. Summa
 public readonly record struct EntityId(long Value);   // EntityId.New() / EnsureCounterExceeds()
 public readonly record struct EventId(long Value);
 public readonly record struct CivId(int Value);       // CivId.None = CivId(0); IsValid => Value > 0
-public readonly record struct ModifierId(Guid Value); // ModifierId.New()
 public readonly record struct ArtifactId(long Value); // ArtifactId.New()
 ```

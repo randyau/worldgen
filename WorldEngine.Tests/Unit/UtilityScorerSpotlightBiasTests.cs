@@ -177,6 +177,36 @@ public class UtilityScorerSpotlightBiasTests
     }
 
     [Fact]
+    public void SocialTarget_BiasesOnlyTheMatchingSocialAction()
+    {
+        var world = BuildWorld();
+        var start = FindLandTileWithLandNeighbor(world, out _);
+        var character = MakeTier1(start, new EntityId(924));
+        var matchingTarget    = new EntityId(925);
+        var nonMatchingTarget = new EntityId(926);
+        world.Entities.Add(character);
+
+        world.SpotlightCharacterId = character.Id;
+        world.SpotlightIntent      = new SpotlightIntent { SocialTarget = matchingTarget };
+
+        var matchingAlly    = new WorldEngine.Sim.Entities.AllyWith(character.Id, matchingTarget);
+        var nonMatchingAlly = new WorldEngine.Sim.Entities.AllyWith(character.Id, nonMatchingTarget);
+        var rest            = new WorldEngine.Sim.Entities.Rest(character.Id);
+        var candidates = new List<UtilityScorer.ScoredAction>
+        {
+            new(matchingAlly, 1.0f),
+            new(nonMatchingAlly, 1.0f),
+            new(rest, 1.0f),
+        };
+
+        ApplySpotlightBias(candidates, world, character);
+
+        candidates[0].Score.Should().BeApproximately(ExpectedBias, 0.001f, "AllyWith targeting the spotlight social target must be biased 3.0x");
+        candidates[1].Score.Should().Be(1.0f, "AllyWith targeting a different character must not be biased");
+        candidates[2].Score.Should().Be(1.0f, "Rest does not match the social intent and must be left unbiased");
+    }
+
+    [Fact]
     public void NoActiveIntent_LeavesAllScoresUnchanged()
     {
         var world = BuildWorld();
