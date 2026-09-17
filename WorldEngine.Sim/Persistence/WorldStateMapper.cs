@@ -132,7 +132,9 @@ internal static class WorldStateMapper
             Allies:                  o.Allies.Select(a => a.Value).ToList(),
             Treasury:                o.Treasury,
             HomeSettlementCoord:     o.HomeSettlementCoord.HasValue ? TileKey(o.HomeSettlementCoord.Value) : null,
-            TreasuryInsolvencyFlagged: o.TreasuryInsolvencyFlagged))
+            TreasuryInsolvencyFlagged: o.TreasuryInsolvencyFlagged,
+            IsExtinct:                 o.IsExtinct,
+            ReligionArchetypeId:       o.ReligionArchetypeId))
         .ToList();
 
     private static Dictionary<string, List<ResourceDepositDto>> MapResourceRegistry(WorldState w)
@@ -428,7 +430,9 @@ internal static class WorldStateMapper
             {
                 SuccessionCrisisEndYear = odto.SuccessionCrisisEndYear,
                 Treasury = odto.Treasury,
-                TreasuryInsolvencyFlagged = odto.TreasuryInsolvencyFlagged
+                TreasuryInsolvencyFlagged = odto.TreasuryInsolvencyFlagged,
+                IsExtinct = odto.IsExtinct,
+                ReligionArchetypeId = odto.ReligionArchetypeId
             };
             foreach (var m in odto.Members)
                 org.Members[new EntityId(m.CharacterId)] = new Organizations.Membership(
