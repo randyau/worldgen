@@ -189,9 +189,7 @@ public sealed class CharacterBehaviorPhase
             int bornOrdinal = world.ClaimNameOrdinal(child.Identity.Name);
             child.Identity = child.Identity with { NameOrdinal = bornOrdinal };
 
-            var childMembership = new Membership(familyOrg.Id, OrganizationRole.Member, famCfg.NewbornFamilyLoyalty);
-            child.Memberships.Add(childMembership);
-            familyOrg.Members[child.Id] = childMembership;
+            OrganizationMembership.Join(child, familyOrg, OrganizationRole.Member, famCfg.NewbornFamilyLoyalty);
 
             // Inherit civ membership from whichever parent has one; mother's takes precedence
             // when both do — arbitrary but deterministic (no RNG), same convention as the
@@ -562,74 +560,99 @@ public sealed class CharacterBehaviorPhase
             }
         }
 
-        // M14 14.4 — Guild leader succession: reuses SuccessionResolver.SelectSuccessor unmodified
-        // (no new succession mechanism, per the M12 audit note this milestone is bound by),
-        // mirroring the civ ruler succession block above generalized only as far as Guild needs
-        // it (Family/Religion leader succession stays out of scope for 14.4). Dead members are
-        // never removed from Organization.Members (same convention Family already follows — see
-        // FindHeir/SelectSuccessor's IsAlive filters below), so no cleanup is needed here beyond
-        // reassigning LeaderId, mirroring how the civ block above only reassigns civ.RulerId/
-        // succOrg.LeaderId without touching Members' Role entries.
+        // M14 14.4 / M15 15.0 — non-civ leader succession (Guild, Religion). Both reuse
+        // SuccessionResolver.SelectSuccessor unmodified (no new succession mechanism, per the M12
+        // audit note), mirroring the civ ruler succession block above as far as they need: dead
+        // members are never removed from Organization.Members (the same convention Family follows —
+        // see FindHeir/SelectSuccessor's IsAlive filters), so no cleanup is needed here beyond
+        // reassigning LeaderId, just as the civ block only reassigns civ.RulerId/succOrg.LeaderId
+        // without touching Members' Role entries. Civ succession stays separate above: it also
+        // carries RulerOrdinal/RulerCount and collapse bookkeeping that does not generalize.
+        //
+        // M15.9: one pass over Memberships rather than one per kind. A character can only ever lead
+        // one Guild and one Religion, and the two event kinds are independent, so the only visible
+        // difference is that a dual-leader's two events now interleave in membership order instead
+        // of Guild-always-first; nothing downstream reads them positionally.
         foreach (var membership in c.Memberships)
         {
-            if (!world.Organizations.TryGetValue(membership.OrganizationId, out var guildOrg)) continue;
-            if (guildOrg.Kind != OrganizationKind.Guild || guildOrg.LeaderId != c.Id) continue;
+            if (!world.Organizations.TryGetValue(membership.OrganizationId, out var org)) continue;
+            if (org.LeaderId != c.Id) continue;
 
-            var successorId = SuccessionResolver.SelectSuccessor(guildOrg, world, _cfg.MinRulerAgeSeasons,
-                member => (member.Personality.Ambition + member.Skills.Leadership) * 0.5f);
-            if (!successorId.HasValue) continue; // no eligible member — seat simply stays vacant
-
-            guildOrg.LeaderId = successorId.Value;
-            var successor = (Tier1Character)world.GetEntity(successorId.Value)!;
-
-            var succPayload = JsonSerializer.Serialize(new GuildSuccessionPayload(
-                guildOrg.Id.Value, guildOrg.Name,
-                c.Id.Value, c.Identity.Name,
-                successorId.Value.Value, successor.Identity.Name));
-            pending.Add(new PendingEvent(EventType.GuildLeadershipTransferred, c.Location, null,
-                succPayload, new[] { c.Id.Value, successorId.Value.Value },
-                ActorId: successorId.Value.Value, ActorName: successor.Identity.Name));
-        }
-
-        // M15 15.0 — Religion leader succession: same SuccessionResolver reuse as the Guild block
-        // above. Unlike Guild (seat simply stays vacant when no eligible successor exists), a
-        // religion with zero remaining living members is genuinely extinct — the sink half of
-        // M15's population balance (docs/phases/archive/m15_religion_deepened.md "Long-run balance
-        // constraints"). "Eligible" (age-gated) successor absence doesn't necessarily mean extinct
-        // (a young-only congregation still has living followers), so extinction is checked
-        // separately against IsAlive alone, not SelectSuccessor's age-gated result.
-        foreach (var membership in c.Memberships)
-        {
-            if (!world.Organizations.TryGetValue(membership.OrganizationId, out var religionOrg)) continue;
-            if (religionOrg.Kind != OrganizationKind.Religion || religionOrg.LeaderId != c.Id) continue;
-
-            var successorId = SuccessionResolver.SelectSuccessor(religionOrg, world, _cfg.MinRulerAgeSeasons,
-                member => (member.Personality.Wonder + member.Skills.Piety) * 0.5f);
-            if (successorId.HasValue)
+            switch (org.Kind)
             {
-                religionOrg.LeaderId = successorId.Value;
-                var successor = (Tier1Character)world.GetEntity(successorId.Value)!;
+                // No eligible member -> the seat simply stays vacant.
+                case OrganizationKind.Guild:
+                    ResolveOrgSuccession(c, org, world, pending,
+                        m => (m.Personality.Ambition + m.Skills.Leadership) * 0.5f,
+                        EventType.GuildLeadershipTransferred,
+                        (o, successor) => JsonSerializer.Serialize(new GuildSuccessionPayload(
+                            o.Id.Value, o.Name,
+                            c.Id.Value, c.Identity.Name,
+                            successor.Id.Value, successor.Identity.Name)));
+                    break;
 
-                var succPayload = JsonSerializer.Serialize(new ReligiousLeadershipTransferredPayload(
-                    religionOrg.Id.Value, religionOrg.Name,
-                    c.Id.Value, c.Identity.Name,
-                    successorId.Value.Value, successor.Identity.Name));
-                pending.Add(new PendingEvent(EventType.ReligiousLeadershipTransferred, c.Location, null,
-                    succPayload, new[] { c.Id.Value, successorId.Value.Value },
-                    ActorId: successorId.Value.Value, ActorName: successor.Identity.Name));
-                continue;
+                // Unlike Guild, a religion with zero remaining living members is genuinely extinct —
+                // the sink half of M15's population balance (docs/phases/archive/
+                // m15_religion_deepened.md "Long-run balance constraints"). "Eligible" (age-gated)
+                // successor absence doesn't necessarily mean extinct (a young-only congregation still
+                // has living followers), so extinction is checked separately against IsAlive alone,
+                // not SelectSuccessor's age-gated result.
+                case OrganizationKind.Religion:
+                    bool transferred = ResolveOrgSuccession(c, org, world, pending,
+                        m => (m.Personality.Wonder + m.Skills.Piety) * 0.5f,
+                        EventType.ReligiousLeadershipTransferred,
+                        (o, successor) => JsonSerializer.Serialize(new ReligiousLeadershipTransferredPayload(
+                            o.Id.Value, o.Name,
+                            c.Id.Value, c.Identity.Name,
+                            successor.Id.Value, successor.Identity.Name)));
+                    if (!transferred) MaybeMarkReligionExtinct(c, org, world, pending);
+                    break;
             }
-
-            bool anyLivingFollower = religionOrg.Members.Keys.Any(id =>
-                id != c.Id && world.GetEntity(id) is Tier1Character t && t.IsAlive);
-            if (anyLivingFollower) continue; // seat vacant, congregation survives — mirrors Guild
-
-            religionOrg.IsExtinct = true;
-            var extinctPayload = JsonSerializer.Serialize(new ReligionExtinctPayload(
-                religionOrg.Id.Value, religionOrg.Name, world.CurrentYear));
-            pending.Add(new PendingEvent(EventType.ReligionExtinct, c.Location, null,
-                extinctPayload, new[] { c.Id.Value }));
         }
+    }
+
+    /// <summary>
+    /// Promotes the highest-scoring eligible living member of <paramref name="org"/> into the seat
+    /// <paramref name="deceased"/> just vacated and emits <paramref name="eventType"/>. Returns
+    /// false (leaving the seat vacant, emitting nothing) when no eligible successor exists.
+    /// </summary>
+    private bool ResolveOrgSuccession(
+        Tier1Character deceased,
+        Organization org,
+        WorldState world,
+        List<PendingEvent> pending,
+        Func<Tier1Character, float> score,
+        EventType eventType,
+        Func<Organization, Tier1Character, string> payload)
+    {
+        var successorId = SuccessionResolver.SelectSuccessor(org, world, _cfg.MinRulerAgeSeasons, score);
+        if (!successorId.HasValue) return false;
+
+        org.LeaderId = successorId.Value;
+        var successor = (Tier1Character)world.GetEntity(successorId.Value)!;
+
+        pending.Add(new PendingEvent(eventType, deceased.Location, null,
+            payload(org, successor), new[] { deceased.Id.Value, successorId.Value.Value },
+            ActorId: successorId.Value.Value, ActorName: successor.Identity.Name));
+        return true;
+    }
+
+    /// <summary>
+    /// Marks <paramref name="religionOrg"/> extinct when <paramref name="deceased"/> was its last
+    /// living member. Guild has no equivalent — a leaderless guild just carries on.
+    /// </summary>
+    private static void MaybeMarkReligionExtinct(
+        Tier1Character deceased, Organization religionOrg, WorldState world, List<PendingEvent> pending)
+    {
+        bool anyLivingFollower = religionOrg.Members.Keys.Any(id =>
+            id != deceased.Id && world.GetEntity(id) is Tier1Character t && t.IsAlive);
+        if (anyLivingFollower) return; // seat vacant, congregation survives — mirrors Guild
+
+        religionOrg.IsExtinct = true;
+        var extinctPayload = JsonSerializer.Serialize(new ReligionExtinctPayload(
+            religionOrg.Id.Value, religionOrg.Name, world.CurrentYear));
+        pending.Add(new PendingEvent(EventType.ReligionExtinct, deceased.Location, null,
+            extinctPayload, new[] { deceased.Id.Value }));
     }
 
     /// <summary>
@@ -989,14 +1012,9 @@ public sealed class CharacterBehaviorPhase
 
             long fromOrgId = currentMembership?.OrganizationId.Value ?? 0;
             if (currentMembership != null)
-            {
-                world.Organizations[currentMembership.OrganizationId].Members.Remove(ch.Id);
-                ch.Memberships.Remove(currentMembership);
-            }
+                OrganizationMembership.Leave(ch, world.Organizations[currentMembership.OrganizationId]);
             var targetOrg = world.Organizations[targetOrgId];
-            var newMembership = new Membership(targetOrgId, OrganizationRole.Member, cfg.InitialConvertLoyalty);
-            ch.Memberships.Add(newMembership);
-            targetOrg.Members[ch.Id] = newMembership;
+            OrganizationMembership.Join(ch, targetOrg, OrganizationRole.Member, cfg.InitialConvertLoyalty);
 
             var payload = JsonSerializer.Serialize(new CharacterConvertedPayload(
                 ch.Id.Value, ch.Identity.Name, targetOrgId.Value, targetOrg.Name, fromOrgId));
@@ -1056,11 +1074,8 @@ public sealed class CharacterBehaviorPhase
                 if (outcomeRoll < cfg.PersecutionForcedConversionChance)
                 {
                     outcome = "forced_conversion";
-                    heresyOrg.Members.Remove(ch.Id);
-                    ch.Memberships.Remove(religionMembership);
-                    var newMembership = new Membership(stateOrgId, OrganizationRole.Member, cfg.ForcedConvertLoyalty);
-                    ch.Memberships.Add(newMembership);
-                    stateOrg.Members[ch.Id] = newMembership;
+                    OrganizationMembership.Leave(ch, heresyOrg);
+                    OrganizationMembership.Join(ch, stateOrg, OrganizationRole.Member, cfg.ForcedConvertLoyalty);
                 }
                 else
                 {
@@ -1068,14 +1083,9 @@ public sealed class CharacterBehaviorPhase
                     var civMembership = ch.Memberships.FirstOrDefault(m => m.CivId.IsValid);
                     if (civMembership != null)
                     {
-                        var updated = civMembership with
-                        {
-                            Loyalty = Math.Max(0f, civMembership.Loyalty - cfg.PersecutionCivLoyaltyPenalty)
-                        };
-                        ch.Memberships.Remove(civMembership);
-                        ch.Memberships.Add(updated);
-                        if (world.Organizations.TryGetValue(civMembership.OrganizationId, out var civOrg))
-                            civOrg.Members[ch.Id] = updated;
+                        world.Organizations.TryGetValue(civMembership.OrganizationId, out var civOrg);
+                        OrganizationMembership.SetLoyalty(ch, civMembership.OrganizationId,
+                            Math.Max(0f, civMembership.Loyalty - cfg.PersecutionCivLoyaltyPenalty), civOrg);
                     }
                     ch.Needs = ch.Needs with
                     {
@@ -1104,8 +1114,8 @@ public sealed class CharacterBehaviorPhase
         if (c.Needs.Spiritual    < cfg.SpiritualFoundingThreshold) return;
         if (c.Skills.Piety       < cfg.PietyFoundingThreshold)     return;
         if (c.Personality.Wonder < cfg.WonderFoundingThreshold)    return;
-        if (c.LastReligionFoundedYear > -999
-            && world.CurrentYear - c.LastReligionFoundedYear < cfg.ReligionFoundingCooldownYears)
+        if (Cooldown.HasFired(c.LastReligionFoundedYear)
+            && Cooldown.YearsElapsed(world.CurrentYear, c.LastReligionFoundedYear) < cfg.ReligionFoundingCooldownYears)
             return;
         if (c.Goals.Any(g => g.Type == GoalType.FoundReligion && !g.IsComplete)) return;
 
@@ -1155,9 +1165,7 @@ public sealed class CharacterBehaviorPhase
         var orgId = CivTracker.CreateOrganization(world, OrganizationKind.Religion, religionName, c.Id, c.Location);
         var org   = world.Organizations[orgId];
         org.ReligionArchetypeId = archetypeId;
-        var membership = new Membership(orgId, OrganizationRole.Leader, 1.0f);
-        c.Memberships.Add(membership);
-        org.Members[c.Id] = membership;
+        OrganizationMembership.Join(c, org, OrganizationRole.Leader, 1.0f);
 
         var payload = JsonSerializer.Serialize(new ReligionFoundedPayload(
             c.Id.Value, c.Identity.Name, world.CurrentYear,
@@ -1181,8 +1189,8 @@ public sealed class CharacterBehaviorPhase
     {
         var cfg = world.SimConfig.Religion;
         if (c.Skills.Piety < cfg.PilgrimagePietyThreshold) return;
-        if (c.LastPilgrimageYear > -999
-            && world.CurrentYear - c.LastPilgrimageYear < cfg.PilgrimageCooldownYears)
+        if (Cooldown.HasFired(c.LastPilgrimageYear)
+            && Cooldown.YearsElapsed(world.CurrentYear, c.LastPilgrimageYear) < cfg.PilgrimageCooldownYears)
             return;
         if (c.Goals.Any(g => g.Type == GoalType.Pilgrimage && !g.IsComplete)) return;
 
@@ -1232,10 +1240,8 @@ public sealed class CharacterBehaviorPhase
             var org = world.Organizations[religionMembership.OrganizationId];
             religionName = org.Name;
             orgIdValue = org.Id.Value;
-            var updated = religionMembership with { Loyalty = Math.Min(1f, religionMembership.Loyalty + cfg.PilgrimageLoyaltyBoost) };
-            c.Memberships.Remove(religionMembership);
-            c.Memberships.Add(updated);
-            org.Members[c.Id] = updated;
+            OrganizationMembership.SetLoyalty(c, org,
+                Math.Min(1f, religionMembership.Loyalty + cfg.PilgrimageLoyaltyBoost));
         }
 
         var payload = JsonSerializer.Serialize(new PilgrimagePayload(
@@ -1317,13 +1323,10 @@ public sealed class CharacterBehaviorPhase
             foreach (var (memberId, oldMembership) in seceding)
             {
                 if (world.GetEntity(memberId) is not Tier1Character member) continue;
-                org.Members.Remove(memberId);
-                member.Memberships.Remove(oldMembership);
+                OrganizationMembership.Leave(member, org);
 
                 var role = memberId == dissenter.Id ? OrganizationRole.Leader : OrganizationRole.Member;
-                var newMembership = new Membership(newOrgId, role, oldMembership.Loyalty);
-                member.Memberships.Add(newMembership);
-                newOrg.Members[memberId] = newMembership;
+                OrganizationMembership.Join(member, newOrg, role, oldMembership.Loyalty);
             }
 
             var payload = JsonSerializer.Serialize(new ReligionSchismPayload(
@@ -1360,20 +1363,9 @@ public sealed class CharacterBehaviorPhase
             case FleeRegion flee:
                 ResolveMove(c, flee.Destination, world);
                 break;
-            case EstablishSettlement:
-            case AllyWith:
-            case DeclareRivalry:
-            case DeclareWar:
-            case RaidSettlement:
-            case Negotiate:
-            case ProposeMarriage:
-            case GrantAid:
-            case ForgiveDebt:
-            case Placate:
-            case Defect:
-            case BuildImprovement:
-            case ContributeToTreasury:
-            case WithdrawFromTreasury:
+            // Everything CivTracker.Resolve owns is marked ICivCommand, so a new civ-level command
+            // needs no edit here — it is dispatched the moment it implements the marker.
+            case ICivCommand:
                 CivTracker.Resolve(cmd, world, pending, _simCfg.SettlementNames);
                 break;
         }
@@ -1603,7 +1595,9 @@ public sealed class CharacterBehaviorPhase
 
         // Gate ArtworkCreated events to at most one per cooldown period to prevent
         // 200k+ event explosion when a character with an active Create goal spams per-tick.
-        if (world.CurrentYear - c.LastArtworkYear < _cfg.ArtworkCooldownYears) return;
+        // No sentinel guard by design: an unset LastArtworkYear (Cooldown.UnsetYear) makes the
+        // elapsed value huge, so a character's first artwork is never gated.
+        if (Cooldown.YearsElapsed(world.CurrentYear, c.LastArtworkYear) < _cfg.ArtworkCooldownYears) return;
         c.LastArtworkYear = world.CurrentYear;
 
         // Art type weighted toward character personality:

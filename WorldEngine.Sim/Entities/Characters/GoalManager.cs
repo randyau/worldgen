@@ -13,19 +13,6 @@ namespace WorldEngine.Sim.Entities.Characters;
 /// <summary>Goal formation, priority, staleness, and resolution for Tier1 characters (~357 lines).</summary>
 public static class GoalManager
 {
-    // Goal types worth logging as narrative events when formed or resolved.
-    // Expanded to include major character ambitions: expansion, dominance, alliances, plus inner-life goals.
-    private static readonly HashSet<GoalType> NotableGoalTypes =
-    [
-        GoalType.Bond, GoalType.Avenge, GoalType.Create,
-        GoalType.Dominance, GoalType.Alliance,
-        GoalType.FoundCity, GoalType.BuildImprovement,
-        GoalType.SlayBeast,
-        GoalType.CovetArtifact,
-        GoalType.SeaVoyage,
-        GoalType.Pilgrimage
-    ];
-
     // Salt for covet goal formation RNG — distinct from other decision salts
     private const int SaltCovet = 701;
 
@@ -34,7 +21,7 @@ public static class GoalManager
         CharacterSimConfig cfg, List<PendingEvent> pending)
     {
         // 1. Track notable goals before pruning so we can log completions and abandonments.
-        var notableGoalsToCheck = c.Goals.Where(g => NotableGoalTypes.Contains(g.Type)).ToList();
+        var notableGoalsToCheck = c.Goals.Where(g => GoalTypeTraits.IsNotable(g.Type)).ToList();
 
         foreach (var g in notableGoalsToCheck)
         {
@@ -104,30 +91,21 @@ public static class GoalManager
         }
 
         var goalsToRemove = c.Goals.Where(g => g.IsComplete
+            // Short-limit prune: everything that is neither long-running nor Grieve. Grieve is
+            // exempt from both limits — it is not long-running, it just resolves on its own terms.
             || (g.Type != GoalType.Grieve
-                && g.Type != GoalType.Bond
-                && g.Type != GoalType.Create
-                && g.Type != GoalType.FoundCity        // innerLifeLimit — travel takes years
-                && g.Type != GoalType.SlayBeast        // innerLifeLimit — hunts can take years
-                && g.Type != GoalType.BuildImprovement // innerLifeLimit — building takes years
-                && g.Type != GoalType.Alliance         // innerLifeLimit — diplomacy takes years
-                && g.Type != GoalType.CovetArtifact   // innerLifeLimit — acquisition takes years
-                && g.Type != GoalType.SeaVoyage        // innerLifeLimit — a voyage can take more ticks than GoalStaleSeasonLimit
-                && g.Type != GoalType.Pilgrimage       // innerLifeLimit — a pilgrimage can take more ticks than GoalStaleSeasonLimit
+                && !GoalTypeTraits.IsLongRunning(g.Type)
                 && currentTick - g.StaleSince > cfg.GoalStaleSeasonLimit
                 && g.Progress < 0.1f)
-            || ((g.Type == GoalType.Bond || g.Type == GoalType.Create || g.Type == GoalType.FoundCity
-                 || g.Type == GoalType.SlayBeast
-                 || g.Type == GoalType.BuildImprovement || g.Type == GoalType.Alliance
-                 || g.Type == GoalType.CovetArtifact || g.Type == GoalType.SeaVoyage
-                 || g.Type == GoalType.Pilgrimage)
+            // Long-limit prune: goals that legitimately take years get innerLifeLimit instead.
+            || (GoalTypeTraits.IsLongRunning(g.Type)
                 && currentTick - g.StaleSince > innerLifeLimit
                 && g.Progress < 0.1f)).ToList();
 
         // Log abandonments for notable goal types (failed to progress, timed out, or pruned without completion).
         foreach (var g in goalsToRemove)
         {
-            if (!g.IsComplete && NotableGoalTypes.Contains(g.Type) && g.Progress < 0.95f)
+            if (!g.IsComplete && GoalTypeTraits.IsNotable(g.Type) && g.Progress < 0.95f)
                 pending.Add(MakeGoalEvent(EventType.GoalResolved, c, g, "abandoned"));
         }
 
@@ -162,9 +140,7 @@ public static class GoalManager
 
         // M13 13.5 balance: shared ceiling on discretionary goal formation — see MaxConcurrentGoals.
         // Incremented after each successful Add below so later blocks in the same tick see it too.
-        int activeDiscretionaryGoals = c.Goals.Count(g => !g.IsComplete && g.Type is
-            GoalType.Dominance or GoalType.Alliance or GoalType.Bond or GoalType.Create
-            or GoalType.BuildImprovement or GoalType.SlayBeast or GoalType.CovetArtifact);
+        int activeDiscretionaryGoals = c.Goals.Count(g => !g.IsComplete && GoalTypeTraits.IsDiscretionary(g.Type));
         bool hasGoalRoom() => activeDiscretionaryGoals < cfg.MaxConcurrentGoals;
 
         if (hasGoalRoom() && !hasDominance && c.Personality.Aggression > cfg.GoalAggressionThreshold)
@@ -231,7 +207,7 @@ public static class GoalManager
 
         // Create goal: high-Ingenuity characters want to make things.
         // Cooldown prevents immediate re-formation after completing a project.
-        bool createCooldownClear = currentTick - c.LastCreateCompletedTick > cfg.CreateGoalCooldownTicks;
+        bool createCooldownClear = Cooldown.TicksElapsed(currentTick, c.LastCreateCompletedTick) > cfg.CreateGoalCooldownTicks;
         if (hasGoalRoom() && !hasCreate && createCooldownClear && c.Aptitude.Ingenuity > cfg.GoalIngenuityThreshold
             && !c.Goals.Any(g => g.Type == GoalType.Grieve))
         {
@@ -532,7 +508,7 @@ public static class GoalManager
         }
 
         // Purpose drought: characters with no flourishing goals lose wellbeing (existential aimlessness)
-        bool hasFlourishing = c.Goals.Any(g => g.Type is GoalType.Create or GoalType.Bond or GoalType.FoundCity or GoalType.Protect);
+        bool hasFlourishing = c.Goals.Any(g => GoalTypeTraits.IsFlourishing(g.Type));
         if (!hasFlourishing)
             delta -= cfg.PurposeDroughtDrain;
 

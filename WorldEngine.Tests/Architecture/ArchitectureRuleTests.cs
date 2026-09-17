@@ -319,8 +319,13 @@ public class ArchitectureRuleTests
     // Rule (h) — every command CivTracker.Resolve knows how to handle must also be dispatched
     // to it from CharacterBehaviorPhase.ResolveCommand — the actual per-tick call site
     // (_scorer.SelectAction → ResolveCommand). CivTracker.Resolve's switch has no default case
-    // either, so a command present in one switch but not the other silently no-ops forever in
-    // the real simulation despite passing unit tests that call CivTracker.Resolve directly.
+    // either, so a command it handles but that ResolveCommand never routes to it silently no-ops
+    // forever in the real simulation despite passing unit tests that call CivTracker.Resolve
+    // directly.
+    //
+    // M15.9: ResolveCommand no longer re-lists each type — it matches `case ICivCommand` and
+    // delegates. So the rule is now "every type in CivTracker.Resolve's switch implements
+    // ICivCommand", which is what makes that single delegation cover all of them.
     //
     // This is a real bug class, not a hypothetical: GrantAid/ForgiveDebt/Placate/Defect were
     // added to CivTracker.Resolve across M13 13.1/13.2/13.4 but never added to
@@ -340,13 +345,26 @@ public class ArchitectureRuleTests
         var resolveCommandCases = ExtractSwitchCaseTypes(File.ReadAllText(behaviorPath), "private void ResolveCommand(");
 
         civTrackerCases.Should().NotBeEmpty("sanity check: the extractor found CivTracker.Resolve's switch cases");
-        resolveCommandCases.Should().NotBeEmpty("sanity check: the extractor found ResolveCommand's switch cases");
+        resolveCommandCases.Should().Contain("ICivCommand",
+            "CharacterBehaviorPhase.ResolveCommand must delegate to CivTracker.Resolve via the " +
+            "ICivCommand marker rather than re-listing each command type");
 
-        var missing = civTrackerCases.Except(resolveCommandCases).ToList();
-        missing.Should().BeEmpty(
-            because: "every command type CivTracker.Resolve handles must also be a case in " +
-                     "CharacterBehaviorPhase.ResolveCommand's switch, or the utility scorer can select " +
-                     "it every tick while it silently no-ops forever in the real simulation (see rule (h) comment above)");
+        // Name → types (the Sim assembly has same-named types in different namespaces).
+        var simTypes = SimAssembly.GetTypes()
+            .GroupBy(t => t.Name)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        var notMarked = civTrackerCases
+            .Where(name => simTypes.TryGetValue(name, out var ts)
+                           && ts.Any(t => typeof(ICommand).IsAssignableFrom(t))
+                           && !ts.Any(t => typeof(ICivCommand).IsAssignableFrom(t)))
+            .ToList();
+
+        notMarked.Should().BeEmpty(
+            because: "every command type CivTracker.Resolve handles must implement ICivCommand, or " +
+                     "CharacterBehaviorPhase.ResolveCommand's `case ICivCommand` never routes it and the " +
+                     "utility scorer can select it every tick while it silently no-ops forever in the real " +
+                     "simulation (see rule (h) comment above)");
     }
 
     /// <summary>

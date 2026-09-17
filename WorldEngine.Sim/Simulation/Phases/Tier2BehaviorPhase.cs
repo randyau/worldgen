@@ -489,7 +489,7 @@ public sealed class Tier2BehaviorPhase
 
         if (existing != null)
         {
-            existing.Members[merchant.Id] = new Membership(existing.Id, OrganizationRole.Member, 1.0f);
+            OrganizationMembership.JoinTier2(merchant, existing, OrganizationRole.Member, 1.0f);
             return;
         }
 
@@ -501,9 +501,7 @@ public sealed class Tier2BehaviorPhase
 
         var orgId = CivTracker.CreateOrganization(world, OrganizationKind.Guild, guildName, promoted.Id, homeTile);
         var org = world.Organizations[orgId];
-        var membership = new Membership(orgId, OrganizationRole.Leader, 1.0f);
-        org.Members[promoted.Id] = membership;
-        promoted.Memberships.Add(membership);
+        OrganizationMembership.Join(promoted, org, OrganizationRole.Leader, 1.0f);
 
         var payload = JsonSerializer.Serialize(new GuildFormedPayload(
             orgId.Value, guildName, promoted.Id.Value, promoted.Identity.Name, homeTile.X, homeTile.Y));

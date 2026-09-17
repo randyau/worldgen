@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using WorldEngine.Sim.Entities.Characters;
 
 namespace WorldEngine.Sim.Persistence;
 
@@ -136,7 +137,8 @@ public sealed record CivilizationDto(
     Dictionary<string, int>           WarBattleWins);
 
 // ─── Organization (M12) ────────────────────────────────────────────────────────
-public sealed record MembershipDto(long CharacterId, int Role, float Loyalty);
+// CivId defaults to 0 (CivId.None) so pre-M15.9 saves, which did not persist it, still load.
+public sealed record MembershipDto(long CharacterId, int Role, float Loyalty, int CivId = 0);
 
 public sealed record OrganizationDto(
     int    Id,
@@ -246,12 +248,12 @@ public sealed record Tier1EntityDto(
     int    LastReligionFoundedYear,
     // Local-scale position foundation (M11 11.6) — null until a future milestone populates it.
     string? LocalChunkKey = null,
-    int    LastDefectionTick = -1,
+    int    LastDefectionTick = Cooldown.UnsetTick,
     string? LocalPositionKey = null,
     // M14 14.0 — personal Wealth accumulator; see docs/phases/archive/m14_economy_independent_wealth.md.
     float  Wealth = 0f,
     // M15 15.4 — see docs/phases/archive/m15_religion_deepened.md.
-    int    LastPilgrimageYear = -999);
+    int    LastPilgrimageYear = Cooldown.UnsetYear);
 
 public sealed record Tier2EntityDto(
     long   Id,
