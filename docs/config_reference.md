@@ -272,6 +272,12 @@ Edit values in `sim_config.toml`; all keys live there without recompiling.
 | `volcanic_ash_fertility_penalty` | `60` | `SimConfig.Disasters.VolcanicAshFertilityPenalty` | fertility subtracted while ash is active (drought uses the same shape) |
 | `volcanic_ash_fertility_floor` | `20` | `SimConfig.Disasters.VolcanicAshFertilityFloor` | fertility can't be pushed below this by ash alone |
 | `volcanic_ash_duration_ticks` | `64` | `SimConfig.Disasters.VolcanicAshDurationTicks` | ~4 years at 16 ticks/year — was indefinite; now a real recovery arc |
+| `blight_probability_per_year` | `0.01` | `SimConfig.Disasters.BlightProbabilityPerYear` | M16 16.1 — Blight (crop disease). Settlement-scoped: rolled per settlement per year, reuses ActiveTileDisasters keyed by the settlement's own tile rather than a new state track. |
+| `blight_intensity` | `0.6` | `SimConfig.Disasters.BlightIntensity` |  |
+| `blight_duration_ticks` | `8` | `SimConfig.Disasters.BlightDurationTicks` | half a year |
+| `blight_food_store_destruction_fraction` | `0.4` | `SimConfig.Disasters.BlightFoodStoreDestructionFraction` |  |
+| `blight_fertility_penalty` | `50` | `SimConfig.Disasters.BlightFertilityPenalty` |  |
+| `blight_fertility_floor` | `30` | `SimConfig.Disasters.BlightFertilityFloor` |  |
 
 ## `[beasts]` {#beasts}
 

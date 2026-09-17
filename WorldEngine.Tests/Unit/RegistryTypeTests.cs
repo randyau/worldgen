@@ -61,8 +61,9 @@ public class RegistryTypeTests
     }
 
     [Fact]
-    public void DisasterType_HasFourValues()
+    public void DisasterType_HasFiveValues()
     {
-        Enum.GetValues(typeof(DisasterType)).Length.Should().Be(4);
+        // M16 16.1 added Blight.
+        Enum.GetValues(typeof(DisasterType)).Length.Should().Be(5);
     }
 }

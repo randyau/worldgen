@@ -36,6 +36,7 @@ public sealed class EnvironmentalPhase
             RunAnnualSeaLevel(world, pending);
             RunAnnualResourceDynamics(world);
             RunDroughtsAnnual(world, pending);
+            RunBlightAnnual(world, pending);
         }
 
         return pending;
@@ -564,6 +565,42 @@ public sealed class EnvironmentalPhase
         }
     }
 
+    // =========================================================================
+    // M16 16.1 — Blight (crop disease). Settlement-scoped: unlike the tile-scoped disasters
+    // above, blight is rolled per settlement and keyed by the settlement's own tile, reusing
+    // ActiveTileDisasters/ApplyDisasterConsequences rather than a new state track.
+    // =========================================================================
+
+    private void RunBlightAnnual(WorldState world, List<PendingEvent> pending)
+    {
+        var dcfg = _cfg.Disasters;
+
+        foreach (var (tile, stub) in world.Settlements)
+        {
+            if (HasActiveDisasterType(world, tile, DisasterType.Blight)) continue;
+
+            float roll = WorldRng.FloatAt(world.WorldSeed, world.CurrentYear, tile.X, tile.Y, DisasterSalts.Blight);
+            if (roll >= dcfg.BlightProbabilityPerYear) continue;
+
+            // No settlement-Health damage — blight's toll is food/fertility, not structural.
+            AddDisaster(world, tile,
+                new ActiveDisaster(DisasterType.Blight, dcfg.BlightIntensity, dcfg.BlightDurationTicks, new EventId(0)),
+                pending, settlementDamageBase: 0);
+            pending.Add(new PendingEvent(EventType.BlightBegan, tile, null,
+                JsonSerializer.Serialize(new DisasterPayload(dcfg.BlightIntensity)),
+                CivId: stub.CivId.Value, SettlementName: stub.Name));
+
+            if (stub.ResourceStores is { Count: > 0 } stores && stores.TryGetValue("food", out float foodStore) && foodStore > 0)
+            {
+                var updated = new Dictionary<string, float>(stores, StringComparer.OrdinalIgnoreCase)
+                {
+                    ["food"] = foodStore * (1f - dcfg.BlightFoodStoreDestructionFraction)
+                };
+                world.Settlements[tile] = world.Settlements[tile] with { ResourceStores = updated };
+            }
+        }
+    }
+
     private void AddDisaster(WorldState world, TileCoord coord, ActiveDisaster disaster,
         List<PendingEvent> pending, int settlementDamageBase)
     {
@@ -665,6 +702,13 @@ public sealed class EnvironmentalPhase
                     // recovers naturally via the branch below once VolcanicAshDurationTicks expires.
                     fertility = Math.Max(dcfg.VolcanicAshFertilityFloor,
                                          fertility - dcfg.VolcanicAshFertilityPenalty);
+                }
+                else if (HasActiveDisasterType(world, coord, DisasterType.Blight))
+                {
+                    // M16 16.1 — blight suppresses fertility on the settlement's own tile
+                    // in addition to the direct food-store hit taken at onset.
+                    fertility = Math.Max(dcfg.BlightFertilityFloor,
+                                         fertility - dcfg.BlightFertilityPenalty);
                 }
                 else
                 {

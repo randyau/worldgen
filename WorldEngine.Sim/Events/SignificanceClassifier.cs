@@ -45,6 +45,7 @@ public static class SignificanceClassifier
                                            ? PopulationImpact.Catastrophic : PopulationImpact.Major,
             EventType.ImprovementDestroyed         => PopulationImpact.Minor,
             EventType.SettlementDamagedByDisaster  => PopulationImpact.Moderate,
+            EventType.BlightBegan                  => PopulationImpact.Moderate,
             // Beast events
             EventType.BeastAwakened     => PopulationImpact.Major,   // → Regional tier
             EventType.BeastSlain        => PopulationImpact.None,     // VerbClass.Destruction → Regional

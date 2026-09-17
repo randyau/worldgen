@@ -18,6 +18,7 @@ The `Type` column stores integer values. Use these constants in WHERE clauses:
   1007 = SeaLevelChanged                1008 = BiomeChanged                 
   1009 = ClimateShifted                 1010 = ResourceRecovered            
   1011 = ImprovementDestroyed           1012 = SettlementDamagedByDisaster  
+  1013 = BlightBegan                  
 
 -- Beast events (2000–2099)
   2001 = BeastSpawned         2002 = BeastAwakened      

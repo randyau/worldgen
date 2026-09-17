@@ -43,4 +43,13 @@ public class DisasterConfig
     public byte  VolcanicAshFertilityPenalty   { get; set; } = 60;
     public byte  VolcanicAshFertilityFloor     { get; set; } = 20;
     public int  VolcanicAshDurationTicks       { get; set; } = 64; // ~4 years at 16 ticks/year
+
+    // M16 16.1 — Blight (crop disease). Settlement-scoped: rolled per settlement per year,
+    // reuses ActiveTileDisasters keyed by the settlement's own tile rather than a new state track.
+    public float BlightProbabilityPerYear            { get; set; } = 0.01f;
+    public float BlightIntensity                     { get; set; } = 0.6f;
+    public int   BlightDurationTicks                 { get; set; } = 8; // half a year
+    public float BlightFoodStoreDestructionFraction  { get; set; } = 0.4f;
+    public byte  BlightFertilityPenalty              { get; set; } = 50;
+    public byte  BlightFertilityFloor                { get; set; } = 30;
 }

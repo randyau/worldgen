@@ -446,4 +446,36 @@ public class DisasterSystemTests
             (byte)Math.Max(0, 255 - world.SimConfig.Disasters.VolcanicAshFertilityPenalty),
             "ash should suppress fertility on its tile the same year it lands");
     }
+
+    [Fact]
+    public void Disaster_BlightDestroysFoodStoreAndFlagsSettlementTile()
+    {
+        var world = BuildWorld();
+        world.SimConfig.Disasters.BlightProbabilityPerYear = 1.0f;
+        TileCoord landTile = default;
+        for (int y = 0; y < world.TileGrid.TileHeight && landTile == default; y++)
+            for (int x = 0; x < world.TileGrid.TileWidth; x++)
+            {
+                var c = new TileCoord(x, y);
+                if ((BiomeType)world.TileGrid.GetTile(c).BiomeType is BiomeType.Ocean or BiomeType.CoastalWater) continue;
+                landTile = c;
+                break;
+            }
+
+        var stub = MakeSettlement(landTile) with
+        {
+            ResourceStores = new Dictionary<string, float> { ["food"] = 100f }
+        };
+        world.Settlements[landTile] = stub;
+
+        var pending = new List<PendingEvent>();
+        new EnvironmentalPhase(world.SimConfig).RunTick(world, pending, isAnnualTick: true);
+
+        world.ActiveTileDisasters.Should().ContainKey(landTile);
+        world.ActiveTileDisasters[landTile].Should().Contain(d => d.Type == DisasterType.Blight);
+        world.Settlements[landTile].GetStore("food").Should().BeApproximately(
+            100f * (1f - world.SimConfig.Disasters.BlightFoodStoreDestructionFraction), 0.01f,
+            "blight should destroy a fraction of the settlement's stored food on onset");
+        pending.Should().Contain(p => p.Type == EventType.BlightBegan);
+    }
 }

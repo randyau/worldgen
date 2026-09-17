@@ -1,4 +1,4 @@
-<!-- contract-snapshot-hash: 15642e781f0318c5 -->
+<!-- contract-snapshot-hash: 1733f99994840289 -->
 # Interface Contracts — Events & Enumerations
 **Parent:** `interface_contracts.md` | **Version:** 0.9 | **Status:** living document, kept current via SCIP-verified snapshots
 
@@ -368,7 +368,8 @@ Values from `WorldEngine.Sim/Core/Enumerations.cs`.
 Environmental:   1001–1099
     VolcanicEruption=1001, EarthquakeOccurred=1002, WildfireOccurred=1003, FloodOccurred=1004,
     DroughtBegan=1005, DroughtEnded=1006, SeaLevelChanged=1007, BiomeChanged=1008,
-    ClimateShifted=1009, ResourceRecovered=1010
+    ClimateShifted=1009, ResourceRecovered=1010, ImprovementDestroyed=1011,
+    SettlementDamagedByDisaster=1012, BlightBegan=1013 (M16)
 
 Beast:           2001–2099
     BeastSpawned=2001, BeastAwakened=2002, BeastDied=2003, BeastSlain=2004,

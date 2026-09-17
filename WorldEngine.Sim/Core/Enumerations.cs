@@ -72,7 +72,8 @@ public enum DisasterType
     Flood         = 1,
     VolcanicAsh   = 2,
     SeismicDamage = 3,
-    // M16 16.1: Blight, HarshWinter — roadmap-scoped, not yet implemented.
+    Blight        = 4,  // M16 16.1 — crop disease; settlement-scoped, reuses ActiveTileDisasters keyed by the settlement's own tile
+    // M16 16.1: HarshWinter — roadmap-scoped, not yet implemented.
     // V2: Plague, ArmyPresence
 }
 
@@ -103,6 +104,7 @@ public enum EventType
     ResourceRecovered   = 1010,
     ImprovementDestroyed        = 1011,  // M16 16.0 — a TileImprovement destroyed by a disaster
     SettlementDamagedByDisaster = 1012,  // M16 16.0 — non-lethal disaster Health damage to a settlement
+    BlightBegan                 = 1013,  // M16 16.1 — crop disease struck a settlement
     // Beast events (2001–2099) — M2.1
     BeastSpawned        = 2001,
     BeastAwakened       = 2002,
@@ -273,6 +275,7 @@ public static class VerbClassification
         EventType.ResourceRecovered  => VerbClass.Maintenance,
         EventType.ImprovementDestroyed        => VerbClass.Destruction,
         EventType.SettlementDamagedByDisaster  => VerbClass.Transformation,
+        EventType.BlightBegan                  => VerbClass.Destruction,
         // M2+ stubs — reasonable defaults
         EventType.CharacterBorn           => VerbClass.Creation,
         EventType.CharacterDied           => VerbClass.Transformation, // Destruction floor=Regional floods DB; impact drives tier for notable deaths
