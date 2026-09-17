@@ -53,9 +53,10 @@ public static partial class CivTracker
         var existing = c.Memberships.FirstOrDefault(m => m.CivId.IsValid);
         if (existing != null)
         {
-            c.Memberships.Remove(existing);
             if (world.Organizations.TryGetValue(existing.OrganizationId, out var oldOrg))
-                oldOrg.Members.Remove(c.Id);
+                OrganizationMembership.Leave(c, oldOrg);
+            else
+                c.Memberships.Remove(existing); // no Organization record (pre-M12 test fixture)
         }
 
         if (!civId.IsValid) return;
@@ -66,10 +67,15 @@ public static partial class CivTracker
         civ.OrgId ??= CreateOrganization(world, OrganizationKind.Civilization, civ.Name, civ.RulerId, civ.CapitalTile);
         var orgId = civ.OrgId.Value;
 
-        var membership = new Membership(orgId, role, 1.0f, civId);
-        c.Memberships.Add(membership);
         if (world.Organizations.TryGetValue(orgId, out var org))
-            org.Members[c.Id] = membership;
+        {
+            OrganizationMembership.Join(c, org, role, 1.0f, civId);
+        }
+        else
+        {
+            // Organization record missing (pre-M12 test fixture) — character side only.
+            c.Memberships.Add(new Membership(orgId, role, 1.0f, civId));
+        }
     }
 
     public static void Resolve(
@@ -326,10 +332,8 @@ public static partial class CivTracker
 
         var cMembership = new Membership(orgId, cLeads ? OrganizationRole.Leader : OrganizationRole.Member, 1.0f);
         var targetMembership = new Membership(orgId, cLeads ? OrganizationRole.Member : OrganizationRole.Leader, 1.0f);
-        c.Memberships.Add(cMembership);
-        target.Memberships.Add(targetMembership);
-        org.Members[c.Id] = cMembership;
-        org.Members[target.Id] = targetMembership;
+        OrganizationMembership.Join(c, org, cMembership.Role, cMembership.Loyalty);
+        OrganizationMembership.Join(target, org, targetMembership.Role, targetMembership.Loyalty);
 
         world.Relationships.Upsert(rel with
         {

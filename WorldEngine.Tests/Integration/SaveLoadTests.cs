@@ -302,6 +302,11 @@ public class SaveLoadTests : IDisposable
         loadedOrg.LeaderId.Should().Be(ruler.Id);
         loadedOrg.Members.Should().ContainKey(ruler.Id);
         loadedOrg.Members[ruler.Id].Role.Should().Be(OrganizationRole.Leader);
+        // M15.9: MembershipDto used to drop CivId, so the org side of the membership came back
+        // with CivId.None while the character side kept it — the two sides silently disagreed
+        // after any save/load. Both must round-trip.
+        loadedOrg.Members[ruler.Id].CivId.Should().Be(civId,
+            "Organization.Members' CivId must survive save/load, matching the character side");
         loadedOrg.Allies.Should().Contain(otherOrgId, "alliance facts must survive save/load");
 
         loaded.Civilizations[civId].OrgId.Should().Be(orgId, "the civ-to-org link must survive save/load");

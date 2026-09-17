@@ -137,7 +137,8 @@ public sealed record CivilizationDto(
     Dictionary<string, int>           WarBattleWins);
 
 // ─── Organization (M12) ────────────────────────────────────────────────────────
-public sealed record MembershipDto(long CharacterId, int Role, float Loyalty);
+// CivId defaults to 0 (CivId.None) so pre-M15.9 saves, which did not persist it, still load.
+public sealed record MembershipDto(long CharacterId, int Role, float Loyalty, int CivId = 0);
 
 public sealed record OrganizationDto(
     int    Id,

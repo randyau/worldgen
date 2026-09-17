@@ -189,9 +189,7 @@ public sealed class CharacterBehaviorPhase
             int bornOrdinal = world.ClaimNameOrdinal(child.Identity.Name);
             child.Identity = child.Identity with { NameOrdinal = bornOrdinal };
 
-            var childMembership = new Membership(familyOrg.Id, OrganizationRole.Member, famCfg.NewbornFamilyLoyalty);
-            child.Memberships.Add(childMembership);
-            familyOrg.Members[child.Id] = childMembership;
+            OrganizationMembership.Join(child, familyOrg, OrganizationRole.Member, famCfg.NewbornFamilyLoyalty);
 
             // Inherit civ membership from whichever parent has one; mother's takes precedence
             // when both do — arbitrary but deterministic (no RNG), same convention as the
@@ -1014,14 +1012,9 @@ public sealed class CharacterBehaviorPhase
 
             long fromOrgId = currentMembership?.OrganizationId.Value ?? 0;
             if (currentMembership != null)
-            {
-                world.Organizations[currentMembership.OrganizationId].Members.Remove(ch.Id);
-                ch.Memberships.Remove(currentMembership);
-            }
+                OrganizationMembership.Leave(ch, world.Organizations[currentMembership.OrganizationId]);
             var targetOrg = world.Organizations[targetOrgId];
-            var newMembership = new Membership(targetOrgId, OrganizationRole.Member, cfg.InitialConvertLoyalty);
-            ch.Memberships.Add(newMembership);
-            targetOrg.Members[ch.Id] = newMembership;
+            OrganizationMembership.Join(ch, targetOrg, OrganizationRole.Member, cfg.InitialConvertLoyalty);
 
             var payload = JsonSerializer.Serialize(new CharacterConvertedPayload(
                 ch.Id.Value, ch.Identity.Name, targetOrgId.Value, targetOrg.Name, fromOrgId));
@@ -1081,11 +1074,8 @@ public sealed class CharacterBehaviorPhase
                 if (outcomeRoll < cfg.PersecutionForcedConversionChance)
                 {
                     outcome = "forced_conversion";
-                    heresyOrg.Members.Remove(ch.Id);
-                    ch.Memberships.Remove(religionMembership);
-                    var newMembership = new Membership(stateOrgId, OrganizationRole.Member, cfg.ForcedConvertLoyalty);
-                    ch.Memberships.Add(newMembership);
-                    stateOrg.Members[ch.Id] = newMembership;
+                    OrganizationMembership.Leave(ch, heresyOrg);
+                    OrganizationMembership.Join(ch, stateOrg, OrganizationRole.Member, cfg.ForcedConvertLoyalty);
                 }
                 else
                 {
@@ -1093,14 +1083,9 @@ public sealed class CharacterBehaviorPhase
                     var civMembership = ch.Memberships.FirstOrDefault(m => m.CivId.IsValid);
                     if (civMembership != null)
                     {
-                        var updated = civMembership with
-                        {
-                            Loyalty = Math.Max(0f, civMembership.Loyalty - cfg.PersecutionCivLoyaltyPenalty)
-                        };
-                        ch.Memberships.Remove(civMembership);
-                        ch.Memberships.Add(updated);
-                        if (world.Organizations.TryGetValue(civMembership.OrganizationId, out var civOrg))
-                            civOrg.Members[ch.Id] = updated;
+                        world.Organizations.TryGetValue(civMembership.OrganizationId, out var civOrg);
+                        OrganizationMembership.SetLoyalty(ch, civMembership.OrganizationId,
+                            Math.Max(0f, civMembership.Loyalty - cfg.PersecutionCivLoyaltyPenalty), civOrg);
                     }
                     ch.Needs = ch.Needs with
                     {
@@ -1180,9 +1165,7 @@ public sealed class CharacterBehaviorPhase
         var orgId = CivTracker.CreateOrganization(world, OrganizationKind.Religion, religionName, c.Id, c.Location);
         var org   = world.Organizations[orgId];
         org.ReligionArchetypeId = archetypeId;
-        var membership = new Membership(orgId, OrganizationRole.Leader, 1.0f);
-        c.Memberships.Add(membership);
-        org.Members[c.Id] = membership;
+        OrganizationMembership.Join(c, org, OrganizationRole.Leader, 1.0f);
 
         var payload = JsonSerializer.Serialize(new ReligionFoundedPayload(
             c.Id.Value, c.Identity.Name, world.CurrentYear,
@@ -1257,10 +1240,8 @@ public sealed class CharacterBehaviorPhase
             var org = world.Organizations[religionMembership.OrganizationId];
             religionName = org.Name;
             orgIdValue = org.Id.Value;
-            var updated = religionMembership with { Loyalty = Math.Min(1f, religionMembership.Loyalty + cfg.PilgrimageLoyaltyBoost) };
-            c.Memberships.Remove(religionMembership);
-            c.Memberships.Add(updated);
-            org.Members[c.Id] = updated;
+            OrganizationMembership.SetLoyalty(c, org,
+                Math.Min(1f, religionMembership.Loyalty + cfg.PilgrimageLoyaltyBoost));
         }
 
         var payload = JsonSerializer.Serialize(new PilgrimagePayload(
@@ -1342,13 +1323,10 @@ public sealed class CharacterBehaviorPhase
             foreach (var (memberId, oldMembership) in seceding)
             {
                 if (world.GetEntity(memberId) is not Tier1Character member) continue;
-                org.Members.Remove(memberId);
-                member.Memberships.Remove(oldMembership);
+                OrganizationMembership.Leave(member, org);
 
                 var role = memberId == dissenter.Id ? OrganizationRole.Leader : OrganizationRole.Member;
-                var newMembership = new Membership(newOrgId, role, oldMembership.Loyalty);
-                member.Memberships.Add(newMembership);
-                newOrg.Members[memberId] = newMembership;
+                OrganizationMembership.Join(member, newOrg, role, oldMembership.Loyalty);
             }
 
             var payload = JsonSerializer.Serialize(new ReligionSchismPayload(
